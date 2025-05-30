@@ -2,101 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BOOP – Parent Portal</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    .container {
-      background: white;
-      padding: 40px 30px;
-      border-radius: 12px;
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      text-align: center;
-    }
-
-    h1 {
-      font-size: 1.8em;
-      color: #102a43;
-      margin-bottom: 10px;
-    }
-
-    p {
-      color: #334e68;
-      margin-bottom: 10px;
-    }
-
-    .balance {
-      font-size: 1.4em;
-      margin: 10px 0 30px;
-      color: #102a43;
-    }
-
-    button {
-      background-color: #2f80ed;
-      color: white;
-      font-size: 1em;
-      padding: 10px 20px;
-      margin: 8px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #1c60b3;
-    }
-
-    .back-link {
-      display: inline-block;
-      margin-top: 30px;
-      text-decoration: none;
-      color: #2f80ed;
-      font-weight: 600;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<nav style="background:#2f80ed; padding: 12px 20px;">
-  <div style="max-width: 800px; margin: auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-    <a href="index.html">
-  <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
-</a>
-    <div>
-      <a href="student.html" style="color: white; margin: 0 10px; text-decoration: none;">Student</a>
-      <a href="parent.html" style="color: white; margin: 0 10px; text-decoration: none;">Parent</a>
-      <a href="senior.html" style="color: white; margin: 0 10px; text-decoration: none;">Senior</a>
-      <a href="vendor.html" style="color: white; margin: 0 10px; text-decoration: none;">Vendor</a>
-      <a href="proof.html" style="color: white; margin: 0 10px; text-decoration: none;">Proof</a>
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+      </div>
+      <div class="nav-right">
+        <a href="student.html">Student</a>
+        <a href="parent.html" class="active">Parent</a>
+        <a href="senior.html">Senior</a>
+        <a href="vendor.html">Vendor</a>
+        <a href="proof.html">Proof</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <div class="container">
+    <h1>Welcome, Parents!</h1>
+    <p>Manage your child’s BOOP wallet with ease. Fund their cards, track spending, and ensure they ride the bus safely — all from one place.</p>
+  </div>
+
+  <!-- Info Section -->
+  <div class="container">
+    <h2>How BOOP Works for Kids</h2>
+    <p>Your child can ride the bus for free using their BOOP card. If you’d like, you can add money to their account for snacks or essentials at approved stores.</p>
+  </div>
+
+  <!-- Child Management Section -->
+  <div class="container">
+    <h2>Manage Children</h2>
+    <form id="addChildForm">
+      <label for="childAddress">Child Wallet Address:</label><br>
+      <input type="text" id="childAddress" name="childAddress" placeholder="0x..."><br><br>
+
+      <label for="amount">Amount to Add (BMDX):</label><br>
+      <input type="number" id="amount" name="amount"><br><br>
+
+      <button type="submit">Add Funds</button>
+    </form>
+    <p id="fundStatus"></p>
+  </div>
+
+  <!-- Transaction Log Section -->
+  <div class="container">
+    <h2>Child’s Transaction History</h2>
+    <div id="transactionLog">
+      <p>Transactions will appear here after testing is implemented.</p>
     </div>
   </div>
-</nav>
-  
+
+  <!-- Support Section -->
   <div class="container">
-    <h1>Parent Top-Up</h1>
-    <p>Child ID: <strong>STUDENT0456</strong></p>
-    <div class="balance">Current Balance: ₿ 22.00 BMDX</div>
-
-    <p>Select an amount to add:</p>
-    <button onclick="alert('₿5 BMDX added!')">+5 BMDX</button>
-    <button onclick="alert('₿10 BMDX added!')">+10 BMDX</button>
-    <button onclick="alert('₿20 BMDX added!')">+20 BMDX</button>
-
-    <a href="index.html" class="back-link">← Back to Home</a>
+    <h2>Need Help?</h2>
+    <p>Contact us at <a href="mailto:support@boop.bm">support@boop.bm</a> or view our FAQ page (coming soon).</p>
   </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
