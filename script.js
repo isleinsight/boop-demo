@@ -1845,6 +1845,57 @@ function adminResetBalance(targetAddress) {
 
 
 
+
+
+// ==============================
+// STEP 36: Transaction Verifier
+// ==============================
+
+// Called when the user clicks "Verify" on proof.html
+function verifyTransaction() {
+  const input = document.getElementById('searchInput').value.trim();
+  const resultDiv = document.getElementById('transactionResult');
+
+  // Clear any previous result
+  resultDiv.innerHTML = "";
+
+  if (!input) {
+    resultDiv.innerHTML = `<p style="color: red;">Please enter a transaction hash or wallet address.</p>`;
+    return;
+  }
+
+  // Dummy blockchain-like result
+  const mockResult = {
+    txHash: "0x1234abcd5678ef901234abcd5678ef901234abcd5678ef901234abcd5678ef90",
+    from: "0xabc123456789...",
+    to: "0xdef987654321...",
+    amount: "50 BMDX",
+    vendor: "Island Grocery",
+    timestamp: new Date().toLocaleString()
+  };
+
+  // Show results (this would come from a blockchain query in real usage)
+  resultDiv.innerHTML = `
+    <h3>Transaction Found</h3>
+    <p><strong>Transaction Hash:</strong> ${mockResult.txHash}</p>
+    <p><strong>Sender:</strong> ${mockResult.from}</p>
+    <p><strong>Recipient:</strong> ${mockResult.to}</p>
+    <p><strong>Amount:</strong> ${mockResult.amount}</p>
+    <p><strong>Vendor:</strong> ${mockResult.vendor}</p>
+    <p><strong>Timestamp:</strong> ${mockResult.timestamp}</p>
+  `;
+}
+
+
+
+
+
+
+
+
+
+
+
 // ✅ TESTING ONLY: Simulate BOOP with or without senior status
 function simulateBoop(recipientAddress, amount, isSenior = false) {
   if (!signer || !bmdxContract) {
