@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 checkIfWalletConnected(); // Run this when the page loads
 getBMDXBalance(); // Fetch token balance after connecting
+checkForDailyReset(); // Reset daily spend if it's a new day
 
 // This will hold the user's Ethereum address once connected
 let userAddress = null;
@@ -331,8 +332,309 @@ function updateTransactionDisplay() {
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+// Step 9: Automatically Reset Daily Spending
 /////////////////////////////
+// Store the last transaction date
+let lastTransactionDate = null;
+
+// Check if today is a new day — if so, reset spending
+function checkForDailyReset() {
+  const today = new Date().toLocaleDateString(); // e.g., "5/30/2025"
+
+  if (lastTransactionDate !== today) {
+    console.log("🔄 New day detected. Resetting daily spend.");
+    userSpendingToday = 0;
+    lastTransactionDate = today;
+  }
+}
+
+
+//////////////////////////////
+// Step 10: Add Support for QR Codes or Smart Card “Boops”
+/////////////////////////////
+function simulateBoop(recipientAddress, amount) {
+  if (!signer || !bmdxContract) {
+    alert("Wallet not connected.");
+    return;
+  }
+
+  // Pretend a card or QR code was scanned
+  alert(`📡 Boop received for ${amount} BMDX to ${recipientAddress}`);
+  secureBMDXTransfer(recipientAddress, amount);
+}
+
+
+
+//////////////////////////////
+// Step 11: Add Senior Discount Logic
+/////////////////////////////
+// 🧓 Approved vendors offering senior discounts
+const seniorVendors = [
+  "0xVendorAddress1...",
+  "0xVendorAddress2..."
+];
+
+// ✅ Days when seniors get discounts (0 = Sunday, 1 = Monday, etc.)
+const seniorDiscountDays = [2, 4]; // e.g. Tuesday (2), Thursday (4)
+
+// 💸 How much discount (e.g., 10%)
+const seniorDiscountRate = 0.10;
+
+
+function applySeniorDiscountIfEligible(senderAddress, recipientAddress, originalAmount, isSenior) {
+  const today = new Date().getDay(); // e.g. 2 = Tuesday
+
+  if (
+    isSenior &&
+    seniorVendors.includes(recipientAddress) &&
+    seniorDiscountDays.includes(today)
+  ) {
+    const discountAmount = originalAmount * seniorDiscountRate;
+    const discounted = originalAmount - discountAmount;
+
+    console.log(`✅ Senior discount applied: -${discountAmount} BMDX`);
+    return discounted;
+  }
+
+  return originalAmount;
+}
+
+async function secureBMDXTransfer(recipientAddress, amount, isSenior = false) {
+  checkForDailyReset();
+
+  const senderAddress = await signer.getAddress();
+
+  // ✅ Apply senior discount if eligible
+  const finalAmount = applySeniorDiscountIfEligible(senderAddress, recipientAddress, amount, isSenior);
+
+  try {
+    const tx = await bmdxContract.transfer(recipientAddress, ethers.utils.parseUnits(finalAmount.toString(), 18));
+    await tx.wait();
+    console.log(`✅ Sent ${finalAmount} BMDX to ${recipientAddress}`);
+    userSpendingToday += finalAmount;
+  } catch (error) {
+    console.error("🚫 Transaction failed", error);
+    alert("Transaction failed.");
+  }
+}
+
+
+
+
+
+//////////////////////////////
+// Step 12: Role-Based Purchase Restrictions
+/////////////////////////////
+// 🛒 Vendor categories mapped to addresses
+const vendors = {
+  groceries: ["0xVendorGroceries1...", "0xVendorGroceries2..."],
+  snacks: ["0xVendorSnacks1...", "0xVendorSnacks2..."],
+  alcohol: ["0xVendorLiquor1...", "0xVendorLiquor2..."],
+  books: ["0xVendorBooks1..."]
+};
+
+// 👥 Define what each role is allowed to buy
+const rolePermissions = {
+  student: ["groceries", "snacks", "books"],
+  senior: ["groceries", "snacks", "books", "alcohol"],
+  general: ["groceries", "snacks", "books", "alcohol"]
+};
+
+
+function getVendorCategory(recipientAddress) {
+  for (let category in vendors) {
+    if (vendors[category].includes(recipientAddress)) {
+      return category;
+    }
+  }
+  return null; // Not recognized
+}
+
+
+function isTransactionAllowed(userRole, vendorCategory) {
+  if (!userRole || !vendorCategory) return false;
+  return rolePermissions[userRole].includes(vendorCategory);
+}
+
+async function secureBMDXTransfer(recipientAddress, amount, isSenior = false, userRole = "general") {
+  checkForDailyReset();
+  const senderAddress = await signer.getAddress();
+
+  const vendorCategory = getVendorCategory(recipientAddress);
+
+  // 🚫 Check if the user can buy from this vendor
+  if (!isTransactionAllowed(userRole, vendorCategory)) {
+    alert(`🚫 You are not allowed to purchase from this type of vendor (${vendorCategory}).`);
+    return;
+  }
+
+  // ✅ Apply senior discount if eligible
+  const finalAmount = applySeniorDiscountIfEligible(senderAddress, recipientAddress, amount, isSenior);
+
+  try {
+    const tx = await bmdxContract.transfer(recipientAddress, ethers.utils.parseUnits(finalAmount.toString(), 18));
+    await tx.wait();
+    console.log(`✅ Sent ${finalAmount} BMDX to ${recipientAddress}`);
+    userSpendingToday += finalAmount;
+  } catch (error) {
+    console.error("🚫 Transaction failed", error);
+    alert("Transaction failed.");
+  }
+}
+
+
+
+
+
+
+//////////////////////////////
+// Step 13: Display Recent Transactions 
+/////////////////////////////
+// 🧾 Initialize an empty array to store recent transactions
+let transactionLog = [];
+
+/**
+ * 📝 Function: logTransaction
+ * Logs a transaction in a readable format and stores it in the local transactionLog array.
+ * 
+ * @param {string} from - Sender's wallet address
+ * @param {string} to - Recipient's wallet address
+ * @param {number} amount - Amount of BMDX transferred
+ * @param {string} category - Category of transaction (e.g. "Groceries", "Transport")
+ * @param {boolean} success - Whether the transaction succeeded
+ */
+function logTransaction(from, to, amount, category = "General", success = true) {
+  const now = new Date();
+  const timestamp = now.toLocaleString();
+
+  const txRecord = {
+    from,
+    to,
+    amount,
+    category,
+    success,
+    timestamp
+  };
+
+  // Add to the top of the log
+  transactionLog.unshift(txRecord);
+
+  // Keep only the latest 10 transactions
+  if (transactionLog.length > 10) {
+    transactionLog.pop();
+  }
+
+  // Display the log on the page
+  displayTransactionLog();
+}
+
+/**
+ * 📋 Function: displayTransactionLog
+ * Renders the transaction log to the HTML page if a container exists.
+ */
+function displayTransactionLog() {
+  const container = document.getElementById("transaction-log");
+  if (!container) return; // Do nothing if there's no log section on the page
+
+  // Clear current list
+  container.innerHTML = "";
+
+  // Create entries
+  transactionLog.forEach((tx, index) => {
+    const entry = document.createElement("div");
+    entry.classList.add("log-entry");
+    entry.innerHTML = `
+      <strong>${tx.success ? "✅ Success" : "❌ Failed"}</strong> - ${tx.amount} BMDX<br/>
+      From: ${tx.from.slice(0, 6)}...${tx.from.slice(-4)}<br/>
+      To: ${tx.to.slice(0, 6)}...${tx.to.slice(-4)}<br/>
+      Category: ${tx.category}<br/>
+      <small>${tx.timestamp}</small>
+    `;
+    container.appendChild(entry);
+  });
+}
+
+
+
+
+
+//////////////////////////////
+// Step 14 – Spending Limits
+/////////////////////////////
+// 🛑 Spending Limits (per address)
+const spendingLimits = {
+  // Example structure: "0xABC...": { dailyLimit: 20, spentToday: 5, lastReset: "YYYY-MM-DD" }
+};
+
+// 📅 Utility: Get today's date in YYYY-MM-DD format
+function getTodayDate() {
+  const today = new Date();
+  return today.toISOString().split("T")[0];
+}
+
+/**
+ * 💳 Function: canSpendAmount
+ * Checks if a user has not exceeded their daily spending limit.
+ * 
+ * @param {string} address - User's wallet address
+ * @param {number} amount - Amount the user wants to spend
+ * @returns {boolean} - True if allowed, false if over the limit
+ */
+function canSpendAmount(address, amount) {
+  const today = getTodayDate();
+
+  if (!spendingLimits[address]) {
+    // No limits set for this address
+    return true;
+  }
+
+  const record = spendingLimits[address];
+
+  // Reset spentToday if it's a new day
+  if (record.lastReset !== today) {
+    record.spentToday = 0;
+    record.lastReset = today;
+  }
+
+  const remaining = record.dailyLimit - record.spentToday;
+  return amount <= remaining;
+}
+
+/**
+ * 💾 Function: updateSpending
+ * Updates the amount a user has spent today.
+ * 
+ * @param {string} address - User's wallet address
+ * @param {number} amount - Amount just spent
+ */
+function updateSpending(address, amount) {
+  const today = getTodayDate();
+
+  if (!spendingLimits[address]) {
+    // Skip if not being tracked
+    return;
+  }
+
+  if (spendingLimits[address].lastReset !== today) {
+    spendingLimits[address].spentToday = 0;
+    spendingLimits[address].lastReset = today;
+  }
+
+  spendingLimits[address].spentToday += amount;
+}
+
+// 🧪 OPTIONAL: Example of setting a limit manually
+// spendingLimits["0x123...abc"] = { dailyLimit: 30, spentToday: 0, lastReset: getTodayDate() };
+
+// ✅ Integration Tip:
+// Inside your transfer logic (like `secureBMDXTransfer`), insert something like:
+
+// if (!canSpendAmount(senderAddress, finalAmount)) {
+//   alert("You've reached your daily spending limit.");
+//   return;
+// }
+// updateSpending(senderAddress, finalAmount);
+
 
 
 //////////////////////////////
@@ -355,25 +657,6 @@ Automatically Check & Display Wallet Address
 /////////////////////////////
 
 
-//////////////////////////////
-Automatically Check & Display Wallet Address
-/////////////////////////////
-
-
-//////////////////////////////
-Automatically Check & Display Wallet Address
-/////////////////////////////
-
-
-//////////////////////////////
-Automatically Check & Display Wallet Address
-/////////////////////////////
-
-
-//////////////////////////////
-Automatically Check & Display Wallet Address
-/////////////////////////////
-
 
 //////////////////////////////
 Automatically Check & Display Wallet Address
@@ -387,6 +670,19 @@ Automatically Check & Display Wallet Address
 
 
 
-//////////////////////////////
-Automatically Check & Display Wallet Address
-/////////////////////////////
+
+
+// ✅ TESTING ONLY: Simulate BOOP with or without senior status
+function simulateBoop(recipientAddress, amount, isSenior = false) {
+  if (!signer || !bmdxContract) {
+    alert("Wallet not connected.");
+    return;
+  }
+
+  alert(`📡 Boop received for ${amount} BMDX to ${recipientAddress}`);
+  secureBMDXTransfer(recipientAddress, amount, isSenior);
+}
+
+// 👉 Example test cases:
+simulateBoop("0xVendorAddress1...", 20);             // Normal user
+simulateBoop("0xVendorAddress1...", 20, true);        // Senior on discount day
