@@ -1,5 +1,5 @@
 //////////////////////////////
-Connect to Wallet (MetaMask)
+Step 1 Connect to Wallet (MetaMask)
 /////////////////////////////
 
 // Wait for the DOM to fully load before attaching events
@@ -10,6 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // When the button is clicked, run connectWallet()
   connectButton.addEventListener("click", connectWallet);
 });
+
+checkIfWalletConnected(); // Run this when the page loads
+getBMDXBalance(); // Fetch token balance after connecting
 
 // This will hold the user's Ethereum address once connected
 let userAddress = null;
@@ -41,7 +44,7 @@ async function connectWallet() {
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+Step 2 Automatically Check & Display Wallet Address
 /////////////////////////////
 
 // Check if wallet is already connected when the page loads
@@ -70,8 +73,48 @@ async function checkIfWalletConnected() {
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+Step 3: Check BMDX Token Balance
 /////////////////////////////
+// Your smart contract address (replace this with your deployed BMDX address)
+const bmdxAddress = "0xd9145CCE52D386f254917e481eB44e9943F39138";
+
+// ABI (Application Binary Interface) for your BMDX ERC-20 token
+const bmdxABI = [
+  // Only include the functions you need — here, we only need 'balanceOf'
+  {
+    "constant": true,
+    "inputs": [{ "name": "_owner", "type": "address" }],
+    "name": "balanceOf",
+    "outputs": [{ "name": "balance", "type": "uint256" }],
+    "type": "function"
+  }
+];
+
+// Function to get the user's BMDX token balance
+async function getBMDXBalance() {
+  if (!userAddress || typeof window.ethereum === "undefined") {
+    console.warn("Wallet not connected or MetaMask missing.");
+    return;
+  }
+
+  try {
+    // Connect to the blockchain using ethers.js
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const contract = new ethers.Contract(bmdxAddress, bmdxABI, provider);
+
+    // Call the balanceOf function
+    const rawBalance = await contract.balanceOf(userAddress);
+
+    // Convert balance from Wei (smallest unit) to readable format (assuming 18 decimals)
+    const formatted = ethers.utils.formatUnits(rawBalance, 18);
+
+    // Show the balance on the page
+    document.getElementById("bmdxBalance").textContent = `Balance: ${formatted} BMDX`;
+    console.log("BMDX Balance:", formatted);
+  } catch (error) {
+    console.error("Error getting BMDX balance:", error);
+  }
+}
 
 
 //////////////////////////////
