@@ -2,105 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOOP – Senior Card</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    .container {
-      background: white;
-      padding: 40px 30px;
-      border-radius: 12px;
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      text-align: center;
-    }
-
-    h1 {
-      font-size: 1.8em;
-      color: #102a43;
-      margin-bottom: 10px;
-    }
-
-    p {
-      color: #334e68;
-      margin-bottom: 20px;
-    }
-
-    .status {
-      font-weight: bold;
-      font-size: 1.2em;
-      color: #2f80ed;
-      margin-bottom: 20px;
-    }
-
-    .balance {
-      font-size: 1.4em;
-      margin: 10px 0 20px;
-      color: #102a43;
-    }
-
-    .discounts {
-      background: #e0f2fe;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 20px;
-    }
-
-    .back-link {
-      display: inline-block;
-      margin-top: 30px;
-      text-decoration: none;
-      color: #2f80ed;
-      font-weight: 600;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BOOP – Senior Access</title>
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
-
-<nav style="background:#2f80ed; padding: 12px 20px;">
-  <div style="max-width: 800px; margin: auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-    <a href="index.html">
-  <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
-</a>
-    <div>
-      <a href="student.html" style="color: white; margin: 0 10px; text-decoration: none;">Student</a>
-      <a href="parent.html" style="color: white; margin: 0 10px; text-decoration: none;">Parent</a>
-      <a href="senior.html" style="color: white; margin: 0 10px; text-decoration: none;">Senior</a>
-      <a href="vendor.html" style="color: white; margin: 0 10px; text-decoration: none;">Vendor</a>
-      <a href="proof.html" style="color: white; margin: 0 10px; text-decoration: none;">Proof</a>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px;" /></a>
+      </div>
+      <div class="nav-right">
+        <a href="student.html">Student</a>
+        <a href="parent.html">Parent</a>
+        <a href="senior.html">Senior</a>
+        <a href="vendor.html">Vendor</a>
+        <a href="proof.html">Proof</a>
+      </div>
     </div>
-  </div>
-</nav>
-  
+  </nav>
+
   <div class="container">
-    <h1>Senior BOOP Card</h1>
-    <p>This card belongs to: <strong>SENIOR ID 0099</strong></p>
-    <div class="status">🚌 Free Bus Rides Enabled</div>
-    <div class="balance">Wallet Balance: ₿ 58.00 BMDX</div>
+    <h1>Senior Citizen Wallet</h1>
+    <p>Welcome to your BOOP wallet. As a senior, you ride the bus for free and enjoy special vendor discounts!</p>
 
-    <div class="discounts">
-      <p><strong>🎉 Discount Day:</strong> Every Tuesday</p>
-      <p>Participating Stores:</p>
-      <ul style="list-style: none; padding: 0; color: #555;">
-        <li>✔️ Wahoo Mart – 10% off</li>
-        <li>✔️ Health Pharmacy – 15% off</li>
-        <li>✔️ Island Market – 5% off</li>
-      </ul>
+    <div class="form-group">
+      <label for="seniorWallet">Your Wallet Address</label>
+      <input type="text" id="seniorWallet" placeholder="0x123..." />
     </div>
 
-    <a href="index.html" class="back-link">← Back to Home</a>
+    <div class="form-group">
+      <label for="discountDay">Discount Day</label>
+      <select id="discountDay">
+        <option value="tuesday">Tuesday</option>
+        <option value="thursday">Thursday</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <button onclick="connectWallet()">Connect Wallet</button>
+    </div>
+
+    <div class="form-group">
+      <button onclick="checkSeniorDiscount()">Check Discounts</button>
+    </div>
+
+    <div id="seniorDiscountResult"></div>
   </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
