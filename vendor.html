@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BOOP – Vendor Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: white;
+      padding: 40px 30px;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.8em;
+      color: #102a43;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #334e68;
+      margin-bottom: 30px;
+    }
+
+    .balance {
+      font-size: 2em;
+      color: #2f80ed;
+      margin: 20px 0;
+    }
+
+    button {
+      background-color: #2f80ed;
+      color: white;
+      font-size: 1em;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 15px 0;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #1c60b3;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 30px;
+      text-decoration: none;
+      color: #2f80ed;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Vendor Portal</h1>
+    <p>Welcome, vendor! Here's your current BMDX balance:</p>
+    <div class="balance">₿ 1,250.00 BMDX</div>
+
+    <button onclick="alert('Withdrawal request submitted!')">Request Bank Transfer</button>
+
+    <p>Recent BOOPs received:</p>
+    <ul style="list-style: none; padding: 0; color: #555;">
+      <li>🟢 50 BMDX from StudentCard012 – Today</li>
+      <li>🟢 10 BMDX from WelfareCard777 – Yesterday</li>
+      <li>🟢 30 BMDX from ParentCard834 – 2 days ago</li>
+    </ul>
+
+    <a href="index.html" class="back-link">← Back to Home</a>
+  </div>
+</body>
+</html>
