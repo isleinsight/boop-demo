@@ -2,113 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOOP – Student Wallet</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    .container {
-      background: white;
-      padding: 40px 30px;
-      border-radius: 12px;
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      text-align: center;
-    }
-
-    h1 {
-      font-size: 1.8em;
-      color: #102a43;
-      margin-bottom: 10px;
-    }
-
-    p {
-      color: #334e68;
-      margin-bottom: 20px;
-    }
-
-    .status {
-      font-weight: bold;
-      font-size: 1.2em;
-      color: #2f80ed;
-      margin-bottom: 25px;
-    }
-
-    .balance {
-      font-size: 1.4em;
-      margin: 10px 0 20px;
-      color: #102a43;
-    }
-
-    button {
-      background-color: #2f80ed;
-      color: white;
-      font-size: 1em;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin: 15px 0;
-      transition: background-color 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #1c60b3;
-    }
-
-    .back-link {
-      display: inline-block;
-      margin-top: 30px;
-      text-decoration: none;
-      color: #2f80ed;
-      font-weight: 600;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Wallet – BOOP</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="script.js"></script>
 </head>
 <body>
-
-<nav style="background:#2f80ed; padding: 12px 20px;">
-  <div style="max-width: 800px; margin: auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-    <a href="index.html">
-  <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
-</a>
-    <div>
-      <a href="student.html" style="color: white; margin: 0 10px; text-decoration: none;">Student</a>
-      <a href="parent.html" style="color: white; margin: 0 10px; text-decoration: none;">Parent</a>
-      <a href="senior.html" style="color: white; margin: 0 10px; text-decoration: none;">Senior</a>
-      <a href="vendor.html" style="color: white; margin: 0 10px; text-decoration: none;">Vendor</a>
-      <a href="proof.html" style="color: white; margin: 0 10px; text-decoration: none;">Proof</a>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="index.html">
+          <img src="Boop-Logo.png" alt="BOOP Logo" />
+        </a>
+      </div>
+      <div class="nav-right">
+        <a href="student.html">Student</a>
+        <a href="parent.html">Parent</a>
+        <a href="senior.html">Senior</a>
+        <a href="vendor.html">Vendor</a>
+        <a href="proof.html">Proof</a>
+      </div>
     </div>
-  </div>
-</nav>
-  
+  </nav>
+
   <div class="container">
     <h1>Student Wallet</h1>
-    <p>This card belongs to: <strong>STUDENT ID 0456</strong></p>
-    <div class="status">🎓 Student Status: Free Rides Enabled</div>
-    <div class="balance">Wallet Balance: ₿ 22.00 BMDX</div>
+    <p>Welcome, student! Your BOOP card gives you free public transportation access. If your parent added snack funds, you'll see that balance here too.</p>
 
-    <button onclick="alert('Ride Booped! You may enter.')">Boop to Ride</button>
+    <div class="wallet-actions">
+      <input type="text" id="studentWalletAddress" placeholder="Enter your wallet address or connect" />
+      <button onclick="connectWallet()">Connect Wallet</button>
+    </div>
 
-    <p style="margin-top: 30px;">Approved Stores for Snacks:</p>
-    <ul style="list-style: none; padding: 0; color: #555;">
-      <li>✔️ SnackBar Central</li>
-      <li>✔️ Wahoo Mart</li>
-      <li>✔️ Island Grocer</li>
-    </ul>
+    <div class="wallet-balance">
+      <button onclick="checkBalance()">Check Snack Balance</button>
+      <p id="balanceDisplay">Balance will appear here</p>
+    </div>
 
-    <a href="index.html" class="back-link">← Back to Home</a>
+    <div class="info-box" style="background: #e6fffa; padding: 20px; margin-top: 20px; border-radius: 10px;">
+      <strong>Bus Rides:</strong> You ride for free. Your BOOP card works even if the balance is zero.
+    </div>
+
+    <div class="support">
+      <p>Need help? Contact BOOP support for any issues with your student wallet.</p>
+    </div>
   </div>
 </body>
 </html>
