@@ -1,0 +1,89 @@
+/* General styles */
+body {
+  font-family: 'Poppins', sans-serif;
+  background: #f4f7fa;
+  margin: 0;
+  padding: 0;
+}
+
+/* Navbar */
+nav {
+  background-color: #102a43;
+  padding: 12px 20px;
+}
+
+.nav-container {
+  max-width: 1000px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.nav-left img {
+  height: 36px;
+}
+
+.nav-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.nav-right a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1em;
+}
+
+.nav-right a:hover {
+  text-decoration: underline;
+  color: #90cdf4;
+}
+
+/* Page layout */
+.container {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 40px 30px;
+  background: white;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+h1 {
+  color: #000000;
+  font-size: 2em;
+  margin-bottom: 20px;
+}
+
+p {
+  color: #334e68;
+  font-size: 1.1em;
+  margin-bottom: 40px;
+}
+
+/* Buttons */
+.button-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+}
+
+.button-grid a {
+  display: inline-block;
+  background-color: #2f80ed;
+  color: white;
+  padding: 12px 20px;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.button-grid a:hover {
+  background-color: #1c60b3;
+}
