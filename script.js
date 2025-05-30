@@ -638,36 +638,379 @@ function updateSpending(address, amount) {
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+// Step 15 – Role-Based Alerts
 /////////////////////////////
+// 🧠 Simulated user role database
+const userRoles = {
+  // Example:
+  // "0x123...": { role: "student", parent: "0xabc...", name: "Kenny", alertEnabled: true }
+};
+
+// 🔔 Role-based Alert Handler
+function sendRoleBasedAlert(userAddress, eventType, amount = 0) {
+  const user = userRoles[userAddress];
+  if (!user || !user.alertEnabled) return;
+
+  const today = getTodayDate();
+  let message = "";
+
+  switch (eventType) {
+    case "overspend":
+      message = `🚨 ALERT: ${user.name} tried to spend more than their daily limit on ${today}.`;
+      break;
+    case "successful-spend":
+      message = `✅ ${user.name} successfully spent $${amount} on ${today}.`;
+      break;
+    case "denied-spend":
+      message = `⛔ ${user.name} attempted a denied transaction of $${amount} on ${today}.`;
+      break;
+    default:
+      message = `🔔 Activity by ${user.name} on ${today}: ${eventType}`;
+  }
+
+  // Simulate alert (replace with push/email/etc. in future)
+  console.log(`[Parent Alert for ${user.parent}]: ${message}`);
+  // You can also update a UI element or store the message in a log if needed
+}
+
+// 🧪 Example: Assign a student role to a wallet
+userRoles["0x123456789abcdef"] = {
+  role: "student",
+  name: "Malik",
+  parent: "0xParentWalletABC",
+  alertEnabled: true
+};
+
+// ✅ Usage tip:
+// After checking if a user overspent, trigger the alert like this:
+
+/*
+if (!canSpendAmount(senderAddress, finalAmount)) {
+  sendRoleBasedAlert(senderAddress, "overspend", finalAmount);
+  alert("You’ve reached your daily spending limit.");
+  return;
+} else {
+  sendRoleBasedAlert(senderAddress, "successful-spend", finalAmount);
+}
+*/
+
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+// Step 16 – Discount Eligibility Based on Day of the Week
 /////////////////////////////
+// 📅 Utility: Get current day of the week (0 = Sunday, 6 = Saturday)
+function getDayOfWeek() {
+  const today = new Date();
+  return today.getDay(); 
+}
+
+// 🎯 Define role-based day discounts
+const dayDiscountRules = {
+  senior: {
+    // 2 = Tuesday, 4 = Thursday
+    allowedDays: [2, 4],
+    discountPercent: 20
+  },
+  student: {
+    allowedDays: [1, 2, 3, 4, 5], // Weekdays
+    discountPercent: 0 // already free for transport
+  },
+  parent: {
+    allowedDays: [1, 2, 3, 4, 5, 6], // Optional example
+    discountPercent: 5
+  }
+  // Add more roles as needed
+};
+
+// 🎯 Check if today's discount is valid for the user
+function isDiscountDay(userAddress) {
+  const user = userRoles[userAddress];
+  if (!user) return false;
+
+  const rule = dayDiscountRules[user.role];
+  if (!rule) return false;
+
+  const today = getDayOfWeek();
+  return rule.allowedDays.includes(today);
+}
+
+// 🎯 Get today's discount percent (if valid), otherwise return 0
+function getDiscountPercent(userAddress) {
+  if (isDiscountDay(userAddress)) {
+    const role = userRoles[userAddress].role;
+    return dayDiscountRules[role].discountPercent;
+  }
+  return 0;
+}
+
+// 💰 Apply discount inside your secure transfer logic:
+function applyDayBasedDiscount(userAddress, originalAmount) {
+  const discountPercent = getDiscountPercent(userAddress);
+  if (discountPercent > 0) {
+    const discountedAmount = originalAmount - (originalAmount * discountPercent) / 100;
+    console.log(`🎉 ${discountPercent}% discount applied. Final amount: ${discountedAmount}`);
+    return discountedAmount;
+  }
+  return originalAmount;
+}
+
+/* ✅ Example usage inside transfer logic:
+
+let finalAmount = applyDayBasedDiscount(senderAddress, originalAmount);
+secureBMDXTransfer(senderAddress, recipientAddress, finalAmount);
+*/
+
+
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+// Step 17 – Show Transaction History on the Page
 /////////////////////////////
+// 🧠 1. Save the transaction to localStorage (for demo purposes only)
+function saveTransactionLocally(transaction) {
+  let history = JSON.parse(localStorage.getItem("boopHistory")) || [];
+  history.push(transaction);
+  localStorage.setItem("boopHistory", JSON.stringify(history));
+}
+
+// 🧠 2. Display the transaction history on the page
+function displayTransactionHistory() {
+  const historySection = document.getElementById("transaction-history");
+  historySection.innerHTML = ""; // Clear it first
+
+  const history = JSON.parse(localStorage.getItem("boopHistory")) || [];
+
+  if (history.length === 0) {
+    historySection.innerHTML = "<p>No transactions yet.</p>";
+    return;
+  }
+
+  // Create a table
+  const table = document.createElement("table");
+  table.style.width = "100%";
+  table.style.borderCollapse = "collapse";
+
+  // Table header
+  const headerRow = document.createElement("tr");
+  ["From", "To", "Amount", "Category", "Approved", "Date"].forEach((heading) => {
+    const th = document.createElement("th");
+    th.textContent = heading;
+    th.style.borderBottom = "1px solid #ccc";
+    th.style.padding = "8px";
+    table.appendChild(headerRow);
+    headerRow.appendChild(th);
+  });
+
+  // Table rows
+  history.forEach((tx) => {
+    const row = document.createElement("tr");
+    ["from", "to", "amount", "category", "approved", "timestamp"].forEach((key) => {
+      const td = document.createElement("td");
+      td.textContent = tx[key];
+      td.style.padding = "6px";
+      td.style.borderBottom = "1px solid #eee";
+      row.appendChild(td);
+    });
+    table.appendChild(row);
+  });
+
+  historySection.appendChild(table);
+}
+
+// ✨ 3. Update your logTransaction function to include local logging:
+function logTransaction(from, to, amount, category, approved) {
+  const tx = {
+    from,
+    to,
+    amount,
+    category,
+    approved,
+    timestamp: new Date().toLocaleString()
+  };
+  console.log("🧾 Transaction logged:", tx);
+  saveTransactionLocally(tx); // Save locally
+  displayTransactionHistory(); // Update the page
+}
+
+// 📦 4. On page load, show the history if any
+document.addEventListener("DOMContentLoaded", () => {
+  displayTransactionHistory();
+});
+
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+// STEP 18 – USER FEEDBACK & MESSAGING SYSTEM
 /////////////////////////////
+
+// This creates a message box on the page to show helpful feedback to users,
+// like success messages, errors, or instructions.
+
+// 1. Function to display messages to the user
+function showMessage(message, type = "info") {
+  const box = document.getElementById("message-box");
+  box.textContent = message;
+
+  // Color based on message type
+  if (type === "error") {
+    box.style.color = "#ff4d4f"; // red
+  } else if (type === "success") {
+    box.style.color = "#38a169"; // green
+  } else {
+    box.style.color = "#2d3748"; // default/dark gray
+  }
+}
+
+// 2. Call showMessage() inside your wallet functions to provide live feedback
+
+// --- Wallet connection ---
+async function connectWallet() {
+  if (window.ethereum) {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      currentAccount = accounts[0];
+      document.getElementById("wallet-address").textContent = currentAccount;
+      showMessage("✅ Wallet connected!", "success");
+    } catch (error) {
+      console.error("Wallet connection failed", error);
+      showMessage("❌ Failed to connect wallet: " + error.message, "error");
+    }
+  } else {
+    showMessage("❌ MetaMask not detected. Please install MetaMask.", "error");
+  }
+}
+
+// --- Secure transfer ---
+async function secureBMDXTransfer(senderAddress, recipientAddress, amount, vendorCategory) {
+  if (!bmdxContract) {
+    showMessage("Contract not loaded. Please connect your wallet first.", "error");
+    return;
+  }
+
+  try {
+    // Optional limit logic can go here (from Step 14)
+    const finalAmount = ethers.utils.parseUnits(amount.toString(), 18);
+    const tx = await bmdxContract.transfer(recipientAddress, finalAmount);
+    await tx.wait();
+
+    // Log it (Step 13)
+    logTransaction(senderAddress, recipientAddress, finalAmount, vendorCategory, true);
+
+    showMessage(`✅ Sent ${amount} BMDX to ${recipientAddress}`, "success");
+  } catch (error) {
+    console.error("Transfer failed", error);
+    showMessage("❌ Transaction failed: " + error.message, "error");
+  }
+}
+
+
 
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+// Step 19 – Real-Time BMDX Balance Checker
 /////////////////////////////
+// STEP 19 – REAL-TIME BMDX BALANCE CHECKER
+// This step adds a function to fetch and display the user's BMDX token balance.
+// It should run after the wallet is connected and anytime the balance might change.
+
+// 1. Function to fetch and display balance
+async function updateBMDXBalance() {
+  if (!bmdxContract || !currentAccount) {
+    showMessage("Wallet not connected or contract missing.", "error");
+    return;
+  }
+
+  try {
+    const balance = await bmdxContract.balanceOf(currentAccount);
+    const formatted = ethers.utils.formatUnits(balance, 18);
+
+    document.getElementById("bmdx-balance").textContent = `${formatted} BMDX`;
+  } catch (error) {
+    console.error("Error fetching balance:", error);
+    showMessage("❌ Failed to fetch BMDX balance", "error");
+  }
+}
+
+// 2. Modify your wallet connection function to call this too
+
+async function connectWallet() {
+  if (window.ethereum) {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      currentAccount = accounts[0];
+      document.getElementById("wallet-address").textContent = currentAccount;
+      showMessage("✅ Wallet connected!", "success");
+
+      await updateBMDXBalance(); // ✅ Fetch balance after connecting
+    } catch (error) {
+      console.error("Wallet connection failed", error);
+      showMessage("❌ Failed to connect wallet: " + error.message, "error");
+    }
+  } else {
+    showMessage("❌ MetaMask not detected. Please install MetaMask.", "error");
+  }
+}
+
+// 3. OPTIONAL: Update balance after a successful transfer
+// (Already done if you're using secureBMDXTransfer from Step 18)
+
 
 
 
 //////////////////////////////
-Automatically Check & Display Wallet Address
+// Step 20 – Vendor Whitelist System
 /////////////////////////////
+// STEP 20 – VENDOR WHITELIST SYSTEM
+// This step prevents sending BMDX to vendors that aren't approved (on the whitelist).
 
+// 1. Define a whitelist of approved vendor addresses.
+// In a real app, this list would come from a backend or smart contract call.
+const approvedVendors = [
+  "0x1234567890abcdef1234567890abcdef12345678", // Example Grocery Store
+  "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", // Example Pharmacy
+  // Add real or test addresses here as needed
+];
+
+// 2. Utility function to check if a vendor is approved
+function isVendorWhitelisted(address) {
+  return approvedVendors.includes(address.toLowerCase());
+}
+
+// 3. Modify the secureBMDXTransfer function to include this check
+async function secureBMDXTransfer(recipientAddress, amount, vendorCategory) {
+  if (!bmdxContract || !currentAccount) {
+    showMessage("❌ Wallet or contract not available.", "error");
+    return;
+  }
+
+  if (!ethers.utils.isAddress(recipientAddress)) {
+    showMessage("❌ Invalid recipient address.", "error");
+    return;
+  }
+
+  if (!isVendorWhitelisted(recipientAddress)) {
+    showMessage("❌ Vendor not approved. Transaction blocked.", "error");
+    return;
+  }
+
+  try {
+    const amountInWei = ethers.utils.parseUnits(amount.toString(), 18);
+    const tx = await bmdxContract.transfer(recipientAddress, amountInWei);
+    await tx.wait();
+    showMessage(`✅ Sent ${amount} BMDX to ${recipientAddress}`, "success");
+
+    logTransaction(currentAccount, recipientAddress, amount, vendorCategory, true);
+
+    await updateBMDXBalance(); // Update balance after sending
+  } catch (error) {
+    console.error("Transfer failed:", error);
+    showMessage("❌ Transfer failed", "error");
+
+    logTransaction(currentAccount, recipientAddress, amount, vendorCategory, false);
+  }
+}
 
 
 
