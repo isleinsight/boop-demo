@@ -1015,6 +1015,836 @@ async function secureBMDXTransfer(recipientAddress, amount, vendorCategory) {
 
 
 
+
+//////////////////////////////
+// Step 21: Offline Fallback Detection
+//////////////////////////////
+
+
+// Check for MetaMask and connection status
+function detectWalletAvailability() {
+  const walletStatus = document.getElementById("wallet-status");
+
+  if (typeof window.ethereum === 'undefined') {
+    console.warn("MetaMask is not installed!");
+    if (walletStatus) {
+      walletStatus.textContent = "🛑 MetaMask not detected. Please install MetaMask.";
+      walletStatus.style.color = "red";
+    }
+    return false;
+  }
+
+  if (!window.ethereum.isConnected()) {
+    console.warn("MetaMask detected, but not connected.");
+    if (walletStatus) {
+      walletStatus.textContent = "⚠️ MetaMask not connected.";
+      walletStatus.style.color = "orange";
+    }
+    return false;
+  }
+
+  // If connected
+  if (walletStatus) {
+    walletStatus.textContent = "✅ Wallet ready.";
+    walletStatus.style.color = "green";
+  }
+  return true;
+}
+
+// Listen for changes in the network or wallet account
+function monitorWalletEvents() {
+  if (window.ethereum) {
+    window.ethereum.on("accountsChanged", (accounts) => {
+      console.log("Accounts changed:", accounts);
+      checkIfWalletConnected(); // Refresh the connected wallet address
+    });
+
+    window.ethereum.on("chainChanged", (chainId) => {
+      console.log("Network changed to:", chainId);
+      window.location.reload(); // Reload the page when network changes
+    });
+  }
+}
+
+// Add a status box to your HTML dynamically (or you can hardcode one in your HTML)
+window.addEventListener("DOMContentLoaded", () => {
+  const statusDiv = document.createElement("div");
+  statusDiv.id = "wallet-status";
+  statusDiv.style.fontSize = "0.9em";
+  statusDiv.style.padding = "10px";
+  statusDiv.style.marginTop = "10px";
+  statusDiv.style.textAlign = "center";
+  document.body.prepend(statusDiv);
+
+  detectWalletAvailability();
+  monitorWalletEvents();
+});
+
+
+
+
+
+//////////////////////////////
+// STEP 22 – QR CODE GENERATION FOR VENDOR CHECKOUT
+//////////////////////////////
+
+
+// Function to generate a QR code based on vendor address and amount
+function generateVendorQRCode(vendorAddress, amountInEth, label = "BOOP Payment") {
+  const qrContainer = document.getElementById("qr-code-container");
+  if (!qrContainer) {
+    console.error("Missing #qr-code-container in HTML!");
+    return;
+  }
+
+  // Clear any previous QR code
+  qrContainer.innerHTML = "";
+
+  // Compose the payment string (e.g., ethereum:0x123...?value=1.0)
+  const uri = `ethereum:${vendorAddress}?value=${amountInEth}&label=${encodeURIComponent(label)}`;
+
+  // Use QRCode.js to generate the image
+  new QRCode(qrContainer, {
+    text: uri,
+    width: 180,
+    height: 180,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  console.log("QR Code generated:", uri);
+}
+
+
+
+
+
+//////////////////////////////
+// STEP 23 – SCAN A QR CODE AND PAY AUTOMATICALLY
+//////////////////////////////
+// <script src="https://unpkg.com/html5-qrcode@2.3.9"></script>
+
+// Function to initialize QR scanner and process scanned data
+function startQrScanAndPay() {
+  const qrRegionId = "qr-reader"; 
+  const html5QrCode = new Html5Qrcode(qrRegionId);
+
+  const qrConfig = {
+    fps: 10,
+    qrbox: 250
+  };
+
+  // This function runs when a QR code is successfully scanned
+  function onScanSuccess(decodedText, decodedResult) {
+    console.log("Scanned QR Code:", decodedText);
+    
+    // Stop scanning after success
+    html5QrCode.stop().then(() => {
+      console.log("Scanner stopped");
+
+      // Parse the URI from QR Code
+      const url = new URL(decodedText);
+      const recipient = url.pathname.replace(/^\/+/, ""); // remove leading slashes
+      const params = new URLSearchParams(url.search);
+      const value = params.get("value");
+      const label = params.get("label") || "BOOP Transaction";
+
+      // Call the sendTransaction function (you already have this in your script)
+      sendTransaction(recipient, value)
+        .then(() => alert(`Sent ${value} ETH to ${recipient} (${label})`))
+        .catch(err => {
+          console.error("Transaction failed", err);
+          alert("Failed to send transaction.");
+        });
+    }).catch(err => {
+      console.error("Failed to stop scanner", err);
+    });
+  }
+
+  // Handle any errors during scan
+  function onScanError(errorMessage) {
+    // Can be used to show scan errors or log
+    console.warn("Scan error:", errorMessage);
+  }
+
+  // Start the camera and begin scanning
+  Html5Qrcode.getCameras().then(cameras => {
+    if (cameras && cameras.length) {
+      const cameraId = cameras[0].id;
+      html5QrCode.start(cameraId, qrConfig, onScanSuccess, onScanError);
+    } else {
+      console.error("No camera found!");
+      alert("No camera found to scan QR code.");
+    }
+  }).catch(err => {
+    console.error("Camera access error:", err);
+    alert("Camera access denied or unavailable.");
+  });
+}
+
+
+
+
+
+//////////////////////////////
+// STEP 24 – GENERATE A QR CODE FOR A PAYMENT REQUEST
+//////////////////////////////
+
+
+// Load this library in your HTML later when you're ready:
+// <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+/**
+ * Generates a QR code that can be scanned to send crypto payments
+ * @param {string} vendorAddress - The vendor's wallet address (e.g., 0xabc...)
+ * @param {string} amount - Amount to request in ETH or token format
+ * @param {string} label - Optional label (e.g., "Café Latte")
+ */
+function generatePaymentQrCode(vendorAddress, amount = "", label = "") {
+  // Format the Ethereum payment URL
+  const url = `ethereum:${vendorAddress}?value=${amount}&label=${encodeURIComponent(label)}`;
+
+  // Define the target div where QR will appear
+  const qrTarget = document.getElementById("qr-code");
+
+  // Clear anything previously inside it
+  qrTarget.innerHTML = "";
+
+  // Generate the new QR code
+  new QRCode(qrTarget, {
+    text: url,
+    width: 250,
+    height: 250,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  console.log("QR Code generated:", url);
+}
+
+
+
+
+
+//////////////////////////////
+// STEP 25 – Vendor Dashboard: Manage QR Profiles
+//////////////////////////////
+
+
+/**
+ * Save a QR code profile to localStorage
+ * @param {string} profileName - A user-friendly name like "Lunch Combo"
+ * @param {string} address - The wallet address to receive payment
+ * @param {string} amount - The amount to request
+ * @param {string} label - Optional label/description
+ */
+function saveQrProfile(profileName, address, amount, label) {
+  const profile = { address, amount, label };
+
+  // Retrieve existing profiles
+  const profiles = JSON.parse(localStorage.getItem("qrProfiles")) || {};
+
+  // Save new/updated one
+  profiles[profileName] = profile;
+
+  // Store back to localStorage
+  localStorage.setItem("qrProfiles", JSON.stringify(profiles));
+
+  console.log(`Saved profile '${profileName}'`);
+}
+
+/**
+ * Load all saved QR profiles from localStorage
+ * @returns {Object} All profiles as an object
+ */
+function loadQrProfiles() {
+  return JSON.parse(localStorage.getItem("qrProfiles")) || {};
+}
+
+/**
+ * Display QR profiles as buttons or list in the dashboard
+ * @param {string} containerId - The ID of the HTML element to display them in
+ */
+function renderQrProfiles(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const profiles = loadQrProfiles();
+  for (const name in profiles) {
+    const profile = profiles[name];
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.onclick = () => {
+      generatePaymentQrCode(profile.address, profile.amount, profile.label);
+    };
+    container.appendChild(btn);
+  }
+}
+
+/**
+ * Delete a profile by name
+ * @param {string} profileName - Name of the profile to delete
+ */
+function deleteQrProfile(profileName) {
+  const profiles = loadQrProfiles();
+  if (profiles[profileName]) {
+    delete profiles[profileName];
+    localStorage.setItem("qrProfiles", JSON.stringify(profiles));
+    console.log(`Deleted profile '${profileName}'`);
+  }
+}
+
+
+
+
+
+//////////////////////////////
+// STEP 25 – Vendor Dashboard: Manage QR Profiles
+//////////////////////////////
+
+
+/**
+ * Save a QR code profile to localStorage
+ * @param {string} profileName - A user-friendly name like "Lunch Combo"
+ * @param {string} address - The wallet address to receive payment
+ * @param {string} amount - The amount to request
+ * @param {string} label - Optional label/description
+ */
+function saveQrProfile(profileName, address, amount, label) {
+  const profile = { address, amount, label };
+
+  // Retrieve existing profiles
+  const profiles = JSON.parse(localStorage.getItem("qrProfiles")) || {};
+
+  // Save new/updated one
+  profiles[profileName] = profile;
+
+  // Store back to localStorage
+  localStorage.setItem("qrProfiles", JSON.stringify(profiles));
+
+  console.log(`Saved profile '${profileName}'`);
+}
+
+/**
+ * Load all saved QR profiles from localStorage
+ * @returns {Object} All profiles as an object
+ */
+function loadQrProfiles() {
+  return JSON.parse(localStorage.getItem("qrProfiles")) || {};
+}
+
+/**
+ * Display QR profiles as buttons or list in the dashboard
+ * @param {string} containerId - The ID of the HTML element to display them in
+ */
+function renderQrProfiles(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const profiles = loadQrProfiles();
+  for (const name in profiles) {
+    const profile = profiles[name];
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.onclick = () => {
+      generatePaymentQrCode(profile.address, profile.amount, profile.label);
+    };
+    container.appendChild(btn);
+  }
+}
+
+/**
+ * Delete a profile by name
+ * @param {string} profileName - Name of the profile to delete
+ */
+function deleteQrProfile(profileName) {
+  const profiles = loadQrProfiles();
+  if (profiles[profileName]) {
+    delete profiles[profileName];
+    localStorage.setItem("qrProfiles", JSON.stringify(profiles));
+    console.log(`Deleted profile '${profileName}'`);
+  }
+}
+
+
+
+
+
+/**************************************
+ * STEP 26: Parent to Child Wallet Transfer
+ * - Simulates a parent account topping up a child’s wallet.
+ * - You could use this logic to allow oversight or restrictions.
+ **************************************/
+
+// Sample structure to track parent-child wallets
+const parentToChildMap = {
+  '0xParentAddress1': '0xChildAddress1',
+  '0xParentAddress2': '0xChildAddress2',
+  // Add more mappings as needed
+};
+
+// Simulated child balances for display
+const childBalances = {
+  '0xChildAddress1': 0,
+  '0xChildAddress2': 0,
+  // You can populate this during testing
+};
+
+// Function for parent to top-up child wallet
+async function parentTopUpChild(parentAddress, amount, vendorRestriction = []) {
+  const childAddress = parentToChildMap[parentAddress];
+  if (!childAddress) {
+    console.log("No child linked to this parent wallet.");
+    return;
+  }
+
+  // Simulate transfer to child’s wallet
+  try {
+    const tx = await contractInstance.methods.transfer(childAddress, amount).send({ from: parentAddress });
+    console.log(`Top-up successful: ${amount} BMDX sent to ${childAddress}`);
+
+    // Optional: Update child balance tracking (for UI)
+    childBalances[childAddress] = (childBalances[childAddress] || 0) + amount;
+
+    // Optional: Log it (for admin view)
+    logTransaction(parentAddress, childAddress, amount, vendorRestriction.join(', '), true);
+  } catch (error) {
+    console.error("Top-up failed:", error);
+  }
+}
+
+
+/**************************************************
+ * STEP 27: Local Transaction Logging and Viewing
+ * - Logs transactions in localStorage for now
+ * - Later, this can be replaced with backend API
+ **************************************************/
+
+// Function to log a transaction (called after each transfer)
+function logTransaction(sender, recipient, amount, vendorCategory = 'general', success = true) {
+  const transaction = {
+    sender,
+    recipient,
+    amount,
+    vendorCategory,
+    success,
+    timestamp: new Date().toISOString(),
+  };
+
+  // Get existing history from localStorage
+  let history = JSON.parse(localStorage.getItem('transactionHistory')) || [];
+
+  // Add new transaction to the beginning of the list
+  history.unshift(transaction);
+
+  // Save updated history
+  localStorage.setItem('transactionHistory', JSON.stringify(history));
+}
+
+// Function to get transaction history
+function getTransactionHistory() {
+  const history = JSON.parse(localStorage.getItem('transactionHistory')) || [];
+  return history;
+}
+
+// Function to display history (you’ll link this to a page or button later)
+function showTransactionHistory() {
+  const history = getTransactionHistory();
+
+  if (history.length === 0) {
+    console.log("No transactions found.");
+    return;
+  }
+
+  console.log("Transaction History:");
+  history.forEach((tx, index) => {
+    console.log(`${index + 1}. ${tx.timestamp}`);
+    console.log(`   From: ${tx.sender}`);
+    console.log(`   To: ${tx.recipient}`);
+    console.log(`   Amount: ${tx.amount} BMDX`);
+    console.log(`   Category: ${tx.vendorCategory}`);
+    console.log(`   Success: ${tx.success}`);
+    console.log('---------------------------');
+  });
+}
+
+
+
+
+/***********************************************
+ * STEP 28: Vendor-Side Purchase Verification
+ * - Vendors use this logic to check:
+ *   a) If a customer has enough BMDX
+ *   b) If the transaction is allowed (e.g. not blocked)
+ *   c) Then process the purchase
+ ***********************************************/
+
+// Simulated list of approved vendors (by category or wallet address)
+const approvedVendors = {
+  '0xVendorWallet1': 'groceries',
+  '0xVendorWallet2': 'snacks',
+  '0xVendorWallet3': 'school-supplies',
+  // You can add more
+};
+
+// Simulated restriction list for children (optional feature)
+const restrictedVendorCategories = {
+  '0xChildAddress1': ['groceries', 'snacks'],
+  '0xChildAddress2': ['school-supplies'],
+};
+
+// Function to simulate purchase processing at vendor
+async function processPurchase(customerAddress, vendorAddress, amount) {
+  // Check if the vendor is approved
+  const vendorCategory = approvedVendors[vendorAddress];
+  if (!vendorCategory) {
+    console.log("This vendor is not approved.");
+    return;
+  }
+
+  // Optional: Check if customer is a child with spending restrictions
+  const restrictedCategories = restrictedVendorCategories[customerAddress];
+  if (restrictedCategories && !restrictedCategories.includes(vendorCategory)) {
+    console.log("Purchase not allowed for this customer at this vendor.");
+    return;
+  }
+
+  // Check customer balance
+  const balance = await contractInstance.methods.balanceOf(customerAddress).call();
+  if (parseInt(balance) < amount) {
+    console.log("Insufficient BMDX balance.");
+    return;
+  }
+
+  // Transfer BMDX to vendor
+  try {
+    const tx = await contractInstance.methods.transfer(vendorAddress, amount).send({ from: customerAddress });
+    console.log(`Purchase of ${amount} BMDX sent to ${vendorAddress} from ${customerAddress}`);
+
+    // Optional: Log purchase
+    logTransaction(customerAddress, vendorAddress, amount, vendorCategory, true);
+  } catch (error) {
+    console.error("Transaction failed:", error);
+  }
+}
+
+
+
+
+
+/*******************************************************
+ * STEP 28: Role Detection Based on Wallet Address
+ * - This is a simulation using predefined test addresses.
+ * - Later, roles will come from blockchain or database.
+ *******************************************************/
+
+// Sample role list — this should be securely stored in reality
+const userRoles = {
+  "0x1111111111111111111111111111111111111111": "student",
+  "0x2222222222222222222222222222222222222222": "parent",
+  "0x3333333333333333333333333333333333333333": "senior",
+  "0x4444444444444444444444444444444444444444": "vendor",
+  "0x5555555555555555555555555555555555555555": "admin"
+};
+
+// Detect current user role by address
+function detectUserRole(address) {
+  const normalized = address.toLowerCase();
+  const role = userRoles[normalized] || "guest";
+  console.log(`Detected role for ${address}: ${role}`);
+  return role;
+}
+
+// Example usage: Automatically detect when wallet connects
+async function handleUserRoleDetection() {
+  const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+  const address = accounts[0];
+  const role = detectUserRole(address);
+
+  // Optionally update the UI or restrict features
+  if (role === "student") {
+    console.log("Student perks enabled");
+    // Example: Automatically skip fare deduction
+  } else if (role === "vendor") {
+    console.log("Vendor interface enabled");
+  } else if (role === "guest") {
+    console.log("No specific role assigned.");
+  }
+
+  // Save role for other parts of the app if needed
+  localStorage.setItem("userRole", role);
+}
+
+
+
+
+/*******************************************************
+ * STEP 29: Developer Mode – Simulate Roles Manually
+ * - Lets you override wallet detection for testing
+ * - Useful for switching roles without reconnecting wallets
+ *******************************************************/
+
+// Enable this flag during development
+const developerMode = true;
+
+// Developer-defined role (overrides real detection)
+let simulatedRole = "student"; // Change to: parent, senior, vendor, admin
+
+// Unified role getter that respects developer mode
+function getUserRole(address) {
+  if (developerMode) {
+    console.warn(`Developer mode ON – Simulating role: ${simulatedRole}`);
+    return simulatedRole;
+  }
+
+  return detectUserRole(address);
+}
+
+// Use this instead of calling detectUserRole directly
+async function getCurrentUserRole() {
+  const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+  const address = accounts[0];
+  const role = getUserRole(address);
+
+  // Store role for UI or access control logic
+  localStorage.setItem("userRole", role);
+  console.log(`User role set as: ${role}`);
+
+  return role;
+}
+
+
+
+
+/********************************************************
+ * STEP 30: Developer Console Overlay
+ * - Shows wallet address, role, and current network
+ * - Great for debugging on-page in dev mode
+ ********************************************************/
+
+function createDeveloperOverlay(address, role) {
+  if (!developerMode) return; // Only show in dev mode
+
+  const overlay = document.createElement("div");
+  overlay.id = "developerOverlay";
+  overlay.style.position = "fixed";
+  overlay.style.bottom = "20px";
+  overlay.style.right = "20px";
+  overlay.style.backgroundColor = "#102a43";
+  overlay.style.color = "white";
+  overlay.style.padding = "15px";
+  overlay.style.borderRadius = "10px";
+  overlay.style.fontSize = "0.9em";
+  overlay.style.zIndex = "9999";
+  overlay.style.boxShadow = "0 4px 10px rgba(0,0,0,0.2)";
+  overlay.style.fontFamily = "monospace";
+
+  overlay.innerHTML = `
+    <strong>🧪 Developer Mode</strong><br/>
+    Wallet: ${address.slice(0, 6)}...${address.slice(-4)}<br/>
+    Role: ${role}<br/>
+    Network: Ethereum (Simulated)
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+// Call this once wallet connects or role is determined
+async function showOverlayAfterConnect() {
+  if (!developerMode) return;
+  
+  const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+  const address = accounts[0];
+  const role = getUserRole(address);
+  
+  createDeveloperOverlay(address, role);
+}
+
+// Run this after DOM loads or wallet connects
+window.addEventListener("load", () => {
+  if (developerMode) {
+    showOverlayAfterConnect();
+  }
+});
+
+
+
+
+/********************************************************
+ * STEP 31: Page Access Logging
+ * Logs when a user opens a page, for auditing purposes
+ ********************************************************/
+
+function logPageVisit(pageName) {
+  const userAddress = window.currentUserAddress || "unknown";
+  const timestamp = new Date().toISOString();
+
+  // You could also save this to an external logging service
+  console.log(`[📄 Page Access Log] ${timestamp} – ${userAddress} visited ${pageName}`);
+
+  // Optional: store in localStorage for demo/testing
+  const history = JSON.parse(localStorage.getItem("pageVisitLog")) || [];
+  history.push({ user: userAddress, page: pageName, time: timestamp });
+  localStorage.setItem("pageVisitLog", JSON.stringify(history));
+}
+
+// Example: call this at the top of each page (or in a shared script)
+window.addEventListener("load", () => {
+  const currentPage = window.location.pathname.split("/").pop(); // e.g. "student.html"
+  logPageVisit(currentPage);
+});
+
+
+
+
+/********************************************************
+ * STEP 32: Display Wallet Balance
+ * Show the user their current BMDX token balance in real time.
+ ********************************************************/
+
+// Function to fetch balance from the blockchain
+async function getWalletBalance() {
+  if (!window.currentUserAddress || !window.contract) {
+    console.warn("Wallet address or contract not available yet.");
+    return;
+  }
+
+  try {
+    const balance = await window.contract.methods.balanceOf(window.currentUserAddress).call();
+    const readableBalance = window.web3.utils.fromWei(balance, 'ether');
+
+    // Update balance on the page (assuming an element with ID "wallet-balance")
+    const balanceElement = document.getElementById("wallet-balance");
+    if (balanceElement) {
+      balanceElement.textContent = `Balance: ${readableBalance} BMDX`;
+    }
+
+    console.log(`[💰 Balance] ${window.currentUserAddress} has ${readableBalance} BMDX`);
+  } catch (error) {
+    console.error("Error fetching wallet balance:", error);
+  }
+}
+
+// Call this when the page loads
+window.addEventListener("load", () => {
+  setTimeout(getWalletBalance, 2000); // slight delay to ensure connection
+});
+
+// Also call it after any transfer or receive action
+// For example, inside your `sendBMDX()` function, you can add:
+// await getWalletBalance();
+
+
+
+/********************************************************
+ * STEP 33: Add Refresh Button to Check Wallet Balance
+ * This allows users to click a button and instantly refresh
+ * their displayed BMDX token balance.
+ ********************************************************/
+
+// Add event listener to refresh balance on click
+document.addEventListener("DOMContentLoaded", function () {
+  const refreshBtn = document.getElementById("refresh-balance");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = "Refreshing...";
+
+      await getWalletBalance();
+
+      refreshBtn.textContent = "Refresh Balance";
+      refreshBtn.disabled = false;
+    });
+  }
+});
+
+
+
+
+
+/********************************************************
+ * STEP 34: Error Message Display & Logging
+ * Shows nice error messages to users and logs tech info
+ * to the console so we can debug without confusing the user.
+ ********************************************************/
+
+// Display a user-friendly error message on the screen
+function displayUserError(message) {
+  let errorBox = document.getElementById("error-box");
+  if (!errorBox) {
+    errorBox = document.createElement("div");
+    errorBox.id = "error-box";
+    errorBox.style.color = "#D8000C";
+    errorBox.style.backgroundColor = "#FFBABA";
+    errorBox.style.padding = "12px";
+    errorBox.style.margin = "20px 0";
+    errorBox.style.borderRadius = "6px";
+    errorBox.style.textAlign = "center";
+    errorBox.style.fontWeight = "bold";
+    document.body.insertBefore(errorBox, document.body.firstChild);
+  }
+
+  errorBox.textContent = message;
+
+  // Automatically hide the error message after 7 seconds
+  setTimeout(() => {
+    if (errorBox) errorBox.remove();
+  }, 7000);
+}
+
+// Use this to safely wrap async functions
+async function safelyRun(fn) {
+  try {
+    await fn();
+  } catch (error) {
+    console.error("Something went wrong:", error); // Dev view
+    displayUserError("Oops! Something went wrong. Please try again."); // User view
+  }
+}
+
+
+
+
+
+/********************************************************
+ * STEP 35: Admin Override Functions
+ * These should only be available in a testing environment
+ ********************************************************/
+
+// Simulate adding balance for demo/testing
+function adminAddBalance(targetAddress, amount) {
+  if (!targetAddress || !amount) {
+    displayUserError("Admin: Missing address or amount.");
+    return;
+  }
+
+  console.log(`Admin adding ${amount} BMDX to ${targetAddress}`);
+  // In real implementation, this would require smart contract access
+  // For now, pretend success:
+  alert(`Simulated: ${amount} BMDX added to ${targetAddress}`);
+}
+
+// Simulate resetting someone's balance
+function adminResetBalance(targetAddress) {
+  if (!targetAddress) {
+    displayUserError("Admin: Missing address to reset.");
+    return;
+  }
+
+  console.log(`Admin resetting balance for ${targetAddress}`);
+  // Real reset would involve smart contract logic
+  alert(`Simulated: Balance reset for ${targetAddress}`);
+}
+
+
+
+
 // ✅ TESTING ONLY: Simulate BOOP with or without senior status
 function simulateBoop(recipientAddress, amount, isSenior = false) {
   if (!signer || !bmdxContract) {
