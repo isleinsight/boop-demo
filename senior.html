@@ -3,53 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BOOP – Senior Access</title>
-  <link href="styles.css" rel="stylesheet" />
+  <title>Senior Card – BOOP</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px;" /></a>
+        <a href="index.html">
+          <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
+        </a>
       </div>
       <div class="nav-right">
         <a href="student.html">Student</a>
         <a href="parent.html">Parent</a>
-        <a href="senior.html">Senior</a>
+        <a href="senior.html" class="active">Senior</a>
         <a href="vendor.html">Vendor</a>
         <a href="proof.html">Proof</a>
+        <a href="government.html">Government</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h1>Senior Citizen Wallet</h1>
-    <p>Welcome to your BOOP wallet. As a senior, you ride the bus for free and enjoy special vendor discounts!</p>
+    <h1>Senior Card Access</h1>
+    <p>BOOP makes it easy for seniors to ride for free and receive automatic discounts at approved locations.</p>
 
-    <div class="form-group">
-      <label for="seniorWallet">Your Wallet Address</label>
-      <input type="text" id="seniorWallet" placeholder="0x123..." />
+    <div class="button-grid">
+      <a href="#" onclick="checkBalance()">Check Balance</a>
+      <a href="#" onclick="viewSeniorTransactions()">View Transactions</a>
+      <a href="#" onclick="connectWallet()">Connect Wallet</a>
     </div>
-
-    <div class="form-group">
-      <label for="discountDay">Discount Day</label>
-      <select id="discountDay">
-        <option value="tuesday">Tuesday</option>
-        <option value="thursday">Thursday</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <button onclick="connectWallet()">Connect Wallet</button>
-    </div>
-
-    <div class="form-group">
-      <button onclick="checkSeniorDiscount()">Check Discounts</button>
-    </div>
-
-    <div id="seniorDiscountResult"></div>
   </div>
 
   <script src="script.js"></script>
+  <script>
+    function viewSeniorTransactions() {
+      alert("Feature coming soon: Seniors will be able to see eligible discounts and transaction records.");
+    }
+  </script>
+
 </body>
 </html>
