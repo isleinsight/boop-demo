@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOOP – Bermuda's Official Onboard Payment</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Senior Card – BOOP</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,37 +12,37 @@
     <div class="nav-container">
       <div class="nav-left">
         <a href="index.html">
-          <img src="Boop-Logo.png" alt="BOOP Logo" />
+          <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
         </a>
       </div>
       <div class="nav-right">
         <a href="student.html">Student</a>
         <a href="parent.html">Parent</a>
-        <a href="senior.html">Senior</a>
+        <a href="senior.html" class="active">Senior</a>
         <a href="vendor.html">Vendor</a>
         <a href="proof.html">Proof</a>
-        <a href="govpanel.html">Gov Panel</a>
+        <a href="government.html">Government</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h1>
-      Welcome to
-      <img src="Boop-Logo-Black.png" alt="BOOP" class="inline-logo" />
-    </h1>
-    <p>Bermuda's Official Onboard Payment system for public transport and approved purchases. Secure, smart, and simple for everyone.</p>
+    <h1>Senior Card Access</h1>
+    <p>BOOP makes it easy for seniors to ride for free and receive automatic discounts at approved locations.</p>
 
     <div class="button-grid">
-      <a href="student.html">Student Wallet</a>
-      <a href="parent.html">Parent Portal</a>
-      <a href="senior.html">Senior Access</a>
-      <a href="vendor.html">Vendor Portal</a>
-      <a href="proof.html">Transaction Proof</a>
-      <a href="govpanel.html">Government Panel</a>
+      <a href="#" onclick="checkBalance()">Check Balance</a>
+      <a href="#" onclick="viewSeniorTransactions()">View Transactions</a>
+      <a href="#" onclick="connectWallet()">Connect Wallet</a>
     </div>
   </div>
 
   <script src="script.js"></script>
+  <script>
+    function viewSeniorTransactions() {
+      alert("Feature coming soon: Seniors will be able to see eligible discounts and transaction records.");
+    }
+  </script>
+
 </body>
 </html>
