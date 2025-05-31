@@ -57,16 +57,16 @@
 <!-- Your Firebase Config -->
 <script>
   const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-  authDomain: "boop-becff.firebaseapp.com",
-  projectId: "boop-becff",
-  storageBucket: "boop-becff.firebasestorage.app",
-  messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-  measurementId: "G-79DWYFPZNR"
-};
+    apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+    authDomain: "boop-becff.firebaseapp.com",
+    projectId: "boop-becff",
+    storageBucket: "boop-becff.appspot.com", // ← FIXED this line
+    messagingSenderId: "570567453336",
+    appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
+    measurementId: "G-79DWYFPZNR"
+  };
 
   // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore(app);
 </script>
