@@ -4,48 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Wallet – BOOP</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script defer src="script.js"></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <nav>
     <div class="nav-container">
       <div class="nav-left">
         <a href="index.html">
-          <img src="Boop-Logo.png" alt="BOOP Logo" />
+          <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
         </a>
       </div>
       <div class="nav-right">
-        <a href="student.html">Student</a>
+        <a href="student.html" class="active">Student</a>
         <a href="parent.html">Parent</a>
         <a href="senior.html">Senior</a>
         <a href="vendor.html">Vendor</a>
         <a href="proof.html">Proof</a>
+        <a href="government.html">Government</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
     <h1>Student Wallet</h1>
-    <p>Welcome, student! Your BOOP card gives you free public transportation access. If your parent added snack funds, you'll see that balance here too.</p>
+    <p>Students ride for free! You can still receive optional funds from your parent to use at approved stores.</p>
 
-    <div class="wallet-actions">
-      <input type="text" id="studentWalletAddress" placeholder="Enter your wallet address or connect" />
-      <button onclick="connectWallet()">Connect Wallet</button>
-    </div>
-
-    <div class="wallet-balance">
-      <button onclick="checkBalance()">Check Snack Balance</button>
-      <p id="balanceDisplay">Balance will appear here</p>
-    </div>
-
-    <div class="info-box" style="background: #e6fffa; padding: 20px; margin-top: 20px; border-radius: 10px;">
-      <strong>Bus Rides:</strong> You ride for free. Your BOOP card works even if the balance is zero.
-    </div>
-
-    <div class="support">
-      <p>Need help? Contact BOOP support for any issues with your student wallet.</p>
+    <div class="button-grid">
+      <a href="#" onclick="checkBalance()">Check Balance</a>
+      <a href="#" onclick="viewStudentTransactions()">View Transactions</a>
+      <a href="#" onclick="connectWallet()">Connect Wallet</a>
     </div>
   </div>
+
+  <script src="script.js"></script>
+  <script>
+    function viewStudentTransactions() {
+      alert("Feature coming soon: You'll be able to view your transaction history.");
+    }
+  </script>
+
 </body>
 </html>
