@@ -3,78 +3,88 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BOOP Admin Login</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <title>Login – BOOP Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Poppins', sans-serif;
       background: #f4f7fa;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       height: 100vh;
       margin: 0;
     }
-    .login-container {
-      background-color: white;
-      padding: 40px 30px;
+
+    .login-box {
+      background: white;
+      padding: 40px;
       border-radius: 10px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       width: 100%;
       max-width: 400px;
       text-align: center;
     }
+
     h2 {
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       color: #102a43;
     }
+
     input {
       width: 100%;
-      padding: 12px 10px;
+      padding: 12px;
       margin: 10px 0;
-      border-radius: 6px;
       border: 1px solid #ccc;
+      border-radius: 6px;
       font-size: 1em;
     }
+
     button {
       width: 100%;
-      padding: 12px;
       background-color: #2f80ed;
       color: white;
+      padding: 12px;
       border: none;
       border-radius: 6px;
       font-size: 1em;
       cursor: pointer;
-      transition: background-color 0.3s ease;
     }
+
     button:hover {
       background-color: #1c60b3;
     }
+
+    .message {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
     .error {
       color: red;
-      margin-top: 10px;
     }
+
     .success {
       color: green;
-      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="login-container">
+
+  <div class="login-box">
     <h2>Admin Login</h2>
-    <input type="email" id="login-email" placeholder="Email" required />
-    <input type="password" id="login-password" placeholder="Password" required />
+    <input type="email" id="login-email" placeholder="Email" />
+    <input type="password" id="login-password" placeholder="Password" />
     <button onclick="login()">Login</button>
-    <div id="login-message"></div>
+    <div id="login-message" class="message"></div>
   </div>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
 
-  <!-- Firebase Config -->
+  <!-- Your Firebase Config -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
@@ -88,25 +98,32 @@
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
 
+  <!-- Login Logic -->
+  <script>
     function login() {
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
       const messageDiv = document.getElementById('login-message');
+
       messageDiv.textContent = '';
+      messageDiv.className = 'message';
 
-      auth.signInWithEmailAndPassword(email, password)
+      firebase.auth().signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
-          const user = userCredential.user;
+          // Logged in successfully
           messageDiv.textContent = 'Login successful!';
-          messageDiv.className = 'success';
+          messageDiv.classList.add('success');
 
-          // Optional: Redirect to secure admin page
+          // Optional: Redirect to dashboard
           // window.location.href = 'admin-dashboard.html';
         })
         .catch((error) => {
+          // Login failed
           messageDiv.textContent = error.message;
-          messageDiv.className = 'error';
+          messageDiv.classList.add('error');
         });
     }
   </script>
