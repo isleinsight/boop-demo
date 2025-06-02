@@ -104,43 +104,62 @@
   <!-- Login Logic -->
   <script>
     function login() {
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value.trim();
-      const messageDiv = document.getElementById('login-message');
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  const messageDiv = document.getElementById('login-message');
 
-      messageDiv.textContent = '';
-      messageDiv.className = 'message';
+  messageDiv.textContent = '';
+  messageDiv.className = 'message';
 
-      // Input validation
-      if (!email || !password) {
-        messageDiv.textContent = "Please enter both email and password.";
-        messageDiv.classList.add('error');
-        return;
+  // Input validation
+  if (!email || !password) {
+    messageDiv.textContent = "Please enter both email and password.";
+    messageDiv.classList.add('error');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    messageDiv.textContent = "Please enter a valid email address.";
+    messageDiv.classList.add('error');
+    return;
+  }
+
+  // Sign in with Firebase Auth
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      messageDiv.textContent = "Login successful! Redirecting...";
+      messageDiv.classList.add('success');
+
+      // Redirect after a short delay
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 1500);
+    })
+    .catch((error) => {
+      let errorMsg;
+
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMsg = "No user found with this email.";
+          break;
+        case 'auth/wrong-password':
+          errorMsg = "Incorrect password. Please try again.";
+          break;
+        case 'auth/invalid-email':
+          errorMsg = "This email address is invalid.";
+          break;
+        case 'auth/too-many-requests':
+          errorMsg = "Too many failed attempts. Please try again later.";
+          break;
+        default:
+          errorMsg = error.message;
       }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        messageDiv.textContent = "Please enter a valid email address.";
-        messageDiv.classList.add('error');
-        return;
-      }
-
-      // Sign in with Firebase
-      firebase.auth().signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-          messageDiv.textContent = "Login successful! Redirecting...";
-          messageDiv.classList.add('success');
-
-          // Redirect after a short delay
-          setTimeout(() => {
-            window.location.href = "index.html";
-          }, 1500);
-        })
-        .catch((error) => {
-          messageDiv.textContent = error.message;
-          messageDiv.classList.add('error');
-        });
-    }
+      messageDiv.textContent = errorMsg;
+      messageDiv.classList.add('error');
+    });
+}
   </script>
 </body>
 </html>
