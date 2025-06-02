@@ -54,36 +54,43 @@
     document.getElementById("loginForm").addEventListener("submit", function(e) {
       e.preventDefault();
 
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+      const emailField = document.getElementById("email");
+      const passwordField = document.getElementById("password");
+      const email = emailField.value.trim();
+      const password = passwordField.value;
       const status = document.getElementById("loginStatus");
+
+      // Clear previous messages
+      status.textContent = "";
+      status.style.color = "red";
 
       if (!email || !password) {
         status.textContent = "Please enter both email and password.";
-        status.style.color = "red";
         return;
       }
 
       auth.signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
-          status.textContent = "Login successful!";
           status.style.color = "green";
-          window.location.href = "index.html";
+          status.textContent = "Login successful!";
+          // Optional: Delay so user can see the message
+          setTimeout(() => {
+            window.location.href = "index.html";
+          }, 1000);
         })
         .catch((error) => {
-          console.error(error.code, error.message);
-          let message = "Login failed. Please try again.";
+          console.error("Login error:", error.code, error.message);
 
+          let message = "Login failed. Please try again.";
           if (error.code === "auth/user-not-found") {
             message = "No user found with that email.";
           } else if (error.code === "auth/wrong-password") {
             message = "Incorrect password.";
           } else if (error.code === "auth/invalid-email") {
-            message = "Invalid email address.";
+            message = "Invalid email address format.";
           }
 
           status.textContent = message;
-          status.style.color = "red";
         });
     });
   </script>
