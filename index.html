@@ -2,71 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOOP – Bermuda's Official Onboard Payment</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <title>BOOP Home</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
 
+  <!-- Navbar -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html">
-          <img src="Boop-Logo.png" alt="BOOP Logo" />
-        </a>
+        <img src="Boop-Logo.png" alt="BOOP Logo" height="40" />
       </div>
       <div class="nav-right">
-        <a href="student.html">Student</a>
-        <a href="parent.html">Parent</a>
-        <a href="senior.html">Senior</a>
-        <a href="vendor.html">Vendor</a>
-        <a href="proof.html">Proof</a>
-        <a href="government.html">Gov Panel</a>
+        <a href="government.html">Admin Portal</a>
+        <a href="parent.html">Parent Portal</a>
+        <a href="student.html">Student Portal</a>
+        <a href="seniors.html">Senior Portal</a>
+        <a href="vendor.html">Vendor Portal</a>
+        <a href="login.html">Login</a>
       </div>
     </div>
   </nav>
 
-  <div class="container">
-    <h1>
-  Welcome to
-  <img src="Boop-Logo-Black.png" alt="BOOP" class="inline-logo" style="height: 60px;" />
-</h1>
-    <p>Bermuda's Official Onboard Payment system for public transport and approved purchases. Secure, smart, and simple for everyone.</p>
-
+  <!-- Main Content -->
+  <div class="container" style="margin-top: 30px;">
+    <h1>Welcome to BOOP</h1>
+    <p>Secure Digital Access for All</p>
     <div class="button-grid">
-      <a href="student.html">Student Wallet</a>
+      <a href="government.html">Admin Portal</a>
       <a href="parent.html">Parent Portal</a>
-      <a href="senior.html">Senior Access</a>
+      <a href="student.html">Student Portal</a>
+      <a href="seniors.html">Senior Portal</a>
       <a href="vendor.html">Vendor Portal</a>
-      <a href="proof.html">Transaction Proof</a>
-      <a href="government.html">Government Panel</a>
     </div>
   </div>
 
-  <script src="script.js"></script>
 </body>
 </html>
-
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
-
-<!-- Your Firebase Config -->
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-    authDomain: "boop-becff.firebaseapp.com",
-    projectId: "boop-becff",
-    storageBucket: "boop-becff.appspot.com", // ← FIXED this line
-    messagingSenderId: "570567453336",
-    appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-    measurementId: "G-79DWYFPZNR"
-  };
-
-  // Initialize Firebase
-  const app = firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore(app);
-</script>
