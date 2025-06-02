@@ -2,61 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Transaction Proof – BOOP</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Proof of Payment</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
-  <!-- Navigation Bar -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html">
-          <img src="Boop-Logo.png" alt="BOOP Logo" />
-        </a>
+        <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
-        <a href="student.html">Student</a>
-        <a href="parent.html">Parent</a>
-        <a href="senior.html">Senior</a>
-        <a href="vendor.html">Vendor</a>
-        <a href="proof.html">Proof</a>
-        <a href="government.html">Gov Panel</a>
+        <!-- Optional: You can add navigation or leave it clean -->
       </div>
     </div>
   </nav>
 
-  <!-- Hero Section -->
   <div class="container">
-    <h1>Verify a Transaction</h1>
-    <p>Enter a transaction hash or wallet address to confirm payment details using our secure blockchain verification system.</p>
+    <h1>Proof of Payment</h1>
+    <p>Show this screen to confirm that your transaction has been completed.</p>
 
-    <!-- Transaction Search -->
-    <input
-      type="text"
-      id="searchInput"
-      placeholder="Paste transaction hash or wallet address"
-      style="width: 80%; padding: 12px; font-size: 1em; border-radius: 8px; border: 1px solid #ccc; margin-top: 20px;"
-    />
-    <br />
-    <button
-      onclick="verifyTransaction()"
-      style="margin-top: 20px; background-color: #2f80ed; color: white; padding: 12px 20px; border: none; border-radius: 8px; font-size: 1em;"
-    >
-      Verify
-    </button>
-
-    <!-- Result Display -->
-    <div id="transactionResult" style="margin-top: 30px; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto;">
-      <!-- Results from JS will show up here -->
+    <div id="proofDetails" style="margin-top: 30px; text-align: left;">
+      <p><strong>Name:</strong> Jane Doe</p>
+      <p><strong>Amount Paid:</strong> $5.00</p>
+      <p><strong>Vendor:</strong> Bermuda Transit</p>
+      <p><strong>Payment Method:</strong> BOOP Card</p>
+      <p><strong>Date:</strong> June 2, 2025</p>
+      <p><strong>Transaction ID:</strong> TXN-ABCDE12345</p>
     </div>
 
-    <!-- Support Section -->
-    <div style="margin-top: 50px; font-size: 0.9em; color: #666;">
-      <p>If you need help verifying a transaction, please contact our support team at <a href="mailto:support@boop.bm">support@boop.bm</a>.</p>
-    </div>
+    <p style="margin-top: 40px; font-style: italic; color: #555;">Thank you for using BOOP.</p>
   </div>
-
-  <script src="script.js"></script>
 </body>
 </html>
