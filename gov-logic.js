@@ -1,5 +1,18 @@
+// gov-logic.js
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -15,74 +28,100 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
-// Load users into the table
+// DOM elements
+const usersTableBody = document.getElementById("usersTableBody");
+const manageUsersBtn = document.getElementById("manageUsersBtn");
+const addUserBtn = document.getElementById("addUserBtn");
+const addUserFormDiv = document.getElementById("addUserForm");
+const usersTableDiv = document.getElementById("usersTable");
+const userForm = document.getElementById("userForm");
+
+// Switch to user table view
+manageUsersBtn.addEventListener("click", () => {
+  usersTableDiv.style.display = "block";
+  addUserFormDiv.style.display = "none";
+});
+
+// Switch to add user form view
+addUserBtn.addEventListener("click", () => {
+  usersTableDiv.style.display = "none";
+  addUserFormDiv.style.display = "block";
+});
+
+// Load users and show them in the table
 async function loadUsers() {
-  const tableBody = document.querySelector("#userTable tbody");
-  tableBody.innerHTML = ""; // Clear existing rows
-
-  const usersSnapshot = await getDocs(collection(db, "users"));
-  usersSnapshot.forEach((docSnap) => {
-    const data = docSnap.data();
+  usersTableBody.innerHTML = "";
+  const querySnapshot = await getDocs(collection(db, "users"));
+  querySnapshot.forEach((docSnap) => {
+    const docData = docSnap.data();
     const row = document.createElement("tr");
 
     row.innerHTML = `
-      <td>${data.firstName || ""}</td>
-      <td>${data.lastName || ""}</td>
-      <td>${data.email || ""}</td>
-      <td>${data.role || ""}</td>
-      <td>${data.walletAddress || ""}</td>
-      <td>
-        <button class="editBtn" data-id="${docSnap.id}">Edit</button>
-        <button class="deleteBtn" data-id="${docSnap.id}">Delete</button>
-      </td>
+      <td>${docData.firstName || ""}</td>
+      <td>${docData.lastName || ""}</td>
+      <td>${docData.email || ""}</td>
+      <td>${docData.role || ""}</td>
+      <td>${docData.walletAddress || ""}</td>
+      <td>${docData.addedBy || "N/A"}</td>
+      <td><button class="actions-button" onclick="deleteUser('${docSnap.id}')">Delete</button></td>
     `;
-    tableBody.appendChild(row);
+
+    usersTableBody.appendChild(row);
   });
-
-  // Set up button actions
-  document.querySelectorAll(".editBtn").forEach((btn) =>
-    btn.addEventListener("click", handleEdit)
-  );
-  document.querySelectorAll(".deleteBtn").forEach((btn) =>
-    btn.addEventListener("click", handleDelete)
-  );
 }
 
-// Delete user with confirmation
-async function handleDelete(e) {
-  const id = e.target.getAttribute("data-id");
-  if (confirm("Are you sure you want to delete this user?")) {
-    await deleteDoc(doc(db, "users", id));
-    loadUsers();
-  }
-}
-
-// Add user from form
-document.getElementById("addUserForm").addEventListener("submit", async (e) => {
+// Add user to Firestore
+userForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const newUser = {
-    firstName: document.getElementById("firstName").value.trim(),
-    lastName: document.getElementById("lastName").value.trim(),
-    email: document.getElementById("email").value.trim(),
-    role: document.getElementById("role").value,
-    walletAddress: document.getElementById("walletAddress").value.trim(),
-  };
+  const firstName = document.getElementById("firstName").value.trim();
+  const lastName = document.getElementById("lastName").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const role = document.getElementById("role").value;
+  const walletAddress = document.getElementById("walletAddress").value.trim();
+
+  const usersCollection = collection(db, "users");
+  const currentUser = auth.currentUser;
 
   try {
-    await addDoc(collection(db, "users"), newUser);
-    document.getElementById("addUserForm").reset();
+    await addDoc(usersCollection, {
+      firstName,
+      lastName,
+      email,
+      role,
+      walletAddress,
+      addedBy: currentUser ? currentUser.email : "Unknown"
+    });
+
+    userForm.reset();
+    usersTableDiv.style.display = "block";
+    addUserFormDiv.style.display = "none";
     loadUsers();
   } catch (error) {
-    alert("Error adding user: " + error.message);
+    console.error("Error adding user:", error);
   }
 });
 
-// Stub for future edit feature
-function handleEdit(e) {
-  alert("Edit feature coming soon!");
-}
+// Delete user function
+window.deleteUser = async (userId) => {
+  const confirmDelete = confirm("Are you sure you want to delete this user?");
+  if (!confirmDelete) return;
 
-// Load on page start
-loadUsers();
+  try {
+    await deleteDoc(doc(db, "users", userId));
+    loadUsers();
+  } catch (error) {
+    console.error("Error deleting user:", error);
+  }
+};
+
+// Run loadUsers only if user is authenticated
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadUsers();
+  } else {
+    window.location.href = "index.html"; // Redirect to home if not logged in
+  }
+});
