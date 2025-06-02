@@ -3,34 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOOP – Login</title>
+  <title>BOOP Admin Login</title>
   <link rel="stylesheet" href="styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-      measurementId: "G-79DWYFPZNR"
-    };
-    firebase.initializeApp(firebaseConfig);
-  </script>
 </head>
 <body>
-
   <nav>
     <div class="nav-container">
       <div class="nav-left">
         <a href="index.html">
           <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
         </a>
+      </div>
+      <div class="nav-right">
+        <a href="student.html">Student</a>
+        <a href="parent.html">Parent</a>
+        <a href="senior.html">Senior</a>
+        <a href="vendor.html">Vendor</a>
+        <a href="proof.html">Proof</a>
       </div>
     </div>
   </nav>
@@ -45,57 +35,74 @@
     </form>
   </div>
 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+
+  <!-- Firebase Config and Init -->
   <script>
-  const auth = firebase.auth();
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.firebasestorage.app",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
+      measurementId: "G-79DWYFPZNR"
+    };
 
-  document.getElementById("loginForm").addEventListener("submit", function (e) {
-    e.preventDefault();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+  </script>
 
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const status = document.getElementById("loginStatus");
+  <!-- Login Script -->
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
 
-    // Reset status
-    status.textContent = "";
-    status.style.color = "red";
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const status = document.getElementById("loginStatus");
 
-    if (!email || !password) {
-      status.textContent = "Please fill in all fields.";
-      return;
-    }
+      status.textContent = "";
+      status.style.color = "red";
 
-    auth.signInWithEmailAndPassword(email, password)
-      .then((userCredential) => {
-        // ✅ Login successful
-        status.textContent = "Login successful!";
-        status.style.color = "green";
-        // Optional: Wait 1 second then redirect
-        setTimeout(() => {
-          window.location.href = "index.html";
-        }, 1000);
-      })
-      .catch((error) => {
-        // ❌ Login failed — show error message
-        console.error("Login error:", error.code, error.message);
+      if (!email || !password) {
+        status.textContent = "Please fill in all fields.";
+        return;
+      }
 
-        switch (error.code) {
-          case "auth/invalid-email":
-            status.textContent = "Please enter a valid email.";
-            break;
-          case "auth/user-not-found":
-            status.textContent = "No user found with that email.";
-            break;
-          case "auth/wrong-password":
-            status.textContent = "Incorrect password.";
-            break;
-          default:
-            status.textContent = "Login failed. Please try again.";
-        }
+      auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          status.textContent = "Login successful!";
+          status.style.color = "green";
+          setTimeout(() => {
+            window.location.href = "index.html"; // change if needed
+          }, 1200);
+        })
+        .catch((error) => {
+          console.error("Firebase auth error:", error);
 
-        status.style.color = "red";
-      });
-  });
-</script>
+          switch (error.code) {
+            case "auth/invalid-email":
+              status.textContent = "Invalid email format.";
+              break;
+            case "auth/user-not-found":
+              status.textContent = "No account found for that email.";
+              break;
+            case "auth/wrong-password":
+              status.textContent = "Incorrect password.";
+              break;
+            case "auth/too-many-requests":
+              status.textContent = "Too many failed attempts. Please try again later.";
+              break;
+            default:
+              status.textContent = "Login failed. Please try again.";
+          }
 
+          status.style.color = "red";
+        });
+    });
+  </script>
 </body>
 </html>
