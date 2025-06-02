@@ -2,56 +2,128 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vendor Portal – BOOP</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="script.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
+
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html">
-          <img src="Boop-Logo.png" alt="BOOP Logo" />
-        </a>
+        <img src="Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
-        <a href="student.html">Student</a>
-        <a href="parent.html">Parent</a>
-        <a href="senior.html">Senior</a>
-        <a href="vendor.html" class="active">Vendor</a>
-        <a href="proof.html">Proof</a>
-        <a href="government.html">Gov Panel</a>
+        <button id="logoutBtn">Log Out</button>
       </div>
     </div>
   </nav>
 
-  <div class="container">
-    <h1>Welcome, Vendor!</h1>
-    <p>Accept payments, track transactions, and request redemptions with ease using BOOP and BMDX.</p>
+  <div class="container" style="margin-top: 30px;">
+    <h1>Vendor Portal</h1>
 
-    <div class="button-grid">
-      <button onclick="connectWallet()">Connect Wallet</button>
-      <button onclick="getBalance()">Check BMDX Balance</button>
-    </div>
+    <form id="vendorForm">
+      <input type="text" id="boopID" placeholder="Enter BOOP ID" required />
+      <input type="number" id="amount" placeholder="Amount to charge" required />
+      <input type="text" id="description" placeholder="Description" required />
+      <button type="submit">Submit Transaction</button>
+    </form>
 
-    <div id="walletInfo" style="margin-top: 20px;"></div>
-
-    <div style="margin-top: 40px;">
-      <h2>Transaction Log</h2>
-      <div id="transactionLog"></div>
-    </div>
-
-    <div style="margin-top: 40px;">
-      <h2>Redeem Tokens</h2>
-      <p>This is a demonstration. In the full version, you can request a transfer to your business account.</p>
-      <button disabled>Redeem (Coming Soon)</button>
-    </div>
-
-    <div style="margin-top: 40px;">
-      <h2>Need Help?</h2>
-      <p>Contact <a href="mailto:support@boop.bm">support@boop.bm</a> for assistance.</p>
-    </div>
+    <h2>Recent Transactions</h2>
+    <ul id="transactionList"></ul>
   </div>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
+      measurementId: "G-79DWYFPZNR"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    const vendorForm = document.getElementById("vendorForm");
+    const transactionList = document.getElementById("transactionList");
+
+    let currentUser;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (!userDoc.exists() || userDoc.data().role !== "vendor") {
+        alert("Unauthorized access. Redirecting.");
+        window.location.href = "index.html";
+        return;
+      }
+
+      currentUser = user;
+      loadVendorTransactions();
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).then(() => window.location.href = "index.html");
+    });
+
+    vendorForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const boopID = document.getElementById("boopID").value.trim();
+      const amount = parseFloat(document.getElementById("amount").value);
+      const description = document.getElementById("description").value.trim();
+
+      if (!boopID || isNaN(amount) || !description) {
+        alert("Please fill in all fields correctly.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "transactions"), {
+          boopID,
+          amount,
+          description,
+          vendorID: currentUser.uid,
+          timestamp: serverTimestamp()
+        });
+
+        document.getElementById("boopID").value = "";
+        document.getElementById("amount").value = "";
+        document.getElementById("description").value = "";
+
+        loadVendorTransactions();
+      } catch (err) {
+        console.error("Transaction failed:", err);
+        alert("Error saving transaction.");
+      }
+    });
+
+    async function loadVendorTransactions() {
+      transactionList.innerHTML = "";
+      const q = query(collection(db, "transactions"), where("vendorID", "==", currentUser.uid));
+      const querySnapshot = await getDocs(q);
+
+      querySnapshot.forEach((doc) => {
+        const t = doc.data();
+        const li = document.createElement("li");
+        li.textContent = `${t.boopID} - $${t.amount} – ${t.description}`;
+        transactionList.appendChild(li);
+      });
+    }
+  </script>
+
 </body>
 </html>
