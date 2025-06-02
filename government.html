@@ -2,24 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Portal - Government</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel – BOOP</title>
   <link href="styles.css" rel="stylesheet" />
-  <style>
-    .section {
-      display: none;
-      margin-top: 20px;
-      text-align: left;
-    }
-
-    .section.active {
-      display: block;
-    }
-
-    .button-grid a {
-      cursor: pointer;
-    }
-  </style>
 </head>
 <body>
   <!-- Navbar -->
@@ -29,78 +14,58 @@
         <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
-        <a href="#" id="logoutBtn">Log Out</a>
+        <a href="#" onclick="logout()">Log Out</a>
       </div>
     </div>
   </nav>
 
-  <div class="container">
-    <h1>Welcome, Admin</h1>
-    <p>Select an action below:</p>
+  <!-- Container -->
+  <div class="container" style="margin-top: 30px;">
+    <h1>Admin Panel</h1>
 
-    <div class="button-grid">
-      <a onclick="showSection('users')">Manage Users</a>
-      <a onclick="showSection('vendors')">Manage Vendors</a>
-      <a onclick="showSection('reports')">View Reports</a>
+    <!-- Tabs -->
+    <div class="button-grid" style="margin-bottom: 20px;">
+      <button onclick="showTab('users')">Manage Users</button>
+      <button onclick="showTab('addUser')">Add User</button>
+      <!-- Future: Add more tabs here -->
     </div>
 
-    <!-- Manage Users Section -->
-    <div id="users" class="section active">
-      <h2>Manage Users</h2>
-      <p>User management tools will appear here.</p>
-      <!-- You can insert a table or list dynamically with JavaScript -->
+    <!-- Users Table -->
+    <div id="usersTab" class="tab-content">
+      <h2>All Users</h2>
+      <table id="usersTable" border="1" cellspacing="0" cellpadding="10" style="width: 100%; margin-top: 20px;">
+        <thead>
+          <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Wallet Address</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody">
+          <!-- Users will be loaded here -->
+        </tbody>
+      </table>
     </div>
 
-    <!-- Manage Vendors Section -->
-    <div id="vendors" class="section">
-      <h2>Manage Vendors</h2>
-      <p>Vendor management tools will appear here.</p>
-    </div>
-
-    <!-- View Reports Section -->
-    <div id="reports" class="section">
-      <h2>View Reports</h2>
-      <p>Reports will be displayed here.</p>
+    <!-- Add User Form -->
+    <div id="addUserTab" class="tab-content" style="display: none;">
+      <h2>Add New User</h2>
+      <form id="addUserForm">
+        <input type="text" id="firstName" placeholder="First Name" required />
+        <input type="text" id="lastName" placeholder="Last Name" required />
+        <input type="email" id="email" placeholder="Email" required />
+        <input type="text" id="role" placeholder="Role (admin, student, vendor, etc)" required />
+        <input type="text" id="walletAddress" placeholder="Wallet Address" />
+        <button type="submit">Add User</button>
+        <p id="formStatus" style="margin-top: 10px; font-weight: bold;"></p>
+      </form>
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-      measurementId: "G-79DWYFPZNR"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    // Redirect if not logged in
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "government-login.html";
-      }
-    });
-
-    // Log out
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      });
-    });
-
-    // Show sections
-    window.showSection = function(sectionId) {
-      document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
-      document.getElementById(sectionId).classList.add("active");
-    };
-  </script>
+  <!-- Firebase SDK -->
+  <script type="module" src="gov-logic.js"></script>
 </body>
 </html>
