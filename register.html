@@ -1,0 +1,64 @@
+// register.js
+
+// Import Firebase modules (only works in modern environments or bundlers like Vite/Webpack)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// Your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+  authDomain: "boop-becff.firebaseapp.com",
+  projectId: "boop-becff",
+  storageBucket: "boop-becff.appspot.com",
+  messagingSenderId: "570567453336",
+  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
+  measurementId: "G-79DWYFPZNR"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Handle login form
+document.addEventListener("DOMContentLoaded", () => {
+  const loginForm = document.getElementById("loginForm");
+  const loginStatus = document.getElementById("loginStatus");
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginStatus.textContent = "";
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    if (!email || !password) {
+      loginStatus.textContent = "Please enter both email and password.";
+      return;
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      loginStatus.style.color = "green";
+      loginStatus.textContent = "Login successful! Redirecting...";
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 1500);
+    } catch (error) {
+      console.error("Login error:", error);
+      loginStatus.style.color = "red";
+      switch (error.code) {
+        case 'auth/user-not-found':
+          loginStatus.textContent = "No user found with this email.";
+          break;
+        case 'auth/wrong-password':
+          loginStatus.textContent = "Incorrect password.";
+          break;
+        case 'auth/invalid-email':
+          loginStatus.textContent = "Invalid email format.";
+          break;
+        default:
+          loginStatus.textContent = "Error: " + error.message;
+      }
+    }
+  });
+});
