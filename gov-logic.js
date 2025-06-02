@@ -141,4 +141,5 @@ function showManageUsers() {
 }
 
 
-
+<button onclick="showAddUserForm()">Add User</button>
+<button onclick="showManageUsers()">Manage Users</button>
