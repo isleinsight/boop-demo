@@ -2,41 +2,72 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>BOOP Admin Panel</title>
+  <title>Admin Portal - Government</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="styles.css" rel="stylesheet" />
+  <style>
+    .section {
+      display: none;
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .button-grid a {
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
+  <!-- Navbar -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
         <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
-        <a href="index.html">Back</a>
-        <a href="#" id="logout">Logout</a>
+        <a href="#" id="logoutBtn">Log Out</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
     <h1>Welcome, Admin</h1>
-    <p>This is the Government Digital Access Panel.</p>
+    <p>Select an action below:</p>
 
-    <!-- You can add more admin-only tools here -->
     <div class="button-grid">
-      <a href="manage-users.html">Manage Users</a>
-      <a href="manage-vendors.html">Manage Vendors</a>
-      <a href="view-reports.html">View Reports</a>
-      <!-- Add more as needed -->
+      <a onclick="showSection('users')">Manage Users</a>
+      <a onclick="showSection('vendors')">Manage Vendors</a>
+      <a onclick="showSection('reports')">View Reports</a>
+    </div>
+
+    <!-- Manage Users Section -->
+    <div id="users" class="section active">
+      <h2>Manage Users</h2>
+      <p>User management tools will appear here.</p>
+      <!-- You can insert a table or list dynamically with JavaScript -->
+    </div>
+
+    <!-- Manage Vendors Section -->
+    <div id="vendors" class="section">
+      <h2>Manage Vendors</h2>
+      <p>Vendor management tools will appear here.</p>
+    </div>
+
+    <!-- View Reports Section -->
+    <div id="reports" class="section">
+      <h2>View Reports</h2>
+      <p>Reports will be displayed here.</p>
     </div>
   </div>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
@@ -50,31 +81,26 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
-    // Check auth state and role
-    onAuthStateChanged(auth, async (user) => {
+    // Redirect if not logged in
+    onAuthStateChanged(auth, (user) => {
       if (!user) {
         window.location.href = "government-login.html";
-        return;
-      }
-
-      const docRef = doc(db, "users", user.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists() || docSnap.data().role !== "admin") {
-        alert("Unauthorized access.");
-        await signOut(auth);
-        window.location.href = "index.html";
       }
     });
 
-    // Logout
-    document.getElementById("logout").addEventListener("click", () => {
+    // Log out
+    document.getElementById("logoutBtn").addEventListener("click", () => {
       signOut(auth).then(() => {
         window.location.href = "index.html";
       });
     });
+
+    // Show sections
+    window.showSection = function(sectionId) {
+      document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
+      document.getElementById(sectionId).classList.add("active");
+    };
   </script>
 </body>
 </html>
