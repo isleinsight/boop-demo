@@ -2,31 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOOP – Login</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login – BOOP</title>
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
 </head>
 <body>
 
   <div class="container">
-    <h1>Login to BOOP</h1>
+    <h1>BOOP Admin Login</h1>
     <form id="loginForm">
       <input type="email" id="email" placeholder="Email" required />
       <input type="password" id="password" placeholder="Password" required />
-      <button type="submit">Login</button>
+      <button type="submit">Log In</button>
+      <div id="loginStatus"></div>
     </form>
-    <p id="loginStatus" style="color: red; margin-top: 15px;"></p>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
-
-  <!-- Firebase config and login logic -->
   <script>
-    // Initialize Firebase
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
       authDomain: "boop-becff.firebaseapp.com",
@@ -37,50 +33,47 @@
       measurementId: "G-79DWYFPZNR"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth(); // Move this AFTER firebase.initializeApp()
+    const auth = firebase.auth();
 
-    // Handle login form
-    const loginForm = document.getElementById("loginForm");
-    const loginStatus = document.getElementById("loginStatus");
-
-    loginForm.addEventListener("submit", function (e) {
+    // Handle form submission
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
+      const password = document.getElementById("password").value;
+      const status = document.getElementById("loginStatus");
+      status.textContent = "";
+      status.style.color = "red";
 
-      loginStatus.textContent = ""; // Clear old messages
-
-      if (!email || !password) {
-        loginStatus.textContent = "Please enter both email and password.";
-        return;
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        status.style.color = "green";
+        status.textContent = "Login successful! Redirecting...";
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 1500);
+      } catch (error) {
+        // Display user-friendly error messages
+        switch (error.code) {
+          case "auth/invalid-email":
+            status.textContent = "Please enter a valid email address.";
+            break;
+          case "auth/user-not-found":
+            status.textContent = "No user found with that email.";
+            break;
+          case "auth/wrong-password":
+            status.textContent = "Incorrect password.";
+            break;
+          case "auth/missing-password":
+            status.textContent = "Please enter your password.";
+            break;
+          default:
+            status.textContent = "Login failed. Please try again.";
+        }
       }
-
-      auth.signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-          loginStatus.style.color = "green";
-          loginStatus.textContent = "Login successful! Redirecting...";
-          setTimeout(() => {
-            window.location.href = "index.html";
-          }, 1500);
-        })
-        .catch((error) => {
-          console.error("Login error:", error.code);
-          switch (error.code) {
-            case "auth/invalid-email":
-              loginStatus.textContent = "Please enter a valid email address.";
-              break;
-            case "auth/user-not-found":
-              loginStatus.textContent = "No account found with that email.";
-              break;
-            case "auth/wrong-password":
-              loginStatus.textContent = "Incorrect password.";
-              break;
-            default:
-              loginStatus.textContent = "Login failed. Please try again.";
-          }
-        });
     });
   </script>
+
 </body>
 </html>
