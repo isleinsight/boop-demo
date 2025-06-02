@@ -125,3 +125,20 @@ onAuthStateChanged(auth, (user) => {
     window.location.href = "index.html"; // Redirect to home if not logged in
   }
 });
+
+
+// Show the Add User Form
+function showAddUserForm() {
+  document.getElementById("addUserFormContainer").style.display = "block";
+  document.getElementById("usersTable").style.display = "none";
+}
+
+// Show the Users Table
+function showManageUsers() {
+  document.getElementById("addUserFormContainer").style.display = "none";
+  document.getElementById("usersTable").style.display = "block";
+  fetchUsers(); // Load user data into the table
+}
+
+
+
