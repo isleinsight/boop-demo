@@ -1,68 +1,89 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Government Digital Access Panel – BOOP</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Admin Portal - BOOP Government</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
-
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html">
-          <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
-        </a>
+        <img src="Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
-        <a href="student.html">Student</a>
-        <a href="parent.html">Parent</a>
-        <a href="senior.html">Senior</a>
-        <a href="vendor.html">Vendor</a>
-        <a href="proof.html">Proof</a>
-        <a href="government.html" class="active">Gov Panel</a>
+        <a href="#" id="logout">Log Out</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h1>Government Digital Access Panel</h1>
-    <p>Welcome, authorized official. Use this dashboard to oversee wallet activity, distribute funds, and manage system-wide settings for the BOOP platform.</p>
+    <h1>Welcome to the Government Digital Access Panel</h1>
+    <p><strong>Admin:</strong> <span id="adminEmail">Loading...</span></p>
 
-    <div class="button-grid">
-      <a href="#" onclick="distributeFunds()">Distribute Funds</a>
-      <a href="#" onclick="viewAllTransactions()">View All Transactions</a>
-      <a href="#" onclick="addApprovedVendor()">Add Approved Vendor</a>
-      <a href="#" onclick="monitorActivity()">Monitor User Activity</a>
-      <a href="#" onclick="runAudit()">Run Audit</a>
-    </div>
+    <h2>All Users</h2>
+    <ul id="userList"></ul>
   </div>
 
-  <script src="script.js"></script>
-  <script>
-    // Placeholder JavaScript functions — these will be connected in future dev steps
-    function distributeFunds() {
-      alert("Distribute Funds – feature coming soon.");
-    }
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    function viewAllTransactions() {
-      alert("View All Transactions – feature coming soon.");
-    }
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
+      measurementId: "G-79DWYFPZNR"
+    };
 
-    function addApprovedVendor() {
-      alert("Add Approved Vendor – feature coming soon.");
-    }
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    function monitorActivity() {
-      alert("Monitor User Activity – feature coming soon.");
-    }
+    const logoutBtn = document.getElementById('logout');
+    const adminEmail = document.getElementById('adminEmail');
+    const userList = document.getElementById('userList');
 
-    function runAudit() {
-      alert("Run Audit – feature coming soon.");
-    }
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'government-login.html';
+        return;
+      }
+
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists() || userSnap.data().role !== 'admin') {
+        alert("Access denied. Admins only.");
+        await signOut(auth);
+        window.location.href = 'index.html';
+        return;
+      }
+
+      adminEmail.textContent = user.email;
+
+      const usersRef = collection(db, 'users');
+      const usersSnap = await getDocs(usersRef);
+
+      userList.innerHTML = '';
+      usersSnap.forEach((doc) => {
+        const u = doc.data();
+        const li = document.createElement('li');
+        li.textContent = `${u.firstName || ''} ${u.lastName || ''} - ${u.role || 'Unknown'} - $${(u.balance || 0).toFixed(2)} (${u.walletAddress || 'No wallet'})`;
+        userList.appendChild(li);
+      });
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
   </script>
-
 </body>
 </html>
