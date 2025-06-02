@@ -2,70 +2,86 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BOOP – Parent Portal</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Parent Portal - BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
-
-  <!-- Navigation -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+        <img src="Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
-        <a href="student.html">Student</a>
-        <a href="parent.html" class="active">Parent</a>
-        <a href="senior.html">Senior</a>
-        <a href="vendor.html">Vendor</a>
-        <a href="proof.html">Proof</a>
-        <a href="government.html">Gov Panel</a>
+        <a href="#" id="logout">Log Out</a>
       </div>
     </div>
   </nav>
 
-  <!-- Hero Section -->
   <div class="container">
-    <h1>Welcome, Parents!</h1>
-    <p>Manage your child’s BOOP wallet with ease. Fund their cards, track spending, and ensure they ride the bus safely — all from one place.</p>
+    <h1>Welcome to the Parent Portal</h1>
+    <p><strong>Parent:</strong> <span id="parentEmail">Loading...</span></p>
+
+    <h2>Your Info</h2>
+    <ul id="parentDetails">
+      <!-- Fetched parent data will appear here -->
+    </ul>
   </div>
 
-  <!-- Info Section -->
-  <div class="container">
-    <h2>How BOOP Works for Kids</h2>
-    <p>Your child can ride the bus for free using their BOOP card. If you’d like, you can add money to their account for snacks or essentials at approved stores.</p>
-  </div>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  <!-- Child Management Section -->
-  <div class="container">
-    <h2>Manage Children</h2>
-    <form id="addChildForm">
-      <label for="childAddress">Child Wallet Address:</label><br>
-      <input type="text" id="childAddress" name="childAddress" placeholder="0x..."><br><br>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
+      measurementId: "G-79DWYFPZNR"
+    };
 
-      <label for="amount">Amount to Add (BMDX):</label><br>
-      <input type="number" id="amount" name="amount"><br><br>
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-      <button type="submit">Add Funds</button>
-    </form>
-    <p id="fundStatus"></p>
-  </div>
+    const logoutBtn = document.getElementById('logout');
+    const parentEmail = document.getElementById('parentEmail');
+    const parentDetails = document.getElementById('parentDetails');
 
-  <!-- Transaction Log Section -->
-  <div class="container">
-    <h2>Child’s Transaction History</h2>
-    <div id="transactionLog">
-      <p>Transactions will appear here after testing is implemented.</p>
-    </div>
-  </div>
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'parent-login.html';
+        return;
+      }
 
-  <!-- Support Section -->
-  <div class="container">
-    <h2>Need Help?</h2>
-    <p>Contact us at <a href="mailto:support@boop.bm">support@boop.bm</a> or view our FAQ page (coming soon).</p>
-  </div>
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
 
-  <script src="script.js"></script>
+      if (!userSnap.exists() || userSnap.data().role !== 'parent') {
+        alert("Access denied. Parents only.");
+        await signOut(auth);
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const data = userSnap.data();
+      parentEmail.textContent = user.email;
+
+      parentDetails.innerHTML = `
+        <li>Name: ${data.firstName || ''} ${data.lastName || ''}</li>
+        <li>Balance: $${(data.balance || 0).toFixed(2)}</li>
+        <li>Wallet Address: ${data.walletAddress || 'None'}</li>
+      `;
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
+  </script>
 </body>
 </html>
