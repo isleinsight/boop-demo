@@ -2,47 +2,108 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student Wallet – BOOP</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Student Portal - BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
-
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html">
-          <img src="Boop-Logo.png" alt="BOOP Logo" style="height: 36px; vertical-align: middle;" />
-        </a>
+        <img src="Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
-        <a href="student.html" class="active">Student</a>
-        <a href="parent.html">Parent</a>
-        <a href="senior.html">Senior</a>
-        <a href="vendor.html">Vendor</a>
-        <a href="proof.html">Proof</a>
-        <a href="government.html">Gov Panel</a>
+        <a href="#" id="logout">Log Out</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h1>Student Wallet</h1>
-    <p>Students ride for free! You can still receive optional funds from your parent to use at approved stores.</p>
+    <h1>Welcome to the Student Portal</h1>
+    <p><strong>BOOP ID:</strong> <span id="boopID">Loading...</span></p>
+    <p><strong>Balance:</strong> $<span id="balance">Loading...</span></p>
 
-    <div class="button-grid">
-      <a href="#" onclick="checkBalance()">Check Balance</a>
-      <a href="#" onclick="viewStudentTransactions()">View Transactions</a>
-      <a href="#" onclick="connectWallet()">Connect Wallet</a>
-    </div>
+    <h2>Your Transactions</h2>
+    <ul id="transactionsList"></ul>
   </div>
 
-  <script src="script.js"></script>
-  <script>
-    function viewStudentTransactions() {
-      alert("Feature coming soon: You'll be able to view your transaction history.");
-    }
-  </script>
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Import Firebase modules
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
+      measurementId: "G-79DWYFPZNR"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const boopIDEl = document.getElementById('boopID');
+    const balanceEl = document.getElementById('balance');
+    const transactionsList = document.getElementById('transactionsList');
+    const logoutBtn = document.getElementById('logout');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'student-login.html';
+        return;
+      }
+
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        alert("No user data found.");
+        signOut(auth);
+        return;
+      }
+
+      const userData = userSnap.data();
+
+      if (userData.role !== 'student') {
+        alert("Access denied: not a student.");
+        signOut(auth);
+        return;
+      }
+
+      // Populate BOOP ID and balance
+      boopIDEl.textContent = userData.walletAddress || 'Not assigned';
+      balanceEl.textContent = (userData.balance || 0).toFixed(2);
+
+      // Load transactions
+      const q = query(collection(db, 'transactions'), where('sender', '==', userData.walletAddress));
+      const querySnapshot = await getDocs(q);
+
+      transactionsList.innerHTML = '';
+
+      if (querySnapshot.empty) {
+        transactionsList.innerHTML = "<li>No transactions found.</li>";
+      } else {
+        querySnapshot.forEach((doc) => {
+          const tx = doc.data();
+          const li = document.createElement('li');
+          li.textContent = `Sent $${tx.amount.toFixed(2)} to ${tx.recipient} - ${new Date(tx.timestamp?.toDate()).toLocaleString()}`;
+          transactionsList.appendChild(li);
+        });
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
+  </script>
 </body>
 </html>
