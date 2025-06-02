@@ -87,3 +87,39 @@ p {
 .button-grid a:hover {
   background-color: #1c60b3;
 }
+
+
+/* Input fields */
+form input {
+  display: block;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 12px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+/* Submit button */
+form button {
+  background-color: #2f80ed;
+  color: white;
+  padding: 12px;
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+form button:hover {
+  background-color: #1c60b3;
+}
+
+/* Error or status message */
+#loginStatus {
+  margin-top: 15px;
+  font-size: 0.95em;
+}
