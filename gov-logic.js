@@ -1,4 +1,8 @@
-console.log("gov-logic.js loaded");
+console.log("🔥 gov-logic.js has loaded!");
+
+document.addEventListener("DOMContentLoaded", () => {
+  alert("If you see this, JavaScript is running!");
+});
 
 // gov-logic.js
 
