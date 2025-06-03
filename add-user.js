@@ -82,10 +82,16 @@ document.getElementById("step2Form").addEventListener("submit", async (e) => {
       addedBy,
     });
 
+    // Success message
     const status = document.getElementById("step2Status");
     status.style.color = "green";
     status.textContent = "User successfully added!";
+
+    // Reset only Step 2 form
     document.getElementById("step2Form").reset();
+
+    // Optional: Scroll to status or give user feedback
+    status.scrollIntoView({ behavior: "smooth" });
   } catch (error) {
     console.error("Error in Step 2:", error);
     const status = document.getElementById("step2Status");
