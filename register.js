@@ -1,3 +1,5 @@
+console.log("gov-logic.js loaded");
+
 // Updated register.js for handling multiple login redirects based on user roles
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
