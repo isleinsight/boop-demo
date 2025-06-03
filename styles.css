@@ -169,9 +169,8 @@ tr:hover {
 select {
   display: block;
   width: 100%;
-  height: 30px;
   margin-bottom: 20px;
-  padding: 12px;
+  padding: 22px;
   font-size: 1em;
   border: 1px solid #ccc;
   border-radius: 6px;
