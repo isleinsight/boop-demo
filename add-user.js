@@ -55,7 +55,7 @@ step2Form.addEventListener("submit", async (e) => {
   const lastName = document.getElementById("lastName").value.trim();
   const role = document.getElementById("role").value;
   const walletAddress = document.getElementById("walletAddress").value.trim();
-  const addedBy = auth.currentUser ? auth.currentUser.uid : "unknown";
+  const addedBy = auth.currentUser ? auth.currentUser.email : "unknown";  // ← changed here
 
   if (!createdUserUID) {
     step2Status.textContent = "User ID not found. Please complete Step 1 first.";
@@ -75,7 +75,6 @@ step2Form.addEventListener("submit", async (e) => {
     step2Status.textContent = "User successfully added!";
     step2Status.style.color = "green";
 
-    // Clear form fields
     step2Form.reset();
     createdUserUID = null;
   } catch (error) {
