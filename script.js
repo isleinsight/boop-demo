@@ -1,21 +1,3 @@
-// Logout functionality
-document.addEventListener("DOMContentLoaded", () => {
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", (e) => {
-      e.preventDefault(); // Prevent default link behavior
-      firebase.auth().signOut()
-        .then(() => {
-          console.log("User signed out");
-          window.location.href = "index.html"; // Redirect to homepage
-        })
-        .catch((error) => {
-          console.error("Sign out error:", error);
-        });
-    });
-  }
-});
-
 //////////////////////////////
 Step 1 Connect to Wallet (MetaMask)
 /////////////////////////////
