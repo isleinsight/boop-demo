@@ -23,140 +23,123 @@ const firebaseConfig = {
   measurementId: "G-79DWYFPZNR"
 };
 
-// Init services
+// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Track logged-in admin
-let currentAdmin = null;
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("✅ add-user.js loaded");
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    currentAdmin = user;
-    console.log("Admin logged in:", user.email);
-  } else {
-    window.location.href = "login.html"; // Not logged in
-  }
-});
+  const step1Form = document.getElementById("step1Form");
+  const step2Form = document.getElementById("step2Form");
 
-// Elements
-const step1Form = document.getElementById("step1Form");
-const step2Form = document.getElementById("step2Form");
-const step1Status = document.getElementById("step1Status");
-const step2Status = document.getElementById("step2Status");
-const newEmailInput = document.getElementById("newEmail");
-const newPasswordInput = document.getElementById("newPassword");
-const firstNameInput = document.getElementById("firstName");
-const lastNameInput = document.getElementById("lastName");
-const roleInput = document.getElementById("role");
+  const newEmailInput = document.getElementById("newEmail");
+  const newPasswordInput = document.getElementById("newPassword");
 
-// Disable step 2 initially
-step2Form.querySelectorAll("input, select, button").forEach(el => el.disabled = true);
+  const firstNameInput = document.getElementById("firstName");
+  const lastNameInput = document.getElementById("lastName");
+  const roleSelect = document.getElementById("role");
 
-let createdUserUID = null;
+  const step1Status = document.getElementById("step1Status");
+  const step2Status = document.getElementById("step2Status");
 
-// Step 1: Create Auth user
-step1Form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  step1Status.textContent = "";
-  step1Status.style.color = "black";
+  let createdUserUID = null;
+  let adminEmail = null;
 
-  const email = newEmailInput.value.trim();
-  const password = newPasswordInput.value;
-
-  if (!email || !password) {
-    step1Status.textContent = "Email and password are required.";
-    step1Status.style.color = "red";
-    return;
-  }
-
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    createdUserUID = userCredential.user.uid;
-
-    // Disable step 1 form
-    step1Form.querySelectorAll("input, button").forEach(el => el.disabled = true);
-
-    // Enable step 2 form
-    step2Form.querySelectorAll("input, select, button").forEach(el => el.disabled = false);
-
-    step1Status.textContent = "User account created. Please complete step 2.";
-    step1Status.style.color = "green";
-  } catch (error) {
-    console.error(error);
-    step1Status.textContent = "Error: " + error.message;
-    step1Status.style.color = "red";
-  }
-});
-
-// Step 2: Add user profile to Firestore
-step2Form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  step2Status.textContent = "";
-  step2Status.style.color = "black";
-
-  const firstName = firstNameInput.value.trim();
-  const lastName = lastNameInput.value.trim();
-  const role = roleInput.value;
-
-  if (!firstName || !lastName || !role) {
-    step2Status.textContent = "All fields are required.";
-    step2Status.style.color = "red";
-    return;
-  }
-
-  if (!createdUserUID) {
-    step2Status.textContent = "User was not created in step 1.";
-    step2Status.style.color = "red";
-    return;
-  }
-
-  try {
-    await setDoc(doc(db, "users", createdUserUID), {
-      firstName,
-      lastName,
-      role,
-      addedBy: currentAdmin?.email || "Unknown",
-      createdAt: serverTimestamp()
-    });
-
-    step2Status.textContent = "User profile saved successfully!";
-    step2Status.style.color = "green";
-
-    // Show "Add another" button
-    document.getElementById("addAnotherBtn").style.display = "inline-block";
-  } catch (error) {
-    console.error(error);
-    step2Status.textContent = "Error: " + error.message;
-    step2Status.style.color = "red";
-  }
-});
-
-// Add Another button resets the forms
-document.getElementById("addAnotherBtn").addEventListener("click", () => {
-  // Reset values
-  createdUserUID = null;
-  newEmailInput.value = "";
-  newPasswordInput.value = "";
-  firstNameInput.value = "";
-  lastNameInput.value = "";
-  roleInput.value = "";
-
-  step1Status.textContent = "";
-  step2Status.textContent = "";
-
-  // Enable step 1, disable step 2
-  step1Form.querySelectorAll("input, button").forEach(el => el.disabled = false);
-  step2Form.querySelectorAll("input, select, button").forEach(el => el.disabled = true);
-
-  // Hide add another button again
-  document.getElementById("addAnotherBtn").style.display = "none";
-});
-
-// Logout button
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
+  // Get the logged-in admin’s email for “addedBy”
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      adminEmail = user.email;
+      console.log("Admin logged in:", adminEmail);
+    } else {
+      console.log("Not logged in. Redirecting...");
+      window.location.href = "index.html";
+    }
   });
+
+  // Step 1: Create Auth User
+  step1Form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    step1Status.textContent = "Creating user...";
+
+    const email = newEmailInput.value.trim();
+    const password = newPasswordInput.value.trim();
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      createdUserUID = userCredential.user.uid;
+
+      step1Status.style.color = "green";
+      step1Status.textContent = "✅ Step 1 complete. Now fill out step 2.";
+
+      // Disable step 1 inputs and enable step 2
+      newEmailInput.disabled = true;
+      newPasswordInput.disabled = true;
+      step2Form.querySelectorAll("input, select, button").forEach((el) => {
+        el.disabled = false;
+      });
+
+    } catch (error) {
+      console.error("Error creating user:", error);
+      step1Status.style.color = "red";
+      step1Status.textContent = "❌ " + error.message;
+    }
+  });
+
+  // Step 2: Save to Firestore
+  step2Form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    step2Status.textContent = "Saving user data...";
+
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const role = roleSelect.value;
+
+    if (!createdUserUID) {
+      step2Status.style.color = "red";
+      step2Status.textContent = "❌ You must complete step 1 first.";
+      return;
+    }
+
+    try {
+      await setDoc(doc(db, "users", createdUserUID), {
+        firstName,
+        lastName,
+        role,
+        addedBy: adminEmail,
+        createdAt: serverTimestamp()
+      });
+
+      step2Status.style.color = "green";
+      step2Status.textContent = "✅ User successfully saved.";
+
+      // Optional: Add reset button
+      const resetButton = document.createElement("button");
+      resetButton.textContent = "Add Another User";
+      resetButton.style.marginTop = "20px";
+      resetButton.addEventListener("click", () => {
+        window.location.reload();
+      });
+      step2Form.appendChild(resetButton);
+
+    } catch (error) {
+      console.error("Error saving user data:", error);
+      step2Status.style.color = "red";
+      step2Status.textContent = "❌ " + error.message;
+    }
+  });
+
+  // Logout button
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      }).catch((error) => {
+        console.error("Logout error:", error);
+        alert("Logout failed.");
+      });
+    });
+  }
 });
