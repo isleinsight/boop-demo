@@ -83,3 +83,28 @@ step2Form.addEventListener("submit", async (e) => {
     step2Status.style.color = "red";
   }
 });
+
+
+
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const auth = getAuth();
+
+const logoutButton = document.getElementById("logoutBtn");
+
+if (logoutButton) {
+  logoutButton.addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      console.log("User signed out.");
+      window.location.href = "index.html"; // Redirect to homepage after logout
+    } catch (error) {
+      console.error("Logout error:", error);
+      alert("Logout failed. Please try again.");
+    }
+  });
+}
+
+
+
+
