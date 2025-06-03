@@ -1,8 +1,9 @@
+// Firebase imports (required if using type="module")
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Firebase config
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
@@ -18,75 +19,81 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Form elements
-const authForm = document.getElementById("authForm");
-const detailsForm = document.getElementById("detailsForm");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const statusMsg = document.getElementById("statusMsg");
+// Global to store user UID between steps
+let newUserUID = null;
 
-let createdUser = null;
-
-authForm.addEventListener("submit", async (e) => {
+// Step 1 – Create Auth User
+document.getElementById("step1Form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
 
-  if (!email || !password) {
-    statusMsg.textContent = "Email and password are required.";
-    return;
-  }
+  const email = document.getElementById("step1Email").value.trim();
+  const password = document.getElementById("step1Password").value;
 
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    createdUser = userCredential.user;
-    statusMsg.style.color = "green";
-    statusMsg.textContent = "User created. Enter the remaining details.";
-    
-    // Disable first form and enable second
-    emailInput.disabled = true;
-    passwordInput.disabled = true;
-    authForm.querySelector("button").disabled = true;
-    detailsForm.querySelectorAll("input, select, button").forEach(el => el.disabled = false);
-    
-    // Autofill email in step 2 for reference
-    document.getElementById("userEmail").value = email;
+    newUserUID = userCredential.user.uid;
 
+    // Lock Step 1 form and enable Step 2
+    document.getElementById("step1Email").disabled = true;
+    document.getElementById("step1Password").disabled = true;
+    document.getElementById("step1Submit").disabled = true;
+
+    document.getElementById("step2Form").classList.remove("disabled");
+    const status = document.getElementById("step1Status");
+    status.style.color = "green";
+    status.textContent = "Step 1 complete! Now fill in the user details below.";
   } catch (error) {
-    statusMsg.style.color = "red";
-    statusMsg.textContent = "Error: " + error.message;
+    console.error("Error in Step 1:", error);
+    const status = document.getElementById("step1Status");
+    status.style.color = "red";
+    if (error.code === "auth/email-already-in-use") {
+      status.textContent = "This email is already in use.";
+    } else if (error.code === "auth/invalid-email") {
+      status.textContent = "Invalid email address.";
+    } else if (error.code === "auth/weak-password") {
+      status.textContent = "Password is too weak (minimum 6 characters).";
+    } else if (error.code === "auth/network-request-failed") {
+      status.textContent = "Network error. Please try again.";
+    } else {
+      status.textContent = "Error: " + error.message;
+    }
   }
 });
 
-detailsForm.addEventListener("submit", async (e) => {
+// Step 2 – Save User Data to Firestore
+document.getElementById("step2Form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!createdUser) {
-    statusMsg.textContent = "Please create the user first.";
+
+  if (!newUserUID) {
+    document.getElementById("step2Status").textContent = "Please complete Step 1 first.";
     return;
   }
 
-  const firstName = document.getElementById("firstName").value.trim();
-  const lastName = document.getElementById("lastName").value.trim();
-  const role = document.getElementById("role").value;
-  const wallet = document.getElementById("walletAddress").value.trim();
+  const firstName = document.getElementById("step2FirstName").value.trim();
+  const lastName = document.getElementById("step2LastName").value.trim();
+  const role = document.getElementById("step2Role").value;
+  const addedBy = auth.currentUser?.uid || "unknown";
 
   try {
-    await setDoc(doc(db, "users", createdUser.uid), {
+    await setDoc(doc(db, "users", newUserUID), {
       firstName,
       lastName,
-      email: createdUser.email,
       role,
-      walletAddress: wallet,
-      addedBy: auth.currentUser.uid,
-      createdAt: serverTimestamp()
+      addedBy,
     });
 
-    statusMsg.style.color = "green";
-    statusMsg.textContent = "User details saved successfully.";
-    detailsForm.reset();
-
+    const status = document.getElementById("step2Status");
+    status.style.color = "green";
+    status.textContent = "User successfully added!";
+    document.getElementById("step2Form").reset();
   } catch (error) {
-    statusMsg.style.color = "red";
-    statusMsg.textContent = "Error saving user details: " + error.message;
+    console.error("Error in Step 2:", error);
+    const status = document.getElementById("step2Status");
+    status.style.color = "red";
+    if (error.code === "permission-denied") {
+      status.textContent = "Permission denied. Check your Firestore rules.";
+    } else {
+      status.textContent = "Error: " + error.message;
+    }
   }
 });
