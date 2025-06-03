@@ -1,7 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
@@ -12,64 +13,80 @@ const firebaseConfig = {
   measurementId: "G-79DWYFPZNR"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Get form
-const addUserForm = document.getElementById("addUserForm");
-const statusMsg = document.getElementById("addUserStatus");
+// Form elements
+const authForm = document.getElementById("authForm");
+const detailsForm = document.getElementById("detailsForm");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const statusMsg = document.getElementById("statusMsg");
 
-addUserForm.addEventListener("submit", async (e) => {
+let createdUser = null;
+
+authForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
 
-  const firstName = document.getElementById("firstName").value.trim();
-  const lastName = document.getElementById("lastName").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const role = document.getElementById("role").value;
+  if (!email || !password) {
+    statusMsg.textContent = "Email and password are required.";
+    return;
+  }
 
   try {
-    // Step 1: Create user in Firebase Authentication
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const uid = userCredential.user.uid;
-
-    // Step 2: Write user details to Firestore
-    await setDoc(doc(db, "users", uid), {
-      firstName,
-      lastName,
-      email,
-      role,
-      walletAddress: "", // Empty for now unless you want to generate it
-      cardUID: "",        // Optional fields for expansion
-      balance: 0,
-      addedBy: auth.currentUser?.email || "Unknown"
-    });
-
+    createdUser = userCredential.user;
     statusMsg.style.color = "green";
-    statusMsg.textContent = "User added successfully!";
-    addUserForm.reset();
+    statusMsg.textContent = "User created. Enter the remaining details.";
+    
+    // Disable first form and enable second
+    emailInput.disabled = true;
+    passwordInput.disabled = true;
+    authForm.querySelector("button").disabled = true;
+    detailsForm.querySelectorAll("input, select, button").forEach(el => el.disabled = false);
+    
+    // Autofill email in step 2 for reference
+    document.getElementById("userEmail").value = email;
+
   } catch (error) {
-    console.error("Error adding user:", error);
     statusMsg.style.color = "red";
-    statusMsg.textContent = error.message;
+    statusMsg.textContent = "Error: " + error.message;
   }
 });
 
-// Logout functionality
-document.addEventListener("DOMContentLoaded", () => {
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", (e) => {
-      e.preventDefault(); // Prevent default link behavior
-      firebase.auth().signOut()
-        .then(() => {
-          console.log("User signed out");
-          window.location.href = "index.html"; // Redirect to homepage
-        })
-        .catch((error) => {
-          console.error("Sign out error:", error);
-        });
+detailsForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!createdUser) {
+    statusMsg.textContent = "Please create the user first.";
+    return;
+  }
+
+  const firstName = document.getElementById("firstName").value.trim();
+  const lastName = document.getElementById("lastName").value.trim();
+  const role = document.getElementById("role").value;
+  const wallet = document.getElementById("walletAddress").value.trim();
+
+  try {
+    await setDoc(doc(db, "users", createdUser.uid), {
+      firstName,
+      lastName,
+      email: createdUser.email,
+      role,
+      walletAddress: wallet,
+      addedBy: auth.currentUser.uid,
+      createdAt: serverTimestamp()
     });
+
+    statusMsg.style.color = "green";
+    statusMsg.textContent = "User details saved successfully.";
+    detailsForm.reset();
+
+  } catch (error) {
+    statusMsg.style.color = "red";
+    statusMsg.textContent = "Error saving user details: " + error.message;
   }
 });
