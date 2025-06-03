@@ -7,21 +7,23 @@
   <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
-
-  <!-- Navbar -->
+  <!-- Navigation Bar -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+        <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
-        <a href="government.html">Back to Panel</a>
-        <a href="#" onclick="logout()">Logout</a>
+        <a href="government.html">Dashboard</a>
+        <a href="add-user.html">Add User</a>
+        <a href="view-users.html">View Users</a>
+        <a href="manage-vendors.html">Manage Vendors</a>
+        <a href="view-reports.html">View Reports</a>
+        <a href="#" id="logoutBtn">Logout</a>
       </div>
     </div>
   </nav>
 
-  <!-- Container -->
   <div class="container" style="margin-top: 30px;">
     <h1>Add New User</h1>
     <form id="addUserForm">
@@ -29,6 +31,8 @@
       <input type="text" id="lastName" placeholder="Last Name" required />
       <input type="email" id="email" placeholder="Email" required />
       <input type="password" id="password" placeholder="Password" required />
+
+      <label for="role">Role:</label>
       <select id="role" required>
         <option value="">Select Role</option>
         <option value="student">Student</option>
@@ -37,91 +41,13 @@
         <option value="vendor">Vendor</option>
         <option value="admin">Admin</option>
       </select>
+
       <button type="submit">Add User</button>
     </form>
-    <p id="statusMessage" style="margin-top: 15px;"></p>
+    <p id="statusMessage" style="margin-top: 10px; color: red;"></p>
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-      measurementId: "G-79DWYFPZNR"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    const addUserForm = document.getElementById('addUserForm');
-    const statusMessage = document.getElementById('statusMessage');
-
-    let currentAdminEmail = null;
-
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
-        currentAdminEmail = user.email;
-      }
-    });
-
-    addUserForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const firstName = document.getElementById('firstName').value.trim();
-      const lastName = document.getElementById('lastName').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const role = document.getElementById('role').value;
-
-      statusMessage.textContent = "Creating user...";
-      statusMessage.style.color = "black";
-
-      try {
-        // Create auth user
-        const newUser = await createUserWithEmailAndPassword(auth, email, password);
-
-        // Add user to Firestore
-        await addDoc(collection(db, "users"), {
-          firstName,
-          lastName,
-          email,
-          role,
-          addedBy: currentAdminEmail,
-          createdAt: new Date()
-        });
-
-        statusMessage.textContent = "User successfully added.";
-        statusMessage.style.color = "green";
-        addUserForm.reset();
-      } catch (error) {
-        console.error("Error adding user:", error);
-        statusMessage.textContent = `Error: ${error.message}`;
-        statusMessage.style.color = "red";
-      }
-    });
-
-    // Log out
-    function logout() {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      });
-    }
-
-    window.logout = logout;
-  </script>
-
+  <!-- Firebase and Script -->
   <script type="module" src="add-user.js"></script>
-
 </body>
 </html>
