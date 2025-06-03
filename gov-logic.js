@@ -1,3 +1,5 @@
+console.log("gov-logic.js loaded");
+
 // gov-logic.js
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
