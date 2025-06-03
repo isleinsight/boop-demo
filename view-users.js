@@ -1,12 +1,23 @@
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+// view-users.js
 
+// Import Firebase SDK modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, query, orderBy, limit, getDocs, startAfter,
-  endBefore, doc, deleteDoc
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
@@ -17,92 +28,85 @@ const firebaseConfig = {
   measurementId: "G-79DWYFPZNR"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
-const usersRef = collection(db, "users");
+// Get reference to the table and pagination button
+const tableBody = document.querySelector("#userTableBody");
+const pagination = document.querySelector("#pagination");
+
 let lastVisible = null;
-let firstVisible = null;
-let currentPage = 1;
-const pageSize = 20;
-let currentDocs = [];
+let isLoading = false;
 
-const usersTableBody = document.getElementById("usersTableBody");
-const pageNumber = document.getElementById("pageNumber");
-
-async function fetchUsers(direction = "next") {
-  let q;
-
-  if (direction === "next" && lastVisible) {
-    q = query(usersRef, orderBy("firstName"), startAfter(lastVisible), limit(pageSize));
-  } else if (direction === "prev" && firstVisible) {
-    q = query(usersRef, orderBy("firstName"), endBefore(firstVisible), limit(pageSize));
+// Check if user is authenticated
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadUsers(); // Load users once logged in
   } else {
-    q = query(usersRef, orderBy("firstName"), limit(pageSize));
+    window.location.href = "index.html"; // Redirect if not logged in
+  }
+});
+
+// Load users from Firestore
+async function loadUsers(nextPage = false) {
+  if (isLoading) return;
+  isLoading = true;
+  tableBody.innerHTML = "";
+
+  let q;
+  if (nextPage && lastVisible) {
+    q = query(
+      collection(db, "users"),
+      orderBy("createdAt", "desc"),
+      startAfter(lastVisible),
+      limit(20)
+    );
+  } else {
+    q = query(
+      collection(db, "users"),
+      orderBy("createdAt", "desc"),
+      limit(20)
+    );
   }
 
   const snapshot = await getDocs(q);
-  currentDocs = snapshot.docs;
 
-  if (snapshot.empty) {
-    console.log("No users found.");
-    return;
+  if (!snapshot.empty) {
+    lastVisible = snapshot.docs[snapshot.docs.length - 1];
+    snapshot.forEach((doc) => {
+      const user = doc.data();
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${user.firstName || ""}</td>
+        <td>${user.lastName || ""}</td>
+        <td>${user.email || ""}</td>
+        <td>${user.role || ""}</td>
+        <td>${user.walletAddress || ""}</td>
+        <td>${user.addedBy || ""}</td>
+      `;
+      tableBody.appendChild(row);
+    });
+  } else {
+    const row = document.createElement("tr");
+    row.innerHTML = "<td colspan='6'>No users found.</td>";
+    tableBody.appendChild(row);
   }
 
-  firstVisible = snapshot.docs[0];
-  lastVisible = snapshot.docs[snapshot.docs.length - 1];
-
-  usersTableBody.innerHTML = "";
-  snapshot.forEach(docSnap => {
-    const user = docSnap.data();
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td>${user.firstName || ""}</td>
-      <td>${user.lastName || ""}</td>
-      <td>${user.email || ""}</td>
-      <td>${user.role || ""}</td>
-      <td>${user.addedBy || ""}</td>
-      <td><button onclick="deleteUser('${docSnap.id}')">Delete</button></td>
-    `;
-
-    usersTableBody.appendChild(row);
-  });
-
-  pageNumber.textContent = `Page ${currentPage}`;
+  isLoading = false;
 }
 
-window.deleteUser = async function (userId) {
-  if (confirm("Are you sure you want to delete this user?")) {
-    try {
-      await deleteDoc(doc(db, "users", userId));
-      alert("User deleted successfully.");
-      fetchUsers(); // Refresh user list
-    } catch (error) {
-      console.error("Error deleting user:", error);
-    }
-  }
-};
+// Optional: Add a button to load more users
+if (pagination) {
+  pagination.addEventListener("click", () => {
+    loadUsers(true);
+  });
+}
 
-document.getElementById("nextPageBtn").addEventListener("click", () => {
-  currentPage++;
-  fetchUsers("next");
-});
-
-document.getElementById("prevPageBtn").addEventListener("click", () => {
-  if (currentPage > 1) {
-    currentPage--;
-    fetchUsers("prev");
-  }
-});
-
-document.getElementById("searchInput").addEventListener("input", (e) => {
-  const searchTerm = e.target.value.toLowerCase();
-  const rows = usersTableBody.querySelectorAll("tr");
-  rows.forEach(row => {
-    const rowText = row.textContent.toLowerCase();
-    row.style.display = rowText.includes(searchTerm) ? "" : "none";
+// Logout handler
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
   });
 });
-
-fetchUsers();
