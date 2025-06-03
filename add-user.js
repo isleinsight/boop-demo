@@ -1,105 +1,86 @@
-// Firebase imports (required if using type="module")
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Firebase configuration
+// Your Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
   projectId: "boop-becff",
   storageBucket: "boop-becff.appspot.com",
   messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-  measurementId: "G-79DWYFPZNR"
+  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Global to store user UID between steps
-let newUserUID = null;
+const step1Form = document.getElementById("step1Form");
+const step2Form = document.getElementById("step2Form");
+const step1Status = document.getElementById("step1Status");
+const step2Status = document.getElementById("step2Status");
 
-// Step 1 – Create Auth User
-document.getElementById("step1Form").addEventListener("submit", async (e) => {
+let createdUserUID = null;
+
+step1Form.addEventListener("submit", async (e) => {
   e.preventDefault();
-
-  const email = document.getElementById("step1Email").value.trim();
-  const password = document.getElementById("step1Password").value;
+  step1Status.textContent = "";
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
 
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    newUserUID = userCredential.user.uid;
+    createdUserUID = userCredential.user.uid;
+    step1Status.textContent = "Step 1 successful! Please complete step 2.";
+    step1Status.style.color = "green";
 
-    // Lock Step 1 form and enable Step 2
-    document.getElementById("step1Email").disabled = true;
-    document.getElementById("step1Password").disabled = true;
-    document.getElementById("step1Submit").disabled = true;
-
-    document.getElementById("step2Form").classList.remove("disabled");
-    const status = document.getElementById("step1Status");
-    status.style.color = "green";
-    status.textContent = "Step 1 complete! Now fill in the user details below.";
+    // Disable first form and enable second
+    document.getElementById("email").disabled = true;
+    document.getElementById("password").disabled = true;
+    step1Form.querySelector("button").disabled = true;
+    step2Form.querySelectorAll("input, select, button").forEach(el => el.disabled = false);
   } catch (error) {
-    console.error("Error in Step 1:", error);
-    const status = document.getElementById("step1Status");
-    status.style.color = "red";
-    if (error.code === "auth/email-already-in-use") {
-      status.textContent = "This email is already in use.";
-    } else if (error.code === "auth/invalid-email") {
-      status.textContent = "Invalid email address.";
-    } else if (error.code === "auth/weak-password") {
-      status.textContent = "Password is too weak (minimum 6 characters).";
-    } else if (error.code === "auth/network-request-failed") {
-      status.textContent = "Network error. Please try again.";
-    } else {
-      status.textContent = "Error: " + error.message;
-    }
+    console.error("Error in step 1:", error);
+    step1Status.textContent = "Step 1 error: " + error.message;
+    step1Status.style.color = "red";
   }
 });
 
-// Step 2 – Save User Data to Firestore
-document.getElementById("step2Form").addEventListener("submit", async (e) => {
+step2Form.addEventListener("submit", async (e) => {
   e.preventDefault();
+  step2Status.textContent = "";
 
-  if (!newUserUID) {
-    document.getElementById("step2Status").textContent = "Please complete Step 1 first.";
+  const firstName = document.getElementById("firstName").value.trim();
+  const lastName = document.getElementById("lastName").value.trim();
+  const role = document.getElementById("role").value;
+  const walletAddress = document.getElementById("walletAddress").value.trim();
+  const addedBy = auth.currentUser ? auth.currentUser.uid : "unknown";
+
+  if (!createdUserUID) {
+    step2Status.textContent = "User ID not found. Please complete Step 1 first.";
+    step2Status.style.color = "red";
     return;
   }
 
-  const firstName = document.getElementById("step2FirstName").value.trim();
-  const lastName = document.getElementById("step2LastName").value.trim();
-  const role = document.getElementById("step2Role").value;
-  const addedBy = auth.currentUser?.uid || "unknown";
-
   try {
-    await setDoc(doc(db, "users", newUserUID), {
+    await setDoc(doc(db, "users", createdUserUID), {
       firstName,
       lastName,
       role,
-      addedBy,
+      walletAddress,
+      addedBy
     });
 
-    // Success message
-    const status = document.getElementById("step2Status");
-    status.style.color = "green";
-    status.textContent = "User successfully added!";
+    step2Status.textContent = "User successfully added!";
+    step2Status.style.color = "green";
 
-    // Reset only Step 2 form
-    document.getElementById("step2Form").reset();
-
-    // Optional: Scroll to status or give user feedback
-    status.scrollIntoView({ behavior: "smooth" });
+    // Clear form fields
+    step2Form.reset();
+    createdUserUID = null;
   } catch (error) {
-    console.error("Error in Step 2:", error);
-    const status = document.getElementById("step2Status");
-    status.style.color = "red";
-    if (error.code === "permission-denied") {
-      status.textContent = "Permission denied. Check your Firestore rules.";
-    } else {
-      status.textContent = "Error: " + error.message;
-    }
+    console.error("Error in step 2:", error);
+    step2Status.textContent = "Step 2 error: " + error.message;
+    step2Status.style.color = "red";
   }
 });
