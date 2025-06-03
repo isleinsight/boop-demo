@@ -164,3 +164,19 @@ tr:hover {
   background-color: #c53030;
 }
 
+
+
+select {
+  display: block;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 12px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+
+
+
