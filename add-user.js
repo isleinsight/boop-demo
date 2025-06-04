@@ -32,7 +32,7 @@ const secondaryApp = initializeApp(firebaseConfig, "Secondary");
 const secondaryAuth = getAuth(secondaryApp);
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ add-user.js loaded");
+  console.log("add-user.js loaded");
 
   const step1Form = document.getElementById("step1Form");
   const step2Form = document.getElementById("step2Form");
@@ -55,9 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
   onAuthStateChanged(auth, (user) => {
     if (user) {
       adminEmail = user.email;
-      console.log("✅ Admin logged in:", adminEmail);
+      console.log("Admin logged in:", adminEmail);
     } else {
-      console.warn("🚫 Not logged in. Redirecting to index...");
+      console.warn("Not logged in. Redirecting to index...");
       window.location.href = "index.html";
     }
   });
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
       createdUserEmail = email;
 
       step1Status.style.color = "green";
-      step1Status.textContent = "✅ Step 1 complete. Fill in step 2.";
+      step1Status.textContent = "Step 1 complete. Fill in step 2.";
 
       // Disable step 1, enable step 2
       newEmailInput.disabled = true;
@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!createdUserUID || !createdUserEmail) {
       step2Status.style.color = "red";
-      step2Status.textContent = "❌ Step 1 must be completed first.";
+      step2Status.textContent = "Step 1 must be completed first.";
       return;
     }
 
@@ -121,11 +121,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       step2Status.style.color = "green";
-      step2Status.textContent = "✅ User successfully saved.";
+      step2Status.textContent = "User successfully saved.";
 
       // Add reset button
       const resetButton = document.createElement("button");
-      resetButton.textContent = "➕ Add Another User";
+      resetButton.textContent = "Add Another User";
       resetButton.style.marginTop = "20px";
       resetButton.addEventListener("click", () => {
         window.location.reload();
