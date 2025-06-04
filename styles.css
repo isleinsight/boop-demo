@@ -242,6 +242,27 @@ th.sorted-desc .sort-label::after {
 }
 
 
+.action-btn {
+  background-color: #2f80ed;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.9em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dropdown-icon {
+  font-size: 0.75em;
+}
+
+.action-btn:hover .dropdown-icon {
+  transform: rotate(180deg);
+  transition: transform 0.2s ease-in-out;
+}
 
 
 
