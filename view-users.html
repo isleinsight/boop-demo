@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>View Users - BOOP Admin</title>
+  <title>View Users</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
 
-  <!-- Top Navigation Bar -->
+  <!-- Top Navigation -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -19,73 +19,31 @@
         <a href="view-users.html">View Users</a>
         <a href="manage-vendors.html">Manage Vendors</a>
         <a href="view-reports.html">View Reports</a>
-        <a href="#" id="logoutBtn">Logout</a>
+        <button id="logoutBtn">Logout</button>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h1>View Users</h1>
-
-    <input type="text" id="searchInput" placeholder="Search users by name or email" style="margin-bottom: 20px; width: 100%; padding: 10px;" />
-
-    <div id="usersTableContainer">
-      <table id="usersTable" style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Added By</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="usersTableBody">
-          <!-- User rows will be inserted here -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    <div id="paginationControls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
-      <button id="prevPageBtn">Previous</button>
-      <span id="pageNumber">Page 1</span>
-      <button id="nextPageBtn">Next</button>
-    </div>
+    <h1>All Users</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>First</th>
+          <th>Last</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Wallet</th>
+          <th>Added By</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody">
+        <!-- JavaScript will populate this -->
+      </tbody>
+    </table>
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, endBefore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-      measurementId: "G-79DWYFPZNR"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-        window.location.href = "index.html";
-      } catch (error) {
-        console.error("Logout error:", error);
-      }
-    });
-  </script>
-
-  <!-- Main JS file to handle user loading and pagination -->
+  <!-- Firebase/JS Logic -->
   <script type="module" src="view-users.js"></script>
 
 </body>
