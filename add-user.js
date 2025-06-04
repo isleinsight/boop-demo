@@ -57,12 +57,12 @@ document.addEventListener("DOMContentLoaded", () => {
       adminEmail = user.email;
       console.log("Admin logged in:", adminEmail);
     } else {
-      console.warn("Not logged in. Redirecting to index...");
+      console.warn("Not logged in. Redirecting...");
       window.location.href = "index.html";
     }
   });
 
-  // Step 1 - Create auth user (in secondary app)
+  // Step 1 - Create user with Auth
   step1Form.addEventListener("submit", async (e) => {
     e.preventDefault();
     step1Status.textContent = "Creating user...";
@@ -78,23 +78,24 @@ document.addEventListener("DOMContentLoaded", () => {
       step1Status.style.color = "green";
       step1Status.textContent = "Step 1 complete. Fill in step 2.";
 
-      // Disable step 1, enable step 2
+      // Disable step 1 fields, enable step 2
       newEmailInput.disabled = true;
       newPasswordInput.disabled = true;
       step2Form.querySelectorAll("input, select, button").forEach((el) => {
         el.disabled = false;
       });
 
+      // Sign out secondary auth
       await secondaryAuth.signOut();
 
     } catch (error) {
       console.error("Error creating user:", error);
       step1Status.style.color = "red";
-      step1Status.textContent = "Error: " + error.message;
+      step1Status.textContent = error.message;
     }
   });
 
-  // Step 2 - Write user details to Firestore
+  // Step 2 - Save user to Firestore
   step2Form.addEventListener("submit", async (e) => {
     e.preventDefault();
     step2Status.textContent = "Saving user data...";
@@ -105,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!createdUserUID || !createdUserEmail) {
       step2Status.style.color = "red";
-      step2Status.textContent = "Step 1 must be completed first.";
+      step2Status.textContent = "You must complete step 1 first.";
       return;
     }
 
@@ -122,6 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
       step2Status.style.color = "green";
       step2Status.textContent = "User successfully saved.";
 
+      // Add "Add Another User" button
       const resetButton = document.createElement("button");
       resetButton.textContent = "Add Another User";
       resetButton.style.marginTop = "20px";
@@ -131,13 +133,13 @@ document.addEventListener("DOMContentLoaded", () => {
       step2Form.appendChild(resetButton);
 
     } catch (error) {
-      console.error("Error writing to Firestore:", error);
+      console.error("Error saving to Firestore:", error);
       step2Status.style.color = "red";
-      step2Status.textContent = "Error: " + error.message;
+      step2Status.textContent = error.message;
     }
   });
 
-  // Logout button
+  // Logout
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
