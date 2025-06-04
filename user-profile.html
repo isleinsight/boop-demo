@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>User Profile - BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* You can move these to your styles.css later */
+    .profile-container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      margin-top: 40px;
+      margin-bottom: 10px;
+      font-size: 1.3em;
+      color: #333;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
+
+    .user-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .user-details-grid div {
+      background: #f9fafc;
+      padding: 12px 16px;
+      border-radius: 6px;
+    }
+
+    .label {
+      font-weight: bold;
+      display: block;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    .value {
+      color: #222;
+    }
+
+    .wallet-balance {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #1a73e8;
+    }
+
+    .transaction-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.95em;
+    }
+
+    .transaction-table th,
+    .transaction-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .transaction-table th {
+      background-color: #f1f5f9;
+    }
+
+    .admin-controls {
+      margin-top: 30px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .admin-controls button {
+      padding: 10px 20px;
+      font-size: 0.95em;
+      background-color: #2f80ed;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .admin-controls button:hover {
+      background-color: #1c60b3;
+    }
+
+    .back-button {
+      margin-bottom: 20px;
+      display: inline-block;
+      text-decoration: none;
+      color: #2f80ed;
+      font-weight: 500;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+
+    @media screen and (max-width: 600px) {
+      .user-details-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-controls {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+      </div>
+      <div class="nav-right">
+        <a href="government.html">Dashboard</a>
+        <a href="view-users.html">View Users</a>
+        <a href="#" id="logoutBtn">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="profile-container">
+    <a href="view-users.html" class="back-button">← Back to Users</a>
+
+    <h2>User Profile</h2>
+
+    <div class="user-details-grid" id="userInfo">
+      <!-- Dynamic user info goes here -->
+    </div>
+
+    <div class="section-title">Wallet</div>
+    <div class="user-details-grid">
+      <div>
+        <span class="label">Wallet ID</span>
+        <span class="value" id="walletId">Loading...</span>
+      </div>
+      <div>
+        <span class="label">Wallet Balance</span>
+        <span class="wallet-balance" id="walletBalance">$0.00</span>
+      </div>
+    </div>
+
+    <div class="admin-controls" id="adminControls" style="display: none;">
+      <button id="addFundsBtn">Add Funds</button>
+      <button id="freezeWalletBtn">Freeze Wallet</button>
+    </div>
+
+    <div class="section-title">Transaction History</div>
+    <table class="transaction-table" id="transactionTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Transactions go here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script type="module" src="user-profile.js"></script>
+</body>
+</html>
