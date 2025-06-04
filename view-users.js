@@ -7,11 +7,9 @@ import {
 import {
   getFirestore,
   collection,
-  query,
-  orderBy,
   getDocs,
-  limit,
-  startAfter
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -25,7 +23,7 @@ const firebaseConfig = {
   measurementId: "G-79DWYFPZNR"
 };
 
-// Init
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -35,102 +33,97 @@ let filteredUsers = [];
 let currentPage = 1;
 const usersPerPage = 10;
 
-const tableBody = document.getElementById("userTableBody");
-const userCountSpan = document.getElementById("userCount");
-const paginationInfo = document.getElementById("paginationInfo");
-const prevBtn = document.getElementById("prevBtn");
-const nextBtn = document.getElementById("nextBtn");
-const searchInput = document.getElementById("searchInput");
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("✅ view-users.js loaded");
 
-// Load users after auth state is confirmed
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-  } else {
-    try {
-      const querySnapshot = await getDocs(query(collection(db, "users"), orderBy("createdAt", "desc")));
-      allUsers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      filteredUsers = allUsers;
-      updateUserCount();
-      renderTable();
-    } catch (error) {
-      console.error("Error loading users:", error);
-    }
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth)
+        .then(() => (window.location.href = "index.html"))
+        .catch((error) => {
+          console.error("Logout error:", error);
+          alert("Logout failed.");
+        });
+    });
   }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      console.log("Logged in as:", user.email);
+      await loadUsers();
+      displayUsers();
+    } else {
+      console.warn("Not logged in. Redirecting...");
+      window.location.href = "index.html";
+    }
+  });
+
+  document.getElementById("prevBtn").addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      displayUsers();
+    }
+  });
+
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    const maxPage = Math.ceil(filteredUsers.length / usersPerPage);
+    if (currentPage < maxPage) {
+      currentPage++;
+      displayUsers();
+    }
+  });
+
+  document.getElementById("searchBtn").addEventListener("click", () => {
+    const searchTerm = document.getElementById("searchInput").value.trim().toLowerCase();
+    filteredUsers = allUsers.filter(user =>
+      user.firstName?.toLowerCase().includes(searchTerm) ||
+      user.lastName?.toLowerCase().includes(searchTerm) ||
+      user.email?.toLowerCase().includes(searchTerm)
+    );
+    currentPage = 1;
+    displayUsers();
+  });
 });
 
-function updateUserCount() {
-  userCountSpan.textContent = `Total Users: ${filteredUsers.length}`;
+async function loadUsers() {
+  try {
+    const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    filteredUsers = allUsers;
+  } catch (error) {
+    console.error("Error loading users:", error);
+  }
 }
 
-function renderTable() {
+function displayUsers() {
+  const tableBody = document.getElementById("userTableBody");
+  const userCount = document.getElementById("userCount");
+  const paginationInfo = document.getElementById("paginationInfo");
+
+  if (!tableBody) return;
+
   tableBody.innerHTML = "";
 
-  const startIndex = (currentPage - 1) * usersPerPage;
-  const endIndex = startIndex + usersPerPage;
-  const usersToShow = filteredUsers.slice(startIndex, endIndex);
+  const start = (currentPage - 1) * usersPerPage;
+  const end = start + usersPerPage;
+  const pageUsers = filteredUsers.slice(start, end);
 
-  usersToShow.forEach(user => {
+  pageUsers.forEach(user => {
     const row = document.createElement("tr");
-
     row.innerHTML = `
       <td>${user.firstName || ""}</td>
       <td>${user.lastName || ""}</td>
       <td>${user.email || ""}</td>
       <td>${user.role || ""}</td>
-      <td>${user.addedBy || ""}</td>
-      <td>${user.createdAt?.toDate ? user.createdAt.toDate().toLocaleString() : ""}</td>
+      <td><a href="view-user.html?id=${user.id}" class="view-button">View / Modify</a></td>
     `;
-
     tableBody.appendChild(row);
   });
 
-  paginationInfo.textContent = `Page ${currentPage}`;
-  prevBtn.disabled = currentPage === 1;
-  nextBtn.disabled = endIndex >= filteredUsers.length;
-}
-
-searchInput.addEventListener("input", () => {
-  const query = searchInput.value.toLowerCase();
-
-  filteredUsers = allUsers.filter(user =>
-    (user.firstName || "").toLowerCase().includes(query) ||
-    (user.lastName || "").toLowerCase().includes(query) ||
-    (user.email || "").toLowerCase().includes(query) ||
-    (user.role || "").toLowerCase().includes(query) ||
-    (user.addedBy || "").toLowerCase().includes(query)
-  );
-
-  currentPage = 1;
-  updateUserCount();
-  renderTable();
-});
-
-prevBtn.addEventListener("click", () => {
-  if (currentPage > 1) {
-    currentPage--;
-    renderTable();
-  }
-});
-
-nextBtn.addEventListener("click", () => {
-  const maxPages = Math.ceil(filteredUsers.length / usersPerPage);
-  if (currentPage < maxPages) {
-    currentPage++;
-    renderTable();
-  }
-});
-
-const logoutBtn = document.getElementById("logoutBtn");
-if (logoutBtn) {
-  logoutBtn.addEventListener("click", () => {
-    signOut(auth)
-      .then(() => {
-        window.location.href = "index.html";
-      })
-      .catch((error) => {
-        console.error("Logout failed:", error);
-        alert("Logout failed.");
-      });
-  });
+  userCount.textContent = `Total Users: ${filteredUsers.length}`;
+  paginationInfo.textContent = `Page ${currentPage} of ${Math.ceil(filteredUsers.length / usersPerPage)}`;
+  document.getElementById("prevBtn").disabled = currentPage === 1;
+  document.getElementById("nextBtn").disabled = currentPage >= Math.ceil(filteredUsers.length / usersPerPage);
 }
