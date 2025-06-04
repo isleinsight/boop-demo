@@ -1,166 +1,136 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>View Users - BOOP Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  limit,
+  startAfter
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+  authDomain: "boop-becff.firebaseapp.com",
+  projectId: "boop-becff",
+  storageBucket: "boop-becff.appspot.com",
+  messagingSenderId: "570567453336",
+  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
+  measurementId: "G-79DWYFPZNR"
+};
+
+// Init
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let allUsers = [];
+let filteredUsers = [];
+let currentPage = 1;
+const usersPerPage = 10;
+
+const tableBody = document.getElementById("userTableBody");
+const userCountSpan = document.getElementById("userCount");
+const paginationInfo = document.getElementById("paginationInfo");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const searchInput = document.getElementById("searchInput");
+
+// Load users after auth state is confirmed
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "index.html";
+  } else {
+    try {
+      const querySnapshot = await getDocs(query(collection(db, "users"), orderBy("createdAt", "desc")));
+      allUsers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      filteredUsers = allUsers;
+      updateUserCount();
+      renderTable();
+    } catch (error) {
+      console.error("Error loading users:", error);
     }
+  }
+});
 
-    .container {
-      max-width: 1100px;
-      margin: 40px auto 20px;
-      padding: 20px 30px;
-      background: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    }
+function updateUserCount() {
+  userCountSpan.textContent = `Total Users: ${filteredUsers.length}`;
+}
 
-    h1 {
-      margin: 0;
-      font-size: 1.8em;
-    }
+function renderTable() {
+  tableBody.innerHTML = "";
 
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+  const startIndex = (currentPage - 1) * usersPerPage;
+  const endIndex = startIndex + usersPerPage;
+  const usersToShow = filteredUsers.slice(startIndex, endIndex);
 
-    #searchBar {
-      width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      margin-top: 15px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
+  usersToShow.forEach(user => {
+    const row = document.createElement("tr");
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      font-size: 0.95em;
-    }
+    row.innerHTML = `
+      <td>${user.firstName || ""}</td>
+      <td>${user.lastName || ""}</td>
+      <td>${user.email || ""}</td>
+      <td>${user.role || ""}</td>
+      <td>${user.addedBy || ""}</td>
+      <td>${user.createdAt?.toDate ? user.createdAt.toDate().toLocaleString() : ""}</td>
+    `;
 
-    th, td {
-      padding: 12px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
+    tableBody.appendChild(row);
+  });
 
-    th {
-      background-color: #f1f5f9;
-    }
+  paginationInfo.textContent = `Page ${currentPage}`;
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = endIndex >= filteredUsers.length;
+}
 
-    .pagination {
-      margin-top: 20px;
-      text-align: center;
-    }
+searchInput.addEventListener("input", () => {
+  const query = searchInput.value.toLowerCase();
 
-    .pagination button {
-      padding: 8px 16px;
-      margin: 0 8px;
-    }
+  filteredUsers = allUsers.filter(user =>
+    (user.firstName || "").toLowerCase().includes(query) ||
+    (user.lastName || "").toLowerCase().includes(query) ||
+    (user.email || "").toLowerCase().includes(query) ||
+    (user.role || "").toLowerCase().includes(query) ||
+    (user.addedBy || "").toLowerCase().includes(query)
+  );
 
-    .nav-container {
-      max-width: 1100px;
-      margin: auto;
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 20px;
-    }
+  currentPage = 1;
+  updateUserCount();
+  renderTable();
+});
 
-    .nav-left img {
-      height: 36px;
-    }
+prevBtn.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable();
+  }
+});
 
-    .nav-right a, .nav-right button {
-      margin-left: 12px;
-      text-decoration: none;
-      color: white;
-      background: #2f80ed;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-size: 0.9em;
-      cursor: pointer;
-    }
+nextBtn.addEventListener("click", () => {
+  const maxPages = Math.ceil(filteredUsers.length / usersPerPage);
+  if (currentPage < maxPages) {
+    currentPage++;
+    renderTable();
+  }
+});
 
-    .nav-right button:hover,
-    .nav-right a:hover {
-      background-color: #1c60b3;
-    }
-
-    nav {
-      background-color: #102a43;
-    }
-
-    .edit-btn {
-      background-color: #ffaa00;
-      color: white;
-      padding: 6px 10px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-      </div>
-      <div class="nav-right">
-        <a href="government.html">Dashboard</a>
-        <a href="add-user.html">Add User</a>
-        <a href="view-users.html">View Users</a>
-        <a href="manage-vendors.html">Manage Vendors</a>
-        <a href="view-reports.html">View Reports</a>
-        <button id="logoutBtn">Logout</button>
-      </div>
-    </div>
-  </nav>
-
-  <div class="container">
-    <div class="top-bar">
-      <h1>View Users</h1>
-      <span id="userCount">Total Users: 0</span>
-    </div>
-
-    <input type="text" id="searchBar" placeholder="Search users by name, email, or role..." />
-
-    <table>
-      <thead>
-        <tr>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>Email</th>
-          <th>Role</th>
-          <th>Added By</th>
-          <th>Created At</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="userTableBody">
-        <!-- Dynamic rows will be inserted here -->
-      </tbody>
-    </table>
-
-    <div class="pagination">
-      <button id="prevBtn">Previous</button>
-      <span id="paginationInfo">Page 1</span>
-      <button id="nextBtn">Next</button>
-    </div>
-  </div>
-
-  <script type="module" src="view-users.js"></script>
-</body>
-</html>
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    signOut(auth)
+      .then(() => {
+        window.location.href = "index.html";
+      })
+      .catch((error) => {
+        console.error("Logout failed:", error);
+        alert("Logout failed.");
+      });
+  });
+}
