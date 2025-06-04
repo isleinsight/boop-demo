@@ -233,12 +233,23 @@ th .sort-label::after {
   font-size: 0.8em;
 }
 
-th.sorted-asc .sort-label::after {
-  content: "▲";
+th.sortable {
+  cursor: pointer;
 }
 
-th.sorted-desc .sort-label::after {
-  content: "▼";
+th.sortable .arrow::after {
+  content: '';
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.8em;
+}
+
+th.sorted-asc .arrow::after {
+  content: '▲';
+}
+
+th.sorted-desc .arrow::after {
+  content: '▼';
 }
 
 
