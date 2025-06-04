@@ -109,16 +109,7 @@
       position: relative;
     }
 
-    th.sortable::after {
-      content: " ▼";
-      position: absolute;
-      right: 10px;
-      font-size: 0.8em;
-    }
-
-    th.sortable[data-sort="asc"]::after {
-      content: " ▲";
-    }
+ 
 
     .dropdown {
       position: relative;
@@ -201,10 +192,10 @@
     <table>
       <thead>
         <tr>
-          <th class="sortable" data-column="firstName">First Name</th>
-          <th class="sortable" data-column="lastName">Last Name</th>
-          <th class="sortable" data-column="email">Email</th>
-          <th class="sortable" data-column="role">Role</th>
+          <th class="sortable" data-column="firstName">First Name <span class="arrow"></span></th>
+<th class="sortable" data-column="lastName">Last Name <span class="arrow"></span></th>
+<th class="sortable" data-column="email">Email <span class="arrow"></span></th>
+<th class="sortable" data-column="role">Role <span class="arrow"></span></th>
           <th>Actions</th>
         </tr>
       </thead>
