@@ -13,9 +13,7 @@ import {
   collection,
   getDocs,
   deleteDoc,
-  doc,
-  query,
-  orderBy
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -107,6 +105,13 @@ function sortUsers(users, column) {
     currentSort.column = column;
     currentSort.direction = "asc";
   }
+
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.classList.remove("sorted-asc", "sorted-desc");
+    if (th.dataset.column === column) {
+      th.classList.add(currentSort.direction === "asc" ? "sorted-asc" : "sorted-desc");
+    }
+  });
 
   return users.sort((a, b) => {
     const aVal = (a[column] || "").toLowerCase();
