@@ -1,4 +1,3 @@
-// user-profile.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
@@ -7,8 +6,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore,
-  doc,
-  getDoc
+  collection,
+  getDocs,
+  deleteDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -22,71 +23,167 @@ const firebaseConfig = {
   measurementId: "G-79DWYFPZNR"
 };
 
-// Init
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-document.addEventListener("DOMContentLoaded", async () => {
-  const logoutBtn = document.getElementById("logoutBtn");
-  const profileContainer = document.getElementById("profileContainer");
-  const statusMessage = document.getElementById("statusMessage");
+// DOM Elements
+const userTableBody = document.getElementById("userTableBody");
+const userCountSpan = document.getElementById("userCount");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const paginationInfo = document.getElementById("paginationInfo");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
 
-  let adminEmail = null;
+let users = [];
+let filteredUsers = [];
+let currentPage = 1;
+const usersPerPage = 10;
+let currentSortField = null;
+let currentSortOrder = "asc";
 
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      adminEmail = user.email;
-      console.log("Admin logged in:", adminEmail);
-    } else {
-      console.warn("Not logged in. Redirecting...");
-      window.location.href = "index.html";
-    }
+function renderTable(usersToShow) {
+  userTableBody.innerHTML = "";
+
+  usersToShow.forEach((user) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${user.firstName || ""}</td>
+      <td>${user.lastName || ""}</td>
+      <td>${user.email || ""}</td>
+      <td>${user.role || ""}</td>
+      <td>
+        <div class="dropdown">
+          <button class="action-btn">Actions ▼</button>
+          <div class="dropdown-content">
+            <a href="user-profile.html?uid=${user.uid}">View Profile</a>
+            <a href="#" onclick="confirmDelete('${user.uid}', '${user.email || ""}')">Delete</a>
+          </div>
+        </div>
+      </td>
+    `;
+    userTableBody.appendChild(tr);
+  });
+}
+
+function paginateUsers() {
+  const startIndex = (currentPage - 1) * usersPerPage;
+  const endIndex = startIndex + usersPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+  renderTable(paginatedUsers);
+  paginationInfo.textContent = `Page ${currentPage} of ${Math.ceil(filteredUsers.length / usersPerPage)}`;
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = endIndex >= filteredUsers.length;
+}
+
+function sortUsers(field) {
+  if (currentSortField === field) {
+    currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
+  } else {
+    currentSortField = field;
+    currentSortOrder = "asc";
+  }
+
+  filteredUsers.sort((a, b) => {
+    const aVal = a[field]?.toLowerCase?.() || "";
+    const bVal = b[field]?.toLowerCase?.() || "";
+
+    if (aVal < bVal) return currentSortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return currentSortOrder === "asc" ? 1 : -1;
+    return 0;
   });
 
-  // Extract UID from query parameter
-  const params = new URLSearchParams(window.location.search);
-  const uid = params.get("uid");
+  updateSortIndicators();
+  currentPage = 1;
+  paginateUsers();
+}
 
-  if (!uid) {
-    statusMessage.textContent = "No user ID provided in the URL.";
-    return;
-  }
+function updateSortIndicators() {
+  document.querySelectorAll("th[data-key]").forEach((th) => {
+    const span = th.querySelector(".sort-arrow");
+    if (!span) return;
 
-  try {
-    const userDoc = await getDoc(doc(db, "users", uid));
-
-    if (!userDoc.exists()) {
-      statusMessage.textContent = "User not found.";
-      return;
+    if (th.dataset.key === currentSortField) {
+      span.textContent = currentSortOrder === "asc" ? "▲" : "▼";
+    } else {
+      span.textContent = "";
     }
+  });
+}
 
-    const data = userDoc.data();
+function filterUsers() {
+  const searchValue = searchInput.value.toLowerCase();
+  filteredUsers = users.filter(user =>
+    (`${user.firstName} ${user.lastName}`.toLowerCase().includes(searchValue)) ||
+    (user.email?.toLowerCase().includes(searchValue)) ||
+    (user.role?.toLowerCase().includes(searchValue))
+  );
 
-    profileContainer.innerHTML = `
-      <h2>${data.firstName} ${data.lastName}</h2>
-      <p><strong>Email:</strong> ${data.email}</p>
-      <p><strong>Role:</strong> ${data.role}</p>
-      <p><strong>Wallet ID:</strong> ${data.walletId || 'N/A'}</p>
-      <p><strong>Added By:</strong> ${data.addedBy}</p>
-      <p><strong>Created At:</strong> ${data.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
-    `;
+  currentPage = 1;
+  paginateUsers();
+  userCountSpan.textContent = `Total Users: ${filteredUsers.length}`;
+}
 
-  } catch (error) {
-    console.error("Error fetching user profile:", error);
-    statusMessage.textContent = "Error loading user profile.";
+async function loadUsers() {
+  const snapshot = await getDocs(collection(db, "users"));
+  users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+  filteredUsers = [...users];
+  userCountSpan.textContent = `Total Users: ${users.length}`;
+  paginateUsers();
+}
+
+window.confirmDelete = async function(uid, email) {
+  const confirmed = confirm(`Are you sure you want to delete ${email}?`);
+  if (confirmed) {
+    const typed = prompt('Type "DELETE" to confirm:');
+    if (typed === "DELETE") {
+      await deleteDoc(doc(db, "users", uid));
+      users = users.filter(u => u.uid !== uid);
+      filteredUsers = filteredUsers.filter(u => u.uid !== uid);
+      paginateUsers();
+      userCountSpan.textContent = `Total Users: ${filteredUsers.length}`;
+    } else {
+      alert("❌ You must type DELETE exactly.");
+    }
   }
+};
 
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth)
-        .then(() => {
-          window.location.href = "index.html";
-        })
-        .catch((error) => {
-          console.error("Logout error:", error);
-          alert("Logout failed.");
-        });
-    });
+// Event Listeners
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
+});
+
+prevBtn.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    paginateUsers();
+  }
+});
+
+nextBtn.addEventListener("click", () => {
+  if (currentPage * usersPerPage < filteredUsers.length) {
+    currentPage++;
+    paginateUsers();
+  }
+});
+
+searchBtn.addEventListener("click", filterUsers);
+searchInput.addEventListener("input", filterUsers);
+
+document.querySelectorAll("th[data-key]").forEach(th => {
+  th.addEventListener("click", () => sortUsers(th.dataset.key));
+});
+
+// Auth check
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadUsers();
+  } else {
+    window.location.href = "index.html";
   }
 });
