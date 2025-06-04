@@ -81,6 +81,34 @@
     .dashboard-buttons a:hover {
       background-color: #1c60b3;
     }
+
+.dashboard-buttons-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-buttons {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dashboard-buttons a {
+  padding: 10px 20px;
+  background-color: #2f80ed;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 0.95em;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.dashboard-buttons a:hover {
+  background-color: #1c60b3;
+}
+
+    
   </style>
 </head>
 <body>
@@ -104,12 +132,15 @@
     <h1>BOOP Admin Dashboard</h1>
     <p>Welcome to your secure dashboard. From here you can manage users, review system activity, and perform administrative tasks.</p>
 
-    <!-- Action Buttons -->
-    <div class="dashboard-buttons">
-      <a href="add-user.html">➕ Add New User</a>
-      <a href="view-users.html">👥 View All Users</a>
-      <a href="user-profile.html">🔍 Search Profiles</a>
-    </div>
+
+<!-- Action Buttons -->
+<div class="dashboard-buttons-wrapper">
+  <div class="dashboard-buttons">
+    <a href="add-user.html">Add New User</a>
+    <a href="view-users.html">View All Users</a>
+    <a href="user-profile.html">Search Profiles</a>
+  </div>
+</div>
 
     <!-- You can add more content below this if needed -->
   </div>
