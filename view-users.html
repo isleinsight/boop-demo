@@ -13,6 +13,30 @@
       background: #f4f7fa;
     }
 
+    nav {
+      background-color: #102a43;
+      padding: 10px 0;
+    }
+
+    .nav-container {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+    }
+
+    .nav-left img {
+      height: 36px;
+    }
+
+
+    
+
+    .nav-right a:hover, .nav-right button:hover {
+      background-color: #1c60b3;
+    }
+
     .container {
       max-width: 1100px;
       margin: 40px auto 20px;
@@ -22,30 +46,34 @@
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     }
 
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
     h1 {
       margin: 0;
       font-size: 1.8em;
     }
 
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    #searchBar {
+    #searchInput {
+      padding: 8px;
+      font-size: 0.95em;
       width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      margin-top: 15px;
-      border-radius: 6px;
+      max-width: 300px;
+      margin-top: 20px;
+      margin-bottom: 10px;
       border: 1px solid #ccc;
+      border-radius: 5px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-top: 10px;
       font-size: 0.95em;
     }
 
@@ -59,6 +87,20 @@
       background-color: #f1f5f9;
     }
 
+    .action-btn {
+      background-color: #2f80ed;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+
+    .action-btn:hover {
+      background-color: #1c60b3;
+    }
+
     .pagination {
       margin-top: 20px;
       text-align: center;
@@ -67,38 +109,6 @@
     .pagination button {
       padding: 8px 16px;
       margin: 0 8px;
-    }
-
-    .nav-container {
-      max-width: 1100px;
-      margin: auto;
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 20px;
-    }
-
-    .nav-left img {
-      height: 36px;
-    }
-
-   
-
-    .nav-right button:hover,
-    .nav-right a:hover {
-      background-color: #1c60b3;
-    }
-
-    nav {
-      background-color: #102a43;
-    }
-
-    .edit-btn {
-      background-color: #ffaa00;
-      color: white;
-      padding: 6px 10px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -113,7 +123,7 @@
         <a href="add-user.html">Add User</a>
         <a href="view-users.html">View Users</a>
         <a href="manage-vendors.html">Manage Vendors</a>
-        <a href="view-reports.html">View Reports</a>
+        <a href="reports.html">View Reports</a>
         <button id="logoutBtn">Logout</button>
       </div>
     </div>
@@ -125,7 +135,7 @@
       <span id="userCount">Total Users: 0</span>
     </div>
 
-    <input type="text" id="searchBar" placeholder="Search users by name, email, or role..." />
+    <input type="text" id="searchInput" placeholder="Search by name or email..." />
 
     <table>
       <thead>
@@ -134,13 +144,11 @@
           <th>Last Name</th>
           <th>Email</th>
           <th>Role</th>
-          <th>Added By</th>
-          <th>Created At</th>
-          <th>Actions</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <!-- Dynamic rows will be inserted here -->
+        <!-- User rows will be inserted here -->
       </tbody>
     </table>
 
