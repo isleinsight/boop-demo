@@ -6,7 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* Custom additions that complement styles.css */
+    /* You can move these to your styles.css later */
+    .profile-container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
     .section-title {
       margin-top: 40px;
       margin-bottom: 10px;
@@ -30,9 +39,9 @@
 
     .label {
       font-weight: bold;
+      display: block;
       color: #555;
       margin-bottom: 5px;
-      display: block;
     }
 
     .value {
@@ -43,6 +52,24 @@
       font-size: 1.5em;
       font-weight: bold;
       color: #1a73e8;
+    }
+
+    .transaction-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.95em;
+    }
+
+    .transaction-table th,
+    .transaction-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .transaction-table th {
+      background-color: #f1f5f9;
     }
 
     .admin-controls {
@@ -66,19 +93,16 @@
       background-color: #1c60b3;
     }
 
-    .child-link {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .back-button {
+      margin-bottom: 20px;
+      display: inline-block;
+      text-decoration: none;
+      color: #2f80ed;
+      font-weight: 500;
     }
 
-    .child-link button {
-      background: #2f80ed;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 0.9em;
+    .back-button:hover {
+      text-decoration: underline;
     }
 
     @media screen and (max-width: 600px) {
@@ -101,7 +125,6 @@
       <div class="nav-right">
         <a href="government.html">Dashboard</a>
         <a href="view-users.html">View Users</a>
-        <a href="add-user.html">Add User</a>
         <a href="#" id="logoutBtn">Logout</a>
       </div>
     </div>
@@ -113,7 +136,7 @@
     <h2>User Profile</h2>
 
     <div class="user-details-grid" id="userInfo">
-      <!-- Dynamic user info (name, email, etc.) -->
+      <!-- Dynamic user info goes here -->
     </div>
 
     <div class="section-title">Wallet</div>
@@ -123,24 +146,14 @@
         <span class="value" id="walletId">Loading...</span>
       </div>
       <div>
-        <span class="label">Balance</span>
+        <span class="label">Wallet Balance</span>
         <span class="wallet-balance" id="walletBalance">$0.00</span>
       </div>
     </div>
 
-    <div class="section-title">Card Info</div>
-    <div class="user-details-grid" id="cardInfo">
-      <!-- Populated if card exists -->
-    </div>
-
-    <div class="section-title" id="vendorSectionTitle" style="display:none;">Vendor Info</div>
-    <div class="user-details-grid" id="vendorInfo">
-      <!-- Populated if user is a vendor -->
-    </div>
-
-    <div class="section-title" id="childrenTitle" style="display:none;">Linked Children</div>
-    <div class="user-details-grid" id="childrenList">
-      <!-- Child accounts go here -->
+    <div class="admin-controls" id="adminControls" style="display: none;">
+      <button id="addFundsBtn">Add Funds</button>
+      <button id="freezeWalletBtn">Freeze Wallet</button>
     </div>
 
     <div class="section-title">Transaction History</div>
@@ -149,9 +162,8 @@
         <tr>
           <th>Date</th>
           <th>Amount</th>
-          <th>Status</th>
-          <th>From</th>
-          <th>To</th>
+          <th>Type</th>
+          <th>Description</th>
         </tr>
       </thead>
       <tbody>
