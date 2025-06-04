@@ -127,22 +127,22 @@ async function loadUserProfile(uid) {
     }
   }
 
-  // Transactions
-  const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
-  transactionTable.innerHTML = "";
-  txSnap.forEach(doc => {
-    const tx = doc.data();
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
-      <td>$${(tx.amount || 0).toFixed(2)}</td>
-      <td>${tx.status || "-"}</td>
-      <td>${tx.from || "-"}</td>
-      <td>${tx.to || "-"}</td>
-    `;
-    transactionTable.appendChild(row);
-  });
-}
+// Transactions
+const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
+transactionTable.innerHTML = "";
+txSnap.forEach(doc => {
+  const tx = doc.data();
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
+    <td>$${(tx.amount || 0).toFixed(2)}</td>
+    <td>${tx.from || "-"}</td>
+    <td>${tx.to || "-"}</td>
+    <td>${tx.transactionId || doc.id}</td>
+    <td>${tx.status || "-"}</td>
+  `;
+  transactionTable.appendChild(row);
+});
 
 // Auth check
 onAuthStateChanged(auth, (user) => {
