@@ -178,4 +178,19 @@ select {
 
 
 
+.view-button {
+  color: #1a1a1a; /* dark gray/black */
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.view-button:hover {
+  text-decoration: underline;
+  color: #333; /* slightly lighter on hover */
+}
+
+
+
+
+
 
