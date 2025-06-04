@@ -30,7 +30,7 @@ const db = getFirestore(app);
 
 let allUsers = [];
 let currentPage = 1;
-const usersPerPage = 20;
+const usersPerPage = 10;
 
 const tableBody = document.getElementById("userTableBody");
 const userCount = document.getElementById("userCount");
