@@ -89,9 +89,9 @@ document.addEventListener("DOMContentLoaded", () => {
       await secondaryAuth.signOut();
 
     } catch (error) {
-      console.error("❌ Error creating user:", error);
+      console.error("Error creating user:", error);
       step1Status.style.color = "red";
-      step1Status.textContent = "❌ " + error.message;
+      step1Status.textContent = error.message;
     }
   });
 
@@ -133,9 +133,9 @@ document.addEventListener("DOMContentLoaded", () => {
       step2Form.appendChild(resetButton);
 
     } catch (error) {
-      console.error("❌ Error writing to Firestore:", error);
+      console.error("Error writing to Firestore:", error);
       step2Status.style.color = "red";
-      step2Status.textContent = "❌ " + error.message;
+      step2Status.textContent = "error.message;
     }
   });
 
