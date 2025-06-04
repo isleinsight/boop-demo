@@ -85,13 +85,12 @@ document.addEventListener("DOMContentLoaded", () => {
         el.disabled = false;
       });
 
-      // Clean up: sign out the secondary auth instance so it doesn't interfere
       await secondaryAuth.signOut();
 
     } catch (error) {
       console.error("Error creating user:", error);
       step1Status.style.color = "red";
-      step1Status.textContent = error.message;
+      step1Status.textContent = "Error: " + error.message;
     }
   });
 
@@ -123,7 +122,6 @@ document.addEventListener("DOMContentLoaded", () => {
       step2Status.style.color = "green";
       step2Status.textContent = "User successfully saved.";
 
-      // Add reset button
       const resetButton = document.createElement("button");
       resetButton.textContent = "Add Another User";
       resetButton.style.marginTop = "20px";
@@ -135,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("Error writing to Firestore:", error);
       step2Status.style.color = "red";
-      step2Status.textContent = "error.message;
+      step2Status.textContent = "Error: " + error.message;
     }
   });
 
