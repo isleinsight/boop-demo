@@ -2,17 +2,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getAuth,
   onAuthStateChanged,
-  signOut,
-  getUser
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore,
   collection,
   getDocs,
   query,
-  limit,
-  orderBy,
-  startAfter
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -31,108 +28,101 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const tableBody = document.getElementById("userTableBody");
-const logoutBtn = document.getElementById("logoutBtn");
-const userCountSpan = document.getElementById("userCount");
-const paginationInfo = document.getElementById("paginationInfo");
-
-let lastVisible = null;
-let currentPage = 1;
-const USERS_PER_PAGE = 20;
 let allUsers = [];
+let currentPage = 1;
+const usersPerPage = 20;
 
-function formatDate(timestamp) {
-  if (!timestamp) return "—";
-  const date = timestamp.toDate();
-  return date.toLocaleString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
+const tableBody = document.getElementById("userTableBody");
+const userCount = document.getElementById("userCount");
+const paginationInfo = document.getElementById("paginationInfo");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+
+function renderTable() {
+  tableBody.innerHTML = "";
+
+  const start = (currentPage - 1) * usersPerPage;
+  const end = start + usersPerPage;
+  const usersToShow = allUsers.slice(start, end);
+
+  usersToShow.forEach((user) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${user.firstName || ""}</td>
+      <td>${user.lastName || ""}</td>
+      <td>${user.email || ""}</td>
+      <td>${user.role || ""}</td>
+      <td>${user.addedBy || ""}</td>
+      <td>${user.createdAt || ""}</td>
+    `;
+    tableBody.appendChild(row);
   });
+
+  userCount.textContent = `Total Users: ${allUsers.length}`;
+  paginationInfo.textContent = `Page ${currentPage} of ${Math.ceil(allUsers.length / usersPerPage)}`;
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = end >= allUsers.length;
 }
 
-// Authentication check
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  console.log("Authenticated as:", user.email);
-  await loadUsers();
-});
-
-// Logout
-logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  }).catch((error) => {
-    console.error("Logout failed:", error);
-  });
-});
+function formatTimestamp(timestamp) {
+  if (!timestamp || !timestamp.toDate) return "";
+  return timestamp.toDate().toLocaleString();
+}
 
 async function loadUsers() {
   try {
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
-    const querySnapshot = await getDocs(q);
+    const snapshot = await getDocs(q);
 
-    allUsers = [];
-    querySnapshot.forEach((doc) => {
-      allUsers.push({ id: doc.id, ...doc.data() });
+    allUsers = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        email: data.email || "", // Some users may not have this, fallback
+        createdAt: formatTimestamp(data.createdAt)
+      };
     });
 
-    renderPage(1);
+    renderTable();
   } catch (error) {
     console.error("Error loading users:", error);
-    tableBody.innerHTML = `<tr><td colspan="6">❌ Failed to load users.</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="6">❌ Error loading users: ${error.message}</td></tr>`;
   }
 }
 
-function renderPage(pageNumber) {
-  currentPage = pageNumber;
-  tableBody.innerHTML = "";
-
-  const start = (pageNumber - 1) * USERS_PER_PAGE;
-  const end = start + USERS_PER_PAGE;
-  const pageUsers = allUsers.slice(start, end);
-
-  pageUsers.forEach((user) => {
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td>${user.firstName || "—"}</td>
-      <td>${user.lastName || "—"}</td>
-      <td>${user.email || "—"}</td>
-      <td>${user.role || "—"}</td>
-      <td>${user.addedBy || "—"}</td>
-      <td>${formatDate(user.createdAt)}</td>
-    `;
-
-    tableBody.appendChild(row);
-  });
-
-  // Update page info
-  const totalPages = Math.ceil(allUsers.length / USERS_PER_PAGE);
-  paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-  userCountSpan.textContent = allUsers.length;
-
-  // Show/hide pagination buttons
-  document.getElementById("prevBtn").disabled = currentPage === 1;
-  document.getElementById("nextBtn").disabled = currentPage === totalPages;
-}
-
-// Pagination controls
-document.getElementById("prevBtn").addEventListener("click", () => {
+// Navigation
+prevBtn.addEventListener("click", () => {
   if (currentPage > 1) {
-    renderPage(currentPage - 1);
+    currentPage--;
+    renderTable();
   }
 });
 
-document.getElementById("nextBtn").addEventListener("click", () => {
-  const totalPages = Math.ceil(allUsers.length / USERS_PER_PAGE);
-  if (currentPage < totalPages) {
-    renderPage(currentPage + 1);
+nextBtn.addEventListener("click", () => {
+  if ((currentPage * usersPerPage) < allUsers.length) {
+    currentPage++;
+    renderTable();
+  }
+});
+
+// Logout
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    signOut(auth).then(() => {
+      window.location.href = "index.html";
+    }).catch((error) => {
+      alert("Logout failed: " + error.message);
+    });
+  });
+}
+
+// Auth check and load
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = "index.html";
+  } else {
+    console.log("Logged in as:", user.email);
+    loadUsers();
   }
 });
