@@ -1,177 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>User Profile - BOOP Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    /* You can move these to your styles.css later */
-    .profile-container {
-      max-width: 1000px;
-      margin: 40px auto;
-      background: #fff;
-      border-radius: 10px;
-      padding: 30px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-
-    .section-title {
-      margin-top: 40px;
-      margin-bottom: 10px;
-      font-size: 1.3em;
-      color: #333;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 5px;
-    }
-
-    .user-details-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    .user-details-grid div {
-      background: #f9fafc;
-      padding: 12px 16px;
-      border-radius: 6px;
-    }
-
-    .label {
-      font-weight: bold;
-      display: block;
-      color: #555;
-      margin-bottom: 5px;
-    }
-
-    .value {
-      color: #222;
-    }
-
-    .wallet-balance {
-      font-size: 1.5em;
-      font-weight: bold;
-      color: #1a73e8;
-    }
-
-    .transaction-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 0.95em;
-    }
-
-    .transaction-table th,
-    .transaction-table td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-
-    .transaction-table th {
-      background-color: #f1f5f9;
-    }
-
-    .admin-controls {
-      margin-top: 30px;
-      display: flex;
-      gap: 15px;
-      flex-wrap: wrap;
-    }
-
-    .admin-controls button {
-      padding: 10px 20px;
-      font-size: 0.95em;
-      background-color: #2f80ed;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .admin-controls button:hover {
-      background-color: #1c60b3;
-    }
-
-    .back-button {
-      margin-bottom: 20px;
-      display: inline-block;
-      text-decoration: none;
-      color: #2f80ed;
-      font-weight: 500;
-    }
-
-    .back-button:hover {
-      text-decoration: underline;
-    }
-
-    @media screen and (max-width: 600px) {
-      .user-details-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .admin-controls {
-        flex-direction: column;
-      }
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>User Profile</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-      </div>
-      <div class="nav-right">
-        <a href="government.html">Dashboard</a>
-        <a href="view-users.html">View Users</a>
-        <a href="#" id="logoutBtn">Logout</a>
-      </div>
-    </div>
+  <!-- Navigation -->
+  <nav class="nav-top">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="view-users.html">View Users</a>
+    <a href="add-user.html">Add User</a>
+    <a href="#" id="logoutBtn" class="logout-link">Logout</a>
   </nav>
 
-  <div class="profile-container">
-    <a href="view-users.html" class="back-button">← Back to Users</a>
+  <main class="container">
+    <h1>User Profile</h1>
+    <p class="subtitle">Details for the selected user</p>
 
-    <h2>User Profile</h2>
+    <!-- Basic Info -->
+    <section>
+      <h2>User Details</h2>
+      <ul class="data-list">
+        <li><strong>Name:</strong> <span id="fullName"></span></li>
+        <li><strong>Email:</strong> <span id="email"></span></li>
+        <li><strong>Role:</strong> <span id="role"></span></li>
+        <li><strong>Wallet Address:</strong> <span id="walletAddress"></span></li>
+        <li><strong>Added By:</strong> <span id="addedBy"></span></li>
+        <li><strong>Created At:</strong> <span id="createdAt"></span></li>
+      </ul>
+    </section>
 
-    <div class="user-details-grid" id="userInfo">
-      <!-- Dynamic user info goes here -->
-    </div>
+    <!-- Wallet Summary -->
+    <section>
+      <h2>Wallet Summary</h2>
+      <ul class="data-list">
+        <li><strong>Balance:</strong> $<span id="walletBalance">0.00</span></li>
+        <li><strong>Wallet ID:</strong> <span id="walletID">-</span></li>
+      </ul>
+    </section>
 
-    <div class="section-title">Wallet</div>
-    <div class="user-details-grid">
-      <div>
-        <span class="label">Wallet ID</span>
-        <span class="value" id="walletId">Loading...</span>
-      </div>
-      <div>
-        <span class="label">Wallet Balance</span>
-        <span class="wallet-balance" id="walletBalance">$0.00</span>
-      </div>
-    </div>
+    <!-- Assigned Card Info -->
+    <section>
+      <h2>Card Info</h2>
+      <ul class="data-list" id="cardInfoList">
+        <li><strong>Card UID:</strong> <span id="cardUID"></span></li>
+        <li><strong>Card Type:</strong> <span id="cardType"></span></li>
+        <li><strong>Issue Date:</strong> <span id="issueDate"></span></li>
+        <li><strong>Is Active:</strong> <span id="isActive"></span></li>
+      </ul>
+    </section>
 
-    <div class="admin-controls" id="adminControls" style="display: none;">
-      <button id="addFundsBtn">Add Funds</button>
-      <button id="freezeWalletBtn">Freeze Wallet</button>
-    </div>
+    <!-- Vendor Info -->
+    <section id="vendorSection" style="display: none;">
+      <h2>Vendor Info</h2>
+      <ul class="data-list">
+        <li><strong>Vendor Name:</strong> <span id="vendorName"></span></li>
+        <li><strong>Vendor Category:</strong> <span id="vendorCategory"></span></li>
+        <li><strong>Vendor Location:</strong> <span id="vendorLocation"></span></li>
+      </ul>
+    </section>
 
-    <div class="section-title">Transaction History</div>
-    <table class="transaction-table" id="transactionTable">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Amount</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Transactions go here -->
-      </tbody>
-    </table>
-  </div>
+    <!-- Students Managed (for parents) -->
+    <section id="studentSection" style="display: none;">
+      <h2>Students Managed</h2>
+      <ul id="studentList" class="data-list"></ul>
+    </section>
 
-  <script type="module" src="user-profile.js"></script>
+    <!-- Transaction History -->
+    <section>
+      <h2>Transaction History</h2>
+      <table class="data-table" id="transactionsTable">
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="transactionsBody"></tbody>
+      </table>
+    </section>
+  </main>
 </body>
 </html>
