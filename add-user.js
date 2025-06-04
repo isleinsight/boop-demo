@@ -23,10 +23,13 @@ const firebaseConfig = {
   measurementId: "G-79DWYFPZNR"
 };
 
-// Init
+// Init main app and secondary app
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+const secondaryAuth = getAuth(secondaryApp);
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ add-user.js loaded");
@@ -45,20 +48,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const step2Status = document.getElementById("step2Status");
 
   let createdUserUID = null;
+  let createdUserEmail = null;
   let adminEmail = null;
 
-  // Save logged-in admin email
+  // Track logged-in admin
   onAuthStateChanged(auth, (user) => {
     if (user) {
       adminEmail = user.email;
-      console.log("Admin logged in:", adminEmail);
+      console.log("✅ Admin logged in:", adminEmail);
     } else {
-      console.log("Not logged in. Redirecting...");
+      console.warn("🚫 Not logged in. Redirecting to index...");
       window.location.href = "index.html";
     }
   });
 
-  // Step 1: Create Firebase Auth user
+  // Step 1 - Create auth user (in secondary app)
   step1Form.addEventListener("submit", async (e) => {
     e.preventDefault();
     step1Status.textContent = "Creating user...";
@@ -67,28 +71,31 @@ document.addEventListener("DOMContentLoaded", () => {
     const password = newPasswordInput.value.trim();
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
       createdUserUID = userCredential.user.uid;
+      createdUserEmail = email;
 
       step1Status.style.color = "green";
-      step1Status.textContent = "✅ Step 1 complete. Now fill out step 2.";
+      step1Status.textContent = "✅ Step 1 complete. Fill in step 2.";
 
+      // Disable step 1, enable step 2
       newEmailInput.disabled = true;
       newPasswordInput.disabled = true;
-
-      // Enable step 2 form
       step2Form.querySelectorAll("input, select, button").forEach((el) => {
         el.disabled = false;
       });
 
+      // Clean up: sign out the secondary auth instance so it doesn't interfere
+      await secondaryAuth.signOut();
+
     } catch (error) {
-      console.error("Error creating user:", error);
+      console.error("❌ Error creating user:", error);
       step1Status.style.color = "red";
       step1Status.textContent = "❌ " + error.message;
     }
   });
 
-  // Step 2: Save extra user info to Firestore
+  // Step 2 - Write user details to Firestore
   step2Form.addEventListener("submit", async (e) => {
     e.preventDefault();
     step2Status.textContent = "Saving user data...";
@@ -97,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const lastName = lastNameInput.value.trim();
     const role = roleSelect.value;
 
-    if (!createdUserUID || !adminEmail) {
+    if (!createdUserUID || !createdUserEmail) {
       step2Status.style.color = "red";
       step2Status.textContent = "❌ Step 1 must be completed first.";
       return;
@@ -105,6 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       await setDoc(doc(db, "users", createdUserUID), {
+        email: createdUserEmail,
         firstName,
         lastName,
         role,
@@ -115,8 +123,9 @@ document.addEventListener("DOMContentLoaded", () => {
       step2Status.style.color = "green";
       step2Status.textContent = "✅ User successfully saved.";
 
+      // Add reset button
       const resetButton = document.createElement("button");
-      resetButton.textContent = "Add Another User";
+      resetButton.textContent = "➕ Add Another User";
       resetButton.style.marginTop = "20px";
       resetButton.addEventListener("click", () => {
         window.location.reload();
@@ -124,22 +133,24 @@ document.addEventListener("DOMContentLoaded", () => {
       step2Form.appendChild(resetButton);
 
     } catch (error) {
-      console.error("Error saving to Firestore:", error);
+      console.error("❌ Error writing to Firestore:", error);
       step2Status.style.color = "red";
       step2Status.textContent = "❌ " + error.message;
     }
   });
 
-  // Logout button logic
+  // Logout button
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      }).catch((error) => {
-        console.error("Logout error:", error);
-        alert("Logout failed.");
-      });
+      signOut(auth)
+        .then(() => {
+          window.location.href = "index.html";
+        })
+        .catch((error) => {
+          console.error("Logout error:", error);
+          alert("Logout failed.");
+        });
     });
   }
 });
