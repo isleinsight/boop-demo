@@ -8,12 +8,14 @@
   <style>
     body {
       margin: 0;
+      padding: 0;
       font-family: 'Poppins', sans-serif;
       background: #f4f7fa;
     }
 
     nav {
       background-color: #102a43;
+      padding: 12px 20px;
     }
 
     .nav-container {
@@ -21,7 +23,6 @@
       margin: auto;
       display: flex;
       justify-content: space-between;
-      padding: 12px 20px;
       align-items: center;
     }
 
@@ -29,72 +30,34 @@
       height: 36px;
     }
 
-    .nav-right a,
-    .nav-right button {
-      margin-left: 12px;
+    .nav-right a {
+      margin-left: 16px;
       text-decoration: none;
       color: white;
-      background: #2f80ed;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-size: 0.9em;
-      cursor: pointer;
+      font-size: 0.95em;
     }
 
-    .nav-right a:hover,
-    .nav-right button:hover {
-      background-color: #1c60b3;
+    .nav-right a:hover {
+      text-decoration: underline;
     }
 
     .container {
       max-width: 1100px;
-      margin: 40px auto 20px;
-      padding: 30px;
-      background: #ffffff;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
 
     h1 {
-      font-size: 2em;
+      font-size: 1.8em;
       margin-bottom: 10px;
     }
 
-    .admin-email {
-      color: #555;
-      margin-bottom: 20px;
-    }
-
-    .cards {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-top: 30px;
-    }
-
-    .card {
-      flex: 1 1 220px;
-      background-color: #f0f4f8;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-      transition: box-shadow 0.3s;
-    }
-
-    .card:hover {
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .card a {
-      text-decoration: none;
-      color: #2f80ed;
-      font-weight: bold;
-      display: block;
-    }
-
-    .card a:hover {
-      text-decoration: underline;
+    p {
+      font-size: 1em;
+      color: #333;
     }
   </style>
 </head>
@@ -108,35 +71,19 @@
         <a href="government.html">Dashboard</a>
         <a href="view-users.html">Manage Users</a>
         <a href="add-user.html">Add User</a>
-        <button id="logoutBtn">Logout</button>
+        <a href="#" id="logoutLink">Logout</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h1>Dashboard</h1>
-    <div id="adminEmail" class="admin-email">Logged in as: ...</div>
-
-    <div class="cards">
-      <div class="card">
-        <a href="view-users.html">👥 View & Manage Users</a>
-      </div>
-      <div class="card">
-        <a href="add-user.html">➕ Add New User</a>
-      </div>
-    </div>
+    <h1>BOOP Admin Dashboard</h1>
+    <p>Welcome to your secure dashboard. From here you can manage users, review system activity, and perform administrative tasks.</p>
   </div>
 
   <script type="module">
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-    import {
-      initializeApp
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
@@ -150,17 +97,14 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    const adminEmailEl = document.getElementById("adminEmail");
-
     onAuthStateChanged(auth, (user) => {
       if (!user) {
         window.location.href = "index.html";
-      } else {
-        adminEmailEl.textContent = `Logged in as: ${user.email}`;
       }
     });
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
+    document.getElementById("logoutLink").addEventListener("click", (e) => {
+      e.preventDefault();
       signOut(auth).then(() => {
         window.location.href = "index.html";
       });
