@@ -61,8 +61,8 @@ function renderTable(users) {
         <div class="dropdown">
           <button class="action-btn">Actions ▼</button>
           <div class="dropdown-content">
-            <a href="user-profile.html?uid=${user.id}">👁️ View Profile</a>
-            <a href="#" class="delete-user" data-id="${user.id}">🗑️ Delete</a>
+            <a href="user-profile.html?uid=${user.id}">View Profile</a>
+            <a href="#" class="delete-user" data-id="${user.id}">Delete</a>
           </div>
         </div>
       </td>
