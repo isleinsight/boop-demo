@@ -23,7 +23,7 @@ const firebaseConfig = {
   measurementId: "G-79DWYFPZNR"
 };
 
-// Init
+// Init Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -47,13 +47,16 @@ document.addEventListener("DOMContentLoaded", () => {
   let createdUserUID = null;
   let adminEmail = null;
 
-  // Get the logged-in admin’s email for “addedBy”
+  // Disable Step 2 initially
+  step2Form.querySelectorAll("input, select, button").forEach(el => el.disabled = true);
+
+  // Detect admin login
   onAuthStateChanged(auth, (user) => {
     if (user) {
       adminEmail = user.email;
       console.log("Admin logged in:", adminEmail);
     } else {
-      console.log("Not logged in. Redirecting...");
+      alert("You must be logged in to access this page.");
       window.location.href = "index.html";
     }
   });
@@ -61,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Step 1: Create Auth User
   step1Form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    step1Status.textContent = "Creating user...";
+    step1Status.textContent = "⏳ Creating user...";
 
     const email = newEmailInput.value.trim();
     const password = newPasswordInput.value.trim();
@@ -71,14 +74,12 @@ document.addEventListener("DOMContentLoaded", () => {
       createdUserUID = userCredential.user.uid;
 
       step1Status.style.color = "green";
-      step1Status.textContent = "✅ Step 1 complete. Now fill out step 2.";
+      step1Status.textContent = "✅ Step 1 complete. Now continue below.";
 
-      // Disable step 1 inputs and enable step 2
+      // Disable Step 1, enable Step 2
       newEmailInput.disabled = true;
       newPasswordInput.disabled = true;
-      step2Form.querySelectorAll("input, select, button").forEach((el) => {
-        el.disabled = false;
-      });
+      step2Form.querySelectorAll("input, select, button").forEach(el => el.disabled = false);
 
     } catch (error) {
       console.error("Error creating user:", error);
@@ -87,10 +88,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Step 2: Save to Firestore
+  // Step 2: Write user details to Firestore
   step2Form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    step2Status.textContent = "Saving user data...";
+    step2Status.textContent = "⏳ Saving user data...";
 
     const firstName = firstNameInput.value.trim();
     const lastName = lastNameInput.value.trim();
@@ -98,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!createdUserUID) {
       step2Status.style.color = "red";
-      step2Status.textContent = "❌ You must complete step 1 first.";
+      step2Status.textContent = "❌ Step 1 is not complete.";
       return;
     }
 
@@ -107,39 +108,40 @@ document.addEventListener("DOMContentLoaded", () => {
         firstName,
         lastName,
         role,
+        email: newEmailInput.value.trim(),
         addedBy: adminEmail,
         createdAt: serverTimestamp()
       });
 
       step2Status.style.color = "green";
-      step2Status.textContent = "✅ User successfully saved.";
+      step2Status.textContent = "✅ User successfully saved to database.";
 
-      // Optional: Add reset button
-      const resetButton = document.createElement("button");
-      resetButton.textContent = "Add Another User";
-      resetButton.style.marginTop = "20px";
-      resetButton.addEventListener("click", () => {
-        window.location.reload();
-      });
-      step2Form.appendChild(resetButton);
+      // Add "Add Another User" button
+      const resetBtn = document.createElement("button");
+      resetBtn.textContent = "Add Another User";
+      resetBtn.style.marginTop = "20px";
+      resetBtn.onclick = () => window.location.reload();
+      step2Form.appendChild(resetBtn);
 
     } catch (error) {
-      console.error("Error saving user data:", error);
+      console.error("Error saving user to Firestore:", error);
       step2Status.style.color = "red";
       step2Status.textContent = "❌ " + error.message;
     }
   });
 
-  // Logout button
+  // Logout
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      }).catch((error) => {
-        console.error("Logout error:", error);
-        alert("Logout failed.");
-      });
+      signOut(auth)
+        .then(() => {
+          window.location.href = "index.html";
+        })
+        .catch((error) => {
+          console.error("Logout failed:", error);
+          alert("Failed to log out.");
+        });
     });
   }
 });
