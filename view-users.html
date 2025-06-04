@@ -60,41 +60,45 @@
       margin: 0 8px;
     }
 
+    nav {
+      background-color: #102a43;
+      padding: 12px 20px;
+    }
+
     .nav-container {
       max-width: 1100px;
       margin: auto;
       display: flex;
       justify-content: space-between;
-      padding: 12px 20px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .nav-left img {
       height: 36px;
     }
 
-    .nav-right a, .nav-right button {
-      margin-left: 12px;
-      text-decoration: none;
+    .nav-right {
+      display: flex;
+      gap: 15px;
+    }
+
+    .nav-right a,
+    .nav-right button {
       color: white;
-      background: #2f80ed;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1em;
+      background: none;
       border: none;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-size: 0.9em;
+      padding: 0;
       cursor: pointer;
     }
 
-    .nav-right button:hover,
-    .nav-right a:hover {
-      background-color: #1c60b3;
-    }
-
-    .nav-right button {
-      color: white;
-    }
-
-    nav {
-      background-color: #102a43;
+    .nav-right a:hover,
+    .nav-right button:hover {
+      text-decoration: underline;
+      color: #90cdf4;
     }
   </style>
 </head>
@@ -105,9 +109,11 @@
         <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
-        <a href="government.html">Dashboard</a>
         <a href="add-user.html">Add User</a>
-        <button id="logoutBtn">Logout</button>
+        <a href="view-users.html">View Users</a>
+        <a href="manage-vendors.html">Manage Vendors</a>
+        <a href="view-reports.html">View Reports</a>
+        <button id="logoutBtn">Log Out</button>
       </div>
     </div>
   </nav>
