@@ -222,6 +222,27 @@ select {
 }
 
 
+th {
+  position: relative;
+  cursor: pointer;
+}
+
+th .sort-label::after {
+  content: "";
+  margin-left: 6px;
+  font-size: 0.8em;
+}
+
+th.sorted-asc .sort-label::after {
+  content: "▲";
+}
+
+th.sorted-desc .sort-label::after {
+  content: "▼";
+}
+
+
+
 
 
 
