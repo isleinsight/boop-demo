@@ -29,16 +29,20 @@
       height: 36px;
     }
 
+    .nav-right a,
     .nav-right button {
+      margin-left: 12px;
+      text-decoration: none;
+      color: white;
       background: #2f80ed;
       border: none;
       border-radius: 6px;
       padding: 8px 14px;
-      color: white;
       font-size: 0.9em;
       cursor: pointer;
     }
 
+    .nav-right a:hover,
     .nav-right button:hover {
       background-color: #1c60b3;
     }
@@ -50,7 +54,6 @@
       background: #ffffff;
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-      text-align: center;
     }
 
     h1 {
@@ -58,9 +61,40 @@
       margin-bottom: 10px;
     }
 
-    p {
-      font-size: 1em;
+    .admin-email {
       color: #555;
+      margin-bottom: 20px;
+    }
+
+    .cards {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 30px;
+    }
+
+    .card {
+      flex: 1 1 220px;
+      background-color: #f0f4f8;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      transition: box-shadow 0.3s;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .card a {
+      text-decoration: none;
+      color: #2f80ed;
+      font-weight: bold;
+      display: block;
+    }
+
+    .card a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -71,6 +105,9 @@
         <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
+        <a href="government.html">Dashboard</a>
+        <a href="view-users.html">Manage Users</a>
+        <a href="add-user.html">Add User</a>
         <button id="logoutBtn">Logout</button>
       </div>
     </div>
@@ -78,7 +115,16 @@
 
   <div class="container">
     <h1>Dashboard</h1>
-    <p>Welcome to the BOOP Admin Dashboard. Use the menu to manage users and more.</p>
+    <div id="adminEmail" class="admin-email">Logged in as: ...</div>
+
+    <div class="cards">
+      <div class="card">
+        <a href="view-users.html">👥 View & Manage Users</a>
+      </div>
+      <div class="card">
+        <a href="add-user.html">➕ Add New User</a>
+      </div>
+    </div>
   </div>
 
   <script type="module">
@@ -104,9 +150,13 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
+    const adminEmailEl = document.getElementById("adminEmail");
+
     onAuthStateChanged(auth, (user) => {
       if (!user) {
         window.location.href = "index.html";
+      } else {
+        adminEmailEl.textContent = `Logged in as: ${user.email}`;
       }
     });
 
