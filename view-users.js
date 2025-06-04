@@ -1,3 +1,4 @@
+// user-profile.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
@@ -6,15 +7,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore,
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  startAfter,
-  endBefore,
   doc,
-  deleteDoc
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -28,121 +22,71 @@ const firebaseConfig = {
   measurementId: "G-79DWYFPZNR"
 };
 
-// Initialize Firebase
+// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM elements
-const logoutBtn = document.getElementById("logoutBtn");
-const tableBody = document.getElementById("userTableBody");
-const userCount = document.getElementById("userCount");
-const searchInput = document.getElementById("searchInput");
-const searchBtn = document.getElementById("searchBtn");
+document.addEventListener("DOMContentLoaded", async () => {
+  const logoutBtn = document.getElementById("logoutBtn");
+  const profileContainer = document.getElementById("profileContainer");
+  const statusMessage = document.getElementById("statusMessage");
 
-let allUsers = [];
-let sortField = "lastName";
-let sortAsc = true;
+  let adminEmail = null;
 
-// Auth check
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "index.html";
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      adminEmail = user.email;
+      console.log("Admin logged in:", adminEmail);
+    } else {
+      console.warn("Not logged in. Redirecting...");
+      window.location.href = "index.html";
+    }
+  });
+
+  // Extract UID from query parameter
+  const params = new URLSearchParams(window.location.search);
+  const uid = params.get("uid");
+
+  if (!uid) {
+    statusMessage.textContent = "No user ID provided in the URL.";
+    return;
   }
-});
 
-// Logout
-logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
-});
+  try {
+    const userDoc = await getDoc(doc(db, "users", uid));
 
-// Fetch users
-async function fetchUsers() {
-  const snapshot = await getDocs(collection(db, "users"));
-  allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  renderUsers(allUsers);
-}
-fetchUsers();
+    if (!userDoc.exists()) {
+      statusMessage.textContent = "User not found.";
+      return;
+    }
 
-// Render user table
-function renderUsers(users) {
-  const sorted = [...users].sort((a, b) => {
-    const fieldA = (a[sortField] || "").toLowerCase();
-    const fieldB = (b[sortField] || "").toLowerCase();
-    return sortAsc ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA);
-  });
+    const data = userDoc.data();
 
-  tableBody.innerHTML = "";
-  sorted.forEach(user => {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${user.firstName || ""}</td>
-      <td>${user.lastName || ""}</td>
-      <td>${user.email || ""}</td>
-      <td>${user.role || ""}</td>
-      <td>
-        <div class="dropdown">
-          <button class="action-btn">Actions <span>▾</span></button>
-          <div class="dropdown-content">
-            <a href="user-profile.html?uid=${user.id}">View Profile</a>
-            <a href="#" data-id="${user.id}" class="delete-link">Delete</a>
-          </div>
-        </div>
-      </td>
+    profileContainer.innerHTML = `
+      <h2>${data.firstName} ${data.lastName}</h2>
+      <p><strong>Email:</strong> ${data.email}</p>
+      <p><strong>Role:</strong> ${data.role}</p>
+      <p><strong>Wallet ID:</strong> ${data.walletId || 'N/A'}</p>
+      <p><strong>Added By:</strong> ${data.addedBy}</p>
+      <p><strong>Created At:</strong> ${data.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
     `;
 
-    tableBody.appendChild(tr);
-  });
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    statusMessage.textContent = "Error loading user profile.";
+  }
 
-  userCount.textContent = `Total Users: ${users.length}`;
-
-  // Add delete event listeners
-  document.querySelectorAll(".delete-link").forEach(link => {
-    link.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const uid = e.target.getAttribute("data-id");
-
-      const confirmText = prompt("⚠️ Type 'delete' to confirm deletion of this user:");
-      if (confirmText && confirmText.toLowerCase() === "delete") {
-        try {
-          await deleteDoc(doc(db, "users", uid));
-          alert("User deleted.");
-          fetchUsers();
-        } catch (error) {
-          console.error("Error deleting user:", error);
-          alert("Failed to delete user.");
-        }
-      } else {
-        alert("User not deleted.");
-      }
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth)
+        .then(() => {
+          window.location.href = "index.html";
+        })
+        .catch((error) => {
+          console.error("Logout error:", error);
+          alert("Logout failed.");
+        });
     });
-  });
-}
-
-// Search
-searchBtn.addEventListener("click", () => {
-  const query = searchInput.value.trim().toLowerCase();
-  const filtered = allUsers.filter(user =>
-    (user.firstName || "").toLowerCase().includes(query) ||
-    (user.lastName || "").toLowerCase().includes(query) ||
-    (user.email || "").toLowerCase().includes(query)
-  );
-  renderUsers(filtered);
-});
-
-// Sort handlers
-document.querySelectorAll("th[data-sort]").forEach(header => {
-  header.addEventListener("click", () => {
-    const field = header.getAttribute("data-sort");
-    if (sortField === field) {
-      sortAsc = !sortAsc;
-    } else {
-      sortField = field;
-      sortAsc = true;
-    }
-    renderUsers(allUsers);
-  });
+  }
 });
