@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Add reset button
       const resetButton = document.createElement("button");
-      resetButton.textContent = "➕ Add Another User";
+      resetButton.textContent = "Add Another User";
       resetButton.style.marginTop = "20px";
       resetButton.addEventListener("click", () => {
         window.location.reload();
