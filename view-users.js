@@ -9,7 +9,12 @@ import {
   collection,
   getDocs,
   query,
-  orderBy
+  orderBy,
+  limit,
+  startAfter,
+  endBefore,
+  doc,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -28,102 +33,116 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// DOM elements
+const logoutBtn = document.getElementById("logoutBtn");
+const tableBody = document.getElementById("userTableBody");
+const userCount = document.getElementById("userCount");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+
 let allUsers = [];
-let filteredUsers = [];
-let currentPage = 1;
-const usersPerPage = 10;
+let sortField = "lastName";
+let sortAsc = true;
 
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("✅ view-users.js loaded");
-
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth)
-        .then(() => (window.location.href = "index.html"))
-        .catch((error) => {
-          console.error("Logout error:", error);
-          alert("Logout failed.");
-        });
-    });
+// Auth check
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = "index.html";
   }
+});
 
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      console.log("Logged in as:", user.email);
-      await loadUsers();
-      displayUsers();
-    } else {
-      console.warn("Not logged in. Redirecting...");
-      window.location.href = "index.html";
-    }
-  });
-
-  document.getElementById("prevBtn").addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
-      displayUsers();
-    }
-  });
-
-  document.getElementById("nextBtn").addEventListener("click", () => {
-    const maxPage = Math.ceil(filteredUsers.length / usersPerPage);
-    if (currentPage < maxPage) {
-      currentPage++;
-      displayUsers();
-    }
-  });
-
-  document.getElementById("searchBtn").addEventListener("click", () => {
-    const searchTerm = document.getElementById("searchInput").value.trim().toLowerCase();
-    filteredUsers = allUsers.filter(user =>
-      user.firstName?.toLowerCase().includes(searchTerm) ||
-      user.lastName?.toLowerCase().includes(searchTerm) ||
-      user.email?.toLowerCase().includes(searchTerm)
-    );
-    currentPage = 1;
-    displayUsers();
+// Logout
+logoutBtn.addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
   });
 });
 
-async function loadUsers() {
-  try {
-    const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    filteredUsers = allUsers;
-  } catch (error) {
-    console.error("Error loading users:", error);
-  }
+// Fetch users
+async function fetchUsers() {
+  const snapshot = await getDocs(collection(db, "users"));
+  allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  renderUsers(allUsers);
 }
+fetchUsers();
 
-function displayUsers() {
-  const tableBody = document.getElementById("userTableBody");
-  const userCount = document.getElementById("userCount");
-  const paginationInfo = document.getElementById("paginationInfo");
-
-  if (!tableBody) return;
+// Render user table
+function renderUsers(users) {
+  const sorted = [...users].sort((a, b) => {
+    const fieldA = (a[sortField] || "").toLowerCase();
+    const fieldB = (b[sortField] || "").toLowerCase();
+    return sortAsc ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA);
+  });
 
   tableBody.innerHTML = "";
+  sorted.forEach(user => {
+    const tr = document.createElement("tr");
 
-  const start = (currentPage - 1) * usersPerPage;
-  const end = start + usersPerPage;
-  const pageUsers = filteredUsers.slice(start, end);
-
-  pageUsers.forEach(user => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
+    tr.innerHTML = `
       <td>${user.firstName || ""}</td>
       <td>${user.lastName || ""}</td>
       <td>${user.email || ""}</td>
       <td>${user.role || ""}</td>
-      <td><a href="view-user.html?id=${user.id}" class="view-button">View / Modify</a></td>
+      <td>
+        <div class="dropdown">
+          <button class="action-btn">Actions <span>▾</span></button>
+          <div class="dropdown-content">
+            <a href="user-profile.html?uid=${user.id}">View Profile</a>
+            <a href="#" data-id="${user.id}" class="delete-link">Delete</a>
+          </div>
+        </div>
+      </td>
     `;
-    tableBody.appendChild(row);
+
+    tableBody.appendChild(tr);
   });
 
-  userCount.textContent = `Total Users: ${filteredUsers.length}`;
-  paginationInfo.textContent = `Page ${currentPage} of ${Math.ceil(filteredUsers.length / usersPerPage)}`;
-  document.getElementById("prevBtn").disabled = currentPage === 1;
-  document.getElementById("nextBtn").disabled = currentPage >= Math.ceil(filteredUsers.length / usersPerPage);
+  userCount.textContent = `Total Users: ${users.length}`;
+
+  // Add delete event listeners
+  document.querySelectorAll(".delete-link").forEach(link => {
+    link.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const uid = e.target.getAttribute("data-id");
+
+      const confirmText = prompt("⚠️ Type 'delete' to confirm deletion of this user:");
+      if (confirmText && confirmText.toLowerCase() === "delete") {
+        try {
+          await deleteDoc(doc(db, "users", uid));
+          alert("User deleted.");
+          fetchUsers();
+        } catch (error) {
+          console.error("Error deleting user:", error);
+          alert("Failed to delete user.");
+        }
+      } else {
+        alert("User not deleted.");
+      }
+    });
+  });
 }
+
+// Search
+searchBtn.addEventListener("click", () => {
+  const query = searchInput.value.trim().toLowerCase();
+  const filtered = allUsers.filter(user =>
+    (user.firstName || "").toLowerCase().includes(query) ||
+    (user.lastName || "").toLowerCase().includes(query) ||
+    (user.email || "").toLowerCase().includes(query)
+  );
+  renderUsers(filtered);
+});
+
+// Sort handlers
+document.querySelectorAll("th[data-sort]").forEach(header => {
+  header.addEventListener("click", () => {
+    const field = header.getAttribute("data-sort");
+    if (sortField === field) {
+      sortAsc = !sortAsc;
+    } else {
+      sortField = field;
+      sortAsc = true;
+    }
+    renderUsers(allUsers);
+  });
+});
