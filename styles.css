@@ -276,7 +276,7 @@ th.sorted-desc .arrow::after {
 }
 
 
-.btn {
+.btnEdit {
   display: inline-block;
   background-color: #007BFF; /* Bootstrap blue */
   color: #fff;
@@ -289,7 +289,7 @@ th.sorted-desc .arrow::after {
   border: none;
 }
 
-.btn:hover {
+.btnEdit:hover {
   background-color: #0056b3;
   cursor: pointer;
 }
