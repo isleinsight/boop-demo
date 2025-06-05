@@ -251,3 +251,27 @@ saveBtn.addEventListener("click", async () => {
 });
 
 
+// Vendor info
+if (user.role === "vendor") {
+  const vendorDoc = await getDoc(doc(db, "vendors", uid));
+  if (vendorDoc.exists()) {
+    const vendor = vendorDoc.data();
+
+    // Show vendor box
+    document.getElementById("vendorInfoBox").style.display = "block";
+
+    // Display text
+    document.getElementById("vendorName").textContent = vendor.name || "-";
+    document.getElementById("vendorCategory").textContent = vendor.category || "-";
+    document.getElementById("vendorLocation").textContent = vendor.location || "-";
+
+    // Fill inputs (for editing)
+    document.getElementById("vendorNameInput").value = vendor.name || "";
+    document.getElementById("vendorCategoryInput").value = vendor.category || "";
+    document.getElementById("vendorLocationInput").value = vendor.location || "";
+  }
+}
+
+
+
+
