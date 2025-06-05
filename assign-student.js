@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
-// Firebase Config
+// Initialize Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
@@ -18,187 +18,157 @@ const firebaseConfig = {
   messagingSenderId: "570567453336",
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// DOM elements
-const parentSearchBtn = document.getElementById("parentSearchBtn");
-const studentSearchBtn = document.getElementById("studentSearchBtn");
-const assignButton = document.getElementById("assignButton");
-
-const parentResults = document.getElementById("parentResults");
-const studentResults = document.getElementById("studentResults");
-const statusMessage = document.getElementById("statusMessage");
-
+// State
 let selectedParentId = null;
-
-const PAGE_SIZE = 5;
 let parentData = [];
 let studentData = [];
 let parentPage = 0;
 let studentPage = 0;
+const PAGE_SIZE = 5;
 
-// Render parents
-function renderParents() {
-  parentResults.innerHTML = "";
-  const start = parentPage * PAGE_SIZE;
-  const currentPage = parentData.slice(start, start + PAGE_SIZE);
+// DOM
+const parentTableBody = document.getElementById("parentTableBody");
+const studentTableBody = document.getElementById("studentTableBody");
 
-  if (currentPage.length === 0) {
-    parentResults.innerHTML = "<em>No matching parents found.</em>";
-    return;
-  }
+// Helpers
+function renderTable(data, tableBody, page, role, selectType) {
+  tableBody.innerHTML = "";
+  const start = page * PAGE_SIZE;
+  const current = data.slice(start, start + PAGE_SIZE);
 
-  currentPage.forEach((user) => {
-    const div = document.createElement("div");
-    div.style.marginBottom = "10px";
+  current.forEach(user => {
+    const tr = document.createElement("tr");
 
-    const btn = document.createElement("button");
-    btn.textContent = `Select ${user.firstName} ${user.lastName} (${user.email})`;
-    btn.addEventListener("click", () => {
-      selectedParentId = user.id;
-      statusMessage.textContent = `Selected parent: ${user.firstName} ${user.lastName}`;
-      statusMessage.style.color = "#333";
-    });
+    if (role === "parent" && user.id === selectedParentId) {
+      tr.classList.add("selected-row");
+    }
 
-    div.appendChild(btn);
-    parentResults.appendChild(div);
+    const selectCell = (selectType === "checkbox")
+      ? `<input type="checkbox" value="${user.id}" />`
+      : `<button data-id="${user.id}" class="select-parent-btn">Select</button>`;
+
+    tr.innerHTML = `
+      <td>${user.firstName}</td>
+      <td>${user.lastName}</td>
+      <td>${user.email}</td>
+      <td>${user.role}</td>
+      <td>${selectCell}</td>
+    `;
+
+    tableBody.appendChild(tr);
   });
 
-  const nav = document.createElement("div");
-  nav.innerHTML = `
-    <div class="pagination">
-      <button ${parentPage === 0 ? "disabled" : ""} id="prevParent">Previous</button>
-      <button ${start + PAGE_SIZE >= parentData.length ? "disabled" : ""} id="nextParent">Next</button>
-    </div>
-  `;
-  parentResults.appendChild(nav);
+  if (role === "parent") {
+    document.querySelectorAll(".select-parent-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        selectedParentId = e.target.getAttribute("data-id");
+        renderParents();
+      });
+    });
+  }
+}
 
-  document.getElementById("prevParent")?.addEventListener("click", () => {
+async function fetchData(role, searchTerm) {
+  const q = query(collection(db, "users"), where("role", "==", role));
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    .filter(user => {
+      const fullText = `${user.firstName} ${user.lastName} ${user.email}`.toLowerCase();
+      return fullText.includes(searchTerm.toLowerCase());
+    });
+}
+
+// Render + Pagination
+function renderParents() {
+  renderTable(parentData, parentTableBody, parentPage, "parent", "button");
+  document.getElementById("parentPaginationInfo").textContent = `Page ${parentPage + 1}`;
+}
+
+function renderStudents() {
+  renderTable(studentData, studentTableBody, studentPage, "student", "checkbox");
+  document.getElementById("studentPaginationInfo").textContent = `Page ${studentPage + 1}`;
+}
+
+// Pagination handlers
+document.getElementById("prevParentBtn").onclick = () => {
+  if (parentPage > 0) {
     parentPage--;
     renderParents();
-  });
-
-  document.getElementById("nextParent")?.addEventListener("click", () => {
+  }
+};
+document.getElementById("nextParentBtn").onclick = () => {
+  if ((parentPage + 1) * PAGE_SIZE < parentData.length) {
     parentPage++;
     renderParents();
-  });
-}
-
-// Render students
-function renderStudents() {
-  studentResults.innerHTML = "";
-  const start = studentPage * PAGE_SIZE;
-  const currentPage = studentData.slice(start, start + PAGE_SIZE);
-
-  if (currentPage.length === 0) {
-    studentResults.innerHTML = "<em>No matching students found.</em>";
-    return;
   }
-
-  currentPage.forEach((user) => {
-    const label = document.createElement("label");
-    label.classList.add("student-checkbox");
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = user.id;
-
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(` ${user.firstName} ${user.lastName} (${user.email})`));
-    studentResults.appendChild(label);
-  });
-
-  const nav = document.createElement("div");
-  nav.innerHTML = `
-    <div class="pagination">
-      <button ${studentPage === 0 ? "disabled" : ""} id="prevStudent">Previous</button>
-      <button ${start + PAGE_SIZE >= studentData.length ? "disabled" : ""} id="nextStudent">Next</button>
-    </div>
-  `;
-  studentResults.appendChild(nav);
-
-  document.getElementById("prevStudent")?.addEventListener("click", () => {
+};
+document.getElementById("prevStudentBtn").onclick = () => {
+  if (studentPage > 0) {
     studentPage--;
     renderStudents();
-  });
-
-  document.getElementById("nextStudent")?.addEventListener("click", () => {
+  }
+};
+document.getElementById("nextStudentBtn").onclick = () => {
+  if ((studentPage + 1) * PAGE_SIZE < studentData.length) {
     studentPage++;
     renderStudents();
-  });
-}
+  }
+};
 
-// Search parents
-parentSearchBtn.addEventListener("click", async () => {
-  const searchTerm = document.getElementById("parentSearch").value.trim().toLowerCase();
-  selectedParentId = null;
+// Search handlers
+document.getElementById("parentSearchBtn").onclick = async () => {
+  const term = document.getElementById("parentSearch").value;
+  parentData = await fetchData("parent", term);
   parentPage = 0;
-  parentData = [];
-
-  const q = query(collection(db, "users"), where("role", "==", "parent"));
-  const querySnapshot = await getDocs(q);
-
-  querySnapshot.forEach((docSnap) => {
-    const data = docSnap.data();
-    const match = `${data.firstName} ${data.lastName} ${data.email}`.toLowerCase();
-    if (match.includes(searchTerm)) {
-      parentData.push({ id: docSnap.id, ...data });
-    }
-  });
-
   renderParents();
-});
+};
 
-// Search students
-studentSearchBtn.addEventListener("click", async () => {
-  const searchTerm = document.getElementById("studentSearch").value.trim().toLowerCase();
+document.getElementById("studentSearchBtn").onclick = async () => {
+  const term = document.getElementById("studentSearch").value;
+  studentData = await fetchData("student", term);
   studentPage = 0;
-  studentData = [];
-
-  const q = query(collection(db, "users"), where("role", "==", "student"));
-  const querySnapshot = await getDocs(q);
-
-  querySnapshot.forEach((docSnap) => {
-    const data = docSnap.data();
-    const match = `${data.firstName} ${data.lastName} ${data.email}`.toLowerCase();
-    if (match.includes(searchTerm)) {
-      studentData.push({ id: docSnap.id, ...data });
-    }
-  });
-
   renderStudents();
-});
+};
 
-// Assign students to parent
-assignButton.addEventListener("click", async () => {
+// Assign selected students to parent
+document.getElementById("assignButton").onclick = async () => {
+  const status = document.getElementById("statusMessage");
+
   if (!selectedParentId) {
-    statusMessage.textContent = "Please select a parent first.";
-    statusMessage.style.color = "red";
+    status.textContent = "Please select a parent.";
+    status.style.color = "red";
     return;
   }
 
-  const selectedStudentIds = Array.from(studentResults.querySelectorAll("input[type=checkbox]:checked"))
-    .map(cb => cb.value);
+  const selectedCheckboxes = studentTableBody.querySelectorAll("input[type='checkbox']:checked");
+  const studentIds = Array.from(selectedCheckboxes).map(cb => cb.value);
 
-  if (selectedStudentIds.length === 0) {
-    statusMessage.textContent = "Please select at least one student.";
-    statusMessage.style.color = "red";
+  if (studentIds.length === 0) {
+    status.textContent = "Please select at least one student.";
+    status.style.color = "red";
     return;
   }
 
   try {
-    const parentRef = doc(db, "users", selectedParentId);
-    await updateDoc(parentRef, {
-      children: selectedStudentIds
+    await updateDoc(doc(db, "users", selectedParentId), {
+      children: studentIds
     });
-
-    statusMessage.textContent = "Students successfully assigned to parent!";
-    statusMessage.style.color = "green";
-  } catch (error) {
-    console.error("Assignment error:", error);
-    statusMessage.textContent = "An error occurred while assigning students.";
-    statusMessage.style.color = "red";
+    status.textContent = "Students successfully assigned!";
+    status.style.color = "green";
+  } catch (err) {
+    console.error("Error assigning students:", err);
+    status.textContent = "An error occurred.";
+    status.style.color = "red";
   }
-});
+};
+
+// Load initial data on page load
+(async () => {
+  parentData = await fetchData("parent", "");
+  studentData = await fetchData("student", "");
+  renderParents();
+  renderStudents();
+})();
