@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>View Users - BOOP Admin</title>
+  <title>Assign Students - BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -15,6 +15,7 @@
 
     nav {
       background-color: #102a43;
+      padding: 12px 20px;
     }
 
     .nav-container {
@@ -22,7 +23,7 @@
       margin: auto;
       display: flex;
       justify-content: space-between;
-      padding: 12px 20px;
+      align-items: center;
     }
 
     .nav-left img {
@@ -30,13 +31,10 @@
     }
 
     .nav-right a {
-      margin-left: 12px;
+      margin-left: 16px;
       text-decoration: none;
       color: white;
-      background: none;
-      border: none;
       font-size: 0.95em;
-      cursor: pointer;
     }
 
     .nav-right a:hover {
@@ -44,125 +42,89 @@
     }
 
     .container {
-      max-width: 1100px;
-      margin: 40px auto 20px;
-      padding: 20px 30px;
-      background: #ffffff;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
 
-    h1 {
-      margin: 0 0 20px;
-      font-size: 1.8em;
+    h2 {
+      font-size: 1.5em;
+      margin-bottom: 20px;
     }
 
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
+    .box {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 6px;
     }
 
-    .search-bar {
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    .search-row {
       display: flex;
       gap: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
-    .search-bar input {
+    input[type="text"] {
       flex: 1;
       padding: 10px;
       border: 1px solid #ccc;
-      border-radius: 6px;
+      border-radius: 4px;
     }
 
-    .search-bar button {
-      padding: 10px 18px;
-      border: none;
+    button {
+      padding: 10px 16px;
       background-color: #2f80ed;
       color: white;
+      border: none;
       border-radius: 6px;
       cursor: pointer;
     }
 
-    .search-bar button:hover {
+    button:hover {
       background-color: #1c60b3;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    .search-result {
       margin-top: 10px;
-      font-size: 0.95em;
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
     }
 
-    th, td {
-      padding: 12px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-
-    th {
-      background-color: #f1f5f9;
-      cursor: pointer;
-      position: relative;
-    }
-
- 
-
-    .dropdown {
-      position: relative;
-      display: inline-block;
-    }
-
-    .action-btn {
-      background-color: #2f80ed;
-      color: white;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 0.85em;
-    }
-
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      background-color: white;
-      min-width: 120px;
-      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-      z-index: 1;
-    }
-
-    .dropdown-content a {
-      color: black;
-      padding: 10px 12px;
-      text-decoration: none;
+    .student-checkbox {
       display: block;
-      font-size: 0.85em;
-    }
-
-    .dropdown-content a:hover {
-      background-color: #f0f0f0;
-    }
-
-    .dropdown:hover .dropdown-content {
-      display: block;
+      margin-bottom: 8px;
     }
 
     .pagination {
-      margin-top: 20px;
+      margin-top: 10px;
       text-align: center;
     }
 
     .pagination button {
       padding: 8px 16px;
-      margin: 0 8px;
+      margin: 0 5px;
+    }
+
+    #statusMessage {
+      margin-top: 15px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
+
+  <!-- Navigation -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -171,6 +133,7 @@
       <div class="nav-right">
         <a href="government.html">Dashboard</a>
         <a href="add-user.html">Add User</a>
+        <a href="assign-student.html">Assign Student</a>
         <a href="view-users.html">View Users</a>
         <a href="view-reports.html">View Reports</a>
         <a href="#" id="logoutBtn">Log Out</a>
@@ -178,39 +141,74 @@
     </div>
   </nav>
 
+  <!-- Main Section -->
   <div class="container">
-    <div class="top-bar">
-      <h1>View Users</h1>
-      <span id="userCount">Total Users: 0</span>
+    <h2>Assign Students to a Parent</h2>
+
+    <div class="box">
+      <label for="parentSearch">Search Parent</label>
+      <div class="search-row">
+        <input type="text" id="parentSearch" placeholder="Enter parent's name or email" />
+        <button id="parentSearchBtn">Search</button>
+      </div>
+      <div id="parentResults" class="search-result"></div>
     </div>
 
-    <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Search by name or email" />
-      <button id="searchBtn">Search</button>
+    <div class="box">
+      <label for="studentSearch">Search Students</label>
+      <div class="search-row">
+        <input type="text" id="studentSearch" placeholder="Enter student's name or email" />
+        <button id="studentSearchBtn">Search</button>
+      </div>
+      <div id="studentResults" class="search-result"></div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th class="sortable" data-column="firstName">First Name <span class="arrow"></span></th>
-<th class="sortable" data-column="lastName">Last Name <span class="arrow"></span></th>
-<th class="sortable" data-column="email">Email <span class="arrow"></span></th>
-<th class="sortable" data-column="role">Role <span class="arrow"></span></th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="userTableBody">
-        <!-- User rows go here -->
-      </tbody>
-    </table>
-
-    <div class="pagination">
-      <button id="prevBtn">Previous</button>
-      <span id="paginationInfo">Page 1</span>
-      <button id="nextBtn">Next</button>
+    <div class="box">
+      <button id="assignButton">Assign Selected Students</button>
+      <div id="statusMessage"></div>
     </div>
   </div>
 
-  <script type="module" src="view-users.js"></script>
+  <!-- Firebase Auth Check -->
+  <script type="module">
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          signOut(auth).then(() => {
+            window.location.href = "index.html";
+          }).catch((error) => {
+            console.error("Logout error:", error);
+            alert("Logout failed.");
+          });
+        });
+      }
+    });
+  </script>
+
+  <!-- Your JavaScript file for search + assign -->
+  <script type="module" src="assign-student.js"></script>
 </body>
 </html>
