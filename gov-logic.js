@@ -149,3 +149,11 @@ function showManageUsers() {
 
 <button onclick="showAddUserForm()">Add User</button>
 <button onclick="showManageUsers()">Manage Users</button>
+
+
+const logoutBtn = document.getElementById("logoutBtn");
+logoutBtn.addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
+});
