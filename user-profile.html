@@ -1,37 +1,116 @@
-<!-- All <head> and <style> remains unchanged up to ... -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Profile</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
 
-<div style="margin-top: 20px; margin-bottom: 20px;">
-  <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
-  <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
-</div>
-
-<div class="user-details-grid" id="userInfo">
-  <!-- Dynamic user info will be injected here -->
-</div>
-
-<!-- Add these hidden inputs to hold editable fields -->
-<div id="editFields" style="display:none;">
-  <div class="user-details-grid">
-    <div>
-      <span class="label">First Name</span>
-      <input type="text" id="editFirstName" />
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="logo.png" alt="BOOP Logo" class="logo" />
     </div>
-    <div>
-      <span class="label">Last Name</span>
-      <input type="text" id="editLastName" />
+    <div class="navbar-right">
+      <a href="government.html">Dashboard</a>
+      <a href="view-users.html">View Users</a>
+      <a href="view-reports.html">View Reports</a>
+      <a href="#" id="logoutBtn">Logout</a>
     </div>
-    <div>
-      <span class="label">Role</span>
-      <select id="editRole">
-        <option value="cardholder">Cardholder</option>
-        <option value="parent">Parent</option>
-        <option value="vendor">Vendor</option>
-        <option value="admin">Admin</option>
-      </select>
+  </nav>
+
+  <main class="container">
+    <h1>User Profile</h1>
+
+    <div style="margin-top: 20px; margin-bottom: 20px;">
+      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+      <button id="saveProfileBtn" class="btnEdit" style="display: none;">Save Changes</button>
     </div>
-  </div>
-</div>
 
-<!-- vendorInfo, wallet, transactions remain unchanged -->
+    <!-- Display user details -->
+    <div class="user-details-grid" id="userInfo">
+      <!-- JavaScript injects user info here -->
+    </div>
 
-<script type="module" src="user-profile.js"></script>
+    <!-- Editable fields -->
+    <div id="editFields" style="display: none;">
+      <div class="user-details-grid">
+        <div>
+          <span class="label">First Name</span>
+          <input type="text" id="editFirstName" />
+        </div>
+        <div>
+          <span class="label">Last Name</span>
+          <input type="text" id="editLastName" />
+        </div>
+        <div>
+          <span class="label">Role</span>
+          <select id="editRole">
+            <option value="cardholder">Cardholder</option>
+            <option value="parent">Parent</option>
+            <option value="vendor">Vendor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet -->
+    <section class="info-section">
+      <h2>Wallet</h2>
+      <p><strong>ID:</strong> <span id="walletId">-</span></p>
+      <p><strong>Balance:</strong> <span id="walletBalance">-</span></p>
+    </section>
+
+    <!-- Card -->
+    <section class="info-section">
+      <h2>Card</h2>
+      <p><strong>Card UID:</strong> <span id="cardUid">-</span></p>
+      <p><strong>Type:</strong> <span id="cardType">-</span></p>
+      <p><strong>Issue Date:</strong> <span id="issueDate">-</span></p>
+      <p><strong>Active:</strong> <span id="isActive">-</span></p>
+    </section>
+
+    <!-- Vendor -->
+    <section class="info-section" id="vendorInfo" style="display: none;">
+      <h2>Vendor Info</h2>
+      <p><strong>Business Name:</strong> <span id="vendorName">-</span></p>
+      <p><strong>Category:</strong> <span id="vendorCategory">-</span></p>
+      <p><strong>Location:</strong> <span id="vendorLocation">-</span></p>
+    </section>
+
+    <!-- Parent's Children -->
+    <section class="info-section" id="childrenList">
+      <!-- Populated if role is parent -->
+    </section>
+
+    <!-- Transactions -->
+    <section class="info-section">
+      <h2>Transactions</h2>
+      <table id="transactionTable">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Amount</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Category</th>
+            <th>Transaction ID</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Transactions inserted here -->
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <!-- Script -->
+  <script type="module" src="user-profile.js"></script>
+
+</body>
+</html>
