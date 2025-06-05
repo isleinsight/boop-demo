@@ -10,6 +10,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  setDoc,
   collection,
   query,
   where
@@ -33,8 +34,9 @@ const db = getFirestore(app);
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
 
+// Elements
 const userInfoContainer = document.getElementById("userInfo");
-const vendorInfo = document.getElementById("vendorInfo");
+const vendorInfoBox = document.getElementById("vendorInfoBox");
 const transactionTable = document.getElementById("transactionTable").querySelector("tbody");
 
 const walletIdEl = document.getElementById("walletId");
@@ -56,8 +58,13 @@ const editFirstName = document.getElementById("editFirstName");
 const editLastName = document.getElementById("editLastName");
 const editRole = document.getElementById("editRole");
 
+const vendorNameInput = document.getElementById("vendorNameInput");
+const vendorCategoryInput = document.getElementById("vendorCategoryInput");
+const vendorLocationInput = document.getElementById("vendorLocationInput");
+
 let currentUserData = null;
 
+// Load profile
 async function loadUserProfile(uid) {
   const userDoc = await getDoc(doc(db, "users", uid));
   if (!userDoc.exists()) {
@@ -68,6 +75,7 @@ async function loadUserProfile(uid) {
   const user = userDoc.data();
   currentUserData = user;
 
+  // Basic info
   userInfoContainer.innerHTML = `
     <div>
       <span class="label">Name</span>
@@ -102,6 +110,7 @@ async function loadUserProfile(uid) {
   walletIdEl.textContent = user.walletAddress || "-";
   walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
 
+  // Card
   const cardSnap = await getDocs(query(collection(db, "cards"), where("assignedTo", "==", uid)));
   if (!cardSnap.empty) {
     const card = cardSnap.docs[0].data();
@@ -111,19 +120,24 @@ async function loadUserProfile(uid) {
     isActiveEl.textContent = card.isActive ? "Yes" : "No";
   }
 
+  // Vendor
   if (user.role === "vendor") {
-    vendorInfo.style.display = "block";
     const vendorDoc = await getDoc(doc(db, "vendors", uid));
     if (vendorDoc.exists()) {
       const vendor = vendorDoc.data();
+      vendorInfoBox.style.display = "block";
+
       vendorNameEl.textContent = vendor.name || "-";
       vendorCategoryEl.textContent = vendor.category || "-";
       vendorLocationEl.textContent = vendor.location || "-";
+
+      vendorNameInput.value = vendor.name || "";
+      vendorCategoryInput.value = vendor.category || "";
+      vendorLocationInput.value = vendor.location || "";
     }
-  } else {
-    vendorInfo.style.display = "none";
   }
 
+  // Children
   if (user.role === "parent") {
     const kidsSnap = await getDocs(query(collection(db, "users"), where("parentId", "==", uid)));
     const childrenList = document.getElementById("childrenList");
@@ -138,6 +152,7 @@ async function loadUserProfile(uid) {
     }
   }
 
+  // Transactions
   const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
   transactionTable.innerHTML = "";
   for (const docSnap of txSnap.docs) {
@@ -180,7 +195,7 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   });
 });
 
-// Toggle edit mode
+// Edit mode
 editBtn.addEventListener("click", () => {
   editFields.style.display = "block";
   userInfoContainer.style.display = "none";
@@ -198,80 +213,19 @@ saveBtn.addEventListener("click", async () => {
 
   try {
     await updateDoc(doc(db, "users", uid), updated);
+
+    if (updated.role === "vendor") {
+      await setDoc(doc(db, "vendors", uid), {
+        name: vendorNameInput.value.trim(),
+        category: vendorCategoryInput.value.trim(),
+        location: vendorLocationInput.value.trim()
+      }, { merge: true });
+    }
+
     alert("✅ Profile updated!");
     window.location.reload();
   } catch (error) {
     console.error("Error updating profile:", error);
-    alert("❌ Update failed. Check console for details.");
+    alert("❌ Update failed.");
   }
 });
-
-
-const editBtn = document.getElementById("editBtn");
-const saveBtn = document.createElement("button");
-saveBtn.textContent = "Save Changes";
-saveBtn.classList.add("edit-save-btn");
-saveBtn.style.display = "none";
-
-document.body.appendChild(saveBtn);
-
-editBtn.addEventListener("click", () => {
-  // Show input fields for vendor
-  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "block");
-  document.querySelectorAll(".value").forEach(el => el.style.display = "none");
-  saveBtn.style.display = "inline-block";
-  editBtn.style.display = "none";
-});
-
-saveBtn.addEventListener("click", async () => {
-  const vendorName = document.getElementById("vendorNameInput").value.trim();
-  const vendorCategory = document.getElementById("vendorCategoryInput").value.trim();
-  const vendorLocation = document.getElementById("vendorLocationInput").value.trim();
-
-  try {
-    await setDoc(doc(db, "vendors", uid), {
-      name: vendorName,
-      category: vendorCategory,
-      location: vendorLocation
-    }, { merge: true });
-
-    document.getElementById("vendorName").textContent = vendorName;
-    document.getElementById("vendorCategory").textContent = vendorCategory;
-    document.getElementById("vendorLocation").textContent = vendorLocation;
-
-    document.querySelectorAll(".edit-field").forEach(el => el.style.display = "none");
-    document.querySelectorAll(".value").forEach(el => el.style.display = "inline");
-    saveBtn.style.display = "none";
-    editBtn.style.display = "inline-block";
-    alert("✅ Vendor info updated.");
-  } catch (error) {
-    console.error("Error updating vendor info:", error);
-    alert("❌ Failed to update vendor info.");
-  }
-});
-
-
-// Vendor info
-if (user.role === "vendor") {
-  const vendorDoc = await getDoc(doc(db, "vendors", uid));
-  if (vendorDoc.exists()) {
-    const vendor = vendorDoc.data();
-
-    // Show vendor box
-    document.getElementById("vendorInfoBox").style.display = "block";
-
-    // Display text
-    document.getElementById("vendorName").textContent = vendor.name || "-";
-    document.getElementById("vendorCategory").textContent = vendor.category || "-";
-    document.getElementById("vendorLocation").textContent = vendor.location || "-";
-
-    // Fill inputs (for editing)
-    document.getElementById("vendorNameInput").value = vendor.name || "";
-    document.getElementById("vendorCategoryInput").value = vendor.category || "";
-    document.getElementById("vendorLocationInput").value = vendor.location || "";
-  }
-}
-
-
-
-
