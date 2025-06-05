@@ -82,33 +82,8 @@
       border-radius: 4px;
     }
 
-    button.search-btn {
+    button {
       padding: 10px 16px;
-      border: none;
-      background-color: #2f80ed;
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    button.search-btn:hover {
-      background-color: #1c60b3;
-    }
-
-    .search-result {
-      border-top: 1px solid #ddd;
-      padding-top: 10px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .student-checkbox {
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    .assign-button {
-      padding: 12px 20px;
       background-color: #2f80ed;
       color: white;
       border: none;
@@ -116,8 +91,29 @@
       cursor: pointer;
     }
 
-    .assign-button:hover {
+    button:hover {
       background-color: #1c60b3;
+    }
+
+    .search-result {
+      margin-top: 10px;
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
+    }
+
+    .student-checkbox {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .pagination {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .pagination button {
+      padding: 8px 16px;
+      margin: 0 5px;
     }
 
     #statusMessage {
@@ -145,7 +141,6 @@
     </div>
   </nav>
 
-  <!-- Main Content -->
   <div class="container">
     <h2>Assign Students to a Parent</h2>
 
@@ -153,7 +148,7 @@
       <label for="parentSearch">Search Parent</label>
       <div class="search-row">
         <input type="text" id="parentSearch" placeholder="Enter parent's name or email" />
-        <button class="search-btn" id="parentSearchBtn">Search</button>
+        <button id="parentSearchBtn">Search</button>
       </div>
       <div id="parentResults" class="search-result"></div>
     </div>
@@ -162,18 +157,18 @@
       <label for="studentSearch">Search Students</label>
       <div class="search-row">
         <input type="text" id="studentSearch" placeholder="Enter student's name or email" />
-        <button class="search-btn" id="studentSearchBtn">Search</button>
+        <button id="studentSearchBtn">Search</button>
       </div>
       <div id="studentResults" class="search-result"></div>
     </div>
 
     <div class="box">
-      <button class="assign-button" id="assignButton">Assign Selected Students</button>
+      <button id="assignButton">Assign Selected Students</button>
       <div id="statusMessage"></div>
     </div>
   </div>
 
-  <!-- Firebase Auth Script -->
+  <!-- Firebase Auth Check -->
   <script type="module">
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -201,16 +196,20 @@
       if (logoutBtn) {
         logoutBtn.addEventListener("click", (e) => {
           e.preventDefault();
-          signOut(auth).then(() => {
-            window.location.href = "index.html";
-          }).catch((error) => {
-            console.error("Logout error:", error);
-            alert("Logout failed.");
-          });
+          signOut(auth)
+            .then(() => {
+              window.location.href = "index.html";
+            })
+            .catch((error) => {
+              console.error("Logout error:", error);
+              alert("Logout failed.");
+            });
         });
       }
     });
   </script>
+
+ <script type="module" src="assign-student.js"></script>
 
 </body>
 </html>
