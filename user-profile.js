@@ -205,3 +205,49 @@ saveBtn.addEventListener("click", async () => {
     alert("❌ Update failed. Check console for details.");
   }
 });
+
+
+const editBtn = document.getElementById("editBtn");
+const saveBtn = document.createElement("button");
+saveBtn.textContent = "Save Changes";
+saveBtn.classList.add("edit-save-btn");
+saveBtn.style.display = "none";
+
+document.body.appendChild(saveBtn);
+
+editBtn.addEventListener("click", () => {
+  // Show input fields for vendor
+  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "block");
+  document.querySelectorAll(".value").forEach(el => el.style.display = "none");
+  saveBtn.style.display = "inline-block";
+  editBtn.style.display = "none";
+});
+
+saveBtn.addEventListener("click", async () => {
+  const vendorName = document.getElementById("vendorNameInput").value.trim();
+  const vendorCategory = document.getElementById("vendorCategoryInput").value.trim();
+  const vendorLocation = document.getElementById("vendorLocationInput").value.trim();
+
+  try {
+    await setDoc(doc(db, "vendors", uid), {
+      name: vendorName,
+      category: vendorCategory,
+      location: vendorLocation
+    }, { merge: true });
+
+    document.getElementById("vendorName").textContent = vendorName;
+    document.getElementById("vendorCategory").textContent = vendorCategory;
+    document.getElementById("vendorLocation").textContent = vendorLocation;
+
+    document.querySelectorAll(".edit-field").forEach(el => el.style.display = "none");
+    document.querySelectorAll(".value").forEach(el => el.style.display = "inline");
+    saveBtn.style.display = "none";
+    editBtn.style.display = "inline-block";
+    alert("✅ Vendor info updated.");
+  } catch (error) {
+    console.error("Error updating vendor info:", error);
+    alert("❌ Failed to update vendor info.");
+  }
+});
+
+
