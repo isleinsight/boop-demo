@@ -134,6 +134,40 @@
     <a href="view-users.html" class="back-button">← Back to Users</a>
 
     <h2>User Profile</h2>
+
+  <div style="margin-top: 20px; margin-bottom: 20px;">
+  <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+  <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
+</div>
+
+<div class="user-details-grid" id="userInfo">
+  <!-- Dynamic user info will be injected here -->
+</div>
+
+<!-- Add these hidden inputs to hold editable fields -->
+<div id="editFields" style="display:none;">
+  <div class="user-details-grid">
+    <div>
+      <span class="label">First Name</span>
+      <input type="text" id="editFirstName" />
+    </div>
+    <div>
+      <span class="label">Last Name</span>
+      <input type="text" id="editLastName" />
+    </div>
+    <div>
+      <span class="label">Role</span>
+      <select id="editRole">
+        <option value="cardholder">Cardholder</option>
+        <option value="parent">Parent</option>
+        <option value="vendor">Vendor</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+
     
     <div style="margin-top: 20px; margin-bottom: 20px;">
   <a id="editProfileBtn" class="btnEdit">Edit Profile</a>
