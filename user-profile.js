@@ -8,10 +8,11 @@ import {
   getFirestore,
   doc,
   getDoc,
+  getDocs,
+  updateDoc,
   collection,
   query,
-  where,
-  getDocs
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -24,30 +25,39 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Get user ID from URL
+// UID from URL
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
 
-// DOM elements
-const walletIdEl = document.getElementById("walletId");
-const walletBalanceEl = document.getElementById("walletBalance");
+const userInfoContainer = document.getElementById("userInfo");
+const vendorInfo = document.getElementById("vendorInfo");
 const transactionTable = document.getElementById("transactionTable").querySelector("tbody");
 
+const walletIdEl = document.getElementById("walletId");
+const walletBalanceEl = document.getElementById("walletBalance");
 const cardUidEl = document.getElementById("cardUid");
 const cardTypeEl = document.getElementById("cardType");
 const issueDateEl = document.getElementById("issueDate");
 const isActiveEl = document.getElementById("isActive");
 
-const vendorInfoContainer = document.getElementById("vendorInfo");
-const childrenContainer = document.getElementById("childrenList");
-const userInfoContainer = document.getElementById("userInfo");
+const vendorNameEl = document.getElementById("vendorName");
+const vendorCategoryEl = document.getElementById("vendorCategory");
+const vendorLocationEl = document.getElementById("vendorLocation");
 
-// Load profile data
+const editBtn = document.getElementById("editProfileBtn");
+const saveBtn = document.getElementById("saveProfileBtn");
+const editFields = document.getElementById("editFields");
+
+const editFirstName = document.getElementById("editFirstName");
+const editLastName = document.getElementById("editLastName");
+const editRole = document.getElementById("editRole");
+
+let currentUserData = null;
+
 async function loadUserProfile(uid) {
   const userDoc = await getDoc(doc(db, "users", uid));
   if (!userDoc.exists()) {
@@ -56,8 +66,8 @@ async function loadUserProfile(uid) {
   }
 
   const user = userDoc.data();
+  currentUserData = user;
 
-  // Basic user details
   userInfoContainer.innerHTML = `
     <div>
       <span class="label">Name</span>
@@ -85,11 +95,13 @@ async function loadUserProfile(uid) {
     </div>
   `;
 
-  // Wallet info
+  editFirstName.value = user.firstName || "";
+  editLastName.value = user.lastName || "";
+  editRole.value = user.role || "cardholder";
+
   walletIdEl.textContent = user.walletAddress || "-";
   walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
 
-  // Card info
   const cardSnap = await getDocs(query(collection(db, "cards"), where("assignedTo", "==", uid)));
   if (!cardSnap.empty) {
     const card = cardSnap.docs[0].data();
@@ -99,66 +111,57 @@ async function loadUserProfile(uid) {
     isActiveEl.textContent = card.isActive ? "Yes" : "No";
   }
 
-  // Vendor info
   if (user.role === "vendor") {
+    vendorInfo.style.display = "block";
     const vendorDoc = await getDoc(doc(db, "vendors", uid));
     if (vendorDoc.exists()) {
       const vendor = vendorDoc.data();
-      vendorInfoContainer.innerHTML = `
-        <div class="section-title">Vendor Details</div>
-        <div class="user-details-grid">
-          <div>
-            <span class="label">Business Name</span>
-            <span class="value">${vendor.name || "-"}</span>
-          </div>
-          <div>
-            <span class="label">Category</span>
-            <span class="value">${vendor.category || "-"}</span>
-          </div>
-          <div>
-            <span class="label">Phone</span>
-            <span class="value">${vendor.phone || "-"}</span>
-          </div>
-          <div>
-            <span class="label">Approved</span>
-            <span class="value">${vendor.approved ? "Yes" : "No"}</span>
-          </div>
-        </div>
-      `;
+      vendorNameEl.textContent = vendor.name || "-";
+      vendorCategoryEl.textContent = vendor.category || "-";
+      vendorLocationEl.textContent = vendor.location || "-";
     }
+  } else {
+    vendorInfo.style.display = "none";
   }
 
-  // Child users (if parent)
   if (user.role === "parent") {
     const kidsSnap = await getDocs(query(collection(db, "users"), where("parentId", "==", uid)));
+    const childrenList = document.getElementById("childrenList");
     if (!kidsSnap.empty) {
-      let html = "<ul>";
+      let html = "<h2>Children</h2><ul>";
       kidsSnap.forEach(doc => {
         const child = doc.data();
         html += `<li><a href="user-profile.html?uid=${doc.id}">${child.firstName} ${child.lastName}</a></li>`;
       });
       html += "</ul>";
-      childrenContainer.innerHTML = html;
+      childrenList.innerHTML = html;
     }
   }
 
-// Transactions
-const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
-transactionTable.innerHTML = "";
-txSnap.forEach(doc => {
-  const tx = doc.data();
-  const row = document.createElement("tr");
-  row.innerHTML = `
-    <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
-    <td>$${(tx.amount || 0).toFixed(2)}</td>
-    <td>${tx.from || "-"}</td>
-    <td>${tx.to || "-"}</td>
-    <td>${tx.vendorCategory || "-"}</td>
-    <td>${tx.transactionId || doc.id}</td>
-    <td>${tx.status || "-"}</td>
-  `;
-  transactionTable.appendChild(row);
-});
+  const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
+  transactionTable.innerHTML = "";
+  for (const docSnap of txSnap.docs) {
+    const tx = docSnap.data();
+    let category = "-";
+    if (tx.from) {
+      const vendorDoc = await getDoc(doc(db, "vendors", tx.from));
+      if (vendorDoc.exists()) {
+        category = vendorDoc.data().category || "-";
+      }
+    }
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
+      <td>$${(tx.amount || 0).toFixed(2)}</td>
+      <td>${tx.from || "-"}</td>
+      <td>${tx.to || "-"}</td>
+      <td>${category}</td>
+      <td>${tx.transactionId || docSnap.id}</td>
+      <td>${tx.status || "-"}</td>
+    `;
+    transactionTable.appendChild(row);
+  }
 }
 
 // Auth check
@@ -177,12 +180,28 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   });
 });
 
+// Toggle edit mode
+editBtn.addEventListener("click", () => {
+  editFields.style.display = "block";
+  userInfoContainer.style.display = "none";
+  editBtn.style.display = "none";
+  saveBtn.style.display = "inline-block";
+});
 
-// Set the Edit Profile button link
-const editBtn = document.getElementById("editProfileBtn");
-if (editBtn) {
-  editBtn.href = `edit-profile.html?uid=${uid}`;
-}
+// Save changes
+saveBtn.addEventListener("click", async () => {
+  const updated = {
+    firstName: editFirstName.value.trim(),
+    lastName: editLastName.value.trim(),
+    role: editRole.value
+  };
 
-
-
+  try {
+    await updateDoc(doc(db, "users", uid), updated);
+    alert("✅ Profile updated!");
+    window.location.reload();
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    alert("❌ Update failed. Check console for details.");
+  }
+});
