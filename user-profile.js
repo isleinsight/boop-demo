@@ -43,10 +43,7 @@ const cardTypeEl = document.getElementById("cardType");
 const issueDateEl = document.getElementById("issueDate");
 const isActiveEl = document.getElementById("isActive");
 
-const vendorNameEl = document.getElementById("vendorName");
-const vendorCategoryEl = document.getElementById("vendorCategory");
-const vendorLocationEl = document.getElementById("vendorLocation");
-
+const vendorInfoContainer = document.getElementById("vendorInfo");
 const childrenContainer = document.getElementById("childrenList");
 const userInfoContainer = document.getElementById("userInfo");
 
@@ -107,9 +104,27 @@ async function loadUserProfile(uid) {
     const vendorDoc = await getDoc(doc(db, "vendors", uid));
     if (vendorDoc.exists()) {
       const vendor = vendorDoc.data();
-      vendorNameEl.textContent = vendor.name || "-";
-      vendorCategoryEl.textContent = vendor.category || "-";
-      vendorLocationEl.textContent = vendor.location || "-";
+      vendorInfoContainer.innerHTML = `
+        <div class="section-title">Vendor Details</div>
+        <div class="user-details-grid">
+          <div>
+            <span class="label">Business Name</span>
+            <span class="value">${vendor.name || "-"}</span>
+          </div>
+          <div>
+            <span class="label">Category</span>
+            <span class="value">${vendor.category || "-"}</span>
+          </div>
+          <div>
+            <span class="label">Phone</span>
+            <span class="value">${vendor.phone || "-"}</span>
+          </div>
+          <div>
+            <span class="label">Approved</span>
+            <span class="value">${vendor.approved ? "Yes" : "No"}</span>
+          </div>
+        </div>
+      `;
     }
   }
 
