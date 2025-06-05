@@ -14,6 +14,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  // Elements
   const parentSearchBtn = document.getElementById("parentSearchBtn");
   const studentSearchBtn = document.getElementById("studentSearchBtn");
   const assignButton = document.getElementById("assignButton");
@@ -24,73 +25,142 @@
 
   let selectedParentId = null;
 
-  // 🔍 Search Parents
+  // Pagination setup
+  const PAGE_SIZE = 5;
+  let parentData = [];
+  let studentData = [];
+  let parentPage = 0;
+  let studentPage = 0;
+
+  // Render parents
+  function renderParents() {
+    parentResults.innerHTML = "";
+    const start = parentPage * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const currentPage = parentData.slice(start, end);
+
+    if (currentPage.length === 0) {
+      parentResults.innerHTML = "<em>No matching parents found.</em>";
+      return;
+    }
+
+    currentPage.forEach((user) => {
+      const div = document.createElement("div");
+      div.style.marginBottom = "10px";
+      const btn = document.createElement("button");
+      btn.textContent = `Select ${user.firstName} ${user.lastName} (${user.email})`;
+      btn.addEventListener("click", () => {
+        selectedParentId = user.id;
+        statusMessage.textContent = `Selected parent: ${user.firstName} ${user.lastName}`;
+        statusMessage.style.color = "#333";
+      });
+      div.appendChild(btn);
+      parentResults.appendChild(div);
+    });
+
+    const nav = document.createElement("div");
+    nav.innerHTML = `
+      <div style="margin-top: 10px; text-align: center;">
+        <button ${parentPage === 0 ? "disabled" : ""} id="prevParent">Previous</button>
+        <button ${end >= parentData.length ? "disabled" : ""} id="nextParent">Next</button>
+      </div>
+    `;
+    parentResults.appendChild(nav);
+
+    document.getElementById("prevParent").addEventListener("click", () => {
+      parentPage--;
+      renderParents();
+    });
+    document.getElementById("nextParent").addEventListener("click", () => {
+      parentPage++;
+      renderParents();
+    });
+  }
+
+  // Render students
+  function renderStudents() {
+    studentResults.innerHTML = "";
+    const start = studentPage * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const currentPage = studentData.slice(start, end);
+
+    if (currentPage.length === 0) {
+      studentResults.innerHTML = "<em>No matching students found.</em>";
+      return;
+    }
+
+    currentPage.forEach((user) => {
+      const label = document.createElement("label");
+      label.classList.add("student-checkbox");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = user.id;
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(` ${user.firstName} ${user.lastName} (${user.email})`));
+      studentResults.appendChild(label);
+    });
+
+    const nav = document.createElement("div");
+    nav.innerHTML = `
+      <div style="margin-top: 10px; text-align: center;">
+        <button ${studentPage === 0 ? "disabled" : ""} id="prevStudent">Previous</button>
+        <button ${end >= studentData.length ? "disabled" : ""} id="nextStudent">Next</button>
+      </div>
+    `;
+    studentResults.appendChild(nav);
+
+    document.getElementById("prevStudent").addEventListener("click", () => {
+      studentPage--;
+      renderStudents();
+    });
+    document.getElementById("nextStudent").addEventListener("click", () => {
+      studentPage++;
+      renderStudents();
+    });
+  }
+
+  // Parent Search
   parentSearchBtn.addEventListener("click", async () => {
     const searchTerm = document.getElementById("parentSearch").value.trim().toLowerCase();
-    parentResults.innerHTML = "";
     selectedParentId = null;
+    parentPage = 0;
+    parentData = [];
 
     const q = query(collection(db, "users"), where("role", "==", "parent"));
     const querySnapshot = await getDocs(q);
 
-    let found = false;
-
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      const nameEmail = `${data.firstName} ${data.lastName} ${data.email}`.toLowerCase();
-
-      if (nameEmail.includes(searchTerm)) {
-        found = true;
-        const btn = document.createElement("button");
-        btn.textContent = `${data.firstName} ${data.lastName} (${data.email})`;
-        btn.addEventListener("click", () => {
-          selectedParentId = docSnap.id;
-          parentResults.innerHTML = `<strong>Selected:</strong> ${data.firstName} ${data.lastName} (${data.email})`;
-        });
-        parentResults.appendChild(btn);
+      const match = `${data.firstName} ${data.lastName} ${data.email}`.toLowerCase();
+      if (match.includes(searchTerm)) {
+        parentData.push({ id: docSnap.id, ...data });
       }
     });
 
-    if (!found) {
-      parentResults.innerHTML = "<em>No matching parents found.</em>";
-    }
+    renderParents();
   });
 
-  // 🔍 Search Students
+  // Student Search
   studentSearchBtn.addEventListener("click", async () => {
     const searchTerm = document.getElementById("studentSearch").value.trim().toLowerCase();
-    studentResults.innerHTML = "";
+    studentPage = 0;
+    studentData = [];
 
     const q = query(collection(db, "users"), where("role", "==", "student"));
     const querySnapshot = await getDocs(q);
 
-    let found = false;
-
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      const nameEmail = `${data.firstName} ${data.lastName} ${data.email}`.toLowerCase();
-
-      if (nameEmail.includes(searchTerm)) {
-        found = true;
-        const label = document.createElement("label");
-        label.classList.add("student-checkbox");
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.value = docSnap.id;
-
-        label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(` ${data.firstName} ${data.lastName} (${data.email})`));
-        studentResults.appendChild(label);
+      const match = `${data.firstName} ${data.lastName} ${data.email}`.toLowerCase();
+      if (match.includes(searchTerm)) {
+        studentData.push({ id: docSnap.id, ...data });
       }
     });
 
-    if (!found) {
-      studentResults.innerHTML = "<em>No matching students found.</em>";
-    }
+    renderStudents();
   });
 
-  // ✅ Assign Students to Selected Parent
+  // Assign Students
   assignButton.addEventListener("click", async () => {
     if (!selectedParentId) {
       statusMessage.textContent = "Please select a parent first.";
