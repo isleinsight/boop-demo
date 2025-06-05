@@ -30,29 +30,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// UID from URL
+// Get UID from URL
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
 
-// DOM references
+// DOM Elements
 const userInfoContainer = document.getElementById("userInfo");
-const transactionTable = document.getElementById("transactionTable").querySelector("tbody");
-
-const walletIdEl = document.getElementById("walletId");
-const walletBalanceEl = document.getElementById("walletBalance");
-const cardUidEl = document.getElementById("cardUid");
-const cardTypeEl = document.getElementById("cardType");
-const issueDateEl = document.getElementById("issueDate");
-const isActiveEl = document.getElementById("isActive");
-
-const vendorNameEl = document.getElementById("vendorName");
-const vendorCategoryEl = document.getElementById("vendorCategory");
-const vendorLocationEl = document.getElementById("vendorLocation");
-
-const vendorNameInput = document.getElementById("vendorNameInput");
-const vendorCategoryInput = document.getElementById("vendorCategoryInput");
-const vendorLocationInput = document.getElementById("vendorLocationInput");
-
+const transactionTable = document.querySelector("#transactionTable tbody");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
 const editFields = document.getElementById("editFields");
@@ -61,19 +45,37 @@ const editFirstName = document.getElementById("editFirstName");
 const editLastName = document.getElementById("editLastName");
 const editRole = document.getElementById("editRole");
 
-const vendorBox = document.getElementById("vendorInfoBox");
-let currentUserData = null;
+const walletIdEl = document.getElementById("walletId");
+const walletBalanceEl = document.getElementById("walletBalance");
 
+const cardUidEl = document.getElementById("cardUid");
+const cardTypeEl = document.getElementById("cardType");
+const issueDateEl = document.getElementById("issueDate");
+const isActiveEl = document.getElementById("isActive");
+
+const vendorBox = document.getElementById("vendorInfoBox");
+const vendorName = document.getElementById("vendorName");
+const vendorCategory = document.getElementById("vendorCategory");
+const vendorLocation = document.getElementById("vendorLocation");
+
+const vendorNameInput = document.getElementById("vendorNameInput");
+const vendorCategoryInput = document.getElementById("vendorCategoryInput");
+const vendorLocationInput = document.getElementById("vendorLocationInput");
+
+let currentUser = null;
+
+// Load user profile
 async function loadUserProfile(uid) {
   const userDoc = await getDoc(doc(db, "users", uid));
   if (!userDoc.exists()) {
-    alert("User not found.");
+    alert("User not found");
     return;
   }
 
   const user = userDoc.data();
-  currentUserData = user;
+  currentUser = user;
 
+  // Static display
   userInfoContainer.innerHTML = `
     <div>
       <span class="label">Name</span>
@@ -81,11 +83,11 @@ async function loadUserProfile(uid) {
     </div>
     <div>
       <span class="label">Email</span>
-      <span class="value">${user.email || ""}</span>
+      <span class="value">${user.email || "-"}</span>
     </div>
     <div>
       <span class="label">Role</span>
-      <span class="value">${user.role || ""}</span>
+      <span class="value">${user.role || "-"}</span>
     </div>
     <div>
       <span class="label">Wallet Address</span>
@@ -108,14 +110,25 @@ async function loadUserProfile(uid) {
   walletIdEl.textContent = user.walletAddress || "-";
   walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
 
+  // Load card info
+  const cardSnap = await getDocs(query(collection(db, "cards"), where("assignedTo", "==", uid)));
+  if (!cardSnap.empty) {
+    const card = cardSnap.docs[0].data();
+    cardUidEl.textContent = card.cardUid || "-";
+    cardTypeEl.textContent = card.cardType || "-";
+    issueDateEl.textContent = card.issueDate?.toDate().toLocaleDateString() || "-";
+    isActiveEl.textContent = card.isActive ? "Yes" : "No";
+  }
+
+  // Vendor section
   if (user.role === "vendor") {
     vendorBox.style.display = "block";
     const vendorDoc = await getDoc(doc(db, "vendors", uid));
     if (vendorDoc.exists()) {
       const vendor = vendorDoc.data();
-      vendorNameEl.textContent = vendor.name || "-";
-      vendorCategoryEl.textContent = vendor.category || "-";
-      vendorLocationEl.textContent = vendor.location || "-";
+      vendorName.textContent = vendor.name || "-";
+      vendorCategory.textContent = vendor.category || "-";
+      vendorLocation.textContent = vendor.location || "-";
 
       vendorNameInput.value = vendor.name || "";
       vendorCategoryInput.value = vendor.category || "";
@@ -123,6 +136,7 @@ async function loadUserProfile(uid) {
     }
   }
 
+  // Transactions
   const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
   transactionTable.innerHTML = "";
   for (const docSnap of txSnap.docs) {
@@ -149,40 +163,26 @@ async function loadUserProfile(uid) {
   }
 }
 
-// Auth check
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loadUserProfile(uid);
-  } else {
-    window.location.href = "index.html";
-  }
-});
-
-// Logout
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
-});
-
-// Enable editing
+// Toggle edit mode
 editBtn.addEventListener("click", () => {
   editFields.style.display = "block";
-  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "inline-block");
-  document.querySelectorAll(".value").forEach(el => el.style.display = "none");
-  saveBtn.style.display = "inline-block";
+  userInfoContainer.style.display = "none";
   editBtn.style.display = "none";
+  saveBtn.style.display = "inline-block";
+  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "block");
+  document.querySelectorAll(".value").forEach(el => el.style.display = "none");
 });
 
-// Save profile edits
+// Save updates
 saveBtn.addEventListener("click", async () => {
-  try {
-    await updateDoc(doc(db, "users", uid), {
-      firstName: editFirstName.value.trim(),
-      lastName: editLastName.value.trim(),
-      role: editRole.value
-    });
+  const updated = {
+    firstName: editFirstName.value.trim(),
+    lastName: editLastName.value.trim(),
+    role: editRole.value
+  };
 
+  try {
+    await updateDoc(doc(db, "users", uid), updated);
     if (editRole.value === "vendor") {
       await setDoc(doc(db, "vendors", uid), {
         name: vendorNameInput.value.trim(),
@@ -193,8 +193,24 @@ saveBtn.addEventListener("click", async () => {
 
     alert("✅ Profile updated!");
     window.location.reload();
-  } catch (error) {
-    console.error("Error saving:", error);
-    alert("❌ Update failed.");
+  } catch (err) {
+    console.error("❌ Update failed:", err);
+    alert("Error saving changes.");
+  }
+});
+
+// Logout
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
+});
+
+// Auth check
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadUserProfile(uid);
+  } else {
+    window.location.href = "index.html";
   }
 });
