@@ -126,7 +126,7 @@ async function loadUserProfile(uid) {
       childrenContainer.innerHTML = html;
     }
   }
-
+}
 // Transactions
 const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
 transactionTable.innerHTML = "";
