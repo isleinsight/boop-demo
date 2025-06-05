@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transaction Reports - BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .filters label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .filters select,
+    .filters input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 200px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95em;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f1f5f9;
+    }
+
+    .back-button {
+      margin-bottom: 20px;
+      display: inline-block;
+      text-decoration: none;
+      color: #2f80ed;
+      font-weight: 500;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+      </div>
+      <div class="nav-right">
+        <a href="government.html">Dashboard</a>
+        <a href="view-users.html">View Users</a>
+        <a href="view-reports.html">Reports</a>
+        <a href="#" id="logoutBtn">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <a href="government.html" class="back-button">← Back to Dashboard</a>
+    <h2>Transaction Reports</h2>
+
+    <div class="filters">
+      <div>
+        <label for="categoryFilter">Vendor Category</label>
+        <select id="categoryFilter">
+          <option value="">All</option>
+          <option value="food">Food</option>
+          <option value="transport">Transport</option>
+          <option value="retail">Retail</option>
+          <option value="health">Health</option>
+          <!-- Add more categories as needed -->
+        </select>
+      </div>
+
+      <div>
+        <label for="startDate">Start Date</label>
+        <input type="date" id="startDate" value="2025-06-01" />
+      </div>
+
+      <div>
+        <label for="endDate">End Date</label>
+        <input type="date" id="endDate" value="2025-06-05" />
+      </div>
+
+      <div>
+        <label>&nbsp;</label>
+        <button id="applyFilters">Apply Filters</button>
+      </div>
+    </div>
+
+    <table id="reportTable">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Amount</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Category</th>
+          <th>Transaction ID</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Transactions will be populated here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script type="module" src="view-reports.js"></script>
+</body>
+</html>
