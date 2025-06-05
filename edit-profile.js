@@ -26,70 +26,55 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Get user ID from URL
+// Get UID from query string
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
 
-// Form elements
-const form = document.getElementById("editForm");
-const statusMsg = document.getElementById("statusMsg");
+const emailEl = document.getElementById("email");
+const firstNameEl = document.getElementById("firstName");
+const lastNameEl = document.getElementById("lastName");
+const roleEl = document.getElementById("role");
+const saveBtn = document.getElementById("saveChanges");
 
-const firstNameInput = document.getElementById("firstName");
-const lastNameInput = document.getElementById("lastName");
-const roleInput = document.getElementById("role");
-const walletAddressInput = document.getElementById("walletAddress");
-
-// Load current user data
-async function loadUserData() {
+async function loadUserData(uid) {
   try {
     const docRef = doc(db, "users", uid);
-    const userSnap = await getDoc(docRef);
+    const docSnap = await getDoc(docRef);
 
-    if (userSnap.exists()) {
-      const data = userSnap.data();
-      firstNameInput.value = data.firstName || "";
-      lastNameInput.value = data.lastName || "";
-      roleInput.value = data.role || "";
-      walletAddressInput.value = data.walletAddress || "";
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      emailEl.value = data.email || "";
+      firstNameEl.value = data.firstName || "";
+      lastNameEl.value = data.lastName || "";
+      roleEl.value = data.role || "";
     } else {
-      statusMsg.textContent = "❌ User not found.";
-      statusMsg.style.color = "red";
+      alert("User not found.");
     }
-  } catch (error) {
-    console.error("Error loading user data:", error);
-    statusMsg.textContent = "❌ Failed to load user data.";
-    statusMsg.style.color = "red";
+  } catch (err) {
+    console.error("Failed to load user:", err);
+    alert("Error loading user.");
   }
 }
 
-// Save updates
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  statusMsg.textContent = "Saving changes...";
-
+saveBtn.addEventListener("click", async () => {
   try {
-    const updates = {
-      firstName: firstNameInput.value.trim(),
-      lastName: lastNameInput.value.trim(),
-      role: roleInput.value.trim(),
-      walletAddress: walletAddressInput.value.trim()
-    };
+    await updateDoc(doc(db, "users", uid), {
+      firstName: firstNameEl.value.trim(),
+      lastName: lastNameEl.value.trim()
+      // Role and email are not editable here
+    });
 
-    await updateDoc(doc(db, "users", uid), updates);
-    statusMsg.textContent = "✅ Profile updated.";
-    statusMsg.style.color = "green";
-
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    statusMsg.textContent = "❌ Update failed.";
-    statusMsg.style.color = "red";
+    alert("✅ Profile updated.");
+  } catch (err) {
+    console.error("❌ Update error:", err);
+    alert("Failed to save changes.");
   }
 });
 
 // Auth check
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    loadUserData();
+    loadUserData(uid);
   } else {
     window.location.href = "index.html";
   }
