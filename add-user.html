@@ -6,46 +6,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .container {
-      max-width: 600px;
+    /* Navigation Bar Styles */
+    nav {
+      background-color: #116980;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-left img {
+      height: 40px;
+    }
+
+    .nav-right a {
+      color: white;
+      margin-left: 20px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .nav-right a:hover {
+      text-decoration: underline;
+    }
+
+    /* Form Container Styles */
+    .form-container {
+      max-width: 800px;
       margin: 40px auto;
       background: #fff;
-      padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    form {
+    .form-section {
       margin-bottom: 30px;
+    }
+
+    .form-section h3 {
+      margin-bottom: 15px;
+      color: #333;
     }
 
     label {
       display: block;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
+      color: #555;
     }
 
     input, select {
       width: 100%;
       padding: 10px;
-      margin-top: 5px;
-      margin-bottom: 20px;
-      border-radius: 5px;
+      margin-bottom: 15px;
       border: 1px solid #ccc;
+      border-radius: 6px;
     }
 
     button {
-      width: 100%;
-      padding: 12px;
+      padding: 10px 20px;
       background-color: #2f80ed;
       color: white;
       border: none;
       border-radius: 6px;
-      font-size: 1em;
       cursor: pointer;
     }
 
@@ -53,84 +76,57 @@
       background-color: #1c60b3;
     }
 
-    .section-title {
-      font-weight: bold;
-      margin-top: 30px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 5px;
-    }
-
     #vendorFields {
       display: none;
-      padding: 10px;
-      background-color: #f5faff;
-      border-radius: 6px;
+    }
+
+    .status-message {
       margin-top: 10px;
-    }
-
-    .status {
-      text-align: center;
-      margin-top: 10px;
-    }
-
-    nav {
-      padding: 10px 20px;
-      background-color: #f8f8f8;
-      border-bottom: 1px solid #ccc;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    nav a {
-      margin-left: 15px;
-      text-decoration: none;
-      color: #2f80ed;
-      font-weight: 500;
-    }
-
-    nav a:hover {
-      text-decoration: underline;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
+  <!-- Navigation Bar -->
   <nav>
-    <div>
+    <div class="nav-left">
+      <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+    </div>
+    <div class="nav-right">
       <a href="government.html">Dashboard</a>
       <a href="view-users.html">View Users</a>
-    </div>
-    <div>
       <a href="#" id="logoutBtn">Logout</a>
     </div>
   </nav>
 
-  <div class="container">
-    <h2>Add New User</h2>
-
-    <!-- Step 1 -->
-    <form id="step1Form">
-      <div class="section-title">Step 1: Create Account</div>
-      <label>Email:
+  <!-- Main Form Container -->
+  <div class="form-container">
+    <!-- Step 1: Create Auth User -->
+    <div class="form-section">
+      <h3>Step 1: Create User Account</h3>
+      <form id="step1Form">
+        <label for="newEmail">Email</label>
         <input type="email" id="newEmail" required />
-      </label>
-      <label>Password:
-        <input type="password" id="newPassword" required />
-      </label>
-      <button type="submit">Create User</button>
-      <div class="status" id="step1Status"></div>
-    </form>
 
-    <!-- Step 2 -->
-    <form id="step2Form">
-      <div class="section-title">Step 2: User Details</div>
-      <label>First Name:
+        <label for="newPassword">Password</label>
+        <input type="password" id="newPassword" required />
+
+        <button type="submit">Create Account</button>
+        <div id="step1Status" class="status-message"></div>
+      </form>
+    </div>
+
+    <!-- Step 2: Add User Details -->
+    <div class="form-section">
+      <h3>Step 2: User Details</h3>
+      <form id="step2Form">
+        <label for="firstName">First Name</label>
         <input type="text" id="firstName" required />
-      </label>
-      <label>Last Name:
+
+        <label for="lastName">Last Name</label>
         <input type="text" id="lastName" required />
-      </label>
-      <label>Role:
+
+        <label for="role">Role</label>
         <select id="role" required>
           <option value="">Select Role</option>
           <option value="admin">Admin</option>
@@ -138,31 +134,29 @@
           <option value="vendor">Vendor</option>
           <option value="cardholder">Cardholder</option>
         </select>
-      </label>
 
-      <!-- Vendor-only fields -->
-      <div id="vendorFields">
-        <div class="section-title">Vendor Information (Optional)</div>
-        <label>Business Name:
+        <!-- Vendor-Specific Fields -->
+        <div id="vendorFields">
+          <label for="businessName">Business Name</label>
           <input type="text" id="businessName" />
-        </label>
-        <label>Phone:
-          <input type="text" id="vendorPhone" />
-        </label>
-        <label>Category:
-          <input type="text" id="vendorCategory" />
-        </label>
-        <label>Approved:
-          <select id="vendorApproved">
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </label>
-      </div>
 
-      <button type="submit">Save User</button>
-      <div class="status" id="step2Status"></div>
-    </form>
+          <label for="vendorPhone">Phone</label>
+          <input type="tel" id="vendorPhone" />
+
+          <label for="vendorCategory">Category</label>
+          <input type="text" id="vendorCategory" />
+
+          <label for="vendorApproved">Approved</label>
+          <select id="vendorApproved">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+
+        <button type="submit">Save User</button>
+        <div id="step2Status" class="status-message"></div>
+      </form>
+    </div>
   </div>
 
   <script type="module" src="add-user.js"></script>
