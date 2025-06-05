@@ -176,3 +176,13 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
     window.location.href = "index.html";
   });
 });
+
+
+// Set the Edit Profile button link
+const editBtn = document.getElementById("editProfileBtn");
+if (editBtn) {
+  editBtn.href = `edit-profile.html?uid=${uid}`;
+}
+
+
+
