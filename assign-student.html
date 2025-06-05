@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assign Students to Parent</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+      background-color: #f9f9f9;
+    }
+    h2 {
+      margin-bottom: 10px;
+    }
+    .box {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 6px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .search-result {
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .student-checkbox {
+      display: block;
+      margin-bottom: 6px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      background-color: #0066cc;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #005bb5;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Assign Students to a Parent</h2>
+
+  <div class="box">
+    <label for="parentSearch">Search Parent</label>
+    <input type="text" id="parentSearch" placeholder="Enter parent's name or email" />
+    <div id="parentResults" class="search-result"></div>
+  </div>
+
+  <div class="box">
+    <label for="studentSearch">Search Students</label>
+    <input type="text" id="studentSearch" placeholder="Enter student's name or email" />
+    <div id="studentResults" class="search-result"></div>
+  </div>
+
+  <div class="box">
+    <button id="assignButton">Assign Selected Students</button>
+    <div id="statusMessage" style="margin-top: 15px; font-weight: bold;"></div>
+  </div>
+
+</body>
+</html>
