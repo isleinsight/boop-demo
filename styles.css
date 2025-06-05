@@ -295,4 +295,8 @@ th.sorted-desc .arrow::after {
   cursor: pointer;
 }
 
+.btn-wrapper {
+  margin-bottom: 20px;
+}
+
 
