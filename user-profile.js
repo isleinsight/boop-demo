@@ -33,24 +33,21 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// URL param
+// UID from URL
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
 
-// DOM
+// DOM elements
 const userInfoContainer = document.getElementById("userInfo");
 const transactionTable = document.querySelector("#transactionTable tbody");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-
 const editFields = document.getElementById("editFields");
 const editFirstName = document.getElementById("editFirstName");
 const editLastName = document.getElementById("editLastName");
 const editRole = document.getElementById("editRole");
 const walletIdEl = document.getElementById("walletId");
 const walletBalanceEl = document.getElementById("walletBalance");
-
 const vendorSection = document.getElementById("vendorInfoSection");
 const vendorName = document.getElementById("vendorName");
 const vendorCategory = document.getElementById("vendorCategory");
@@ -58,6 +55,7 @@ const vendorLocation = document.getElementById("vendorLocation");
 const vendorNameInput = document.getElementById("vendorNameInput");
 const vendorCategoryInput = document.getElementById("vendorCategoryInput");
 const vendorLocationInput = document.getElementById("vendorLocationInput");
+const logoutBtn = document.getElementById("logoutBtn");
 
 const addStudentBtn = document.getElementById("addStudentBtn");
 const assignForm = document.getElementById("assignStudentForm");
@@ -65,14 +63,12 @@ const studentSearchInput = document.getElementById("studentSearchInput");
 const studentSearchBtn = document.getElementById("studentSearchBtn");
 const studentSearchResults = document.getElementById("studentSearchResults");
 const assignSelectedStudentsBtn = document.getElementById("assignSelectedStudentsBtn");
-const assignedStudentsSection = document.getElementById("assignedStudentsSection");
 const assignedStudentsList = document.getElementById("assignedStudentsList");
 
 let currentUser = null;
 let lastStudentDoc = null;
-let selectedStudentIds = new Set();
 
-// Auth
+// Auth check
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     await loadUserProfile(uid);
@@ -81,6 +77,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+// Load profile
 async function loadUserProfile(uid) {
   const userDoc = await getDoc(doc(db, "users", uid));
   if (!userDoc.exists()) {
@@ -91,13 +88,32 @@ async function loadUserProfile(uid) {
   const user = userDoc.data();
   currentUser = user;
 
+  // Basic Info
   userInfoContainer.innerHTML = `
-    <div><span class="label">Name</span><span class="value">${user.firstName || ""} ${user.lastName || ""}</span></div>
-    <div><span class="label">Email</span><span class="value">${user.email || "-"}</span></div>
-    <div><span class="label">Role</span><span class="value">${user.role || "-"}</span></div>
-    <div><span class="label">Wallet Address</span><span class="value">${user.walletAddress || "-"}</span></div>
-    <div><span class="label">Added By</span><span class="value">${user.addedBy || "-"}</span></div>
-    <div><span class="label">Created At</span><span class="value">${user.createdAt?.toDate().toLocaleString() || "-"}</span></div>
+    <div>
+      <span class="label">Name</span>
+      <span class="value">${user.firstName || ""} ${user.lastName || ""}</span>
+    </div>
+    <div>
+      <span class="label">Email</span>
+      <span class="value">${user.email || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Role</span>
+      <span class="value">${user.role || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Wallet Address</span>
+      <span class="value">${user.walletAddress || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Added By</span>
+      <span class="value">${user.addedBy || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Created At</span>
+      <span class="value">${user.createdAt?.toDate().toLocaleString() || "-"}</span>
+    </div>
   `;
 
   editFirstName.value = user.firstName || "";
@@ -106,6 +122,7 @@ async function loadUserProfile(uid) {
   walletIdEl.textContent = user.walletAddress || "-";
   walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
 
+  // Vendor
   if (user.role === "vendor") {
     vendorSection.style.display = "block";
     const vendorDoc = await getDoc(doc(db, "vendors", uid));
@@ -120,10 +137,33 @@ async function loadUserProfile(uid) {
     }
   }
 
+  // Parent
   if (user.role === "parent") {
     addStudentBtn.style.display = "inline-block";
-    assignedStudentsSection.style.display = "block";
     await renderAssignedStudents();
+  }
+
+  // Student: Show Parent
+  if (user.role === "student" && user.parentId) {
+    const parentDoc = await getDoc(doc(db, "users", user.parentId));
+    if (parentDoc.exists()) {
+      const parent = parentDoc.data();
+      const parentSection = document.createElement("div");
+      parentSection.innerHTML = `
+        <div class="section-title">Parent</div>
+        <div class="user-details-grid">
+          <div>
+            <span class="label">Name</span>
+            <a class="value" href="user-profile.html?uid=${user.parentId}">${parent.firstName || ""} ${parent.lastName || ""}</a>
+          </div>
+          <div>
+            <span class="label">Email</span>
+            <span class="value">${parent.email || "-"}</span>
+          </div>
+        </div>
+      `;
+      document.querySelector(".profile-container").appendChild(parentSection);
+    }
   }
 
   await loadTransactions(uid);
@@ -157,7 +197,7 @@ async function loadTransactions(uid) {
   }
 }
 
-// Edit profile
+// Edit
 editBtn.addEventListener("click", () => {
   editFields.style.display = "block";
   userInfoContainer.style.display = "none";
@@ -167,6 +207,7 @@ editBtn.addEventListener("click", () => {
   document.querySelectorAll(".value").forEach(el => el.style.display = "none");
 });
 
+// Save
 saveBtn.addEventListener("click", async () => {
   const updated = {
     firstName: editFirstName.value.trim(),
@@ -183,6 +224,7 @@ saveBtn.addEventListener("click", async () => {
         location: vendorLocationInput.value.trim()
       }, { merge: true });
     }
+
     alert("✅ Profile updated!");
     window.location.reload();
   } catch (err) {
@@ -202,18 +244,17 @@ logoutBtn.addEventListener("click", () => {
 addStudentBtn.addEventListener("click", () => {
   assignForm.style.display = assignForm.style.display === "none" ? "block" : "none";
   studentSearchResults.innerHTML = "";
-  selectedStudentIds.clear();
   lastStudentDoc = null;
   fetchStudents();
 });
 
 studentSearchBtn.addEventListener("click", () => {
   studentSearchResults.innerHTML = "";
-  selectedStudentIds.clear();
   lastStudentDoc = null;
   fetchStudents();
 });
 
+// Fetch students
 async function fetchStudents() {
   const keyword = studentSearchInput.value.trim().toLowerCase();
   let studentQuery = query(
@@ -251,6 +292,7 @@ async function fetchStudents() {
   }
 }
 
+// Assign students
 assignSelectedStudentsBtn.addEventListener("click", async () => {
   const checkboxes = studentSearchResults.querySelectorAll("input[type='checkbox']");
   const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
@@ -275,10 +317,12 @@ assignSelectedStudentsBtn.addEventListener("click", async () => {
   }
 });
 
+// Render assigned students
 async function renderAssignedStudents() {
   const q = query(collection(db, "users"), where("parentId", "==", uid));
   const snap = await getDocs(q);
   assignedStudentsList.innerHTML = "";
+
   if (snap.empty) {
     assignedStudentsList.innerHTML = "<p>No students assigned yet.</p>";
     return;
@@ -286,11 +330,35 @@ async function renderAssignedStudents() {
 
   snap.forEach(docSnap => {
     const student = docSnap.data();
+    const studentId = docSnap.id;
+
     const box = document.createElement("div");
     box.innerHTML = `
-      <span class="label">Student</span>
-      <span class="value">${student.firstName || ""} ${student.lastName || ""}</span>
+      <div>
+        <span class="label">Student</span>
+        <a class="value" href="user-profile.html?uid=${studentId}">${student.firstName || ""} ${student.lastName || ""}</a>
+      </div>
+      <div>
+        <span class="label">Email</span>
+        <span class="value">${student.email || "-"}</span>
+      </div>
+      <div>
+        <button class="btnEdit" onclick="removeStudent('${studentId}')">Remove</button>
+      </div>
     `;
     assignedStudentsList.appendChild(box);
   });
 }
+
+// Remove student
+window.removeStudent = async function(studentId) {
+  if (!confirm("Remove this student from this parent?")) return;
+  try {
+    await updateDoc(doc(db, "users", studentId), { parentId: null });
+    alert("Student removed.");
+    await renderAssignedStudents();
+  } catch (err) {
+    console.error("Error removing student:", err);
+    alert("Failed to remove student.");
+  }
+};
