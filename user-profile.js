@@ -1,6 +1,4 @@
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -14,171 +12,167 @@ import {
   updateDoc,
   collection,
   query,
-  where,
-  setDoc,
-  limit,
-  startAfter,
-  orderBy
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Firebase setup
+// Firebase config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MSG_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+  authDomain: "boop-becff.firebaseapp.com",
+  projectId: "boop-becff",
+  storageBucket: "boop-becff.appspot.com",
+  messagingSenderId: "570567453336",
+  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Get UID from URL
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
 
 // DOM elements
+const userInfoContainer = document.getElementById("userInfo");
+const editBtn = document.getElementById("editProfileBtn");
+const saveBtn = document.getElementById("saveProfileBtn");
+const editFields = document.getElementById("editFields");
 const addStudentBtn = document.getElementById("addStudentBtn");
-const assignForm = document.getElementById("assignStudentForm");
+const toggleAssignFormBtn = document.getElementById("toggleAssignFormBtn");
+const assignStudentForm = document.getElementById("assignStudentForm");
 const studentSearchInput = document.getElementById("studentSearchInput");
 const studentSearchBtn = document.getElementById("studentSearchBtn");
-const studentResultsTbody = document.getElementById("studentSearchResults");
+const studentSearchResults = document.getElementById("studentSearchResults");
 const assignSelectedStudentsBtn = document.getElementById("assignSelectedStudentsBtn");
 const assignedStudentsList = document.getElementById("assignedStudentsList");
 
-let studentDocs = [];
-let currentPage = 0;
-const pageSize = 5;
+function showUserInfo(user) {
+  userInfoContainer.innerHTML = `
+    <div>
+      <span class="label">Name</span>
+      <span class="value">${user.firstName || ""} ${user.lastName || ""}</span>
+    </div>
+    <div>
+      <span class="label">Email</span>
+      <span class="value">${user.email || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Role</span>
+      <span class="value">${user.role || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Wallet Address</span>
+      <span class="value">${user.walletAddress || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Added By</span>
+      <span class="value">${user.addedBy || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Created At</span>
+      <span class="value">${user.createdAt?.toDate().toLocaleString() || "-"}</span>
+    </div>
+  `;
 
-// Auth check
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "index.html";
+  document.getElementById("editFirstName").value = user.firstName || "";
+  document.getElementById("editLastName").value = user.lastName || "";
+  document.getElementById("editRole").value = user.role || "cardholder";
+}
+
+async function loadAssignedStudents() {
+  const q = query(collection(db, "users"), where("parentId", "==", uid));
+  const snap = await getDocs(q);
+  assignedStudentsList.innerHTML = "";
+  snap.forEach(doc => {
+    const student = doc.data();
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <span class="label">${student.firstName || ""} ${student.lastName || ""}</span>
+      <span class="value">${student.email || ""}</span>
+    `;
+    assignedStudentsList.appendChild(div);
+  });
+}
+
+async function loadUserProfile(uid) {
+  const userDoc = await getDoc(doc(db, "users", uid));
+  if (!userDoc.exists()) {
+    alert("User not found");
     return;
   }
 
-  const userDoc = await getDoc(doc(db, "users", uid));
-  const userData = userDoc.data();
-  if (userData.role === "parent") {
+  const user = userDoc.data();
+  showUserInfo(user);
+
+  if (user.role === "parent") {
     addStudentBtn.style.display = "inline-block";
-    await loadAssignedStudents();
+    toggleAssignFormBtn.style.display = "inline-block";
+    document.getElementById("studentSection").style.display = "block";
+    loadAssignedStudents();
   }
-});
-
-addStudentBtn.addEventListener("click", async () => {
-  assignForm.style.display = "block";
-  currentPage = 0;
-  await loadStudentPage();
-});
-
-studentSearchBtn.addEventListener("click", () => {
-  currentPage = 0;
-  loadStudentPage(studentSearchInput.value.trim().toLowerCase());
-});
-
-async function loadStudentPage(search = "") {
-  const usersCol = collection(db, "users");
-  const q = query(usersCol, where("role", "==", "student"));
-
-  const snapshot = await getDocs(q);
-  studentDocs = snapshot.docs.filter(docSnap => {
-    const data = docSnap.data();
-    const fullText = `${data.firstName} ${data.lastName} ${data.email}`.toLowerCase();
-    return fullText.includes(search);
-  });
-
-  renderPage();
 }
 
-function renderPage() {
-  const start = currentPage * pageSize;
-  const end = start + pageSize;
-  const pageDocs = studentDocs.slice(start, end);
+// Event listeners
+editBtn.addEventListener("click", () => {
+  editFields.style.display = "block";
+  userInfoContainer.style.display = "none";
+  editBtn.style.display = "none";
+  saveBtn.style.display = "inline-block";
+});
 
-  studentResultsTbody.innerHTML = "";
-  for (const docSnap of pageDocs) {
+addStudentBtn.addEventListener("click", () => {
+  assignStudentForm.style.display = "block";
+});
+
+toggleAssignFormBtn.addEventListener("click", () => {
+  assignStudentForm.style.display = assignStudentForm.style.display === "none" ? "block" : "none";
+});
+
+studentSearchBtn.addEventListener("click", async () => {
+  const term = studentSearchInput.value.trim().toLowerCase();
+  const q = query(collection(db, "users"), where("role", "==", "student"));
+  const snap = await getDocs(q);
+
+  studentSearchResults.innerHTML = "";
+  snap.forEach(docSnap => {
     const student = docSnap.data();
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${student.firstName || "-"}</td>
-      <td>${student.lastName || "-"}</td>
-      <td>${student.email || "-"}</td>
-      <td><input type="checkbox" data-uid="${docSnap.id}"></td>
-    `;
-    studentResultsTbody.appendChild(row);
-  }
-
-  renderPaginationControls();
-}
-
-function renderPaginationControls() {
-  let controls = document.getElementById("paginationControls");
-  if (!controls) {
-    controls = document.createElement("div");
-    controls.id = "paginationControls";
-    controls.style.marginTop = "10px";
-    assignForm.appendChild(controls);
-  }
-
-  controls.innerHTML = `
-    <button ${currentPage === 0 ? "disabled" : ""} id="prevBtn">Prev</button>
-    <span style="margin: 0 10px;">Page ${currentPage + 1} of ${Math.ceil(studentDocs.length / pageSize)}</span>
-    <button ${(currentPage + 1) * pageSize >= studentDocs.length ? "disabled" : ""} id="nextBtn">Next</button>
-  `;
-
-  document.getElementById("prevBtn").addEventListener("click", () => {
-    if (currentPage > 0) {
-      currentPage--;
-      renderPage();
+    const name = `${student.firstName || ""} ${student.lastName || ""}`.toLowerCase();
+    const email = (student.email || "").toLowerCase();
+    if (name.includes(term) || email.includes(term)) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${student.firstName || ""}</td>
+        <td>${student.lastName || ""}</td>
+        <td>${student.email || ""}</td>
+        <td><input type="checkbox" data-id="${docSnap.id}" /></td>
+      `;
+      studentSearchResults.appendChild(row);
     }
   });
-
-  document.getElementById("nextBtn").addEventListener("click", () => {
-    if ((currentPage + 1) * pageSize < studentDocs.length) {
-      currentPage++;
-      renderPage();
-    }
-  });
-}
+});
 
 assignSelectedStudentsBtn.addEventListener("click", async () => {
-  const checkboxes = studentResultsTbody.querySelectorAll("input[type='checkbox']:checked");
-  const selectedUIDs = Array.from(checkboxes).map(cb => cb.getAttribute("data-uid"));
-
-  const parentRef = doc(db, "users", uid);
-  const parentSnap = await getDoc(parentRef);
-  if (!parentSnap.exists()) return;
-
-  const current = parentSnap.data().children || [];
-  const updated = Array.from(new Set([...current, ...selectedUIDs]));
-
-  await updateDoc(parentRef, { children: updated });
+  const checkboxes = studentSearchResults.querySelectorAll("input[type='checkbox']:checked");
+  for (let cb of checkboxes) {
+    const studentId = cb.getAttribute("data-id");
+    await updateDoc(doc(db, "users", studentId), {
+      parentId: uid
+    });
+  }
   alert("Students assigned.");
-  await loadAssignedStudents();
+  loadAssignedStudents();
+  assignStudentForm.style.display = "none";
 });
 
-async function loadAssignedStudents() {
-  assignedStudentsList.innerHTML = "";
-
-  const parentSnap = await getDoc(doc(db, "users", uid));
-  const children = parentSnap.data().children || [];
-
-  for (const studentId of children) {
-    const studentSnap = await getDoc(doc(db, "users", studentId));
-    if (studentSnap.exists()) {
-      const student = studentSnap.data();
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <div>
-          <span class="label">Student</span>
-          <span class="value">${student.firstName} ${student.lastName} (${student.email})</span>
-        </div>
-      `;
-      assignedStudentsList.appendChild(div);
-    }
+// Auth check
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadUserProfile(uid);
+  } else {
+    window.location.href = "index.html";
   }
-}
+});
 
 // Logout
 document.getElementById("logoutBtn").addEventListener("click", () => {
