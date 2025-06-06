@@ -40,26 +40,28 @@ const transactionTable = document.querySelector("#transactionTable tbody");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
 const editFields = document.getElementById("editFields");
+const vendorSection = document.getElementById("vendorInfoSection");
+const walletIdEl = document.getElementById("walletId");
+const walletBalanceEl = document.getElementById("walletBalance");
 
 const editFirstName = document.getElementById("editFirstName");
 const editLastName = document.getElementById("editLastName");
 const editRole = document.getElementById("editRole");
 
-const walletIdEl = document.getElementById("walletId");
-const walletBalanceEl = document.getElementById("walletBalance");
-
-const cardUidEl = document.getElementById("cardUid");
-const cardTypeEl = document.getElementById("cardType");
-const issueDateEl = document.getElementById("issueDate");
-const isActiveEl = document.getElementById("isActive");
-
 const vendorName = document.getElementById("vendorName");
 const vendorCategory = document.getElementById("vendorCategory");
 const vendorLocation = document.getElementById("vendorLocation");
-
 const vendorNameInput = document.getElementById("vendorNameInput");
 const vendorCategoryInput = document.getElementById("vendorCategoryInput");
 const vendorLocationInput = document.getElementById("vendorLocationInput");
+
+const adminControls = document.getElementById("adminControls");
+
+const addStudentSection = document.getElementById("addStudentSection");
+const studentSearchInput = document.getElementById("studentSearchInput");
+const studentSearchBtn = document.getElementById("studentSearchBtn");
+const studentResultsTable = document.getElementById("studentResultsTable");
+const assignSelectedBtn = document.getElementById("assignSelectedBtn");
 
 let currentUser = null;
 
@@ -74,7 +76,6 @@ async function loadUserProfile(uid) {
   const user = userDoc.data();
   currentUser = user;
 
-  // Static display
   userInfoContainer.innerHTML = `
     <div>
       <span class="label">Name</span>
@@ -109,19 +110,8 @@ async function loadUserProfile(uid) {
   walletIdEl.textContent = user.walletAddress || "-";
   walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
 
-  // Load card info
-  const cardSnap = await getDocs(query(collection(db, "cards"), where("assignedTo", "==", uid)));
-  if (!cardSnap.empty) {
-    const card = cardSnap.docs[0].data();
-    cardUidEl.textContent = card.cardUid || "-";
-    cardTypeEl.textContent = card.cardType || "-";
-    issueDateEl.textContent = card.issueDate?.toDate().toLocaleDateString() || "-";
-    isActiveEl.textContent = card.isActive ? "Yes" : "No";
-  }
-
-  // Vendor section
   if (user.role === "vendor") {
-    document.getElementById("vendorInfoSection").style.display = "block";
+    vendorSection.style.display = "block";
     const vendorDoc = await getDoc(doc(db, "vendors", uid));
     if (vendorDoc.exists()) {
       const vendor = vendorDoc.data();
@@ -135,26 +125,23 @@ async function loadUserProfile(uid) {
     }
   }
 
-  // Transactions
+  if (user.role === "parent") {
+    addStudentSection.style.display = "block";
+    loadStudentResults(""); // Load all by default
+  }
+
+  // Load transactions
   const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
   transactionTable.innerHTML = "";
   for (const docSnap of txSnap.docs) {
     const tx = docSnap.data();
-    let category = "-";
-    if (tx.from) {
-      const vendorDoc = await getDoc(doc(db, "vendors", tx.from));
-      if (vendorDoc.exists()) {
-        category = vendorDoc.data().category || "-";
-      }
-    }
-
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
       <td>$${(tx.amount || 0).toFixed(2)}</td>
       <td>${tx.from || "-"}</td>
       <td>${tx.to || "-"}</td>
-      <td>${category}</td>
+      <td>${tx.category || "-"}</td>
       <td>${tx.transactionId || docSnap.id}</td>
       <td>${tx.status || "-"}</td>
     `;
@@ -162,7 +149,7 @@ async function loadUserProfile(uid) {
   }
 }
 
-// Toggle edit mode
+// Edit
 editBtn.addEventListener("click", () => {
   editFields.style.display = "block";
   userInfoContainer.style.display = "none";
@@ -172,16 +159,15 @@ editBtn.addEventListener("click", () => {
   document.querySelectorAll(".value").forEach(el => el.style.display = "none");
 });
 
-// Save updates
+// Save
 saveBtn.addEventListener("click", async () => {
-  const updated = {
-    firstName: editFirstName.value.trim(),
-    lastName: editLastName.value.trim(),
-    role: editRole.value
-  };
-
   try {
-    await updateDoc(doc(db, "users", uid), updated);
+    await updateDoc(doc(db, "users", uid), {
+      firstName: editFirstName.value.trim(),
+      lastName: editLastName.value.trim(),
+      role: editRole.value
+    });
+
     if (editRole.value === "vendor") {
       await setDoc(doc(db, "vendors", uid), {
         name: vendorNameInput.value.trim(),
@@ -192,9 +178,9 @@ saveBtn.addEventListener("click", async () => {
 
     alert("✅ Profile updated!");
     window.location.reload();
-  } catch (err) {
-    console.error("❌ Update failed:", err);
-    alert("Error saving changes.");
+  } catch (error) {
+    console.error(error);
+    alert("❌ Failed to update profile.");
   }
 });
 
@@ -205,8 +191,63 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   });
 });
 
-// Auth check
-onAuthStateChanged(auth, (user) => {
+// Load available students
+async function loadStudentResults(searchTerm) {
+  let q = query(collection(db, "users"), where("role", "==", "cardholder"));
+  const snapshot = await getDocs(q);
+
+  studentResultsTable.innerHTML = "";
+  let count = 0;
+  snapshot.forEach(docSnap => {
+    const student = docSnap.data();
+    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+    if (!searchTerm || fullName.includes(searchTerm.toLowerCase())) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${student.firstName}</td>
+        <td>${student.lastName}</td>
+        <td>${student.email}</td>
+        <td><input type="checkbox" data-uid="${docSnap.id}" /></td>
+      `;
+      studentResultsTable.appendChild(row);
+      count++;
+    }
+  });
+
+  if (count === 0) {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td colspan="4">No matching students found.</td>`;
+    studentResultsTable.appendChild(row);
+  }
+}
+
+// Search students
+studentSearchBtn.addEventListener("click", () => {
+  const searchTerm = studentSearchInput.value.trim();
+  loadStudentResults(searchTerm);
+});
+
+// Assign students
+assignSelectedBtn.addEventListener("click", async () => {
+  const selected = [...studentResultsTable.querySelectorAll('input[type="checkbox"]:checked')];
+  if (selected.length === 0) {
+    alert("Please select at least one student.");
+    return;
+  }
+
+  for (const checkbox of selected) {
+    const studentId = checkbox.getAttribute("data-uid");
+    await updateDoc(doc(db, "users", studentId), {
+      parentId: uid
+    });
+  }
+
+  alert("✅ Students assigned.");
+  loadStudentResults(""); // refresh
+});
+
+// Auth
+onAuthStateChanged(auth, user => {
   if (user) {
     loadUserProfile(uid);
   } else {
