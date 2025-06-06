@@ -141,39 +141,47 @@
 
       <button id="addStudentBtn" style="display:none;" class="btnEdit">Add Student</button>
         </div>
-        
 
-<!-- Always visible: Assigned Students -->
-    <div class="section-title">Assigned Students</div>
-    <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;">
-      <!-- Student entries will be inserted here -->
+      
+
+<!-- inside your .profile-container, replacing the related parts -->
+<div style="margin-top: 20px; margin-bottom: 20px;">
+  <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+  <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
+</div>
+
+<!-- Parent-only section -->
+<div id="studentSection" style="display: none;">
+  <button id="addStudentBtn" class="btnEdit" style="margin-bottom: 10px;">Add Student</button>
+
+  <!-- Always visible: Assigned Students -->
+  <div class="section-title">Assigned Students</div>
+  <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
+
+  <!-- Toggled: Add Student Form -->
+  <div id="assignStudentForm" style="display: none; margin-top: 20px;">
+    <div class="search-bar">
+      <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
+      <button id="studentSearchBtn">Search</button>
     </div>
 
-    <!-- Toggled: Add Student Form -->
-    <div id="assignStudentForm" style="display: none; margin-top: 20px;">
-      <div class="search-bar">
-        <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
-        <button id="studentSearchBtn">Search</button>
-      </div>
+    <table>
+      <thead>
+        <tr>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Email</th>
+          <th>Select</th>
+        </tr>
+      </thead>
+      <tbody id="studentSearchResults">
+        <!-- Search results will go here -->
+      </tbody>
+    </table>
 
-      <table>
-        <thead>
-          <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Email</th>
-            <th>Select</th>
-          </tr>
-        </thead>
-        <tbody id="studentSearchResults">
-          <!-- Search results will go here -->
-        </tbody>
-      </table>
-
-      <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
-    </div>
-
-    </div>
+    <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
+  </div>
+</div>
 
     <div class="user-details-grid" id="userInfo"></div>
 
