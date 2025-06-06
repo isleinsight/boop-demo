@@ -68,10 +68,6 @@ let lastVisibleStudent = null;
 let allStudentDocs = [];
 let searchMode = false;
 
-let filteredUsers = [];
-let currentPage = 1;
-const rowsPerPage = 5;
-let currentSort = { column: null, direction: "asc" };
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
