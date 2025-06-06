@@ -89,6 +89,17 @@ async function loadUserProfile(uid) {
   const user = userDoc.data();
   currentUser = user;
 
+
+  if (currentUser.role === "parent") {
+  document.getElementById("studentSection").style.display = "block";
+  document.getElementById("addStudentBtn").style.display = "inline-block";
+  document.getElementById("toggleAssignFormBtn").style.display = "inline-block";
+} else {
+  document.getElementById("studentSection").style.display = "none";
+  document.getElementById("addStudentBtn").style.display = "none";
+  document.getElementById("toggleAssignFormBtn").style.display = "none";
+}
+
   userInfoContainer.innerHTML = `
     <div><span class="label">Name</span><span class="value">${user.firstName || ""} ${user.lastName || ""}</span></div>
     <div><span class="label">Email</span><span class="value">${user.email || "-"}</span></div>
