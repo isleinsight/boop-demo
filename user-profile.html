@@ -136,12 +136,10 @@
     <div style="margin-top: 20px; margin-bottom: 20px;">
       <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
       <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
-      <button id="addStudentBtn" style="display: none; margin-left: 10px;" class="btnEdit">➕ Add Student</button>
+      <button id="addStudentBtn" style="display:none;" class="btnEdit">Add Student</button>
     </div>
 
-    <div class="user-details-grid" id="userInfo">
-      <!-- Dynamic user info will be injected here -->
-    </div>
+    <div class="user-details-grid" id="userInfo"></div>
 
     <div id="editFields" style="display:none;">
       <div class="user-details-grid">
@@ -186,36 +184,34 @@
       </div>
     </div>
 
-    <!-- PARENT STUDENT SECTION -->
-    <div id="studentSection" style="display: none; margin-top: 40px;">
-      <div class="section-title">Assigned Students</div>
+    <!-- Always visible: Assigned Students -->
+    <div class="section-title">Assigned Students</div>
+    <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;">
+      <!-- Student entries will be inserted here -->
+    </div>
 
-      <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;">
-        <!-- Student entries will be inserted here -->
+    <!-- Toggled: Add Student Form -->
+    <div id="assignStudentForm" style="display: none; margin-top: 20px;">
+      <div class="search-bar">
+        <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
+        <button id="studentSearchBtn">Search</button>
       </div>
 
-      <div id="assignStudentForm" style="display: none; margin-top: 20px;">
-        <div class="search-bar">
-          <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
-          <button id="studentSearchBtn">Search</button>
-        </div>
+      <table>
+        <thead>
+          <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Email</th>
+            <th>Select</th>
+          </tr>
+        </thead>
+        <tbody id="studentSearchResults">
+          <!-- Search results will go here -->
+        </tbody>
+      </table>
 
-        <table>
-          <thead>
-            <tr>
-              <th>First Name</th>
-              <th>Last Name</th>
-              <th>Email</th>
-              <th>Select</th>
-            </tr>
-          </thead>
-          <tbody id="studentSearchResults">
-            <!-- Search results will go here -->
-          </tbody>
-        </table>
-
-        <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
-      </div>
+      <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
     </div>
 
     <div class="section-title">Wallet</div>
@@ -249,7 +245,7 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Transactions go here -->
+        <!-- Transactions will go here -->
       </tbody>
     </table>
   </div>
