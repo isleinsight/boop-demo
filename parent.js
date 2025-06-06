@@ -1,3 +1,4 @@
+// Firebase v10 imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
@@ -8,12 +9,12 @@ import {
   getFirestore,
   doc,
   getDoc,
-  getDocs,
   collection,
   query,
   where,
   orderBy,
-  limit
+  limit,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -31,80 +32,127 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // DOM
-const logoutBtn = document.getElementById("logoutBtn");
-const parentNameEl = document.getElementById("parentName");
-const parentEmailEl = document.getElementById("parentEmail");
 const studentsList = document.getElementById("studentsList");
+const logoutBtn = document.getElementById("logoutBtn");
 
 // Auth check
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
+  if (user) {
+    await loadStudents(user.uid);
+  } else {
     window.location.href = "index.html";
-    return;
-  }
-
-  const parentDoc = await getDoc(doc(db, "users", user.uid));
-  if (!parentDoc.exists()) return;
-
-  const parent = parentDoc.data();
-  parentNameEl.textContent = `${parent.firstName || ""} ${parent.lastName || ""}`;
-  parentEmailEl.textContent = parent.email || "-";
-
-  const studentsSnap = await getDocs(query(collection(db, "users"), where("parentId", "==", user.uid)));
-  studentsList.innerHTML = "";
-
-  for (const studentDoc of studentsSnap.docs) {
-    const student = studentDoc.data();
-    const studentId = studentDoc.id;
-    const balance = student.walletBalance ? `$${student.walletBalance.toFixed(2)}` : "$0.00";
-
-    const txSnap = await getDocs(
-      query(collection(db, "transactions"), where("to", "==", studentId), orderBy("timestamp", "desc"), limit(3))
-    );
-
-    let txHtml = "";
-    if (txSnap.empty) {
-      txHtml = `<p style="color:#555; margin-left: 15px;">No transactions found.</p>`;
-    } else {
-      txHtml = "<ul>";
-      txSnap.forEach((txDoc) => {
-        const tx = txDoc.data();
-        txHtml += `<li>${tx.timestamp?.toDate().toLocaleString() || "-"} - $${tx.amount || 0}</li>`;
-      });
-      txHtml += "</ul>";
-    }
-
-    const card = document.createElement("div");
-    card.className = "student-card";
-    card.style.marginBottom = "40px";
-    card.innerHTML = `
-      <div class="section-title">Student: ${student.firstName || ""} ${student.lastName || ""}</div>
-      <div class="user-details-grid">
-        <div>
-          <span class="label">Email</span>
-          <span class="value">${student.email || "-"}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span class="label">Wallet Balance</span>
-            <span class="value">${balance}</span>
-          </div>
-          <button class="btnEdit" onclick="addFunds('${studentId}')">Add Funds</button>
-        </div>
-      </div>
-      <div style="margin-top: 20px;">
-        <div class="section-title">Recent Transactions</div>
-        ${txHtml}
-      </div>
-    `;
-
-    studentsList.appendChild(card);
   }
 });
 
-// Placeholder function
-window.addFunds = function (studentId) {
-  alert(`Add Funds clicked for student: ${studentId}`);
+// Load students assigned to the logged-in parent
+async function loadStudents(parentId) {
+  if (!studentsList) return console.error("Missing studentsList element");
+
+  studentsList.innerHTML = "";
+
+  const q = query(collection(db, "users"), where("parentId", "==", parentId));
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) {
+    studentsList.innerHTML = `<p>No students assigned to you.</p>`;
+    return;
+  }
+
+  snapshot.forEach(async (docSnap) => {
+    const student = docSnap.data();
+    const studentId = docSnap.id;
+
+    const studentBox = document.createElement("div");
+    studentBox.className = "user-details-grid";
+    studentBox.style.marginBottom = "30px";
+
+    studentBox.innerHTML = `
+      <div>
+        <span class="label">Name</span>
+        <span class="value">${student.firstName || ""} ${student.lastName || ""}</span>
+      </div>
+      <div>
+        <span class="label">Email</span>
+        <span class="value">${student.email || ""}</span>
+      </div>
+      <div>
+        <span class="label">Wallet ID</span>
+        <span class="value">${student.walletId || "N/A"}</span>
+      </div>
+      <div>
+        <span class="label">Balance</span>
+        <span class="value">$${student.walletBalance?.toFixed(2) || "0.00"}</span>
+      </div>
+      <div style="grid-column: 1 / -1; text-align: right;">
+        <button onclick="handleAddFunds('${studentId}')" class="add-funds-btn">Add Funds</button>
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <span class="label">Recent Transactions</span>
+        <table class="transaction-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Amount</th>
+              <th>To</th>
+              <th>Category</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tx-${studentId}">
+            <tr><td colspan="5">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    studentsList.appendChild(studentBox);
+
+    // Load transactions for this student
+    loadTransactions(studentId);
+  });
+}
+
+async function loadTransactions(studentId) {
+  const txTable = document.getElementById(`tx-${studentId}`);
+  if (!txTable) return;
+
+  txTable.innerHTML = "";
+
+  const q = query(
+    collection(db, "transactions"),
+    where("from", "==", studentId),
+    orderBy("timestamp", "desc"),
+    limit(5)
+  );
+
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) {
+    txTable.innerHTML = `<tr><td colspan="5">No recent transactions</td></tr>`;
+    return;
+  }
+
+  snapshot.forEach((doc) => {
+    const tx = doc.data();
+    const row = document.createElement("tr");
+
+    const date = tx.timestamp?.toDate().toLocaleString() || "-";
+
+    row.innerHTML = `
+      <td>${date}</td>
+      <td>$${tx.amount?.toFixed(2) || "0.00"}</td>
+      <td>${tx.to || "-"}</td>
+      <td>${tx.category || "-"}</td>
+      <td>${tx.status || "-"}</td>
+    `;
+
+    txTable.appendChild(row);
+  });
+}
+
+// Stub for Add Funds
+window.handleAddFunds = (studentId) => {
+  alert(`Add Funds to student: ${studentId} (functionality coming soon)`);
 };
 
 // Logout
