@@ -14,8 +14,7 @@ import {
   setDoc,
   collection,
   query,
-  where,
-  limit
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -86,8 +85,19 @@ async function loadUserProfile(uid) {
           <div><span class="label">Name</span><span class="value"><a href="user-profile.html?uid=${parentDoc.id}">${parent.firstName} ${parent.lastName}</a></span></div>
           <div><span class="label">Email</span><span class="value">${parent.email}</span></div>
         </div>`;
-      const walletTitle = document.querySelector(".section-title:nth-of-type(2)");
-      walletTitle?.parentNode.insertBefore(section, walletTitle);
+
+      // Insert before Wallet section title
+      const allHeadings = document.querySelectorAll(".section-title");
+      let walletTitle = null;
+      allHeadings.forEach(h => {
+        if (h.textContent.trim() === "Wallet") walletTitle = h;
+      });
+
+      if (walletTitle && walletTitle.parentNode) {
+        walletTitle.parentNode.insertBefore(section, walletTitle);
+      } else {
+        document.querySelector(".profile-container").appendChild(section);
+      }
     }
   }
 }
