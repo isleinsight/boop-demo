@@ -86,7 +86,8 @@ async function loadUserProfile(uid) {
           <div><span class="label">Name</span><span class="value"><a href="user-profile.html?uid=${parentDoc.id}">${parent.firstName} ${parent.lastName}</a></span></div>
           <div><span class="label">Email</span><span class="value">${parent.email}</span></div>
         </div>`;
-      document.querySelector(".profile-container").insertBefore(section, document.querySelector(".section-title"));
+      const walletTitle = document.querySelector(".section-title:nth-of-type(2)");
+      walletTitle?.parentNode.insertBefore(section, walletTitle);
     }
   }
 }
@@ -110,6 +111,7 @@ async function loadStudents() {
   const q = query(collection(db, "users"), where("role", "==", "student"));
   const snap = await getDocs(q);
   studentDocs = snap.docs;
+  currentPage = 0;
   renderStudentPage();
 }
 
