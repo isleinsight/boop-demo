@@ -13,10 +13,11 @@ import {
   setDoc,
   collection,
   query,
-  where
+  where,
+  limit,
+  startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Firebase setup
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
@@ -30,16 +31,21 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Get UID from URL
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
 
-// DOM references
 const userInfoContainer = document.getElementById("userInfo");
 const transactionTable = document.querySelector("#transactionTable tbody");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
 const editFields = document.getElementById("editFields");
+const toggleAssignFormBtn = document.getElementById("toggleAssignFormBtn");
+const assignStudentForm = document.getElementById("assignStudentForm");
+const studentSearchInput = document.getElementById("studentSearchInput");
+const studentSearchBtn = document.getElementById("studentSearchBtn");
+const studentSearchResults = document.getElementById("studentSearchResults");
+const assignSelectedStudentsBtn = document.getElementById("assignSelectedStudentsBtn");
+const assignedStudentsList = document.getElementById("assignedStudentsList");
 
 const editFirstName = document.getElementById("editFirstName");
 const editLastName = document.getElementById("editLastName");
@@ -57,123 +63,188 @@ const vendorCategoryInput = document.getElementById("vendorCategoryInput");
 const vendorLocationInput = document.getElementById("vendorLocationInput");
 
 const addStudentBtn = document.getElementById("addStudentBtn");
-const studentSection = document.getElementById("studentSection");
-const studentList = document.getElementById("studentList");
-
 let currentUser = null;
+let lastVisibleStudent = null;
+let firstPage = true;
 
-// Load user profile
 async function loadUserProfile(uid) {
-  try {
-    const userDoc = await getDoc(doc(db, "users", uid));
-    if (!userDoc.exists()) {
-      alert("User not found.");
-      return;
+  const userDoc = await getDoc(doc(db, "users", uid));
+  if (!userDoc.exists()) {
+    alert("User not found");
+    return;
+  }
+
+  const user = userDoc.data();
+  currentUser = user;
+
+  userInfoContainer.innerHTML = `
+    <div><span class="label">Name</span><span class="value">${user.firstName || ""} ${user.lastName || ""}</span></div>
+    <div><span class="label">Email</span><span class="value">${user.email || "-"}</span></div>
+    <div><span class="label">Role</span><span class="value">${user.role || "-"}</span></div>
+    <div><span class="label">Wallet Address</span><span class="value">${user.walletAddress || "-"}</span></div>
+    <div><span class="label">Added By</span><span class="value">${user.addedBy || "-"}</span></div>
+    <div><span class="label">Created At</span><span class="value">${user.createdAt?.toDate().toLocaleString() || "-"}</span></div>
+  `;
+
+  editFirstName.value = user.firstName || "";
+  editLastName.value = user.lastName || "";
+  editRole.value = user.role || "cardholder";
+
+  walletIdEl.textContent = user.walletAddress || "-";
+  walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
+
+  if (user.role === "vendor") {
+    vendorSection.style.display = "block";
+    const vendorDoc = await getDoc(doc(db, "vendors", uid));
+    if (vendorDoc.exists()) {
+      const vendor = vendorDoc.data();
+      vendorName.textContent = vendor.name || "-";
+      vendorCategory.textContent = vendor.category || "-";
+      vendorLocation.textContent = vendor.location || "-";
+
+      vendorNameInput.value = vendor.name || "";
+      vendorCategoryInput.value = vendor.category || "";
+      vendorLocationInput.value = vendor.location || "";
     }
+  }
 
-    const user = userDoc.data();
-    currentUser = user;
+  if (user.role === "parent") {
+    addStudentBtn.style.display = "inline-block";
+    toggleAssignFormBtn.style.display = "inline-block";
+    loadAssignedStudents();
+  }
 
-    // Display user info
-    userInfoContainer.innerHTML = `
-      <div>
-        <span class="label">Name</span>
-        <span class="value">${user.firstName || ""} ${user.lastName || ""}</span>
-      </div>
-      <div>
-        <span class="label">Email</span>
-        <span class="value">${user.email || "-"}</span>
-      </div>
-      <div>
-        <span class="label">Role</span>
-        <span class="value">${user.role || "-"}</span>
-      </div>
-      <div>
-        <span class="label">Wallet Address</span>
-        <span class="value">${user.walletAddress || "-"}</span>
-      </div>
-      <div>
-        <span class="label">Added By</span>
-        <span class="value">${user.addedBy || "-"}</span>
-      </div>
-      <div>
-        <span class="label">Created At</span>
-        <span class="value">${user.createdAt?.toDate().toLocaleString() || "-"}</span>
-      </div>
+  const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
+  transactionTable.innerHTML = "";
+  for (const docSnap of txSnap.docs) {
+    const tx = docSnap.data();
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
+      <td>$${(tx.amount || 0).toFixed(2)}</td>
+      <td>${tx.from || "-"}</td>
+      <td>${tx.to || "-"}</td>
+      <td>${tx.category || "-"}</td>
+      <td>${tx.transactionId || docSnap.id}</td>
+      <td>${tx.status || "-"}</td>
     `;
-
-    // Pre-fill edit fields
-    editFirstName.value = user.firstName || "";
-    editLastName.value = user.lastName || "";
-    editRole.value = user.role || "cardholder";
-    walletIdEl.textContent = user.walletAddress || "-";
-    walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
-
-    // Vendor logic
-    if (user.role === "vendor") {
-      vendorSection.style.display = "block";
-      const vendorDoc = await getDoc(doc(db, "vendors", uid));
-      if (vendorDoc.exists()) {
-        const vendor = vendorDoc.data();
-        vendorName.textContent = vendor.name || "-";
-        vendorCategory.textContent = vendor.category || "-";
-        vendorLocation.textContent = vendor.location || "-";
-        vendorNameInput.value = vendor.name || "";
-        vendorCategoryInput.value = vendor.category || "";
-        vendorLocationInput.value = vendor.location || "";
-      }
-    } else {
-      vendorSection.style.display = "none";
-    }
-
-    console.log("User role is:", user.role);
-    // Show add-student section button if parent
-    if (user.role === "parent") {
-      addStudentBtn.style.display = "inline-block";
-    }
-
-    // Load transactions
-    const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
-    transactionTable.innerHTML = "";
-    for (const docSnap of txSnap.docs) {
-      const tx = docSnap.data();
-      let category = "-";
-
-      if (tx.from) {
-        const vendorDoc = await getDoc(doc(db, "vendors", tx.from));
-        if (vendorDoc.exists()) {
-          category = vendorDoc.data().category || "-";
-        }
-      }
-
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
-        <td>$${(tx.amount || 0).toFixed(2)}</td>
-        <td>${tx.from || "-"}</td>
-        <td>${tx.to || "-"}</td>
-        <td>${category}</td>
-        <td>${tx.transactionId || docSnap.id}</td>
-        <td>${tx.status || "-"}</td>
-      `;
-      transactionTable.appendChild(row);
-    }
-  } catch (err) {
-    console.error("Error loading profile:", err);
+    transactionTable.appendChild(row);
   }
 }
 
-// Toggle edit mode
+toggleAssignFormBtn.addEventListener("click", () => {
+  assignStudentForm.style.display = assignStudentForm.style.display === "none" ? "block" : "none";
+  searchAndRenderStudents(); // default search on open
+});
+
+studentSearchBtn.addEventListener("click", () => {
+  searchAndRenderStudents();
+});
+
+async function searchAndRenderStudents(search = "", startAfterDoc = null) {
+  studentSearchResults.innerHTML = "";
+
+  let q = query(collection(db, "users"), where("role", "==", "cardholder"), limit(5));
+  if (search.trim()) {
+    q = query(collection(db, "users"), where("firstName", ">=", search), limit(5));
+  }
+  if (startAfterDoc) {
+    q = query(q, startAfter(startAfterDoc));
+  }
+
+  const snap = await getDocs(q);
+  if (snap.empty) {
+    studentSearchResults.innerHTML = "<tr><td colspan='4'>No results found</td></tr>";
+    return;
+  }
+
+  lastVisibleStudent = snap.docs[snap.docs.length - 1];
+
+  snap.forEach(docSnap => {
+    const user = docSnap.data();
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${user.firstName || "-"}</td>
+      <td>${user.lastName || "-"}</td>
+      <td>${user.email || "-"}</td>
+      <td><input type="checkbox" value="${docSnap.id}" /></td>
+    `;
+    studentSearchResults.appendChild(tr);
+  });
+
+  // Add simple pagination
+  const navRow = document.createElement("tr");
+  navRow.innerHTML = `
+    <td colspan="4">
+      <button id="nextPageBtn">Next</button>
+    </td>
+  `;
+  studentSearchResults.appendChild(navRow);
+
+  document.getElementById("nextPageBtn").addEventListener("click", () => {
+    if (lastVisibleStudent) {
+      searchAndRenderStudents(search, lastVisibleStudent);
+    }
+  });
+}
+
+assignSelectedStudentsBtn.addEventListener("click", async () => {
+  const checkboxes = studentSearchResults.querySelectorAll("input[type='checkbox']:checked");
+  const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+
+  if (selectedIds.length === 0) return alert("Please select at least one student.");
+
+  try {
+    await updateDoc(doc(db, "users", uid), {
+      children: selectedIds
+    });
+    alert("✅ Students assigned.");
+    assignStudentForm.style.display = "none";
+    loadAssignedStudents();
+  } catch (err) {
+    console.error("❌ Error assigning students:", err);
+    alert("Error assigning students.");
+  }
+});
+
+async function loadAssignedStudents() {
+  assignedStudentsList.innerHTML = "";
+  const userDoc = await getDoc(doc(db, "users", uid));
+  const children = userDoc.data().children || [];
+
+  if (children.length === 0) {
+    assignedStudentsList.innerHTML = "<p>No students assigned.</p>";
+    return;
+  }
+
+  for (let childId of children) {
+    const childDoc = await getDoc(doc(db, "users", childId));
+    if (childDoc.exists()) {
+      const child = childDoc.data();
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div>
+          <span class="label">Name</span>
+          <span class="value">${child.firstName || "-"} ${child.lastName || "-"}</span>
+        </div>
+        <div>
+          <span class="label">Email</span>
+          <span class="value">${child.email || "-"}</span>
+        </div>
+      `;
+      assignedStudentsList.appendChild(div);
+    }
+  }
+}
+
+// Edit/save
 editBtn.addEventListener("click", () => {
   editFields.style.display = "block";
   userInfoContainer.style.display = "none";
   editBtn.style.display = "none";
   saveBtn.style.display = "inline-block";
-  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "block");
-  document.querySelectorAll(".value").forEach(el => el.style.display = "none");
 });
 
-// Save changes
 saveBtn.addEventListener("click", async () => {
   const updated = {
     firstName: editFirstName.value.trim(),
@@ -183,15 +254,6 @@ saveBtn.addEventListener("click", async () => {
 
   try {
     await updateDoc(doc(db, "users", uid), updated);
-
-    if (editRole.value === "vendor") {
-      await setDoc(doc(db, "vendors", uid), {
-        name: vendorNameInput.value.trim(),
-        category: vendorCategoryInput.value.trim(),
-        location: vendorLocationInput.value.trim()
-      }, { merge: true });
-    }
-
     alert("✅ Profile updated!");
     window.location.reload();
   } catch (err) {
@@ -200,41 +262,12 @@ saveBtn.addEventListener("click", async () => {
   }
 });
 
-// Add Student Toggle
-addStudentBtn?.addEventListener("click", async () => {
-  studentSection.style.display = studentSection.style.display === "none" ? "block" : "none";
-
-  // Load students assigned to this parent
-  const q = query(collection(db, "users"), where("parent", "==", uid));
-  const querySnapshot = await getDocs(q);
-  studentList.innerHTML = "";
-
-  if (querySnapshot.empty) {
-    studentList.innerHTML = `<p>No students assigned yet.</p>`;
-    return;
-  }
-
-  querySnapshot.forEach((docSnap) => {
-    const student = docSnap.data();
-    const div = document.createElement("div");
-    div.innerHTML = `
-      <div style="background:#f1f5f9;padding:10px;margin-bottom:10px;border-radius:6px;">
-        <strong>${student.firstName || ""} ${student.lastName || ""}</strong><br>
-        <span>Email: ${student.email || "-"}</span>
-      </div>
-    `;
-    studentList.appendChild(div);
-  });
-});
-
-// Logout
 document.getElementById("logoutBtn").addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
 });
 
-// Auth check
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loadUserProfile(uid);
