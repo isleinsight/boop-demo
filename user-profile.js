@@ -16,7 +16,7 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Firebase config
+// Firebase setup
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
@@ -33,21 +33,21 @@ const db = getFirestore(app);
 // Get UID from URL
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
-if (!uid) {
-  alert("Missing user ID in URL.");
-  throw new Error("Missing user ID");
-}
 
-// DOM Elements
+// DOM references
 const userInfoContainer = document.getElementById("userInfo");
+const transactionTable = document.querySelector("#transactionTable tbody");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
 const editFields = document.getElementById("editFields");
+
 const editFirstName = document.getElementById("editFirstName");
 const editLastName = document.getElementById("editLastName");
 const editRole = document.getElementById("editRole");
+
 const walletIdEl = document.getElementById("walletId");
 const walletBalanceEl = document.getElementById("walletBalance");
+
 const vendorSection = document.getElementById("vendorInfoSection");
 const vendorName = document.getElementById("vendorName");
 const vendorCategory = document.getElementById("vendorCategory");
@@ -56,21 +56,25 @@ const vendorNameInput = document.getElementById("vendorNameInput");
 const vendorCategoryInput = document.getElementById("vendorCategoryInput");
 const vendorLocationInput = document.getElementById("vendorLocationInput");
 
-// Load User Info
-async function loadUserProfile() {
+const addStudentBtn = document.getElementById("addStudentBtn");
+const studentSection = document.getElementById("studentSection");
+const studentList = document.getElementById("studentList");
+
+let currentUser = null;
+
+// Load user profile
+async function loadUserProfile(uid) {
   try {
-    const userRef = doc(db, "users", uid);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) {
+    const userDoc = await getDoc(doc(db, "users", uid));
+    if (!userDoc.exists()) {
       alert("User not found.");
       return;
     }
 
-    const user = userSnap.data();
-    editFirstName.value = user.firstName || "";
-    editLastName.value = user.lastName || "";
-    editRole.value = user.role || "cardholder";
+    const user = userDoc.data();
+    currentUser = user;
 
+    // Display user info
     userInfoContainer.innerHTML = `
       <div>
         <span class="label">Name</span>
@@ -98,15 +102,19 @@ async function loadUserProfile() {
       </div>
     `;
 
+    // Pre-fill edit fields
+    editFirstName.value = user.firstName || "";
+    editLastName.value = user.lastName || "";
+    editRole.value = user.role || "cardholder";
     walletIdEl.textContent = user.walletAddress || "-";
     walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
 
-    // Vendor Info
+    // Vendor logic
     if (user.role === "vendor") {
       vendorSection.style.display = "block";
-      const vendorSnap = await getDoc(doc(db, "vendors", uid));
-      if (vendorSnap.exists()) {
-        const vendor = vendorSnap.data();
+      const vendorDoc = await getDoc(doc(db, "vendors", uid));
+      if (vendorDoc.exists()) {
+        const vendor = vendorDoc.data();
         vendorName.textContent = vendor.name || "-";
         vendorCategory.textContent = vendor.category || "-";
         vendorLocation.textContent = vendor.location || "-";
@@ -118,24 +126,62 @@ async function loadUserProfile() {
       vendorSection.style.display = "none";
     }
 
-    // Show student assignment section if parent
+    // Show add-student section button if parent
     if (user.role === "parent") {
-      document.getElementById("addStudentSection").style.display = "block";
+      addStudentBtn.style.display = "inline-block";
     }
-  } catch (error) {
-    console.error("Error loading profile:", error);
-    alert("Error loading user profile.");
+
+    // Load transactions
+    const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
+    transactionTable.innerHTML = "";
+    for (const docSnap of txSnap.docs) {
+      const tx = docSnap.data();
+      let category = "-";
+
+      if (tx.from) {
+        const vendorDoc = await getDoc(doc(db, "vendors", tx.from));
+        if (vendorDoc.exists()) {
+          category = vendorDoc.data().category || "-";
+        }
+      }
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
+        <td>$${(tx.amount || 0).toFixed(2)}</td>
+        <td>${tx.from || "-"}</td>
+        <td>${tx.to || "-"}</td>
+        <td>${category}</td>
+        <td>${tx.transactionId || docSnap.id}</td>
+        <td>${tx.status || "-"}</td>
+      `;
+      transactionTable.appendChild(row);
+    }
+  } catch (err) {
+    console.error("Error loading profile:", err);
   }
 }
 
-// Save Profile
+// Toggle edit mode
+editBtn.addEventListener("click", () => {
+  editFields.style.display = "block";
+  userInfoContainer.style.display = "none";
+  editBtn.style.display = "none";
+  saveBtn.style.display = "inline-block";
+  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "block");
+  document.querySelectorAll(".value").forEach(el => el.style.display = "none");
+});
+
+// Save changes
 saveBtn.addEventListener("click", async () => {
+  const updated = {
+    firstName: editFirstName.value.trim(),
+    lastName: editLastName.value.trim(),
+    role: editRole.value
+  };
+
   try {
-    await updateDoc(doc(db, "users", uid), {
-      firstName: editFirstName.value.trim(),
-      lastName: editLastName.value.trim(),
-      role: editRole.value
-    });
+    await updateDoc(doc(db, "users", uid), updated);
 
     if (editRole.value === "vendor") {
       await setDoc(doc(db, "vendors", uid), {
@@ -147,20 +193,37 @@ saveBtn.addEventListener("click", async () => {
 
     alert("✅ Profile updated!");
     window.location.reload();
-  } catch (error) {
-    console.error("Save error:", error);
-    alert("❌ Failed to save profile.");
+  } catch (err) {
+    console.error("❌ Update failed:", err);
+    alert("Error saving changes.");
   }
 });
 
-// Edit Mode Toggle
-editBtn.addEventListener("click", () => {
-  editFields.style.display = "block";
-  userInfoContainer.style.display = "none";
-  editBtn.style.display = "none";
-  saveBtn.style.display = "inline-block";
-  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "block");
-  document.querySelectorAll(".value").forEach(el => el.style.display = "none");
+// Add Student Toggle
+addStudentBtn?.addEventListener("click", async () => {
+  studentSection.style.display = studentSection.style.display === "none" ? "block" : "none";
+
+  // Load students assigned to this parent
+  const q = query(collection(db, "users"), where("parent", "==", uid));
+  const querySnapshot = await getDocs(q);
+  studentList.innerHTML = "";
+
+  if (querySnapshot.empty) {
+    studentList.innerHTML = `<p>No students assigned yet.</p>`;
+    return;
+  }
+
+  querySnapshot.forEach((docSnap) => {
+    const student = docSnap.data();
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <div style="background:#f1f5f9;padding:10px;margin-bottom:10px;border-radius:6px;">
+        <strong>${student.firstName || ""} ${student.lastName || ""}</strong><br>
+        <span>Email: ${student.email || "-"}</span>
+      </div>
+    `;
+    studentList.appendChild(div);
+  });
 });
 
 // Logout
@@ -170,10 +233,10 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   });
 });
 
-// Auth Check
+// Auth check
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    loadUserProfile();
+    loadUserProfile(uid);
   } else {
     window.location.href = "index.html";
   }
