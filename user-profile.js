@@ -67,8 +67,6 @@ const assignedStudentsList = document.getElementById("assignedStudentsList");
 
 let currentUser = null;
 let lastStudentDoc = null;
-let allStudents = [];
-let selectedStudentIds = new Set();
 
 // Auth check
 onAuthStateChanged(auth, async (user) => {
@@ -90,6 +88,7 @@ async function loadUserProfile(uid) {
   const user = userDoc.data();
   currentUser = user;
 
+  // Populate user info
   userInfoContainer.innerHTML = `
     <div>
       <span class="label">Name</span>
@@ -117,6 +116,7 @@ async function loadUserProfile(uid) {
     </div>
   `;
 
+  // Set editable fields
   editFirstName.value = user.firstName || "";
   editLastName.value = user.lastName || "";
   editRole.value = user.role || "cardholder";
@@ -138,16 +138,19 @@ async function loadUserProfile(uid) {
     }
   }
 
-  // Show Add Student button if parent
+  // If user is a parent, show student controls
   if (user.role === "parent") {
     addStudentBtn.style.display = "inline-block";
     await renderAssignedStudents();
+  } else {
+    addStudentBtn.style.display = "none";
+    assignedStudentsList.style.display = "none";
   }
 
   await loadTransactions(uid);
 }
 
-// Transactions
+// Load transaction history
 async function loadTransactions(uid) {
   const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
   transactionTable.innerHTML = "";
@@ -217,22 +220,21 @@ logoutBtn.addEventListener("click", () => {
   });
 });
 
-// Add Student functionality
+// Add student toggle
 addStudentBtn.addEventListener("click", () => {
   assignForm.style.display = assignForm.style.display === "none" ? "block" : "none";
   studentSearchResults.innerHTML = "";
-  selectedStudentIds.clear();
   lastStudentDoc = null;
   fetchStudents();
 });
 
 studentSearchBtn.addEventListener("click", () => {
   studentSearchResults.innerHTML = "";
-  selectedStudentIds.clear();
   lastStudentDoc = null;
   fetchStudents();
 });
 
+// Search students
 async function fetchStudents() {
   const keyword = studentSearchInput.value.trim().toLowerCase();
   let studentQuery = query(
@@ -270,6 +272,7 @@ async function fetchStudents() {
   }
 }
 
+// Assign students
 assignSelectedStudentsBtn.addEventListener("click", async () => {
   const checkboxes = studentSearchResults.querySelectorAll("input[type='checkbox']");
   const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
@@ -294,6 +297,7 @@ assignSelectedStudentsBtn.addEventListener("click", async () => {
   }
 });
 
+// Render assigned students
 async function renderAssignedStudents() {
   const q = query(collection(db, "users"), where("parentId", "==", uid));
   const snap = await getDocs(q);
