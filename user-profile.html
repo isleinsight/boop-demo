@@ -159,17 +159,57 @@
     <a href="view-users.html" class="back-button">← Back to Users</a>
     <h2>User Profile</h2>
 
-    <!-- ACTION BUTTONS -->
     <div style="margin-top: 20px; margin-bottom: 20px;">
       <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
       <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
       <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
     </div>
 
-    <!-- USER INFO -->
+    <!-- User Info -->
     <div class="user-details-grid" id="userInfo"></div>
 
-    <!-- EDIT FIELDS -->
+    <!-- Parent Info (visible on student profile) -->
+    <div id="parentSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Parent</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">Name</span>
+          <span class="value" id="parentName">-</span>
+        </div>
+        <div>
+          <span class="label">Email</span>
+          <span class="value" id="parentEmail">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assigned Students (visible on parent profile) -->
+    <div id="studentSection" style="display: none;">
+      <div class="section-title">Assigned Students</div>
+      <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
+
+      <!-- Add Student Form (visible after clicking the button) -->
+      <div id="assignStudentForm" style="display: none; margin-top: 20px;">
+        <div class="search-bar">
+          <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
+          <button id="studentSearchBtn">Search</button>
+        </div>
+        <table style="width: 100%; margin-top: 15px;">
+          <thead>
+            <tr>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Email</th>
+              <th>Select</th>
+            </tr>
+          </thead>
+          <tbody id="studentSearchResults"></tbody>
+        </table>
+        <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
+      </div>
+    </div>
+
+    <!-- Edit fields -->
     <div id="editFields" style="display:none;">
       <div class="user-details-grid">
         <div>
@@ -192,47 +232,7 @@
       </div>
     </div>
 
-    <!-- ASSIGNED STUDENTS -->
-    <div id="studentSection" style="display: none;">
-      <div class="section-title">Assigned Students</div>
-      <div class="user-details-grid" id="assignedStudentsList"></div>
-
-      <div id="assignStudentForm" style="display: none; margin-top: 20px;">
-        <div class="search-bar">
-          <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
-          <button id="studentSearchBtn">Search</button>
-        </div>
-        <table style="width: 100%; margin-top: 15px;">
-          <thead>
-            <tr>
-              <th>First Name</th>
-              <th>Last Name</th>
-              <th>Email</th>
-              <th>Select</th>
-            </tr>
-          </thead>
-          <tbody id="studentSearchResults"></tbody>
-        </table>
-        <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
-      </div>
-    </div>
-
-    <!-- PARENT INFO IF USER IS STUDENT -->
-    <div id="parentInfoSection" style="display: none;">
-      <div class="section-title">Parent</div>
-      <div class="user-details-grid" id="parentDetailsGrid">
-        <div>
-          <span class="label">Name</span>
-          <span class="value"><a id="parentNameLink" href="#">-</a></span>
-        </div>
-        <div>
-          <span class="label">Email</span>
-          <span class="value" id="parentEmail">-</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- VENDOR INFO -->
+    <!-- Vendor Info -->
     <div id="vendorInfoSection" style="display: none;">
       <div class="section-title">Vendor Info</div>
       <div class="user-details-grid" id="vendorDetailsGrid">
@@ -254,7 +254,7 @@
       </div>
     </div>
 
-    <!-- WALLET -->
+    <!-- Wallet Info -->
     <div class="section-title">Wallet</div>
     <div class="user-details-grid">
       <div>
@@ -267,13 +267,13 @@
       </div>
     </div>
 
-    <!-- ADMIN BUTTONS -->
+    <!-- Admin Buttons -->
     <div class="admin-controls" id="adminControls" style="display: none;">
       <button id="addFundsBtn">Add Funds</button>
       <button id="freezeWalletBtn">Freeze Wallet</button>
     </div>
 
-    <!-- TRANSACTIONS -->
+    <!-- Transactions -->
     <div class="section-title">Transaction History</div>
     <table class="transaction-table" id="transactionTable">
       <thead>
