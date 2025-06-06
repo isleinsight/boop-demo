@@ -1,4 +1,3 @@
-// Firebase v10 imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
@@ -14,9 +13,7 @@ import {
   query,
   where,
   orderBy,
-  limit,
-  updateDoc,
-  increment
+  limit
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -33,88 +30,53 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// DOM elements
+// DOM
 const logoutBtn = document.getElementById("logoutBtn");
 const parentNameEl = document.getElementById("parentName");
 const parentEmailEl = document.getElementById("parentEmail");
-const studentsContainer = document.getElementById("studentsContainer");
+const studentsList = document.getElementById("studentsList");
 
 // Auth check
 onAuthStateChanged(auth, async (user) => {
-  if (!user) return (window.location.href = "index.html");
-
-  const userDoc = await getDoc(doc(db, "users", user.uid));
-  if (!userDoc.exists()) return alert("User not found.");
-
-  const parent = userDoc.data();
-  if (parent.role !== "parent") {
-    alert("Unauthorized. Parents only.");
-    return (window.location.href = "index.html");
-  }
-
-  parentNameEl.textContent = `${parent.firstName || ""} ${parent.lastName || ""}`;
-  parentEmailEl.textContent = parent.email || "-";
-
-  loadStudents(user.uid);
-});
-
-// Load students
-async function loadStudents(parentId) {
-  const q = query(collection(db, "users"), where("parentId", "==", parentId));
-  const snap = await getDocs(q);
-  studentsContainer.innerHTML = "";
-
-  if (snap.empty) {
-    studentsContainer.innerHTML = "<p>No students assigned yet.</p>";
+  if (!user) {
+    window.location.href = "index.html";
     return;
   }
 
-  for (const docSnap of snap.docs) {
-    const student = docSnap.data();
-    const studentId = docSnap.id;
-    const balance = student.balance ? `$${student.balance.toFixed(2)}` : "$0.00";
+  const parentDoc = await getDoc(doc(db, "users", user.uid));
+  if (!parentDoc.exists()) return;
 
-    // Transactions
-    const txQuery = query(
-      collection(db, "transactions"),
-      where("from", "==", studentId),
-      orderBy("timestamp", "desc"),
-      limit(5)
+  const parent = parentDoc.data();
+  parentNameEl.textContent = `${parent.firstName || ""} ${parent.lastName || ""}`;
+  parentEmailEl.textContent = parent.email || "-";
+
+  const studentsSnap = await getDocs(query(collection(db, "users"), where("parentId", "==", user.uid)));
+  studentsList.innerHTML = "";
+
+  for (const studentDoc of studentsSnap.docs) {
+    const student = studentDoc.data();
+    const studentId = studentDoc.id;
+    const balance = student.walletBalance ? `$${student.walletBalance.toFixed(2)}` : "$0.00";
+
+    const txSnap = await getDocs(
+      query(collection(db, "transactions"), where("to", "==", studentId), orderBy("timestamp", "desc"), limit(3))
     );
-    const txSnap = await getDocs(txQuery);
-    let txHtml = "";
 
+    let txHtml = "";
     if (txSnap.empty) {
-      txHtml = "<p>No transactions found.</p>";
+      txHtml = `<p style="color:#555; margin-left: 15px;">No transactions found.</p>`;
     } else {
-      txHtml = `
-        <table class="transaction-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Amount</th>
-              <th>To</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${txSnap.docs.map(txDoc => {
-              const tx = txDoc.data();
-              return `
-                <tr>
-                  <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
-                  <td>$${(tx.amount || 0).toFixed(2)}</td>
-                  <td>${tx.to || "-"}</td>
-                  <td>${tx.status || "-"}</td>
-                </tr>`;
-            }).join("")}
-          </tbody>
-        </table>`;
+      txHtml = "<ul>";
+      txSnap.forEach((txDoc) => {
+        const tx = txDoc.data();
+        txHtml += `<li>${tx.timestamp?.toDate().toLocaleString() || "-"} - $${tx.amount || 0}</li>`;
+      });
+      txHtml += "</ul>";
     }
 
-    // Student Card
     const card = document.createElement("div");
-    card.style.marginBottom = "30px";
+    card.className = "student-card";
+    card.style.marginBottom = "40px";
     card.innerHTML = `
       <div class="section-title">Student: ${student.firstName || ""} ${student.lastName || ""}</div>
       <div class="user-details-grid">
@@ -122,9 +84,11 @@ async function loadStudents(parentId) {
           <span class="label">Email</span>
           <span class="value">${student.email || "-"}</span>
         </div>
-        <div>
-          <span class="label">Wallet Balance</span>
-          <span class="value">${balance}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span class="label">Wallet Balance</span>
+            <span class="value">${balance}</span>
+          </div>
           <button class="btnEdit" onclick="addFunds('${studentId}')">Add Funds</button>
         </div>
       </div>
@@ -133,30 +97,14 @@ async function loadStudents(parentId) {
         ${txHtml}
       </div>
     `;
-    studentsContainer.appendChild(card);
-  }
-}
 
-// Add funds
-window.addFunds = async function (studentId) {
-  const amountStr = prompt("Enter amount to add (numbers only):");
-  const amount = parseFloat(amountStr);
-
-  if (isNaN(amount) || amount <= 0) {
-    alert("Invalid amount.");
-    return;
+    studentsList.appendChild(card);
   }
+});
 
-  try {
-    await updateDoc(doc(db, "users", studentId), {
-      balance: increment(amount)
-    });
-    alert("✅ Funds added.");
-    loadStudents(auth.currentUser.uid);
-  } catch (err) {
-    console.error("Add funds error:", err);
-    alert("Failed to add funds.");
-  }
+// Placeholder function
+window.addFunds = function (studentId) {
+  alert(`Add Funds clicked for student: ${studentId}`);
 };
 
 // Logout
