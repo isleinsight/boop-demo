@@ -53,7 +53,6 @@ const cardTypeEl = document.getElementById("cardType");
 const issueDateEl = document.getElementById("issueDate");
 const isActiveEl = document.getElementById("isActive");
 
-const vendorBox = document.getElementById("vendorInfoBox");
 const vendorName = document.getElementById("vendorName");
 const vendorCategory = document.getElementById("vendorCategory");
 const vendorLocation = document.getElementById("vendorLocation");
@@ -122,7 +121,7 @@ async function loadUserProfile(uid) {
 
   // Vendor section
   if (user.role === "vendor") {
-    vendorBox.style.display = "block";
+    document.getElementById("vendorInfoSection").style.display = "block";
     const vendorDoc = await getDoc(doc(db, "vendors", uid));
     if (vendorDoc.exists()) {
       const vendor = vendorDoc.data();
@@ -214,26 +213,3 @@ onAuthStateChanged(auth, (user) => {
     window.location.href = "index.html";
   }
 });
-
-
-const vendorSection = document.getElementById("vendorInfoSection");
-
-if (user.role === "vendor") {
-  vendorSection.style.display = "block";
-  const vendorDoc = await getDoc(doc(db, "vendors", uid));
-  if (vendorDoc.exists()) {
-    const vendor = vendorDoc.data();
-    document.getElementById("vendorName").textContent = vendor.name || "-";
-    document.getElementById("vendorCategory").textContent = vendor.category || "-";
-    document.getElementById("vendorLocation").textContent = vendor.location || "-";
-
-    document.getElementById("vendorNameInput").value = vendor.name || "";
-    document.getElementById("vendorCategoryInput").value = vendor.category || "";
-    document.getElementById("vendorLocationInput").value = vendor.location || "";
-  }
-} else {
-  vendorSection.style.display = "none";
-}
-
-
-
