@@ -136,55 +136,9 @@
     <div style="margin-top: 20px; margin-bottom: 20px;">
       <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
       <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
-      
-    </div>
+      <button id="addStudentBtn" style="display:none;" class="btnEdit">Add Student</button>
 
-    <div class="user-details-grid" id="userInfo"></div>
-
-    <div id="editFields" style="display:none;">
-      <div class="user-details-grid">
-        <div>
-          <span class="label">First Name</span>
-          <input type="text" id="editFirstName" />
-        </div>
-        <div>
-          <span class="label">Last Name</span>
-          <input type="text" id="editLastName" />
-        </div>
-        <div>
-          <span class="label">Role</span>
-          <select id="editRole">
-            <option value="cardholder">Cardholder</option>
-            <option value="parent">Parent</option>
-            <option value="vendor">Vendor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-      </div>
-    </div>
-<button id="addStudentBtn" style="display:none;" class="btnEdit">Add Student</button>
-    <div id="vendorInfoSection" style="display: none;">
-      <div class="section-title">Vendor Info</div>
-      <div class="user-details-grid" id="vendorDetailsGrid">
-        <div>
-          <span class="label">Business Name</span>
-          <span class="value" id="vendorName">-</span>
-          <input type="text" id="vendorNameInput" class="edit-field" style="display: none;">
-        </div>
-        <div>
-          <span class="label">Category</span>
-          <span class="value" id="vendorCategory">-</span>
-          <input type="text" id="vendorCategoryInput" class="edit-field" style="display: none;">
-        </div>
-        <div>
-          <span class="label">Location</span>
-          <span class="value" id="vendorLocation">-</span>
-          <input type="text" id="vendorLocationInput" class="edit-field" style="display: none;">
-        </div>
-      </div>
-    </div>
-
-    <!-- Always visible: Assigned Students -->
+<!-- Always visible: Assigned Students -->
     <div class="section-title">Assigned Students</div>
     <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;">
       <!-- Student entries will be inserted here -->
@@ -213,6 +167,55 @@
 
       <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
     </div>
+      
+    </div>
+
+    <div class="user-details-grid" id="userInfo"></div>
+
+    <div id="editFields" style="display:none;">
+      <div class="user-details-grid">
+        <div>
+          <span class="label">First Name</span>
+          <input type="text" id="editFirstName" />
+        </div>
+        <div>
+          <span class="label">Last Name</span>
+          <input type="text" id="editLastName" />
+        </div>
+        <div>
+          <span class="label">Role</span>
+          <select id="editRole">
+            <option value="cardholder">Cardholder</option>
+            <option value="parent">Parent</option>
+            <option value="vendor">Vendor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="vendorInfoSection" style="display: none;">
+      <div class="section-title">Vendor Info</div>
+      <div class="user-details-grid" id="vendorDetailsGrid">
+        <div>
+          <span class="label">Business Name</span>
+          <span class="value" id="vendorName">-</span>
+          <input type="text" id="vendorNameInput" class="edit-field" style="display: none;">
+        </div>
+        <div>
+          <span class="label">Category</span>
+          <span class="value" id="vendorCategory">-</span>
+          <input type="text" id="vendorCategoryInput" class="edit-field" style="display: none;">
+        </div>
+        <div>
+          <span class="label">Location</span>
+          <span class="value" id="vendorLocation">-</span>
+          <input type="text" id="vendorLocationInput" class="edit-field" style="display: none;">
+        </div>
+      </div>
+    </div>
+
+    
 
     <div class="section-title">Wallet</div>
     <div class="user-details-grid">
