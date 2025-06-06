@@ -12,60 +12,47 @@
       background: #fff;
       border-radius: 10px;
       padding: 30px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     .section-title {
-      margin-top: 30px;
-      margin-bottom: 10px;
-      font-size: 1.4em;
-      font-weight: 600;
+      font-size: 1.3em;
       color: #333;
       border-bottom: 1px solid #ccc;
+      margin-top: 40px;
+      margin-bottom: 10px;
       padding-bottom: 5px;
     }
 
-    .header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .student-box {
-      background: #f9f9f9;
-      padding: 15px;
-      border-radius: 6px;
+    .user-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
       margin-bottom: 20px;
     }
 
-    .student-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+    .user-details-grid div {
+      background: #f9fafc;
+      padding: 12px 16px;
+      border-radius: 6px;
     }
 
     .label {
       font-weight: bold;
-      display: block;
-      color: #444;
+      color: #555;
       margin-bottom: 5px;
+      display: block;
     }
 
     .value {
-      color: #111;
-    }
-
-    .wallet-balance {
-      font-size: 1.4em;
-      font-weight: bold;
-      color: #1a73e8;
+      color: #222;
     }
 
     .transaction-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
       font-size: 0.95em;
+      margin-top: 10px;
     }
 
     .transaction-table th,
@@ -79,28 +66,43 @@
       background-color: #f1f5f9;
     }
 
+    .student-box {
+      margin-top: 30px;
+      border-top: 1px solid #ddd;
+      padding-top: 20px;
+    }
+
     .add-funds-btn {
+      float: right;
       background-color: #2f80ed;
-      color: #fff;
+      color: white;
       border: none;
       padding: 8px 16px;
       border-radius: 6px;
       cursor: pointer;
+      font-size: 0.9em;
+      margin-bottom: 10px;
     }
 
     .add-funds-btn:hover {
       background-color: #1c60b3;
     }
 
+    .no-tx {
+      font-style: italic;
+      color: #777;
+      padding: 10px;
+    }
+
     @media screen and (max-width: 600px) {
-      .student-grid {
+      .user-details-grid {
         grid-template-columns: 1fr;
       }
 
-      .header-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
+      .add-funds-btn {
+        float: none;
+        width: 100%;
+        margin-top: 10px;
       }
     }
   </style>
@@ -119,33 +121,21 @@
 
   <div class="container">
     <h2>Welcome, Parent</h2>
-
-    <div class="header-row">
-      <div class="section-title">Your Students</div>
-      <button class="add-funds-btn" id="addFundsBtn" style="display: none;">Add Funds</button>
+    <div class="user-details-grid">
+      <div>
+        <span class="label">Name</span>
+        <span class="value" id="parentName">Loading...</span>
+      </div>
+      <div>
+        <span class="label">Email</span>
+        <span class="value" id="parentEmail">Loading...</span>
+      </div>
     </div>
 
-    <!-- Student profiles will be inserted here -->
-    <div id="studentsList"></div>
-
-    <!-- Recent Transactions -->
-    <div class="section-title">Recent Transactions</div>
-    <table class="transaction-table" id="transactionTable">
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Amount</th>
-          <th>From</th>
-          <th>To</th>
-          <th>Category</th>
-          <th>Transaction ID</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Transactions go here -->
-      </tbody>
-    </table>
+    <div class="section-title">Your Students</div>
+    <div id="studentsList">
+      <!-- Student boxes will be rendered here -->
+    </div>
   </div>
 
   <script type="module" src="parent.js"></script>
