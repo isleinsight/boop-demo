@@ -2,65 +2,190 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>User Profile</title>
+  <title>User Profile - BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .profile-container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      margin-top: 40px;
+      margin-bottom: 10px;
+      font-size: 1.3em;
+      color: #333;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
+
+    .user-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .user-details-grid div {
+      background: #f9fafc;
+      padding: 12px 16px;
+      border-radius: 6px;
+    }
+
+    .label {
+      font-weight: bold;
+      display: block;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    .value {
+      color: #222;
+    }
+
+    .wallet-balance {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #1a73e8;
+    }
+
+    .transaction-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.95em;
+    }
+
+    .transaction-table th,
+    .transaction-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .transaction-table th {
+      background-color: #f1f5f9;
+    }
+
+    .admin-controls {
+      margin-top: 30px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .admin-controls button {
+      padding: 10px 20px;
+      font-size: 0.95em;
+      background-color: #2f80ed;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .admin-controls button:hover {
+      background-color: #1c60b3;
+    }
+
+    .back-button {
+      margin-bottom: 20px;
+      display: inline-block;
+      text-decoration: none;
+      color: #2f80ed;
+      font-weight: 500;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .search-bar button {
+      padding: 8px 18px;
+      border: none;
+      background-color: #2f80ed;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .search-bar button:hover {
+      background-color: #1c60b3;
+    }
+
+    @media screen and (max-width: 600px) {
+      .user-details-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-controls {
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="container profile-container">
-
-    <h1>User Profile</h1>
-
-    <button id="logoutBtn" class="btnLogout">Logout</button>
-
-    <div id="userInfo" class="user-details-grid"></div>
-
-    <div id="editFields" style="display:none;">
-      <div class="edit-grid">
-        <label>First Name: <input type="text" id="editFirstName" /></label>
-        <label>Last Name: <input type="text" id="editLastName" /></label>
-        <label>Role:
-          <select id="editRole">
-            <option value="cardholder">Cardholder</option>
-            <option value="parent">Parent</option>
-            <option value="vendor">Vendor</option>
-            <option value="student">Student</option>
-          </select>
-        </label>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+      </div>
+      <div class="nav-right">
+        <a href="government.html">Dashboard</a>
+        <a href="view-users.html">View Users</a>
+        <a href="#" id="logoutBtn">Logout</a>
       </div>
     </div>
+  </nav>
 
-    <div class="button-group">
-      <button id="editProfileBtn">Edit Profile</button>
-      <button id="saveProfileBtn" style="display:none;">Save Profile</button>
+  <div class="profile-container">
+    <a href="view-users.html" class="back-button">← Back to Users</a>
+    <h2>User Profile</h2>
+
+    <div style="margin-top: 20px; margin-bottom: 20px;">
+      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+      <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
+      <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
     </div>
 
-    <div id="walletInfo" class="section-box">
-      <div><span class="label">Wallet ID:</span> <span id="walletId"></span></div>
-      <div><span class="label">Balance:</span> <span id="walletBalance"></span></div>
+    <!-- User Info -->
+    <div class="user-details-grid" id="userInfo"></div>
+
+    <!-- Parent Info (if student has a parent) -->
+    <div id="parentInfoSection" style="display: none;">
+      <div class="section-title">Parent Info</div>
+      <div class="user-details-grid" id="parentInfoList"></div>
     </div>
 
-    <div id="vendorInfoSection" class="section-box" style="display:none;">
-      <h3>Vendor Info</h3>
-      <div><span class="label">Name:</span> <span id="vendorName"></span></div>
-      <div><span class="label">Category:</span> <span id="vendorCategory"></span></div>
-      <div><span class="label">Location:</span> <span id="vendorLocation"></span></div>
-      <div style="margin-top:10px;">
-        <input type="text" id="vendorNameInput" placeholder="Edit Name" />
-        <input type="text" id="vendorCategoryInput" placeholder="Edit Category" />
-        <input type="text" id="vendorLocationInput" placeholder="Edit Location" />
-      </div>
-    </div>
+    <!-- Assigned Students (for parents) -->
+    <div id="studentSection" style="display: none;">
+      <div class="section-title">Assigned Students</div>
+      <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
 
-    <!-- Add Student Button -->
-    <div id="parentStudentTools" style="margin-top: 30px;">
-      <button id="addStudentBtn" style="display:none;">Add Student</button>
-
-      <!-- Assign Students Form -->
-      <div id="assignStudentForm" style="display:none; margin-top: 10px;">
-        <input type="text" id="studentSearchInput" placeholder="Search by name or email" />
-        <button id="studentSearchBtn">Search</button>
-        <table class="data-table">
+      <!-- Add Student Form (toggled) -->
+      <div id="assignStudentForm" style="display: none; margin-top: 20px;">
+        <div class="search-bar">
+          <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
+          <button id="studentSearchBtn">Search</button>
+        </div>
+        <table style="width: 100%; margin-top: 15px;">
           <thead>
             <tr>
               <th>First Name</th>
@@ -71,16 +196,77 @@
           </thead>
           <tbody id="studentSearchResults"></tbody>
         </table>
-        <button id="assignSelectedStudentsBtn" style="margin-top:10px;">Assign Selected Students</button>
+        <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
       </div>
     </div>
 
-    <!-- Assigned Students Section -->
-    <div id="assignedStudentsList" class="section-box" style="margin-top: 30px;"></div>
+    <!-- Edit Fields -->
+    <div id="editFields" style="display:none;">
+      <div class="user-details-grid">
+        <div>
+          <span class="label">First Name</span>
+          <input type="text" id="editFirstName" />
+        </div>
+        <div>
+          <span class="label">Last Name</span>
+          <input type="text" id="editLastName" />
+        </div>
+        <div>
+          <span class="label">Role</span>
+          <select id="editRole">
+            <option value="cardholder">Cardholder</option>
+            <option value="parent">Parent</option>
+            <option value="vendor">Vendor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vendor Info -->
+    <div id="vendorInfoSection" style="display: none;">
+      <div class="section-title">Vendor Info</div>
+      <div class="user-details-grid" id="vendorDetailsGrid">
+        <div>
+          <span class="label">Business Name</span>
+          <span class="value" id="vendorName">-</span>
+          <input type="text" id="vendorNameInput" class="edit-field" style="display: none;">
+        </div>
+        <div>
+          <span class="label">Category</span>
+          <span class="value" id="vendorCategory">-</span>
+          <input type="text" id="vendorCategoryInput" class="edit-field" style="display: none;">
+        </div>
+        <div>
+          <span class="label">Location</span>
+          <span class="value" id="vendorLocation">-</span>
+          <input type="text" id="vendorLocationInput" class="edit-field" style="display: none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet Info -->
+    <div class="section-title">Wallet</div>
+    <div class="user-details-grid">
+      <div>
+        <span class="label">Wallet ID</span>
+        <span class="value" id="walletId">Loading...</span>
+      </div>
+      <div>
+        <span class="label">Wallet Balance</span>
+        <span class="wallet-balance" id="walletBalance">$0.00</span>
+      </div>
+    </div>
+
+    <!-- Admin Controls -->
+    <div class="admin-controls" id="adminControls" style="display: none;">
+      <button id="addFundsBtn">Add Funds</button>
+      <button id="freezeWalletBtn">Freeze Wallet</button>
+    </div>
 
     <!-- Transactions -->
-    <h2>Transaction History</h2>
-    <table class="data-table">
+    <div class="section-title">Transaction History</div>
+    <table class="transaction-table" id="transactionTable">
       <thead>
         <tr>
           <th>Timestamp</th>
@@ -88,13 +274,12 @@
           <th>From</th>
           <th>To</th>
           <th>Category</th>
-          <th>ID</th>
+          <th>Transaction ID</th>
           <th>Status</th>
         </tr>
       </thead>
-      <tbody id="transactionTable"></tbody>
+      <tbody></tbody>
     </table>
-
   </div>
 
   <script type="module" src="user-profile.js"></script>
