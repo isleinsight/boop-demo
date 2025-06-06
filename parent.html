@@ -25,11 +25,17 @@
       padding-bottom: 5px;
     }
 
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
     .student-box {
       background: #f9f9f9;
       padding: 15px;
       border-radius: 6px;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
     }
 
     .student-grid {
@@ -49,6 +55,12 @@
       color: #111;
     }
 
+    .wallet-balance {
+      font-size: 1.4em;
+      font-weight: bold;
+      color: #1a73e8;
+    }
+
     .transaction-table {
       width: 100%;
       border-collapse: collapse;
@@ -65,13 +77,6 @@
 
     .transaction-table th {
       background-color: #f1f5f9;
-    }
-
-    .header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 30px;
     }
 
     .add-funds-btn {
@@ -120,10 +125,10 @@
       <button class="add-funds-btn" id="addFundsBtn" style="display: none;">Add Funds</button>
     </div>
 
-    <!-- Students will be inserted here -->
-    <div id="studentsList" class="student-boxes"></div>
+    <!-- Student profiles will be inserted here -->
+    <div id="studentsList"></div>
 
-    <!-- Transactions Section -->
+    <!-- Recent Transactions -->
     <div class="section-title">Recent Transactions</div>
     <table class="transaction-table" id="transactionTable">
       <thead>
