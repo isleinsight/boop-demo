@@ -33,19 +33,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// UID from URL
+// DOM elements
 const params = new URLSearchParams(window.location.search);
 const uid = params.get("uid");
 
-// DOM elements
+const logoutBtn = document.getElementById("logoutBtn");
 const userInfoContainer = document.getElementById("userInfo");
 const transactionTable = document.querySelector("#transactionTable tbody");
-const editBtn = document.getElementById("editProfileBtn");
-const saveBtn = document.getElementById("saveProfileBtn");
-const editFields = document.getElementById("editFields");
-const editFirstName = document.getElementById("editFirstName");
-const editLastName = document.getElementById("editLastName");
-const editRole = document.getElementById("editRole");
 const walletIdEl = document.getElementById("walletId");
 const walletBalanceEl = document.getElementById("walletBalance");
 const vendorSection = document.getElementById("vendorInfoSection");
@@ -55,7 +49,13 @@ const vendorLocation = document.getElementById("vendorLocation");
 const vendorNameInput = document.getElementById("vendorNameInput");
 const vendorCategoryInput = document.getElementById("vendorCategoryInput");
 const vendorLocationInput = document.getElementById("vendorLocationInput");
-const logoutBtn = document.getElementById("logoutBtn");
+
+const editBtn = document.getElementById("editProfileBtn");
+const saveBtn = document.getElementById("saveProfileBtn");
+const editFields = document.getElementById("editFields");
+const editFirstName = document.getElementById("editFirstName");
+const editLastName = document.getElementById("editLastName");
+const editRole = document.getElementById("editRole");
 
 const addStudentBtn = document.getElementById("addStudentBtn");
 const assignForm = document.getElementById("assignStudentForm");
@@ -64,20 +64,25 @@ const studentSearchBtn = document.getElementById("studentSearchBtn");
 const studentSearchResults = document.getElementById("studentSearchResults");
 const assignSelectedStudentsBtn = document.getElementById("assignSelectedStudentsBtn");
 const assignedStudentsList = document.getElementById("assignedStudentsList");
+const studentSection = document.getElementById("studentSection");
+const parentSection = document.getElementById("parentSection");
+const parentName = document.getElementById("parentName");
+const parentEmail = document.getElementById("parentEmail");
 
 let currentUser = null;
 let lastStudentDoc = null;
+let selectedStudentIds = new Set();
 
-// Auth check
+// Auth
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    await loadUserProfile(uid);
-  } else {
+  if (!user) {
     window.location.href = "index.html";
+    return;
   }
+  await loadUserProfile(uid);
 });
 
-// Load profile
+// Load user info
 async function loadUserProfile(uid) {
   const userDoc = await getDoc(doc(db, "users", uid));
   if (!userDoc.exists()) {
@@ -88,7 +93,7 @@ async function loadUserProfile(uid) {
   const user = userDoc.data();
   currentUser = user;
 
-  // Basic Info
+  // Info Box
   userInfoContainer.innerHTML = `
     <div>
       <span class="label">Name</span>
@@ -122,7 +127,6 @@ async function loadUserProfile(uid) {
   walletIdEl.textContent = user.walletAddress || "-";
   walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
 
-  // Vendor
   if (user.role === "vendor") {
     vendorSection.style.display = "block";
     const vendorDoc = await getDoc(doc(db, "vendors", uid));
@@ -137,59 +141,38 @@ async function loadUserProfile(uid) {
     }
   }
 
-  // Parent
   if (user.role === "parent") {
+    studentSection.style.display = "block";
     addStudentBtn.style.display = "inline-block";
     await renderAssignedStudents();
   }
 
-  // Student: Show Parent
   if (user.role === "student" && user.parentId) {
     const parentDoc = await getDoc(doc(db, "users", user.parentId));
     if (parentDoc.exists()) {
       const parent = parentDoc.data();
-      const parentSection = document.createElement("div");
-      parentSection.innerHTML = `
-        <div class="section-title">Parent</div>
-        <div class="user-details-grid">
-          <div>
-            <span class="label">Name</span>
-            <a class="value" href="user-profile.html?uid=${user.parentId}">${parent.firstName || ""} ${parent.lastName || ""}</a>
-          </div>
-          <div>
-            <span class="label">Email</span>
-            <span class="value">${parent.email || "-"}</span>
-          </div>
-        </div>
-      `;
-      document.querySelector(".profile-container").appendChild(parentSection);
+      parentSection.style.display = "block";
+      parentName.textContent = `${parent.firstName || ""} ${parent.lastName || ""}`;
+      parentEmail.innerHTML = `<a href="user-profile.html?uid=${parentDoc.id}">${parent.email || "-"}</a>`;
     }
   }
 
   await loadTransactions(uid);
 }
 
-// Transactions
+// Load transactions
 async function loadTransactions(uid) {
-  const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
+  const snap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
   transactionTable.innerHTML = "";
-  for (const docSnap of txSnap.docs) {
+  for (const docSnap of snap.docs) {
     const tx = docSnap.data();
-    let category = "-";
-    if (tx.from) {
-      const vendorDoc = await getDoc(doc(db, "vendors", tx.from));
-      if (vendorDoc.exists()) {
-        category = vendorDoc.data().category || "-";
-      }
-    }
-
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
       <td>$${(tx.amount || 0).toFixed(2)}</td>
       <td>${tx.from || "-"}</td>
       <td>${tx.to || "-"}</td>
-      <td>${category}</td>
+      <td>${tx.category || "-"}</td>
       <td>${tx.transactionId || docSnap.id}</td>
       <td>${tx.status || "-"}</td>
     `;
@@ -197,7 +180,7 @@ async function loadTransactions(uid) {
   }
 }
 
-// Edit
+// Edit / Save
 editBtn.addEventListener("click", () => {
   editFields.style.display = "block";
   userInfoContainer.style.display = "none";
@@ -207,14 +190,12 @@ editBtn.addEventListener("click", () => {
   document.querySelectorAll(".value").forEach(el => el.style.display = "none");
 });
 
-// Save
 saveBtn.addEventListener("click", async () => {
   const updated = {
     firstName: editFirstName.value.trim(),
     lastName: editLastName.value.trim(),
     role: editRole.value
   };
-
   try {
     await updateDoc(doc(db, "users", uid), updated);
     if (editRole.value === "vendor") {
@@ -224,12 +205,11 @@ saveBtn.addEventListener("click", async () => {
         location: vendorLocationInput.value.trim()
       }, { merge: true });
     }
-
     alert("✅ Profile updated!");
     window.location.reload();
   } catch (err) {
-    console.error("❌ Update failed:", err);
-    alert("Error saving changes.");
+    console.error(err);
+    alert("❌ Error saving changes.");
   }
 });
 
@@ -240,16 +220,19 @@ logoutBtn.addEventListener("click", () => {
   });
 });
 
-// Add Student
+// Add Student button
 addStudentBtn.addEventListener("click", () => {
   assignForm.style.display = assignForm.style.display === "none" ? "block" : "none";
   studentSearchResults.innerHTML = "";
+  selectedStudentIds.clear();
   lastStudentDoc = null;
   fetchStudents();
 });
 
+// Search
 studentSearchBtn.addEventListener("click", () => {
   studentSearchResults.innerHTML = "";
+  selectedStudentIds.clear();
   lastStudentDoc = null;
   fetchStudents();
 });
@@ -257,108 +240,89 @@ studentSearchBtn.addEventListener("click", () => {
 // Fetch students
 async function fetchStudents() {
   const keyword = studentSearchInput.value.trim().toLowerCase();
-  let studentQuery = query(
+  let q = query(
     collection(db, "users"),
     where("role", "==", "student"),
     orderBy("firstName"),
     limit(5)
   );
 
-  if (lastStudentDoc) {
-    studentQuery = query(studentQuery, startAfter(lastStudentDoc));
-  }
+  if (lastStudentDoc) q = query(q, startAfter(lastStudentDoc));
+  const snap = await getDocs(q);
+  if (snap.empty) return;
 
-  const snapshot = await getDocs(studentQuery);
-  if (!snapshot.empty) {
-    lastStudentDoc = snapshot.docs[snapshot.docs.length - 1];
-    snapshot.forEach(docSnap => {
-      const student = docSnap.data();
-      if (
-        !keyword ||
-        student.firstName?.toLowerCase().includes(keyword) ||
-        student.lastName?.toLowerCase().includes(keyword) ||
-        student.email?.toLowerCase().includes(keyword)
-      ) {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${student.firstName || "-"}</td>
-          <td>${student.lastName || "-"}</td>
-          <td>${student.email || "-"}</td>
-          <td><input type="checkbox" value="${docSnap.id}" /></td>
-        `;
-        studentSearchResults.appendChild(row);
-      }
-    });
-  }
+  lastStudentDoc = snap.docs[snap.docs.length - 1];
+  snap.forEach(docSnap => {
+    const s = docSnap.data();
+    if (
+      !keyword ||
+      s.firstName?.toLowerCase().includes(keyword) ||
+      s.lastName?.toLowerCase().includes(keyword) ||
+      s.email?.toLowerCase().includes(keyword)
+    ) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${s.firstName || ""}</td>
+        <td>${s.lastName || ""}</td>
+        <td>${s.email || ""}</td>
+        <td><input type="checkbox" value="${docSnap.id}" /></td>
+      `;
+      studentSearchResults.appendChild(row);
+    }
+  });
 }
 
-// Assign students
+// Assign selected
 assignSelectedStudentsBtn.addEventListener("click", async () => {
-  const checkboxes = studentSearchResults.querySelectorAll("input[type='checkbox']");
-  const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-
-  if (selected.length === 0) {
-    alert("Please select at least one student.");
-    return;
-  }
+  const boxes = studentSearchResults.querySelectorAll("input[type='checkbox']");
+  const selected = Array.from(boxes).filter(cb => cb.checked).map(cb => cb.value);
+  if (selected.length === 0) return alert("Please select at least one student.");
 
   try {
-    for (const studentId of selected) {
-      await updateDoc(doc(db, "users", studentId), {
+    for (const sid of selected) {
+      await updateDoc(doc(db, "users", sid), {
         parentId: uid
       });
     }
     alert("✅ Students assigned.");
     assignForm.style.display = "none";
     await renderAssignedStudents();
-  } catch (error) {
-    console.error("Error assigning students:", error);
-    alert("Failed to assign students.");
+  } catch (e) {
+    console.error(e);
+    alert("❌ Failed to assign students.");
   }
 });
 
 // Render assigned students
 async function renderAssignedStudents() {
-  const q = query(collection(db, "users"), where("parentId", "==", uid));
-  const snap = await getDocs(q);
+  const snap = await getDocs(query(collection(db, "users"), where("parentId", "==", uid)));
   assignedStudentsList.innerHTML = "";
-
   if (snap.empty) {
     assignedStudentsList.innerHTML = "<p>No students assigned yet.</p>";
     return;
   }
 
   snap.forEach(docSnap => {
-    const student = docSnap.data();
-    const studentId = docSnap.id;
-
-    const box = document.createElement("div");
-    box.innerHTML = `
-      <div>
-        <span class="label">Student</span>
-        <a class="value" href="user-profile.html?uid=${studentId}">${student.firstName || ""} ${student.lastName || ""}</a>
-      </div>
-      <div>
-        <span class="label">Email</span>
-        <span class="value">${student.email || "-"}</span>
-      </div>
-      <div>
-        <button class="btnEdit" onclick="removeStudent('${studentId}')">Remove</button>
-      </div>
+    const s = docSnap.data();
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <span class="label">Student</span>
+      <span class="value"><a href="user-profile.html?uid=${docSnap.id}">${s.firstName || ""} ${s.lastName || ""} (${s.email || ""})</a></span>
+      <button data-id="${docSnap.id}" class="remove-student" style="margin-top:10px;">Remove</button>
     `;
-    assignedStudentsList.appendChild(box);
+    assignedStudentsList.appendChild(div);
+  });
+
+  document.querySelectorAll(".remove-student").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-id");
+      try {
+        await updateDoc(doc(db, "users", id), { parentId: null });
+        alert("Student removed.");
+        await renderAssignedStudents();
+      } catch (e) {
+        alert("Error removing student.");
+      }
+    });
   });
 }
-
-// Remove student
-window.removeStudent = async function(studentId) {
-  if (!confirm("Remove this student from this parent?")) return;
-  try {
-    await updateDoc(doc(db, "users", studentId), { parentId: null });
-    alert("Student removed.");
-    await renderAssignedStudents();
-  } catch (err) {
-    console.error("Error removing student:", err);
-    alert("Failed to remove student.");
-  }
-};
