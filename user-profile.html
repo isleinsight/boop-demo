@@ -190,6 +190,42 @@
   </div>
 </div>
 
+
+
+    <!-- Show this only for parents -->
+<div id="assignedStudentsSection" style="display: none; margin-top: 40px;">
+  <div class="section-title">Assigned Students</div>
+
+  <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;">
+    <!-- Student entries will be inserted here -->
+  </div>
+
+  <button id="toggleAssignFormBtn" class="btnEdit">Add Student</button>
+
+  <div id="assignStudentForm" style="display: none; margin-top: 20px;">
+    <div class="search-bar">
+      <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
+      <button id="studentSearchBtn">Search</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Email</th>
+          <th>Select</th>
+        </tr>
+      </thead>
+      <tbody id="studentSearchResults">
+        <!-- Search results will go here -->
+      </tbody>
+    </table>
+
+    <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
+  </div>
+</div>
+
     
     <div class="section-title">Wallet</div>
     <div class="user-details-grid">
