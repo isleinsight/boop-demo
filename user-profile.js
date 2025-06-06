@@ -126,6 +126,7 @@ async function loadUserProfile(uid) {
       vendorSection.style.display = "none";
     }
 
+    console.log("User role is:", user.role);
     // Show add-student section button if parent
     if (user.role === "parent") {
       addStudentBtn.style.display = "inline-block";
