@@ -2,86 +2,133 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Parent Portal - BOOP</title>
+  <title>Parent Dashboard - BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="styles.css" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 1.3em;
+      margin-top: 30px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+      color: #333;
+    }
+
+    .user-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .user-card, .student-card {
+      background: #f9fafc;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    .value {
+      color: #222;
+    }
+
+    .logout {
+      text-align: right;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      background-color: #2f80ed;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: #1c60b3;
+    }
+
+    .transaction-table {
+      width: 100%;
+      margin-top: 10px;
+      border-collapse: collapse;
+      font-size: 0.95em;
+    }
+
+    .transaction-table th, .transaction-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .transaction-table th {
+      background-color: #f1f5f9;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    @media screen and (max-width: 600px) {
+      .user-details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <img src="Boop-Logo.png" alt="BOOP Logo" />
+        <a href="parent.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
-        <a href="#" id="logout">Log Out</a>
+        <a href="#" id="logoutBtn">Logout</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h1>Welcome to the Parent Portal</h1>
-    <p><strong>Parent:</strong> <span id="parentEmail">Loading...</span></p>
+    <h2>Welcome, Parent</h2>
 
-    <h2>Your Info</h2>
-    <ul id="parentDetails">
-      <!-- Fetched parent data will appear here -->
-    </ul>
+    <!-- Parent Info -->
+    <div class="user-card user-details-grid" id="parentInfo">
+      <div>
+        <span class="label">Name</span>
+        <span class="value" id="parentName">Loading...</span>
+      </div>
+      <div>
+        <span class="label">Email</span>
+        <span class="value" id="parentEmail">Loading...</span>
+      </div>
+    </div>
+
+    <!-- Assigned Students -->
+    <div>
+      <div class="section-title">Your Children</div>
+      <div id="studentsList" class="user-details-grid"></div>
+    </div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-      measurementId: "G-79DWYFPZNR"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    const logoutBtn = document.getElementById('logout');
-    const parentEmail = document.getElementById('parentEmail');
-    const parentDetails = document.getElementById('parentDetails');
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = 'parent-login.html';
-        return;
-      }
-
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists() || userSnap.data().role !== 'parent') {
-        alert("Access denied. Parents only.");
-        await signOut(auth);
-        window.location.href = 'index.html';
-        return;
-      }
-
-      const data = userSnap.data();
-      parentEmail.textContent = user.email;
-
-      parentDetails.innerHTML = `
-        <li>Name: ${data.firstName || ''} ${data.lastName || ''}</li>
-        <li>Balance: $${(data.balance || 0).toFixed(2)}</li>
-        <li>Wallet Address: ${data.walletAddress || 'None'}</li>
-      `;
-    });
-
-    logoutBtn.addEventListener('click', async () => {
-      await signOut(auth);
-      window.location.href = 'index.html';
-    });
-  </script>
+  <script type="module" src="parent.js"></script>
 </body>
 </html>
