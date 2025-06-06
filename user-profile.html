@@ -1,260 +1,247 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>User Profile - BOOP Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    .profile-container {
-      max-width: 1000px;
-      margin: 40px auto;
-      background: #fff;
-      border-radius: 10px;
-      padding: 30px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+  collection,
+  setDoc,
+  limit,
+  startAfter
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+  authDomain: "boop-becff.firebaseapp.com",
+  projectId: "boop-becff",
+  storageBucket: "boop-becff.appspot.com",
+  messagingSenderId: "570567453336",
+  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const uid = new URLSearchParams(window.location.search).get("uid");
+
+const userInfoContainer = document.getElementById("userInfo");
+const transactionTable = document.querySelector("#transactionTable tbody");
+
+const editBtn = document.getElementById("editProfileBtn");
+const saveBtn = document.getElementById("saveProfileBtn");
+const editFields = document.getElementById("editFields");
+const editFirstName = document.getElementById("editFirstName");
+const editLastName = document.getElementById("editLastName");
+const editRole = document.getElementById("editRole");
+
+const walletIdEl = document.getElementById("walletId");
+const walletBalanceEl = document.getElementById("walletBalance");
+
+const vendorSection = document.getElementById("vendorInfoSection");
+const vendorName = document.getElementById("vendorName");
+const vendorCategory = document.getElementById("vendorCategory");
+const vendorLocation = document.getElementById("vendorLocation");
+const vendorNameInput = document.getElementById("vendorNameInput");
+const vendorCategoryInput = document.getElementById("vendorCategoryInput");
+const vendorLocationInput = document.getElementById("vendorLocationInput");
+
+const addStudentBtn = document.getElementById("addStudentBtn");
+const assignForm = document.getElementById("assignStudentForm");
+const studentSearchInput = document.getElementById("studentSearchInput");
+const studentSearchBtn = document.getElementById("studentSearchBtn");
+const assignSelectedBtn = document.getElementById("assignSelectedStudentsBtn");
+const studentSearchResults = document.getElementById("studentSearchResults");
+const assignedStudentsList = document.getElementById("assignedStudentsList");
+
+let currentUser = null;
+let lastVisibleStudent = null;
+let allStudentDocs = [];
+let searchMode = false;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadUserProfile(uid);
+  } else {
+    window.location.href = "index.html";
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
+});
+
+async function loadUserProfile(uid) {
+  const userDoc = await getDoc(doc(db, "users", uid));
+  if (!userDoc.exists()) return alert("User not found");
+  const user = userDoc.data();
+  currentUser = user;
+
+  userInfoContainer.innerHTML = `
+    <div><span class="label">Name</span><span class="value">${user.firstName || ""} ${user.lastName || ""}</span></div>
+    <div><span class="label">Email</span><span class="value">${user.email || "-"}</span></div>
+    <div><span class="label">Role</span><span class="value">${user.role || "-"}</span></div>
+    <div><span class="label">Wallet Address</span><span class="value">${user.walletAddress || "-"}</span></div>
+    <div><span class="label">Added By</span><span class="value">${user.addedBy || "-"}</span></div>
+    <div><span class="label">Created At</span><span class="value">${user.createdAt?.toDate().toLocaleString() || "-"}</span></div>
+  `;
+
+  editFirstName.value = user.firstName || "";
+  editLastName.value = user.lastName || "";
+  editRole.value = user.role || "cardholder";
+  walletIdEl.textContent = user.walletAddress || "-";
+  walletBalanceEl.textContent = `$${(user.balance || 0).toFixed(2)}`;
+
+  if (user.role === "vendor") {
+    vendorSection.style.display = "block";
+    const vendorDoc = await getDoc(doc(db, "vendors", uid));
+    if (vendorDoc.exists()) {
+      const vendor = vendorDoc.data();
+      vendorName.textContent = vendor.name || "-";
+      vendorCategory.textContent = vendor.category || "-";
+      vendorLocation.textContent = vendor.location || "-";
+
+      vendorNameInput.value = vendor.name || "";
+      vendorCategoryInput.value = vendor.category || "";
+      vendorLocationInput.value = vendor.location || "";
+    }
+  }
+
+  if (user.role === "parent") {
+    addStudentBtn.style.display = "inline-block";
+    loadAssignedStudents(uid);
+  }
+
+  const txSnap = await getDocs(query(collection(db, "transactions"), where("to", "==", uid)));
+  transactionTable.innerHTML = "";
+  for (const docSnap of txSnap.docs) {
+    const tx = docSnap.data();
+    let category = "-";
+    if (tx.from) {
+      const vendorDoc = await getDoc(doc(db, "vendors", tx.from));
+      if (vendorDoc.exists()) category = vendorDoc.data().category || "-";
     }
 
-    .section-title {
-      margin-top: 40px;
-      margin-bottom: 10px;
-      font-size: 1.3em;
-      color: #333;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 5px;
-    }
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
+      <td>$${(tx.amount || 0).toFixed(2)}</td>
+      <td>${tx.from || "-"}</td>
+      <td>${tx.to || "-"}</td>
+      <td>${category}</td>
+      <td>${tx.transactionId || docSnap.id}</td>
+      <td>${tx.status || "-"}</td>
+    `;
+    transactionTable.appendChild(row);
+  }
+}
 
-    .user-details-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
+editBtn.addEventListener("click", () => {
+  editFields.style.display = "block";
+  userInfoContainer.style.display = "none";
+  editBtn.style.display = "none";
+  saveBtn.style.display = "inline-block";
+  document.querySelectorAll(".edit-field").forEach(el => el.style.display = "block");
+  document.querySelectorAll(".value").forEach(el => el.style.display = "none");
+});
 
-    .user-details-grid div {
-      background: #f9fafc;
-      padding: 12px 16px;
-      border-radius: 6px;
-    }
+saveBtn.addEventListener("click", async () => {
+  const updated = {
+    firstName: editFirstName.value.trim(),
+    lastName: editLastName.value.trim(),
+    role: editRole.value
+  };
+  await updateDoc(doc(db, "users", uid), updated);
 
-    .label {
-      font-weight: bold;
-      display: block;
-      color: #555;
-      margin-bottom: 5px;
-    }
+  if (editRole.value === "vendor") {
+    await setDoc(doc(db, "vendors", uid), {
+      name: vendorNameInput.value.trim(),
+      category: vendorCategoryInput.value.trim(),
+      location: vendorLocationInput.value.trim()
+    }, { merge: true });
+  }
 
-    .value {
-      color: #222;
-    }
+  alert("✅ Profile updated!");
+  window.location.reload();
+});
 
-    .wallet-balance {
-      font-size: 1.5em;
-      font-weight: bold;
-      color: #1a73e8;
-    }
+addStudentBtn.addEventListener("click", () => {
+  assignForm.style.display = assignForm.style.display === "none" ? "block" : "none";
+  if (!searchMode) fetchStudents();
+});
 
-    .transaction-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 0.95em;
-    }
+studentSearchBtn.addEventListener("click", () => {
+  searchMode = true;
+  fetchStudents(studentSearchInput.value.trim());
+});
 
-    .transaction-table th,
-    .transaction-table td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
+async function fetchStudents(keyword = "") {
+  let q = query(collection(db, "users"), where("role", "==", "student"), limit(5));
+  const snapshot = await getDocs(q);
 
-    .transaction-table th {
-      background-color: #f1f5f9;
-    }
+  studentSearchResults.innerHTML = "";
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    if (keyword && !`${data.firstName} ${data.lastName} ${data.email}`.toLowerCase().includes(keyword.toLowerCase())) return;
 
-    .admin-controls {
-      margin-top: 30px;
-      display: flex;
-      gap: 15px;
-      flex-wrap: wrap;
-    }
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${data.firstName || "-"}</td>
+      <td>${data.lastName || "-"}</td>
+      <td>${data.email || "-"}</td>
+      <td><input type="checkbox" value="${docSnap.id}" /></td>
+    `;
+    studentSearchResults.appendChild(row);
+  });
+}
 
-    .admin-controls button {
-      padding: 10px 20px;
-      font-size: 0.95em;
-      background-color: #2f80ed;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
+assignSelectedBtn.addEventListener("click", async () => {
+  const selected = Array.from(document.querySelectorAll("#studentSearchResults input[type='checkbox']:checked")).map(cb => cb.value);
+  if (selected.length === 0) return alert("Please select students to assign.");
 
-    .admin-controls button:hover {
-      background-color: #1c60b3;
-    }
+  for (const studentId of selected) {
+    await updateDoc(doc(db, "users", studentId), { parentId: uid });
+  }
 
-    .back-button {
-      margin-bottom: 20px;
-      display: inline-block;
-      text-decoration: none;
-      color: #2f80ed;
-      font-weight: 500;
-    }
+  alert("Students assigned.");
+  assignForm.style.display = "none";
+  loadAssignedStudents(uid);
+});
 
-    .back-button:hover {
-      text-decoration: underline;
-    }
+async function loadAssignedStudents(parentId) {
+  assignedStudentsList.innerHTML = "";
+  const q = query(collection(db, "users"), where("parentId", "==", parentId));
+  const snapshot = await getDocs(q);
 
-    @media screen and (max-width: 600px) {
-      .user-details-grid {
-        grid-template-columns: 1fr;
-      }
+  if (snapshot.empty) {
+    assignedStudentsList.innerHTML = "<p>No students assigned yet.</p>";
+    return;
+  }
 
-      .admin-controls {
-        flex-direction: column;
-      }
-    }
-  </style>
-</head>
-<body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-      </div>
-      <div class="nav-right">
-        <a href="government.html">Dashboard</a>
-        <a href="view-users.html">View Users</a>
-        <a href="#" id="logoutBtn">Logout</a>
-      </div>
-    </div>
-  </nav>
-
-  <div class="profile-container">
-    <a href="view-users.html" class="back-button">← Back to Users</a>
-    <h2>User Profile</h2>
-
-    <div style="margin-top: 20px; margin-bottom: 20px;">
-      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
-      <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
-
-      <button id="addStudentBtn" style="display:none;" class="btnEdit">Add Student</button>
-          </div>
-
-<!-- Always visible: Assigned Students -->
-    <div class="section-title">Assigned Students</div>
-    <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;">
-      <!-- Student entries will be inserted here -->
-    </div>
-
-    <!-- Toggled: Add Student Form -->
-    <div id="assignStudentForm" style="display: none; margin-top: 20px;">
-      <div class="search-bar">
-        <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
-        <button id="studentSearchBtn">Search</button>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Email</th>
-            <th>Select</th>
-          </tr>
-        </thead>
-        <tbody id="studentSearchResults">
-          <!-- Search results will go here -->
-        </tbody>
-      </table>
-
-      <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
-    </div>
-      
-    </div>
-
-    <div class="user-details-grid" id="userInfo"></div>
-
-    <div id="editFields" style="display:none;">
-      <div class="user-details-grid">
-        <div>
-          <span class="label">First Name</span>
-          <input type="text" id="editFirstName" />
-        </div>
-        <div>
-          <span class="label">Last Name</span>
-          <input type="text" id="editLastName" />
-        </div>
-        <div>
-          <span class="label">Role</span>
-          <select id="editRole">
-            <option value="cardholder">Cardholder</option>
-            <option value="parent">Parent</option>
-            <option value="vendor">Vendor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div id="vendorInfoSection" style="display: none;">
-      <div class="section-title">Vendor Info</div>
-      <div class="user-details-grid" id="vendorDetailsGrid">
-        <div>
-          <span class="label">Business Name</span>
-          <span class="value" id="vendorName">-</span>
-          <input type="text" id="vendorNameInput" class="edit-field" style="display: none;">
-        </div>
-        <div>
-          <span class="label">Category</span>
-          <span class="value" id="vendorCategory">-</span>
-          <input type="text" id="vendorCategoryInput" class="edit-field" style="display: none;">
-        </div>
-        <div>
-          <span class="label">Location</span>
-          <span class="value" id="vendorLocation">-</span>
-          <input type="text" id="vendorLocationInput" class="edit-field" style="display: none;">
-        </div>
-      </div>
-    </div>
-
-    
-
-    <div class="section-title">Wallet</div>
-    <div class="user-details-grid">
+  snapshot.forEach(docSnap => {
+    const student = docSnap.data();
+    const div = document.createElement("div");
+    div.innerHTML = `
       <div>
-        <span class="label">Wallet ID</span>
-        <span class="value" id="walletId">Loading...</span>
+        <span class="label">Student Name</span>
+        <span class="value">${student.firstName || ""} ${student.lastName || ""}</span>
       </div>
       <div>
-        <span class="label">Wallet Balance</span>
-        <span class="wallet-balance" id="walletBalance">$0.00</span>
+        <span class="label">Email</span>
+        <span class="value">${student.email || "-"}</span>
       </div>
-    </div>
-
-    <div class="admin-controls" id="adminControls" style="display: none;">
-      <button id="addFundsBtn">Add Funds</button>
-      <button id="freezeWalletBtn">Freeze Wallet</button>
-    </div>
-
-    <div class="section-title">Transaction History</div>
-    <table class="transaction-table" id="transactionTable">
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Amount</th>
-          <th>From</th>
-          <th>To</th>
-          <th>Category</th>
-          <th>Transaction ID</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Transactions will go here -->
-      </tbody>
-    </table>
-  </div>
-
-  <script type="module" src="user-profile.js"></script>
-</body>
-</html>
+    `;
+    assignedStudentsList.appendChild(div);
+  });
+}
