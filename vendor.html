@@ -5,196 +5,60 @@
   <title>Vendor Dashboard - BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="styles.css" rel="stylesheet" />
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-    }
-
-    nav {
-      background-color: #102a43;
-      padding: 12px 20px;
-    }
-
-    .nav-container {
-      max-width: 1100px;
-      margin: auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .nav-left img {
-      height: 36px;
-    }
-
-    .nav-right a {
-      margin-left: 16px;
-      text-decoration: none;
-      color: white;
-      font-size: 0.95em;
-    }
-
-    .nav-right a:hover {
-      text-decoration: underline;
-    }
-
-    .container {
-      max-width: 1100px;
-      margin: 40px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-
-    .section-title {
-      font-size: 1.2em;
-      font-weight: bold;
-      margin: 30px 0 10px;
-    }
-
-    .user-details-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .user-details-grid div {
-      background: #f1f6fb;
-      padding: 10px 16px;
-      border-radius: 6px;
-    }
-
-    .label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    .value {
-      color: #333;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    table th, table td {
-      padding: 10px;
-      text-align: left;
-      border: 1px solid #ddd;
-    }
-
-    table th {
-      background: #e3f2fd;
-    }
-
-    .logout-btn {
-      margin-left: 16px;
-      background-color: transparent;
-      border: none;
-      color: white;
-      font-size: 0.95em;
-      cursor: pointer;
-    }
-
-    .logout-btn:hover {
-      text-decoration: underline;
-    }
-  </style>
 </head>
 <body>
-  <!-- Navigation Bar -->
+  <!-- Navbar -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
         <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
-        <button id="logoutBtn" class="logout-btn">Log Out</button>
+        <button id="logoutBtn">Logout</button>
       </div>
     </div>
   </nav>
 
-  <!-- Page Content -->
-  <div class="container">
-    <h1>Welcome, Vendor</h1>
+  <div class="container" style="margin-top: 30px;">
+    <h1>Vendor Dashboard</h1>
 
-    <!-- Vendor Info -->
-    <div class="user-details-grid">
-      <div>
-        <span class="label">Name</span>
-        <span class="value" id="vendorName">Loading...</span>
-      </div>
-      <div>
-        <span class="label">Email</span>
-        <span class="value" id="vendorEmail">Loading...</span>
-      </div>
-      <div>
-        <span class="label">Business Name</span>
-        <span class="value" id="vendorBusiness">Loading...</span>
-      </div>
-      <div>
-        <span class="label">Phone</span>
-        <span class="value" id="vendorPhone">Loading...</span>
-      </div>
-      <div>
-        <span class="label">Category</span>
-        <span class="value" id="vendorCategory">Loading...</span>
-      </div>
-      <div>
-        <span class="label">Approved</span>
-        <span class="value" id="vendorApproved">Loading...</span>
-      </div>
+    <!-- Profile Info -->
+    <div class="info-box">
+      <h2>Vendor Profile</h2>
+      <p><strong>Name:</strong> <span id="vendorName">Loading...</span></p>
+      <p><strong>Email:</strong> <span id="vendorEmail">Loading...</span></p>
+      <p><strong>Business Name:</strong> <span id="businessName">Loading...</span></p>
+      <p><strong>Phone:</strong> <span id="phone">Loading...</span></p>
+      <p><strong>Category:</strong> <span id="category">Loading...</span></p>
+      <p><strong>Approved:</strong> <span id="approved">Loading...</span></p>
     </div>
 
     <!-- Wallet Info -->
-   <div class="section-title">Wallet</div>
-<div class="user-details-grid">
-  <div>
-    <span class="label">Wallet ID</span>
-    <span class="value" id="walletId">-</span>
-  </div>
-  <div>
-    <span class="label">Wallet Balance</span>
-    <span class="value" id="walletBalance">$0.00</span>
-  </div>
-  <div style="grid-column: span 2; text-align: right;">
-    <button id="redeemBtn" class="Editbtn">Redeem Funds</button>
-  </div>
-</div>
+    <div class="info-box">
+      <h2>Wallet</h2>
+      <p><strong>Wallet ID:</strong> <span id="walletId">Loading...</span></p>
+      <p><strong>Wallet Balance:</strong> <span id="walletBalance">Loading...</span></p>
+    </div>
 
-<!-- Redeem Modal -->
-<div id="redeemModal" style="display: none; margin-top: 20px;">
-  <div class="section-title">Request Payout</div>
-  <input type="number" id="redeemAmount" placeholder="Enter amount to redeem" />
-  <button id="submitRedeemBtn" class="Editbtn">Submit</button>
-  <p id="redeemStatus" style="color: green;"></p>
-</div>
+    <!-- Redeem Button -->
+    <div class="info-box">
+      <h2>Redeem BMDX</h2>
+      <button id="redeemBtn">Redeem Funds</button>
+    </div>
 
-    <!-- Transactions -->
-    <div class="section-title">Recent Transactions</div>
-    <table class="transaction-table">
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>Amount</th>
-          <th>From</th>
-          <th>Transaction ID</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="transactionTable">
-        <tr><td colspan="5">Loading...</td></tr>
-      </tbody>
-    </table>
+    <!-- Redeem Modal -->
+    <div id="redeemModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h3>Redeem Request</h3>
+        <input type="number" id="redeemAmount" placeholder="Amount to redeem" />
+        <button id="submitRedeemBtn">Submit</button>
+        <p id="redeemStatus" style="margin-top: 10px;"></p>
+        <button onclick="document.getElementById('redeemModal').style.display='none'">Cancel</button>
+      </div>
+    </div>
   </div>
 
+  <!-- Vendor JS -->
   <script type="module" src="vendor.js"></script>
 </body>
 </html>
