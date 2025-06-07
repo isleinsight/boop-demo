@@ -11,6 +11,9 @@ import {
   getDoc,
   addDoc,
   collection,
+  query,
+  where,
+  getDocs,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -46,6 +49,8 @@ const redeemAmount = document.getElementById("redeemAmount");
 const submitRedeemBtn = document.getElementById("submitRedeemBtn");
 const redeemStatus = document.getElementById("redeemStatus");
 
+const transactionBody = document.getElementById("transactionBody");
+
 let currentUserId = null;
 
 // Auth Check
@@ -56,36 +61,66 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUserId = user.uid;
+  const docRef = doc(db, "users", currentUserId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return;
+
+  const userData = docSnap.data();
+  vendorNameEl.textContent = `${userData.firstName} ${userData.lastName}`;
+  vendorEmailEl.textContent = userData.email || "-";
+  walletIdEl.textContent = userData.walletId || "N/A";
+  walletBalanceEl.textContent = "$" + (userData.walletBalance || 0).toFixed(2);
+
+  // Load vendor-specific info
+  const vendorDoc = await getDoc(doc(db, "vendors", currentUserId));
+  if (vendorDoc.exists()) {
+    const vendor = vendorDoc.data();
+    businessNameEl.textContent = vendor.name || "-";
+    phoneEl.textContent = vendor.phone || "-";
+    categoryEl.textContent = vendor.category || "-";
+    approvedEl.textContent = vendor.approved ? "Yes" : "No";
+  } else {
+    businessNameEl.textContent = "-";
+    phoneEl.textContent = "-";
+    categoryEl.textContent = "-";
+    approvedEl.textContent = "-";
+  }
+
+  loadTransactions(currentUserId);
+});
+
+// Load transactions sent by this vendor
+async function loadTransactions(vendorId) {
+  transactionBody.innerHTML = "<tr><td colspan='5'>Loading...</td></tr>";
 
   try {
-    // Load base user info
-    const userDoc = await getDoc(doc(db, "users", currentUserId));
-    if (!userDoc.exists()) throw new Error("User doc not found");
-    const userData = userDoc.data();
+    const q = query(collection(db, "transactions"), where("from", "==", vendorId));
+    const snap = await getDocs(q);
 
-    vendorNameEl.textContent = `${userData.firstName || ""} ${userData.lastName || ""}`;
-    vendorEmailEl.textContent = userData.email || "-";
-    walletIdEl.textContent = userData.walletId || "N/A";
-    walletBalanceEl.textContent = `$${(userData.walletBalance || 0).toFixed(2)}`;
-
-    // Load vendor-specific info
-    const vendorDoc = await getDoc(doc(db, "vendors", currentUserId));
-    if (vendorDoc.exists()) {
-      const vendor = vendorDoc.data();
-      businessNameEl.textContent = vendor.name || "-";
-      phoneEl.textContent = vendor.phone || "-";
-      categoryEl.textContent = vendor.category || "-";
-      approvedEl.textContent = vendor.approved ? "Yes" : "No";
-    } else {
-      businessNameEl.textContent = "-";
-      phoneEl.textContent = "-";
-      categoryEl.textContent = "-";
-      approvedEl.textContent = "-";
+    if (snap.empty) {
+      transactionBody.innerHTML = "<tr><td colspan='5'>No recent transactions.</td></tr>";
+      return;
     }
-  } catch (error) {
-    console.error("Error loading vendor:", error);
+
+    transactionBody.innerHTML = "";
+
+    snap.forEach((docSnap) => {
+      const tx = docSnap.data();
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
+        <td>$${(tx.amount || 0).toFixed(2)}</td>
+        <td>${tx.to || "-"}</td>
+        <td>${docSnap.id}</td>
+        <td>${tx.status || "-"}</td>
+      `;
+      transactionBody.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Failed to load transactions:", err);
+    transactionBody.innerHTML = "<tr><td colspan='5'>Failed to load transactions.</td></tr>";
   }
-});
+}
 
 // Logout
 logoutBtn.addEventListener("click", () => {
