@@ -1,98 +1,170 @@
-// Firebase v10 imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  query,
-  where,
-  collection,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-  authDomain: "boop-becff.firebaseapp.com",
-  projectId: "boop-becff",
-  storageBucket: "boop-becff.appspot.com",
-  messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-};
-
-// Initialize
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// DOM Elements
-const logoutBtn = document.getElementById("logoutBtn");
-const studentNameEl = document.getElementById("studentName");
-const studentEmailEl = document.getElementById("studentEmail");
-const walletIdEl = document.getElementById("walletId");
-const walletBalanceEl = document.getElementById("walletBalance");
-const txBody = document.getElementById("transactionBody");
-
-// Check auth state
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  try {
-    const studentDoc = await getDoc(doc(db, "users", user.uid));
-    if (!studentDoc.exists()) throw new Error("Student not found");
-
-    const student = studentDoc.data();
-    studentNameEl.textContent = `${student.firstName || ""} ${student.lastName || ""}`;
-    studentEmailEl.textContent = student.email || "-";
-    walletIdEl.textContent = student.walletId || "N/A";
-    walletBalanceEl.textContent = `$${(student.walletBalance || 0).toFixed(2)}`;
-
-    loadTransactions(user.uid);
-  } catch (err) {
-    console.error("Error loading student data:", err);
-    txBody.innerHTML = `<tr><td colspan="5">Failed to load data.</td></tr>`;
-  }
-});
-
-// Load transactions
-async function loadTransactions(studentId) {
-  try {
-    const q = query(collection(db, "transactions"), where("to", "==", studentId));
-    const snap = await getDocs(q);
-    txBody.innerHTML = "";
-
-    if (snap.empty) {
-      txBody.innerHTML = `<tr><td colspan="5">No recent transactions.</td></tr>`;
-      return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Senior Dashboard - BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
     }
 
-    snap.forEach(doc => {
-      const tx = doc.data();
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
-        <td>$${(tx.amount || 0).toFixed(2)}</td>
-        <td>${tx.to || "-"}</td>
-        <td>${tx.category || "-"}</td>
-        <td>${tx.status || "-"}</td>
-      `;
-      txBody.appendChild(row);
-    });
-  } catch (err) {
-    console.error("Transaction fetch failed", err);
-    txBody.innerHTML = `<tr><td colspan="5">Error loading transactions.</td></tr>`;
-  }
-}
+    nav {
+      background-color: #102a43;
+      padding: 12px 20px;
+    }
 
-// Logout
-logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => window.location.href = "index.html");
-});
+    .nav-container {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-left img {
+      height: 36px;
+    }
+
+    .nav-right a {
+      margin-left: 16px;
+      text-decoration: none;
+      color: white;
+      font-size: 0.95em;
+    }
+
+    .nav-right a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 1.3em;
+      font-weight: bold;
+      margin-bottom: 16px;
+      color: #102a43;
+    }
+
+    .user-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .user-details-grid div {
+      background: #f9fbfd;
+      padding: 14px 18px;
+      border-radius: 6px;
+      border: 1px solid #dce3e9;
+    }
+
+    .label {
+      display: block;
+      font-size: 0.85em;
+      color: #5b7083;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      font-size: 1.05em;
+      color: #1f2d3d;
+    }
+
+    .transaction-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    .transaction-table th,
+    .transaction-table td {
+      border: 1px solid #dce3e9;
+      padding: 10px;
+      font-size: 0.95em;
+    }
+
+    .transaction-table th {
+      background-color: #f0f4f8;
+      text-align: left;
+    }
+
+    .transaction-table td {
+      background-color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="senior.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+      </div>
+      <div class="nav-right">
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Container -->
+  <div class="container">
+    <div class="section">
+      <div class="section-title">Senior Details</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">Name</span>
+          <span class="value" id="seniorName">-</span>
+        </div>
+        <div>
+          <span class="label">Email</span>
+          <span class="value" id="seniorEmail">-</span>
+        </div>
+        <div>
+          <span class="label">Wallet ID</span>
+          <span class="value" id="walletId">-</span>
+        </div>
+        <div>
+          <span class="label">Wallet Balance</span>
+          <span class="value" id="walletBalance">$0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Recent Transactions</div>
+      <table class="transaction-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Amount</th>
+            <th>To</th>
+            <th>Category</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="transactionBody">
+          <tr><td colspan="5">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module" src="senior.js"></script>
+</body>
+</html>
