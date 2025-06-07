@@ -4,67 +4,18 @@
   <meta charset="UTF-8" />
   <title>Parent Dashboard</title>
   <link rel="stylesheet" href="style.css" />
-  <style>
-    .profile-container {
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    .section {
-      margin-top: 30px;
-    }
-    .section-title {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 15px;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 5px;
-    }
-    .user-details-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .label {
-      font-weight: bold;
-    }
-    .value {
-      display: block;
-    }
-    .btnEdit {
-      padding: 6px 12px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .btnEdit:hover {
-      background-color: #0056b3;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    table, th, td {
-      border: 1px solid #ccc;
-    }
-    th, td {
-      padding: 8px;
-      text-align: left;
-    }
-    .right-align {
-      text-align: right;
-    }
-  </style>
 </head>
 <body>
+  <!-- Navigation Bar -->
+  <div class="topnav">
+    <a href="government.html">Dashboard</a>
+    <a href="view-users.html">View Users</a>
+    <a href="user-profile.html">Profile</a>
+    <a href="#" id="logoutBtn" style="float:right">Logout</a>
+  </div>
+
   <div class="profile-container">
+    <!-- Parent Info -->
     <div class="section">
       <div class="section-title">Parent Info</div>
       <div class="user-details-grid">
@@ -76,13 +27,13 @@
           <span class="label">Email</span>
           <span class="value" id="parentEmail">-</span>
         </div>
-        <div class="right-align">
+        <div style="grid-column: span 2; text-align: right;">
           <button id="openAddFundsBtn" class="btnEdit">Add Funds</button>
         </div>
       </div>
 
       <!-- Add Funds Form -->
-      <div id="addFundsForm" style="display: none; margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <div id="addFundsForm" style="display: none; margin-top: 10px;">
         <h4>Add Funds to Student</h4>
         <label for="studentSelect">Student:</label>
         <select id="studentSelect"></select><br><br>
@@ -92,11 +43,13 @@
       </div>
     </div>
 
+    <!-- Students Section -->
     <div class="section">
       <div class="section-title">Your Students</div>
       <div id="studentsList"></div>
     </div>
 
+    <!-- Transactions Section -->
     <div class="section">
       <div class="section-title">Recent Transactions</div>
       <table>
