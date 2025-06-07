@@ -5,7 +5,6 @@
   <title>View Users - BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
-
 </head>
 <body>
   <nav>
@@ -24,12 +23,12 @@
   </nav>
 
   <div class="container">
-    <div class="top-bar">
+    <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center;">
       <h1>View Users</h1>
       <span id="userCount">Total Users: 0</span>
     </div>
 
-    <div class="search-bar">
+    <div class="search-bar" style="margin-bottom: 20px;">
       <input type="text" id="searchInput" placeholder="Search by name or email" />
       <button id="searchBtn">Search</button>
     </div>
@@ -37,10 +36,11 @@
     <table>
       <thead>
         <tr>
+          <th><input type="checkbox" id="selectAll" /></th>
           <th class="sortable" data-column="firstName">First Name <span class="arrow"></span></th>
-<th class="sortable" data-column="lastName">Last Name <span class="arrow"></span></th>
-<th class="sortable" data-column="email">Email <span class="arrow"></span></th>
-<th class="sortable" data-column="role">Role <span class="arrow"></span></th>
+          <th class="sortable" data-column="lastName">Last Name <span class="arrow"></span></th>
+          <th class="sortable" data-column="email">Email <span class="arrow"></span></th>
+          <th class="sortable" data-column="role">Role <span class="arrow"></span></th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -49,10 +49,16 @@
       </tbody>
     </table>
 
-    <div class="pagination">
+    <div class="pagination" style="margin-top: 20px;">
       <button id="prevBtn">Previous</button>
       <span id="paginationInfo">Page 1</span>
       <button id="nextBtn">Next</button>
+    </div>
+
+    <div style="margin-top: 20px; text-align: right;">
+      <button id="deleteSelectedBtn" style="background-color: #e74c3c; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer;">
+        Delete Selected
+      </button>
     </div>
   </div>
 
