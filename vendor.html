@@ -154,17 +154,28 @@
     </div>
 
     <!-- Wallet Info -->
-    <div class="section-title">Wallet</div>
-    <div class="user-details-grid">
-      <div>
-        <span class="label">Wallet ID</span>
-        <span class="value" id="walletId">-</span>
-      </div>
-      <div>
-        <span class="label">Wallet Balance</span>
-        <span class="value" id="walletBalance">$0.00</span>
-      </div>
-    </div>
+   <div class="section-title">Wallet</div>
+<div class="user-details-grid">
+  <div>
+    <span class="label">Wallet ID</span>
+    <span class="value" id="walletId">-</span>
+  </div>
+  <div>
+    <span class="label">Wallet Balance</span>
+    <span class="value" id="walletBalance">$0.00</span>
+  </div>
+  <div style="grid-column: span 2; text-align: right;">
+    <button id="redeemBtn" class="btn">Redeem Funds</button>
+  </div>
+</div>
+
+<!-- Redeem Modal -->
+<div id="redeemModal" style="display: none; margin-top: 20px;">
+  <div class="section-title">Request Payout</div>
+  <input type="number" id="redeemAmount" placeholder="Enter amount to redeem" />
+  <button id="submitRedeemBtn" class="btn">Submit</button>
+  <p id="redeemStatus" style="color: green;"></p>
+</div>
 
     <!-- Transactions -->
     <div class="section-title">Recent Transactions</div>
