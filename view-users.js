@@ -1,10 +1,13 @@
-// Firebase v10 imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
 import {
   getAuth,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
 import {
   getFirestore,
   collection,
@@ -39,8 +42,8 @@ const userCount = document.getElementById("userCount");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 
-// Render Table
 function renderTable(users) {
   const start = (currentPage - 1) * rowsPerPage;
   const paginatedUsers = users.slice(start, start + rowsPerPage);
@@ -50,7 +53,7 @@ function renderTable(users) {
     const row = document.createElement("tr");
 
     row.innerHTML = `
-      <td><input type="checkbox" class="userCheckbox" data-id="${user.id}" /></td>
+      <td><input type="checkbox" class="rowCheckbox" data-id="${user.id}" /></td>
       <td>${user.firstName || ""}</td>
       <td>${user.lastName || ""}</td>
       <td>${user.email || ""}</td>
@@ -65,7 +68,6 @@ function renderTable(users) {
         </div>
       </td>
     `;
-
     tableBody.appendChild(row);
   });
 
@@ -79,38 +81,25 @@ function renderTable(users) {
       const id = btn.getAttribute("data-id");
       const confirmDelete = confirm("Are you sure you want to delete this user?");
       if (!confirmDelete) return;
-
       const typed = prompt("Type DELETE to confirm:");
-      if (typed !== "DELETE") {
-        alert("User not deleted. You must type DELETE exactly.");
-        return;
-      }
+      if (typed !== "DELETE") return alert("Not deleted. You must type DELETE exactly.");
 
       try {
         await deleteDoc(doc(db, "users", id));
         alert("User deleted.");
         loadUsers();
       } catch (err) {
-        console.error("Error deleting:", err);
-        alert("Error deleting user.");
+        console.error("Delete error:", err);
+        alert("Failed to delete user.");
       }
     });
   });
 
-  // Checkbox change event to toggle delete button
-  document.querySelectorAll(".userCheckbox").forEach((box) => {
-    box.addEventListener("change", updateDeleteButtonVisibility);
+  document.querySelectorAll(".rowCheckbox").forEach(cb => {
+    cb.addEventListener("change", updateDeleteButtonVisibility);
   });
-
-  updateDeleteButtonVisibility();
 }
 
-function updateDeleteButtonVisibility() {
-  const anyChecked = document.querySelectorAll(".userCheckbox:checked").length > 0;
-  deleteSelectedBtn.style.display = anyChecked ? "inline-block" : "none";
-}
-
-// Sorting
 function sortUsers(users, column) {
   if (currentSort.column === column) {
     currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
@@ -129,13 +118,15 @@ function sortUsers(users, column) {
   return users.sort((a, b) => {
     const aVal = (a[column] || "").toLowerCase();
     const bVal = (b[column] || "").toLowerCase();
-    if (aVal < bVal) return currentSort.direction === "asc" ? -1 : 1;
-    if (aVal > bVal) return currentSort.direction === "asc" ? 1 : -1;
-    return 0;
+    return aVal.localeCompare(bVal) * (currentSort.direction === "asc" ? 1 : -1);
   });
 }
 
-// Search
+function updateDeleteButtonVisibility() {
+  const checked = document.querySelectorAll(".rowCheckbox:checked");
+  deleteSelectedBtn.style.display = checked.length > 0 ? "inline-block" : "none";
+}
+
 function handleSearch() {
   const value = searchInput.value.trim().toLowerCase();
   filteredUsers = allUsers.filter(user =>
@@ -148,7 +139,6 @@ function handleSearch() {
   userCount.textContent = `Total Users: ${filteredUsers.length}`;
 }
 
-// Pagination
 document.getElementById("prevBtn").addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
@@ -173,47 +163,50 @@ document.querySelectorAll("th.sortable").forEach((th) => {
   });
 });
 
-// Bulk delete
-deleteSelectedBtn.addEventListener("click", async () => {
-  const checkboxes = document.querySelectorAll(".userCheckbox:checked");
-  if (checkboxes.length === 0) return;
-
-  const confirmDelete = confirm(`Delete ${checkboxes.length} user(s)?`);
-  if (!confirmDelete) return;
-
-  const typed = prompt("Type DELETE to confirm:");
-  if (typed !== "DELETE") {
-    alert("Bulk delete cancelled.");
-    return;
-  }
-
-  try {
-    for (const box of checkboxes) {
-      const id = box.getAttribute("data-id");
-      await deleteDoc(doc(db, "users", id));
-    }
-    alert("Selected users deleted.");
-    loadUsers();
-  } catch (err) {
-    console.error("Bulk delete error:", err);
-    alert("Something went wrong.");
-  }
+selectAllCheckbox.addEventListener("change", () => {
+  const checkboxes = document.querySelectorAll(".rowCheckbox");
+  checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+  updateDeleteButtonVisibility();
 });
 
-// Load all users
+deleteSelectedBtn.addEventListener("click", async () => {
+  const checked = document.querySelectorAll(".rowCheckbox:checked");
+  const count = checked.length;
+  if (count === 0) return;
+
+  const confirmDelete = confirm(`Are you sure you want to delete ${count} selected user(s)?`);
+  if (!confirmDelete) return;
+
+  const typed = prompt(`Type DELETE to confirm deleting ${count} user(s):`);
+  if (typed !== "DELETE") return alert("Action canceled. You must type DELETE exactly.");
+
+  for (let cb of checked) {
+    const id = cb.getAttribute("data-id");
+    try {
+      await deleteDoc(doc(db, "users", id));
+    } catch (err) {
+      console.error("Error deleting user:", id, err);
+    }
+  }
+
+  alert(`✅ Deleted ${count} user(s).`);
+  loadUsers();
+});
+
 function loadUsers() {
   getDocs(collection(db, "users")).then((snapshot) => {
     allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     filteredUsers = [...allUsers];
     userCount.textContent = `Total Users: ${filteredUsers.length}`;
     renderTable(filteredUsers);
+    deleteSelectedBtn.style.display = "none";
+    selectAllCheckbox.checked = false;
   }).catch((err) => {
     console.error("Failed to load users:", err);
     alert("Could not load users.");
   });
 }
 
-// Auth check
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loadUsers();
@@ -222,7 +215,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Logout
 document.getElementById("logoutBtn").addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
