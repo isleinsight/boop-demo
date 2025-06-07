@@ -56,19 +56,35 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUserId = user.uid;
-  const docRef = doc(db, "users", user.uid);
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) return;
 
-  const vendor = docSnap.data();
-  vendorNameEl.textContent = vendor.firstName + " " + vendor.lastName;
-  vendorEmailEl.textContent = vendor.email;
-  walletIdEl.textContent = vendor.walletId || "N/A";
-  walletBalanceEl.textContent = "$" + (vendor.walletBalance || 0).toFixed(2);
-  businessNameEl.textContent = vendor.businessName || "-";
-  phoneEl.textContent = vendor.phone || "-";
-  categoryEl.textContent = vendor.category || "-";
-  approvedEl.textContent = vendor.approved ? "Yes" : "No";
+  try {
+    // Load base user info
+    const userDoc = await getDoc(doc(db, "users", currentUserId));
+    if (!userDoc.exists()) throw new Error("User doc not found");
+    const userData = userDoc.data();
+
+    vendorNameEl.textContent = `${userData.firstName || ""} ${userData.lastName || ""}`;
+    vendorEmailEl.textContent = userData.email || "-";
+    walletIdEl.textContent = userData.walletId || "N/A";
+    walletBalanceEl.textContent = `$${(userData.walletBalance || 0).toFixed(2)}`;
+
+    // Load vendor-specific info
+    const vendorDoc = await getDoc(doc(db, "vendors", currentUserId));
+    if (vendorDoc.exists()) {
+      const vendor = vendorDoc.data();
+      businessNameEl.textContent = vendor.name || "-";
+      phoneEl.textContent = vendor.phone || "-";
+      categoryEl.textContent = vendor.category || "-";
+      approvedEl.textContent = vendor.approved ? "Yes" : "No";
+    } else {
+      businessNameEl.textContent = "-";
+      phoneEl.textContent = "-";
+      categoryEl.textContent = "-";
+      approvedEl.textContent = "-";
+    }
+  } catch (error) {
+    console.error("Error loading vendor:", error);
+  }
 });
 
 // Logout
