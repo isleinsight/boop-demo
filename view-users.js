@@ -1,17 +1,19 @@
-// Firebase v10 imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
 import {
   getAuth,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
 import {
   getFirestore,
-  doc,
-  getDoc,
-  addDoc,
   collection,
-  serverTimestamp
+  getDocs,
+  deleteDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -29,141 +31,177 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM Elements
-const logoutBtn = document.getElementById("logoutBtn");
-const vendorNameEl = document.getElementById("vendorName");
-const vendorEmailEl = document.getElementById("vendorEmail");
-const walletIdEl = document.getElementById("walletId");
-const walletBalanceEl = document.getElementById("walletBalance");
-const businessNameEl = document.getElementById("businessName");
-const phoneEl = document.getElementById("phone");
-const categoryEl = document.getElementById("category");
-const approvedEl = document.getElementById("approved");
+let allUsers = [];
+let filteredUsers = [];
+let currentPage = 1;
+const rowsPerPage = 10;
+let currentSort = { column: null, direction: "asc" };
 
-const redeemBtn = document.getElementById("redeemBtn");
-const redeemModal = document.getElementById("redeemModal");
-const redeemAmount = document.getElementById("redeemAmount");
-const submitRedeemBtn = document.getElementById("submitRedeemBtn");
-const redeemStatus = document.getElementById("redeemStatus");
+const tableBody = document.getElementById("userTableBody");
+const userCount = document.getElementById("userCount");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
 
-const txTableBody = document.getElementById("transactionTableBody");
+function renderTable(users) {
+  const start = (currentPage - 1) * rowsPerPage;
+  const paginatedUsers = users.slice(start, start + rowsPerPage);
+  tableBody.innerHTML = "";
 
-let currentUserId = null;
+  paginatedUsers.forEach((user) => {
+    const row = document.createElement("tr");
 
-// Auth Check
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
+    row.innerHTML = `
+      <td>${user.firstName || ""}</td>
+      <td>${user.lastName || ""}</td>
+      <td>${user.email || ""}</td>
+      <td>${user.role || ""}</td>
+      <td>
+        <div class="dropdown">
+          <button class="action-btn">Actions ▼</button>
+          <div class="dropdown-content">
+            <a href="user-profile.html?uid=${user.id}">View Profile</a>
+            <a href="#" class="delete-user" data-id="${user.id}">Delete</a>
+          </div>
+        </div>
+      </td>
+    `;
 
-  currentUserId = user.uid;
+    tableBody.appendChild(row);
+  });
 
-  try {
-    // Get core user info from 'users' collection
-    const docRef = doc(db, "users", user.uid);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) return;
+  document.getElementById("paginationInfo").textContent = `Page ${currentPage} of ${Math.ceil(users.length / rowsPerPage)}`;
+  document.getElementById("prevBtn").disabled = currentPage === 1;
+  document.getElementById("nextBtn").disabled = start + rowsPerPage >= users.length;
 
-    const vendor = docSnap.data();
-    vendorNameEl.textContent = `${vendor.firstName || ""} ${vendor.lastName || ""}`;
-    vendorEmailEl.textContent = vendor.email || "-";
-    walletIdEl.textContent = vendor.walletId || "N/A";
-    walletBalanceEl.textContent = `$${(vendor.walletBalance || 0).toFixed(2)}`;
+  document.querySelectorAll(".delete-user").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const id = btn.getAttribute("data-id");
+      const confirmDelete = confirm("Are you sure you want to delete this user?");
+      if (!confirmDelete) return;
 
-    // Fetch extended vendor info from 'vendors' collection
-    const vendorExtraRef = doc(db, "vendors", user.uid);
-    const vendorExtraSnap = await getDoc(vendorExtraRef);
+      const typed = prompt("Type DELETE to confirm:");
+      if (typed !== "DELETE") {
+        alert("User not deleted. You must type DELETE exactly.");
+        return;
+      }
 
-    if (vendorExtraSnap.exists()) {
-      const vendorExtra = vendorExtraSnap.data();
-      businessNameEl.textContent = vendorExtra.name || "-";
-      phoneEl.textContent = vendorExtra.phone || "-";
-      categoryEl.textContent = vendorExtra.category || "-";
-      approvedEl.textContent = vendorExtra.approved ? "Yes" : "No";
-    } else {
-      businessNameEl.textContent = "-";
-      phoneEl.textContent = "-";
-      categoryEl.textContent = "-";
-      approvedEl.textContent = "-";
-    }
-
-    loadTransactions();
-  } catch (err) {
-    console.error("Error loading vendor data:", err);
-  }
-});
-
-// Logout
-logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => window.location.href = "index.html");
-});
-
-// Show Redeem Modal
-redeemBtn.addEventListener("click", () => {
-  redeemModal.style.display = "block";
-});
-
-// Submit Redeem Request
-submitRedeemBtn.addEventListener("click", async () => {
-  const amount = parseFloat(redeemAmount.value);
-  if (isNaN(amount) || amount <= 0) {
-    redeemStatus.textContent = "❌ Please enter a valid amount.";
-    redeemStatus.style.color = "red";
-    return;
-  }
-
-  try {
-    await addDoc(collection(db, "transactions"), {
-      from: currentUserId,
-      to: "government",
-      type: "redeem",
-      amount: amount,
-      status: "pending",
-      timestamp: serverTimestamp()
+      try {
+        await deleteDoc(doc(db, "users", id));
+        alert("User deleted.");
+        loadUsers(); // Refresh
+      } catch (err) {
+        console.error("Error deleting:", err);
+        alert("Error deleting user.");
+      }
     });
-
-    redeemStatus.textContent = "✅ Request submitted!";
-    redeemStatus.style.color = "green";
-    redeemAmount.value = "";
-  } catch (err) {
-    console.error("Redeem failed:", err);
-    redeemStatus.textContent = "❌ Failed to submit request.";
-    redeemStatus.style.color = "red";
-  }
-});
-
-// Load transactions
-async function loadTransactions() {
-  txTableBody.innerHTML = "<tr><td colspan='5'>Loading...</td></tr>";
-
-  try {
-    const q = collection(db, "transactions");
-    const snap = await getDocs(q);
-    const filtered = snap.docs
-      .map(doc => doc.data())
-      .filter(tx => tx.to === currentUserId || tx.from === currentUserId);
-
-    if (filtered.length === 0) {
-      txTableBody.innerHTML = "<tr><td colspan='5'>No recent transactions.</td></tr>";
-      return;
-    }
-
-    txTableBody.innerHTML = "";
-
-    filtered.forEach(tx => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
-        <td>$${(tx.amount || 0).toFixed(2)}</td>
-        <td>${tx.from || "-"}</td>
-        <td>${tx.transactionId || "-"}</td>
-        <td>${tx.status || "-"}</td>
-      `;
-      txTableBody.appendChild(row);
-    });
-  } catch (err) {
-    console.error("Failed to load transactions:", err);
-    txTableBody.innerHTML = "<tr><td colspan='5'>Failed to load transactions.</td></tr>";
-  }
+  });
 }
+
+function sortUsers(users, column) {
+  if (currentSort.column === column) {
+    currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
+  } else {
+    currentSort.column = column;
+    currentSort.direction = "asc";
+  }
+
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.classList.remove("sorted-asc", "sorted-desc");
+    if (th.dataset.column === column) {
+      th.classList.add(currentSort.direction === "asc" ? "sorted-asc" : "sorted-desc");
+    }
+  });
+
+  return users.sort((a, b) => {
+    const aVal = (a[column] || "").toLowerCase();
+    const bVal = (b[column] || "").toLowerCase();
+    if (aVal < bVal) return currentSort.direction === "asc" ? -1 : 1;
+    if (aVal > bVal) return currentSort.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+}
+
+function handleSearch() {
+  const value = searchInput.value.trim().toLowerCase();
+  filteredUsers = allUsers.filter(user =>
+    (user.firstName + " " + user.lastName + " " + user.email + " " + user.role)
+      .toLowerCase()
+      .includes(value)
+  );
+  currentPage = 1;
+  renderTable(filteredUsers);
+  userCount.textContent = `Total Users: ${filteredUsers.length}`;
+}
+
+document.getElementById("prevBtn").addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable(filteredUsers);
+  }
+});
+
+document.getElementById("nextBtn").addEventListener("click", () => {
+  if ((currentPage * rowsPerPage) < filteredUsers.length) {
+    currentPage++;
+    renderTable(filteredUsers);
+  }
+});
+
+searchBtn.addEventListener("click", handleSearch);
+searchInput.addEventListener("input", handleSearch);
+
+document.querySelectorAll("th.sortable").forEach((th) => {
+  th.addEventListener("click", () => {
+    filteredUsers = sortUsers(filteredUsers, th.dataset.column);
+    renderTable(filteredUsers);
+  });
+});
+
+function loadUsers() {
+  getDocs(collection(db, "users")).then((snapshot) => {
+    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    filteredUsers = [...allUsers];
+    userCount.textContent = `Total Users: ${filteredUsers.length}`;
+    renderTable(filteredUsers);
+  }).catch((err) => {
+    console.error("Failed to load users:", err);
+    alert("Could not load users.");
+  });
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadUsers();
+  } else {
+    window.location.href = "index.html";
+  }
+});
+
+const logoutBtn = document.getElementById("logoutBtn");
+logoutBtn.addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
+});
+
+
+
+
+const vendorSection = document.getElementById("vendorInfoSection");
+
+if (user.role === "vendor") {
+  vendorSection.style.display = "block";
+  const vendorDoc = await getDoc(doc(db, "vendors", uid));
+  if (vendorDoc.exists()) {
+    const vendor = vendorDoc.data();
+    document.getElementById("vendorName").textContent = vendor.name || "-";
+    document.getElementById("vendorCategory").textContent = vendor.category || "-";
+    document.getElementById("vendorLocation").textContent = vendor.location || "-";
+
+    document.getElementById("vendorNameInput").value = vendor.name || "";
+    document.getElementById("vendorCategoryInput").value = vendor.category || "";
+    document.getElementById("vendorLocationInput").value = vendor.location || "";
+  }
+} else {
+  vendorSection.style.display = "none";
