@@ -67,9 +67,12 @@ async function loadStudents(parentId) {
     const student = studentDoc.data();
     const studentId = studentDoc.id;
 
-    const box = document.createElement("div");
-    box.className = "user-details-grid";
-    box.innerHTML = `
+    const studentContainer = document.createElement("div");
+    studentContainer.style.marginBottom = "40px";
+
+    const studentInfo = document.createElement("div");
+    studentInfo.className = "user-details-grid";
+    studentInfo.innerHTML = `
       <div>
         <span class="label">Name</span>
         <span class="value">${student.firstName || ""} ${student.lastName || ""}</span>
@@ -87,10 +90,9 @@ async function loadStudents(parentId) {
         <span class="value">$${(student.walletBalance || 0).toFixed(2)}</span>
       </div>
     `;
-    studentsList.appendChild(box);
 
-    const section = document.createElement("div");
-    section.innerHTML = `
+    const transactionSection = document.createElement("div");
+    transactionSection.innerHTML = `
       <div class="section-title">Recent Transactions</div>
       <table class="transaction-table">
         <thead>
@@ -107,7 +109,10 @@ async function loadStudents(parentId) {
         </tbody>
       </table>
     `;
-    studentsList.appendChild(section);
+
+    studentContainer.appendChild(studentInfo);
+    studentContainer.appendChild(transactionSection);
+    studentsList.appendChild(studentContainer);
 
     loadTransactions(studentId);
   }
