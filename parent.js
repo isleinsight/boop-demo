@@ -8,13 +8,11 @@ import {
 import {
   getFirestore,
   collection,
-  doc,
-  getDoc,
-  getDocs,
   query,
   where,
-  orderBy,
-  limit
+  getDocs,
+  doc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -27,72 +25,73 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
+// Init
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 // DOM Elements
+const logoutBtn = document.getElementById("logoutBtn");
 const parentNameEl = document.getElementById("parentName");
 const parentEmailEl = document.getElementById("parentEmail");
 const studentsList = document.getElementById("studentsList");
-const logoutBtn = document.getElementById("logoutBtn");
+const addFundsBtn = document.getElementById("addFundsBtn");
 
-// Auth check
+// Auth Check
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    await loadParentDashboard(user.uid);
-  } else {
+  if (!user) {
     window.location.href = "index.html";
+    return;
+  }
+
+  try {
+    const parentDoc = await getDoc(doc(db, "users", user.uid));
+    if (parentDoc.exists()) {
+      const parent = parentDoc.data();
+      parentNameEl.textContent = `${parent.firstName || ""} ${parent.lastName || ""}`;
+      parentEmailEl.textContent = parent.email || "-";
+      loadStudents(user.uid);
+    }
+  } catch (err) {
+    console.error("Error loading parent:", err);
   }
 });
 
-async function loadParentDashboard(parentUid) {
-  const parentRef = doc(db, "users", parentUid);
-  const parentSnap = await getDoc(parentRef);
-  if (!parentSnap.exists()) {
-    alert("Parent user not found");
-    return;
-  }
-
-  const parent = parentSnap.data();
-
-  // ✅ Populate parent name and email
-  parentNameEl.textContent = `${parent.firstName || "-"}`;
-  parentEmailEl.textContent = `${parent.email || "-"}`;
-
-  // ✅ Load students
-  const q = query(collection(db, "users"), where("parentId", "==", parentUid));
-  const studentSnap = await getDocs(q);
-
+// Load students assigned to this parent
+async function loadStudents(parentId) {
   studentsList.innerHTML = "";
+  const q = query(collection(db, "users"), where("parentId", "==", parentId));
+  const snap = await getDocs(q);
 
-  if (studentSnap.empty) {
-    studentsList.innerHTML = "<p>No students assigned.</p>";
-    return;
-  }
-
-  for (const docSnap of studentSnap.docs) {
-    const student = docSnap.data();
-    const studentId = docSnap.id;
+  for (const studentDoc of snap.docs) {
+    const student = studentDoc.data();
+    const studentId = studentDoc.id;
 
     const box = document.createElement("div");
-    box.className = "student-box";
-
-    const name = `${student.firstName || ""} ${student.lastName || ""}`;
-    const email = student.email || "-";
-    const walletId = student.walletId || "N/A";
-    const balance = student.walletBalance !== undefined
-      ? `$${student.walletBalance.toFixed(2)}`
-      : "$0.00";
-
+    box.className = "user-details-grid";
     box.innerHTML = `
-      <div class="user-details-grid">
-        <div><span class="label">Name</span><span class="value">${name}</span></div>
-        <div><span class="label">Email</span><span class="value">${email}</span></div>
-        <div><span class="label">Wallet ID</span><span class="value">${walletId}</span></div>
-        <div><span class="label">Balance</span><span class="value">${balance}</span></div>
+      <div>
+        <span class="label">Name</span>
+        <span class="value">${student.firstName || ""} ${student.lastName || ""}</span>
       </div>
-      <div class="section-title" style="margin-top: 25px;">Recent Transactions</div>
+      <div>
+        <span class="label">Email</span>
+        <span class="value">${student.email || "-"}</span>
+      </div>
+      <div>
+        <span class="label">Wallet ID</span>
+        <span class="value">${student.walletId || "N/A"}</span>
+      </div>
+      <div>
+        <span class="label">Balance</span>
+        <span class="value">$${(student.walletBalance || 0).toFixed(2)}</span>
+      </div>
+    `;
+    studentsList.appendChild(box);
+
+    const section = document.createElement("div");
+    section.innerHTML = `
+      <div class="section-title">Recent Transactions</div>
       <table class="transaction-table">
         <thead>
           <tr>
@@ -107,36 +106,30 @@ async function loadParentDashboard(parentUid) {
           <tr><td colspan="5">Loading...</td></tr>
         </tbody>
       </table>
-      <div style="text-align: right; margin-top: 10px;">
-        <button class="btnEdit" onclick="alert('TODO: Add funds to ${name}')">Add Funds</button>
-      </div>
     `;
+    studentsList.appendChild(section);
 
-    studentsList.appendChild(box);
-    loadTransactionsForStudent(studentId);
+    loadTransactions(studentId);
   }
 }
 
-async function loadTransactionsForStudent(studentId) {
+// Load student transactions
+async function loadTransactions(studentId) {
   const txBody = document.getElementById(`tx-${studentId}`);
-  const q = query(
-    collection(db, "transactions"),
-    where("to", "==", studentId),
-    orderBy("timestamp", "desc"),
-    limit(5)
-  );
+  if (!txBody) return;
 
   try {
+    const q = query(collection(db, "transactions"), where("to", "==", studentId));
     const snap = await getDocs(q);
     txBody.innerHTML = "";
 
     if (snap.empty) {
-      txBody.innerHTML = `<tr><td colspan="5">No recent transactions</td></tr>`;
+      txBody.innerHTML = `<tr><td colspan="5">No recent transactions.</td></tr>`;
       return;
     }
 
-    for (const docSnap of snap.docs) {
-      const tx = docSnap.data();
+    snap.forEach(doc => {
+      const tx = doc.data();
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
@@ -146,16 +139,19 @@ async function loadTransactionsForStudent(studentId) {
         <td>${tx.status || "-"}</td>
       `;
       txBody.appendChild(row);
-    }
-  } catch (error) {
+    });
+  } catch (err) {
+    console.error("Transaction fetch failed", err);
     txBody.innerHTML = `<tr><td colspan="5">Failed to load transactions.</td></tr>`;
-    console.error("Transaction error:", error);
   }
 }
 
 // Logout
 logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
+  signOut(auth).then(() => window.location.href = "index.html");
+});
+
+// Add Funds button
+addFundsBtn.addEventListener("click", () => {
+  alert("Add Funds functionality will go here!");
 });
