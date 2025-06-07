@@ -23,17 +23,10 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Init Firebase
+// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-// UI Elements
-const logoutBtn = document.getElementById("logoutBtn");
-const tableBody = document.getElementById("userTableBody");
-const userCount = document.getElementById("userCount");
-const searchInput = document.getElementById("searchInput");
-const searchBtn = document.getElementById("searchBtn");
 
 let allUsers = [];
 let filteredUsers = [];
@@ -41,16 +34,22 @@ let currentPage = 1;
 const rowsPerPage = 10;
 let currentSort = { column: null, direction: "asc" };
 
-// Render users in the table
+const tableBody = document.getElementById("userTableBody");
+const userCount = document.getElementById("userCount");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+
 function renderTable(users) {
   const start = (currentPage - 1) * rowsPerPage;
-  const paginated = users.slice(start, start + rowsPerPage);
+  const paginatedUsers = users.slice(start, start + rowsPerPage);
   tableBody.innerHTML = "";
 
-  paginated.forEach(user => {
+  paginatedUsers.forEach((user) => {
     const row = document.createElement("tr");
 
     row.innerHTML = `
+      <td><input type="checkbox" class="userCheckbox" data-id="${user.id}" /></td>
       <td>${user.firstName || ""}</td>
       <td>${user.lastName || ""}</td>
       <td>${user.email || ""}</td>
@@ -73,8 +72,7 @@ function renderTable(users) {
   document.getElementById("prevBtn").disabled = currentPage === 1;
   document.getElementById("nextBtn").disabled = start + rowsPerPage >= users.length;
 
-  // Delete functionality
-  document.querySelectorAll(".delete-user").forEach(btn => {
+  document.querySelectorAll(".delete-user").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
       const id = btn.getAttribute("data-id");
@@ -90,16 +88,15 @@ function renderTable(users) {
       try {
         await deleteDoc(doc(db, "users", id));
         alert("User deleted.");
-        loadUsers(); // Refresh
+        loadUsers();
       } catch (err) {
-        console.error("Delete failed:", err);
-        alert("Could not delete user.");
+        console.error("Error deleting:", err);
+        alert("Error deleting user.");
       }
     });
   });
 }
 
-// Sorting
 function sortUsers(users, column) {
   if (currentSort.column === column) {
     currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
@@ -124,7 +121,6 @@ function sortUsers(users, column) {
   });
 }
 
-// Search
 function handleSearch() {
   const value = searchInput.value.trim().toLowerCase();
   filteredUsers = allUsers.filter(user =>
@@ -137,22 +133,6 @@ function handleSearch() {
   userCount.textContent = `Total Users: ${filteredUsers.length}`;
 }
 
-// Load Users
-function loadUsers() {
-  getDocs(collection(db, "users"))
-    .then(snapshot => {
-      allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      filteredUsers = [...allUsers];
-      userCount.textContent = `Total Users: ${filteredUsers.length}`;
-      renderTable(filteredUsers);
-    })
-    .catch(err => {
-      console.error("Error loading users:", err);
-      alert("Could not load users.");
-    });
-}
-
-// Pagination
 document.getElementById("prevBtn").addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
@@ -167,7 +147,9 @@ document.getElementById("nextBtn").addEventListener("click", () => {
   }
 });
 
-// Sort headers
+searchBtn.addEventListener("click", handleSearch);
+searchInput.addEventListener("input", handleSearch);
+
 document.querySelectorAll("th.sortable").forEach((th) => {
   th.addEventListener("click", () => {
     filteredUsers = sortUsers(filteredUsers, th.dataset.column);
@@ -175,9 +157,48 @@ document.querySelectorAll("th.sortable").forEach((th) => {
   });
 });
 
-// Search
-searchBtn.addEventListener("click", handleSearch);
-searchInput.addEventListener("input", handleSearch);
+async function loadUsers() {
+  try {
+    const snapshot = await getDocs(collection(db, "users"));
+    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    filteredUsers = [...allUsers];
+    userCount.textContent = `Total Users: ${filteredUsers.length}`;
+    renderTable(filteredUsers);
+  } catch (err) {
+    console.error("Failed to load users:", err);
+    alert("Could not load users.");
+  }
+}
+
+// Bulk delete
+deleteSelectedBtn.addEventListener("click", async () => {
+  const checkedBoxes = document.querySelectorAll(".userCheckbox:checked");
+  if (checkedBoxes.length === 0) {
+    alert("Please select at least one user to delete.");
+    return;
+  }
+
+  const confirmDelete = confirm(`Are you sure you want to delete ${checkedBoxes.length} user(s)?`);
+  if (!confirmDelete) return;
+
+  const typed = prompt("Type DELETE to confirm:");
+  if (typed !== "DELETE") {
+    alert("You must type DELETE exactly to proceed.");
+    return;
+  }
+
+  for (const box of checkedBoxes) {
+    const id = box.getAttribute("data-id");
+    try {
+      await deleteDoc(doc(db, "users", id));
+    } catch (err) {
+      console.error("Error deleting user:", err);
+    }
+  }
+
+  alert("Selected users deleted.");
+  loadUsers();
+});
 
 // Auth check
 onAuthStateChanged(auth, (user) => {
@@ -188,8 +209,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Logout
-logoutBtn.addEventListener("click", () => {
+document.getElementById("logoutBtn").addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
