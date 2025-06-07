@@ -40,6 +40,7 @@ const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 
+// Render Table
 function renderTable(users) {
   const start = (currentPage - 1) * rowsPerPage;
   const paginatedUsers = users.slice(start, start + rowsPerPage);
@@ -95,8 +96,21 @@ function renderTable(users) {
       }
     });
   });
+
+  // Checkbox change event to toggle delete button
+  document.querySelectorAll(".userCheckbox").forEach((box) => {
+    box.addEventListener("change", updateDeleteButtonVisibility);
+  });
+
+  updateDeleteButtonVisibility();
 }
 
+function updateDeleteButtonVisibility() {
+  const anyChecked = document.querySelectorAll(".userCheckbox:checked").length > 0;
+  deleteSelectedBtn.style.display = anyChecked ? "inline-block" : "none";
+}
+
+// Sorting
 function sortUsers(users, column) {
   if (currentSort.column === column) {
     currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
@@ -121,6 +135,7 @@ function sortUsers(users, column) {
   });
 }
 
+// Search
 function handleSearch() {
   const value = searchInput.value.trim().toLowerCase();
   filteredUsers = allUsers.filter(user =>
@@ -133,6 +148,7 @@ function handleSearch() {
   userCount.textContent = `Total Users: ${filteredUsers.length}`;
 }
 
+// Pagination
 document.getElementById("prevBtn").addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
@@ -157,48 +173,45 @@ document.querySelectorAll("th.sortable").forEach((th) => {
   });
 });
 
-async function loadUsers() {
-  try {
-    const snapshot = await getDocs(collection(db, "users"));
-    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    filteredUsers = [...allUsers];
-    userCount.textContent = `Total Users: ${filteredUsers.length}`;
-    renderTable(filteredUsers);
-  } catch (err) {
-    console.error("Failed to load users:", err);
-    alert("Could not load users.");
-  }
-}
-
 // Bulk delete
 deleteSelectedBtn.addEventListener("click", async () => {
-  const checkedBoxes = document.querySelectorAll(".userCheckbox:checked");
-  if (checkedBoxes.length === 0) {
-    alert("Please select at least one user to delete.");
-    return;
-  }
+  const checkboxes = document.querySelectorAll(".userCheckbox:checked");
+  if (checkboxes.length === 0) return;
 
-  const confirmDelete = confirm(`Are you sure you want to delete ${checkedBoxes.length} user(s)?`);
+  const confirmDelete = confirm(`Delete ${checkboxes.length} user(s)?`);
   if (!confirmDelete) return;
 
   const typed = prompt("Type DELETE to confirm:");
   if (typed !== "DELETE") {
-    alert("You must type DELETE exactly to proceed.");
+    alert("Bulk delete cancelled.");
     return;
   }
 
-  for (const box of checkedBoxes) {
-    const id = box.getAttribute("data-id");
-    try {
+  try {
+    for (const box of checkboxes) {
+      const id = box.getAttribute("data-id");
       await deleteDoc(doc(db, "users", id));
-    } catch (err) {
-      console.error("Error deleting user:", err);
     }
+    alert("Selected users deleted.");
+    loadUsers();
+  } catch (err) {
+    console.error("Bulk delete error:", err);
+    alert("Something went wrong.");
   }
-
-  alert("Selected users deleted.");
-  loadUsers();
 });
+
+// Load all users
+function loadUsers() {
+  getDocs(collection(db, "users")).then((snapshot) => {
+    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    filteredUsers = [...allUsers];
+    userCount.textContent = `Total Users: ${filteredUsers.length}`;
+    renderTable(filteredUsers);
+  }).catch((err) => {
+    console.error("Failed to load users:", err);
+    alert("Could not load users.");
+  });
+}
 
 // Auth check
 onAuthStateChanged(auth, (user) => {
@@ -209,6 +222,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// Logout
 document.getElementById("logoutBtn").addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
