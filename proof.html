@@ -2,36 +2,78 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Proof of Payment</title>
+  <title>Proof of Transaction - BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="styles.css" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 50px auto;
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .receipt-section {
+      margin-bottom: 20px;
+    }
+
+    .receipt-section span.label {
+      font-weight: 600;
+      display: inline-block;
+      width: 140px;
+    }
+
+    .proof-actions {
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    .proof-actions button {
+      padding: 10px 20px;
+      font-size: 1em;
+      background-color: #2f80ed;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .proof-actions button:hover {
+      background-color: #1c60b3;
+    }
+  </style>
 </head>
 <body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="index.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-      </div>
-      <div class="nav-right">
-        <!-- Optional: You can add navigation or leave it clean -->
-      </div>
-    </div>
-  </nav>
-
   <div class="container">
-    <h1>Proof of Payment</h1>
-    <p>Show this screen to confirm that your transaction has been completed.</p>
+    <h1>Proof of Transaction</h1>
 
-    <div id="proofDetails" style="margin-top: 30px; text-align: left;">
-      <p><strong>Name:</strong> Jane Doe</p>
-      <p><strong>Amount Paid:</strong> $5.00</p>
-      <p><strong>Vendor:</strong> Bermuda Transit</p>
-      <p><strong>Payment Method:</strong> BOOP Card</p>
-      <p><strong>Date:</strong> June 2, 2025</p>
-      <p><strong>Transaction ID:</strong> TXN-ABCDE12345</p>
+    <div class="receipt-section"><span class="label">Name:</span> <span id="proofName">Loading...</span></div>
+    <div class="receipt-section"><span class="label">Email:</span> <span id="proofEmail">Loading...</span></div>
+    <div class="receipt-section"><span class="label">Transaction ID:</span> <span id="proofTxId">Loading...</span></div>
+    <div class="receipt-section"><span class="label">Amount:</span> <span id="proofAmount">Loading...</span></div>
+    <div class="receipt-section"><span class="label">Type:</span> <span id="proofType">Loading...</span></div>
+    <div class="receipt-section"><span class="label">Status:</span> <span id="proofStatus">Loading...</span></div>
+    <div class="receipt-section"><span class="label">Date:</span> <span id="proofDate">Loading...</span></div>
+
+    <div class="proof-actions">
+      <button onclick="window.print()">Print Proof</button>
     </div>
-
-    <p style="margin-top: 40px; font-style: italic; color: #555;">Thank you for using BOOP.</p>
   </div>
+
+  <script type="module" src="proof.js"></script>
 </body>
 </html>
