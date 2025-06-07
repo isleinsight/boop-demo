@@ -69,7 +69,11 @@ loginForm.addEventListener("submit", async (e) => {
       case "vendor":
         window.location.href = "vendor.html";
         break;
+      case "cardholder":
+        window.location.href = "cardholder.html";
+        break;
       default:
+      
         loginStatus.textContent = "Invalid role. Please contact support.";
     }
   } catch (error) {
