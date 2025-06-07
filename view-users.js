@@ -1,13 +1,10 @@
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
+// Firebase v10 imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
 import {
   getFirestore,
   collection,
@@ -26,10 +23,17 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Init
+// Init Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// UI Elements
+const logoutBtn = document.getElementById("logoutBtn");
+const tableBody = document.getElementById("userTableBody");
+const userCount = document.getElementById("userCount");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
 
 let allUsers = [];
 let filteredUsers = [];
@@ -37,17 +41,13 @@ let currentPage = 1;
 const rowsPerPage = 10;
 let currentSort = { column: null, direction: "asc" };
 
-const tableBody = document.getElementById("userTableBody");
-const userCount = document.getElementById("userCount");
-const searchInput = document.getElementById("searchInput");
-const searchBtn = document.getElementById("searchBtn");
-
+// Render users in the table
 function renderTable(users) {
   const start = (currentPage - 1) * rowsPerPage;
-  const paginatedUsers = users.slice(start, start + rowsPerPage);
+  const paginated = users.slice(start, start + rowsPerPage);
   tableBody.innerHTML = "";
 
-  paginatedUsers.forEach((user) => {
+  paginated.forEach(user => {
     const row = document.createElement("tr");
 
     row.innerHTML = `
@@ -73,7 +73,8 @@ function renderTable(users) {
   document.getElementById("prevBtn").disabled = currentPage === 1;
   document.getElementById("nextBtn").disabled = start + rowsPerPage >= users.length;
 
-  document.querySelectorAll(".delete-user").forEach((btn) => {
+  // Delete functionality
+  document.querySelectorAll(".delete-user").forEach(btn => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
       const id = btn.getAttribute("data-id");
@@ -91,13 +92,14 @@ function renderTable(users) {
         alert("User deleted.");
         loadUsers(); // Refresh
       } catch (err) {
-        console.error("Error deleting:", err);
-        alert("Error deleting user.");
+        console.error("Delete failed:", err);
+        alert("Could not delete user.");
       }
     });
   });
 }
 
+// Sorting
 function sortUsers(users, column) {
   if (currentSort.column === column) {
     currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
@@ -122,6 +124,7 @@ function sortUsers(users, column) {
   });
 }
 
+// Search
 function handleSearch() {
   const value = searchInput.value.trim().toLowerCase();
   filteredUsers = allUsers.filter(user =>
@@ -134,6 +137,22 @@ function handleSearch() {
   userCount.textContent = `Total Users: ${filteredUsers.length}`;
 }
 
+// Load Users
+function loadUsers() {
+  getDocs(collection(db, "users"))
+    .then(snapshot => {
+      allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      filteredUsers = [...allUsers];
+      userCount.textContent = `Total Users: ${filteredUsers.length}`;
+      renderTable(filteredUsers);
+    })
+    .catch(err => {
+      console.error("Error loading users:", err);
+      alert("Could not load users.");
+    });
+}
+
+// Pagination
 document.getElementById("prevBtn").addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
@@ -148,9 +167,7 @@ document.getElementById("nextBtn").addEventListener("click", () => {
   }
 });
 
-searchBtn.addEventListener("click", handleSearch);
-searchInput.addEventListener("input", handleSearch);
-
+// Sort headers
 document.querySelectorAll("th.sortable").forEach((th) => {
   th.addEventListener("click", () => {
     filteredUsers = sortUsers(filteredUsers, th.dataset.column);
@@ -158,18 +175,11 @@ document.querySelectorAll("th.sortable").forEach((th) => {
   });
 });
 
-function loadUsers() {
-  getDocs(collection(db, "users")).then((snapshot) => {
-    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    filteredUsers = [...allUsers];
-    userCount.textContent = `Total Users: ${filteredUsers.length}`;
-    renderTable(filteredUsers);
-  }).catch((err) => {
-    console.error("Failed to load users:", err);
-    alert("Could not load users.");
-  });
-}
+// Search
+searchBtn.addEventListener("click", handleSearch);
+searchInput.addEventListener("input", handleSearch);
 
+// Auth check
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loadUsers();
@@ -178,13 +188,9 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-const logoutBtn = document.getElementById("logoutBtn");
+// Logout
 logoutBtn.addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
 });
-
-
-
-
