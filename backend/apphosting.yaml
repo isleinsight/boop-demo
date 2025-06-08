@@ -1,4 +1,5 @@
 run:
+  executable: npm start
   env:
-    - key: GOOGLE_APPLICATION_CREDENTIALS
-      value: serviceAccountKey.json
+    - key: FIREBASE_SERVICE_ACCOUNT
+      secret: FIREBASE_SERVICE_ACCOUNT
