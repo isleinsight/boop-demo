@@ -1,31 +1,39 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+
 admin.initializeApp();
 
-exports.handleAdminRequest = functions.firestore
-  .document('adminRequests/{requestId}')
+exports.handleAdminActions = functions.firestore
+  .document("adminActions/{actionId}")
   .onCreate(async (snap, context) => {
     const data = snap.data();
-    const { action, uid, requestedBy } = data;
-
-    // Optional: check if `requestedBy` is an admin
-    const adminDoc = await admin.firestore().doc(`users/${requestedBy}`).get();
-    if (!adminDoc.exists || adminDoc.data().role !== 'admin') {
-      console.log("Unauthorized request");
-      return null;
-    }
+    const uid = data.uid;
+    const action = data.action;
+    const docRef = snap.ref;
 
     try {
-      if (action === 'delete') {
-        await admin.auth().deleteUser(uid);
-        console.log(`Deleted user: ${uid}`);
-      }
-      // You could add suspend/unsuspend too
+      if (!uid || !action) throw new Error("Missing UID or action.");
 
-      // Clean up the request
-      await snap.ref.delete();
-    } catch (err) {
-      console.error("Admin action failed", err);
+      switch (action) {
+        case "delete":
+          await admin.auth().deleteUser(uid);
+          break;
+        case "suspend":
+          await admin.auth().updateUser(uid, { disabled: true });
+          break;
+        case "unsuspend":
+          await admin.auth().updateUser(uid, { disabled: false });
+          break;
+        case "forceSignout":
+          await admin.auth().revokeRefreshTokens(uid);
+          break;
+        default:
+          throw new Error("Invalid action type.");
+      }
+
+      await docRef.update({ status: "done", message: "Action completed" });
+    } catch (error) {
+      console.error("Admin action failed:", error);
+      await docRef.update({ status: "error", message: error.message });
     }
-    return null;
   });
