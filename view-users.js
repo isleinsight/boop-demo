@@ -1,5 +1,3 @@
-import { requestAdminAction } from './government-actions.js';
-
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -66,9 +64,6 @@ function renderTable(users) {
           <div class="dropdown-content">
             <a href="user-profile.html?uid=${user.id}">View Profile</a>
             <a href="#" class="delete-user" data-id="${user.id}">Delete</a>
-            <a href="#" class="suspend-user" data-id="${user.id}">Suspend</a>
-            <a href="#" class="unsuspend-user" data-id="${user.id}">Unsuspend</a>
-            <a href="#" class="signout-user" data-id="${user.id}">Force Sign Out</a>
           </div>
         </div>
       </td>
@@ -97,36 +92,6 @@ function renderTable(users) {
         console.error("Delete error:", err);
         alert("Failed to delete user.");
       }
-    });
-  });
-
-  document.querySelectorAll(".suspend-user").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const id = btn.getAttribute("data-id");
-      const confirm = window.confirm("Suspend this account?");
-      if (!confirm) return;
-      await requestAdminAction("suspend", id);
-    });
-  });
-
-  document.querySelectorAll(".unsuspend-user").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const id = btn.getAttribute("data-id");
-      const confirm = window.confirm("Unsuspend this account?");
-      if (!confirm) return;
-      await requestAdminAction("unsuspend", id);
-    });
-  });
-
-  document.querySelectorAll(".signout-user").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const id = btn.getAttribute("data-id");
-      const confirm = window.confirm("Force sign out this user?");
-      if (!confirm) return;
-      await requestAdminAction("forceSignOut", id);
     });
   });
 
