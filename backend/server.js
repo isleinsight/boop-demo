@@ -1,33 +1,41 @@
-const express = require('express');
-const admin = require('firebase-admin');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+const express = require("express");
+const admin = require("firebase-admin");
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+app.use(express.json());
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
+// 🔐 Load and decode service account from Base64 secret
+const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 
-// Read service account JSON from environment variable
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+if (!serviceAccountBase64) {
+  throw new Error("🔥 Service account secret is missing. Make sure FIREBASE_SERVICE_ACCOUNT_BASE64 is set.");
+}
 
+let serviceAccount;
+try {
+  const decoded = Buffer.from(serviceAccountBase64, "base64").toString("utf8");
+  serviceAccount = JSON.parse(decoded);
+} catch (err) {
+  console.error("❌ Failed to parse Firebase service account JSON:", err);
+  throw err;
+}
+
+// ✅ Initialize Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
 const auth = admin.auth();
-const MASTER_DELETE_SECRET = 'boopSecret123'; // Change this later to a secret too if needed
+const MASTER_DELETE_SECRET = 'boopSecret123'; // You can move this to an env var later
 
 // ========== ROUTES ==========
 
-// Root check
+// Test route
 app.get('/', (req, res) => {
-  res.send('BOOP Admin Microservice is running!');
+  res.send('🔥 BOOP Admin Microservice is running!');
 });
 
-// Delete user
+// 🔥 Delete user
 app.post('/delete-user', async (req, res) => {
   const { uid, secret } = req.body;
   if (secret !== MASTER_DELETE_SECRET) {
@@ -43,7 +51,7 @@ app.post('/delete-user', async (req, res) => {
   }
 });
 
-// Disable user (suspend)
+// 🚫 Suspend user
 app.post('/suspend-user', async (req, res) => {
   const { uid, secret } = req.body;
   if (secret !== MASTER_DELETE_SECRET) {
@@ -58,7 +66,7 @@ app.post('/suspend-user', async (req, res) => {
   }
 });
 
-// Enable user (unsuspend)
+// ✅ Unsuspend user
 app.post('/unsuspend-user', async (req, res) => {
   const { uid, secret } = req.body;
   if (secret !== MASTER_DELETE_SECRET) {
@@ -73,7 +81,7 @@ app.post('/unsuspend-user', async (req, res) => {
   }
 });
 
-// Force sign out (revoke tokens)
+// 🔐 Force sign-out (revoke refresh tokens)
 app.post('/force-signout', async (req, res) => {
   const { uid, secret } = req.body;
   if (secret !== MASTER_DELETE_SECRET) {
@@ -88,11 +96,8 @@ app.post('/force-signout', async (req, res) => {
   }
 });
 
-// ========== START SERVER ==========
+// 🚀 Start server
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-app.listen(8080, '0.0.0.0', () => {
-  console.log(`Server is running on port 8080`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
