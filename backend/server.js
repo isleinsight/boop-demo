@@ -1,57 +1,61 @@
 const express = require("express");
 const admin = require("firebase-admin");
-const app = express();
-const PORT = 8080;
+const fs = require("fs");
+const { execSync } = require("child_process");
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://0.0.0.0:${PORT}`);
-});
+const app = express();
+const PORT = process.env.PORT || 8080;
+
 app.use(express.json());
 
-// ========== LOAD AND INITIALIZE FIREBASE ADMIN ==========
+// ========== DECRYPT SERVICE ACCOUNT ==========
 
-// Decode and parse base64 secret
-const serviceAccount = JSON.parse(
-  Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8')
-);
+// Decrypt the file at runtime
+const password = process.env.DECRYPTION_KEY || "boopKey123";
+try {
+  execSync(`openssl enc -aes-256-cbc -d -in serviceAccount.enc -pass pass:${password} -out temp_service_account.json`);
+} catch (error) {
+  console.error("❌ Failed to decrypt service account:", error);
+  process.exit(1);
+}
 
-// Initialize Firebase Admin
+// Read decrypted file
+const serviceAccount = JSON.parse(fs.readFileSync("temp_service_account.json", "utf8"));
+
+// Initialize Firebase
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+// Optional: Delete temp decrypted file
+fs.unlinkSync("temp_service_account.json");
+
+// ========== FIREBASE AUTH TOOLS ==========
+
 const auth = admin.auth();
-const MASTER_DELETE_SECRET = process.env.MASTER_DELETE_SECRET || 'boopSecret123';
+const MASTER_DELETE_SECRET = process.env.MASTER_DELETE_SECRET || "boopSecret123";
 
 // ========== ROUTES ==========
 
-// Root route for testing
 app.get("/", (req, res) => {
-  res.send("BOOP Admin Microservice is running!");
+  res.send("🔥 BOOP Admin Microservice is running!");
 });
 
-// Delete user
 app.post("/delete-user", async (req, res) => {
   const { uid, secret } = req.body;
-  if (secret !== MASTER_DELETE_SECRET) {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
+  if (secret !== MASTER_DELETE_SECRET) return res.status(403).json({ message: "Unauthorized" });
 
   try {
     await auth.deleteUser(uid);
     res.status(200).json({ message: `User ${uid} successfully deleted.` });
   } catch (error) {
-    console.error("Delete error:", error);
     res.status(500).json({ message: "Failed to delete user.", error: error.message });
   }
 });
 
-// Suspend user
 app.post("/suspend-user", async (req, res) => {
   const { uid, secret } = req.body;
-  if (secret !== MASTER_DELETE_SECRET) {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
+  if (secret !== MASTER_DELETE_SECRET) return res.status(403).json({ message: "Unauthorized" });
 
   try {
     await auth.updateUser(uid, { disabled: true });
@@ -61,12 +65,9 @@ app.post("/suspend-user", async (req, res) => {
   }
 });
 
-// Unsuspend user
 app.post("/unsuspend-user", async (req, res) => {
   const { uid, secret } = req.body;
-  if (secret !== MASTER_DELETE_SECRET) {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
+  if (secret !== MASTER_DELETE_SECRET) return res.status(403).json({ message: "Unauthorized" });
 
   try {
     await auth.updateUser(uid, { disabled: false });
@@ -76,12 +77,9 @@ app.post("/unsuspend-user", async (req, res) => {
   }
 });
 
-// Force signout
 app.post("/force-signout", async (req, res) => {
   const { uid, secret } = req.body;
-  if (secret !== MASTER_DELETE_SECRET) {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
+  if (secret !== MASTER_DELETE_SECRET) return res.status(403).json({ message: "Unauthorized" });
 
   try {
     await auth.revokeRefreshTokens(uid);
@@ -91,9 +89,7 @@ app.post("/force-signout", async (req, res) => {
   }
 });
 
-// Start server
+// ========== START SERVER ==========
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
-
-console.log('✅ Reached the end of server.js');
