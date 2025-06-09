@@ -68,7 +68,7 @@ function renderTable(users) {
             <a href="#" class="delete-user" data-id="${user.id}">Delete</a>
             <a href="#" class="suspend-user" data-id="${user.id}">Suspend</a>
             <a href="#" class="unsuspend-user" data-id="${user.id}">Unsuspend</a>
-            <a href="#" class="signout-user" data-id="${user.id}">Force Sign-Out</a>
+            <a href="#" class="signout-user" data-id="${user.id}">Force Sign Out</a>
           </div>
         </div>
       </td>
@@ -80,7 +80,6 @@ function renderTable(users) {
   document.getElementById("prevBtn").disabled = currentPage === 1;
   document.getElementById("nextBtn").disabled = start + rowsPerPage >= users.length;
 
-  // Attach event listeners
   document.querySelectorAll(".delete-user").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -89,6 +88,7 @@ function renderTable(users) {
       if (!confirmDelete) return;
       const typed = prompt("Type DELETE to confirm:");
       if (typed !== "DELETE") return alert("Not deleted. You must type DELETE exactly.");
+
       try {
         await deleteDoc(doc(db, "users", id));
         alert("User deleted.");
@@ -100,33 +100,33 @@ function renderTable(users) {
     });
   });
 
-  document.querySelectorAll(".suspend-user").forEach(btn => {
-    btn.addEventListener("click", (e) => {
+  document.querySelectorAll(".suspend-user").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
       e.preventDefault();
       const id = btn.getAttribute("data-id");
-      const confirmSuspend = confirm("Suspend this user?");
-      if (!confirmSuspend) return;
-      requestAdminAction(id, "suspend");
+      const confirm = window.confirm("Suspend this account?");
+      if (!confirm) return;
+      await requestAdminAction("suspend", id);
     });
   });
 
-  document.querySelectorAll(".unsuspend-user").forEach(btn => {
-    btn.addEventListener("click", (e) => {
+  document.querySelectorAll(".unsuspend-user").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
       e.preventDefault();
       const id = btn.getAttribute("data-id");
-      const confirmUnsuspend = confirm("Unsuspend this user?");
-      if (!confirmUnsuspend) return;
-      requestAdminAction(id, "unsuspend");
+      const confirm = window.confirm("Unsuspend this account?");
+      if (!confirm) return;
+      await requestAdminAction("unsuspend", id);
     });
   });
 
-  document.querySelectorAll(".signout-user").forEach(btn => {
-    btn.addEventListener("click", (e) => {
+  document.querySelectorAll(".signout-user").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
       e.preventDefault();
       const id = btn.getAttribute("data-id");
-      const confirmSignout = confirm("Force sign out this user?");
-      if (!confirmSignout) return;
-      requestAdminAction(id, "signout");
+      const confirm = window.confirm("Force sign out this user?");
+      if (!confirm) return;
+      await requestAdminAction("forceSignOut", id);
     });
   });
 
