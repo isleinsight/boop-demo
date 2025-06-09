@@ -1,8 +1,11 @@
 const express = require("express");
 const admin = require("firebase-admin");
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 8080;
 
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 app.use(express.json());
 
 // ========== LOAD AND INITIALIZE FIREBASE ADMIN ==========
