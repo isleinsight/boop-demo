@@ -13,7 +13,9 @@ import {
   collection,
   getDocs,
   deleteDoc,
-  doc
+  doc,
+  addDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -44,6 +46,21 @@ const searchBtn = document.getElementById("searchBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 
+async function requestAdminAction(userId, actionType) {
+  try {
+    await addDoc(collection(db, "adminRequests"), {
+      uid: userId,
+      action: actionType,
+      requestedAt: serverTimestamp(),
+      requestedBy: auth.currentUser?.email || "unknown"
+    });
+    alert(`Admin request to ${actionType} sent successfully.`);
+  } catch (err) {
+    console.error("Admin request error:", err);
+    alert("Failed to send admin request.");
+  }
+}
+
 function renderTable(users) {
   const start = (currentPage - 1) * rowsPerPage;
   const paginatedUsers = users.slice(start, start + rowsPerPage);
@@ -63,7 +80,11 @@ function renderTable(users) {
           <button class="action-btn">Actions ▼</button>
           <div class="dropdown-content">
             <a href="user-profile.html?uid=${user.id}">View Profile</a>
-            <a href="#" class="delete-user" data-id="${user.id}">Delete</a>
+            <a href="#" class="delete-user" data-id="${user.id}">Delete from Firestore</a>
+            <a href="#" class="admin-action" data-id="${user.id}" data-action="delete">Delete (Auth)</a>
+            <a href="#" class="admin-action" data-id="${user.id}" data-action="suspend">Suspend</a>
+            <a href="#" class="admin-action" data-id="${user.id}" data-action="unsuspend">Unsuspend</a>
+            <a href="#" class="admin-action" data-id="${user.id}" data-action="forceSignout">Force Sign-out</a>
           </div>
         </div>
       </td>
@@ -79,18 +100,30 @@ function renderTable(users) {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
       const id = btn.getAttribute("data-id");
-      const confirmDelete = confirm("Are you sure you want to delete this user?");
+      const confirmDelete = confirm("Are you sure you want to delete this user from Firestore?");
       if (!confirmDelete) return;
       const typed = prompt("Type DELETE to confirm:");
       if (typed !== "DELETE") return alert("Not deleted. You must type DELETE exactly.");
 
       try {
         await deleteDoc(doc(db, "users", id));
-        alert("User deleted.");
+        alert("User deleted from Firestore.");
         loadUsers();
       } catch (err) {
         console.error("Delete error:", err);
         alert("Failed to delete user.");
+      }
+    });
+  });
+
+  document.querySelectorAll(".admin-action").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const userId = btn.getAttribute("data-id");
+      const action = btn.getAttribute("data-action");
+      const confirmAction = confirm(`Send admin request to ${action} this user?`);
+      if (confirmAction) {
+        await requestAdminAction(userId, action);
       }
     });
   });
