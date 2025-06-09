@@ -1,21 +1,15 @@
 {
-  "name": "nodejs",
+  "name": "boop-microservice",
   "version": "1.0.0",
-  "description": "",
+  "description": "BOOP Firebase Admin Microservice",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
-    "@types/node": "^22.13.11",
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
     "express": "^5.1.0",
     "firebase-admin": "^13.4.0"
   }
 }
-
