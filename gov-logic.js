@@ -157,3 +157,27 @@ logoutBtn.addEventListener("click", () => {
     window.location.href = "index.html";
   });
 });
+
+
+
+import { requestAdminAction } from './government-actions.js';
+
+document.getElementById("deleteUserBtn").addEventListener("click", () => {
+  const uid = document.getElementById("targetUid").value;
+  requestAdminAction(uid, "delete");
+});
+
+document.getElementById("suspendUserBtn").addEventListener("click", () => {
+  const uid = document.getElementById("targetUid").value;
+  requestAdminAction(uid, "suspend");
+});
+
+document.getElementById("unsuspendUserBtn").addEventListener("click", () => {
+  const uid = document.getElementById("targetUid").value;
+  requestAdminAction(uid, "unsuspend");
+});
+
+document.getElementById("forceSignoutBtn").addEventListener("click", () => {
+  const uid = document.getElementById("targetUid").value;
+  requestAdminAction(uid, "forceSignout");
+});
