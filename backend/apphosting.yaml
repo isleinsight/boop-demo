@@ -1,5 +1,0 @@
-run:
-  executable: npm start
-  env:
-    - key: FIREBASE_SERVICE_ACCOUNT
-      secret: FIREBASE_SERVICE_ACCOUNT
