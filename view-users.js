@@ -1,20 +1,25 @@
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
 import {
   getAuth,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
 import {
   getFirestore,
   collection,
   getDocs,
-  deleteDoc,
   doc,
-  addDoc
+  deleteDoc,
+  query,
+  orderBy,
+  startAt,
+  endAt,
+  limit,
+  getDoc,
+  addDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -31,206 +36,175 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// UI Elements
 const userTableBody = document.getElementById("userTableBody");
-const userCount = document.getElementById("userCount");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
-const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const paginationInfo = document.getElementById("paginationInfo");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
-const instructions = document.getElementById("instructions");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const userCountDisplay = document.getElementById("userCount");
 
-let allUsers = [];
-let filteredUsers = [];
+// Constants
+const USERS_PER_PAGE = 20;
 let currentPage = 1;
-const rowsPerPage = 20;
-let currentSort = { column: null, direction: "asc" };
+let allUsers = [];
 
-instructions.textContent = "✔ Suspended users show a badge and a Reinstate button instead of the usual actions.";
+// Load users
+async function loadUsers() {
+  const snapshot = await getDocs(collection(db, "users"));
+  allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  displayUsers();
+  userCountDisplay.textContent = `Total Users: ${allUsers.length}`;
+}
 
-function renderTable(users) {
-  const start = (currentPage - 1) * rowsPerPage;
-  const paginatedUsers = users.slice(start, start + rowsPerPage);
+function displayUsers() {
+  const startIdx = (currentPage - 1) * USERS_PER_PAGE;
+  const paginatedUsers = allUsers.slice(startIdx, startIdx + USERS_PER_PAGE);
+
   userTableBody.innerHTML = "";
 
-  paginatedUsers.forEach((user) => {
+  paginatedUsers.forEach(user => {
     const row = document.createElement("tr");
-    const isSuspended = user.disabled === true;
+
+    const isSuspended = user.suspended === true;
+    const badgeOrActions = isSuspended
+      ? `<td><span class="badge badge-red">Suspended</span> <button data-id="${user.id}" class="unsuspendBtn">Reinstate</button></td>`
+      : `
+        <td>
+          <select data-id="${user.id}" class="actionSelect">
+            <option value="">Select</option>
+            <option value="suspend">Suspend</option>
+            <option value="delete">Delete</option>
+            <option value="resetPassword">Reset Password</option>
+            <option value="forceSignout">Force Sign-out</option>
+          </select>
+        </td>`;
 
     row.innerHTML = `
-      <td><input type="checkbox" class="rowCheckbox" data-id="${user.id}" /></td>
+      <td><input type="checkbox" class="userCheckbox" data-id="${user.id}"></td>
       <td>${user.firstName || ""}</td>
       <td>${user.lastName || ""}</td>
       <td>${user.email || ""}</td>
       <td>${user.role || ""}</td>
-      <td>
-        ${isSuspended
-          ? `<span class="badge suspended">Suspended</span>
-             <button class="reinstateBtn" data-id="${user.id}">Reinstate</button>`
-          : `
-        <div class="dropdown">
-          <button class="action-btn">Actions ▼</button>
-          <div class="dropdown-content">
-            <a href="user-profile.html?uid=${user.id}">View Profile</a>
-            <a href="#" class="request-delete" data-id="${user.id}">Delete</a>
-            <a href="#" class="admin-action" data-id="${user.id}" data-action="suspend">Suspend</a>
-            <a href="#" class="admin-action" data-id="${user.id}" data-action="forceSignout">Force Sign-out</a>
-            <a href="#" class="admin-action" data-id="${user.id}" data-action="resetPassword">Reset Password</a>
-          </div>
-        </div>`}
-      </td>
+      ${badgeOrActions}
     `;
-
     userTableBody.appendChild(row);
   });
 
-  document.getElementById("paginationInfo").textContent = `Page ${currentPage} of ${Math.ceil(users.length / rowsPerPage)}`;
-  document.getElementById("prevBtn").disabled = currentPage === 1;
-  document.getElementById("nextBtn").disabled = start + rowsPerPage >= users.length;
+  paginationInfo.textContent = `Page ${currentPage}`;
+  attachEventListeners();
+}
 
-  // Actions
-  document.querySelectorAll(".admin-action").forEach(btn => {
+function attachEventListeners() {
+  document.querySelectorAll(".actionSelect").forEach(select => {
+    select.addEventListener("change", async (e) => {
+      const action = e.target.value;
+      const uid = e.target.getAttribute("data-id");
+      if (!action || !uid) return;
+
+      try {
+        await addDoc(collection(db, "adminActions"), {
+          uid,
+          action,
+          requestedAt: new Date()
+        });
+        alert(`${action} action requested for user.`);
+        await loadUsers();
+      } catch (err) {
+        console.error("Action error:", err);
+        alert("Action failed.");
+      }
+    });
+  });
+
+  document.querySelectorAll(".unsuspendBtn").forEach(btn => {
     btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const uid = btn.getAttribute("data-id");
-      const action = btn.getAttribute("data-action");
-      const confirmAction = confirm(`Are you sure you want to ${action} this user?`);
-      if (!confirmAction) return;
-      await addDoc(collection(db, "adminActions"), {
-        uid,
-        action,
-        timestamp: new Date(),
-        status: "pending"
-      });
-      alert(`${action} requested.`);
-      loadUsers();
+      const uid = e.target.getAttribute("data-id");
+      try {
+        await addDoc(collection(db, "adminActions"), {
+          uid,
+          action: "unsuspend",
+          requestedAt: new Date()
+        });
+        alert(`User reinstatement requested.`);
+        await loadUsers();
+      } catch (err) {
+        console.error("Unsuspend error:", err);
+        alert("Failed to reinstate user.");
+      }
     });
   });
 
-  document.querySelectorAll(".request-delete").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const uid = btn.getAttribute("data-id");
-      const confirm1 = confirm("Are you sure you want to delete this user?");
-      if (!confirm1) return;
-      const confirm2 = prompt("Type DELETE to confirm.");
-      if (confirm2 !== "DELETE") return alert("Cancelled.");
-
-      await deleteDoc(doc(db, "users", uid));
-      await addDoc(collection(db, "adminActions"), {
-        uid,
-        action: "delete",
-        timestamp: new Date(),
-        status: "pending"
-      });
-      alert("Deleted.");
-      loadUsers();
-    });
+  document.querySelectorAll(".userCheckbox").forEach(checkbox => {
+    checkbox.addEventListener("change", toggleDeleteSelectedBtn);
   });
 
-  document.querySelectorAll(".reinstateBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const uid = btn.getAttribute("data-id");
-      const confirmReinstate = confirm("Reinstate this suspended user?");
-      if (!confirmReinstate) return;
-      await addDoc(collection(db, "adminActions"), {
-        uid,
-        action: "unsuspend",
-        timestamp: new Date(),
-        status: "pending"
-      });
-      alert("User reinstated.");
-      loadUsers();
-    });
-  });
-
-  document.querySelectorAll(".rowCheckbox").forEach(cb => {
-    cb.addEventListener("change", updateDeleteButtonVisibility);
+  selectAllCheckbox.addEventListener("change", () => {
+    const isChecked = selectAllCheckbox.checked;
+    document.querySelectorAll(".userCheckbox").forEach(cb => cb.checked = isChecked);
+    toggleDeleteSelectedBtn();
   });
 }
 
-function updateDeleteButtonVisibility() {
-  const checked = document.querySelectorAll(".rowCheckbox:checked");
-  deleteSelectedBtn.style.display = checked.length > 0 ? "inline-block" : "none";
+function toggleDeleteSelectedBtn() {
+  const anyChecked = [...document.querySelectorAll(".userCheckbox")].some(cb => cb.checked);
+  deleteSelectedBtn.style.display = anyChecked ? "inline-block" : "none";
 }
-
-selectAllCheckbox.addEventListener("change", () => {
-  const checkboxes = document.querySelectorAll(".rowCheckbox");
-  checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
-  updateDeleteButtonVisibility();
-});
 
 deleteSelectedBtn.addEventListener("click", async () => {
-  const checked = document.querySelectorAll(".rowCheckbox:checked");
-  if (checked.length === 0) return;
-  const confirmDelete = confirm(`Delete ${checked.length} user(s)?`);
-  if (!confirmDelete) return;
-  const typed = prompt("Type DELETE to confirm:");
-  if (typed !== "DELETE") return alert("Cancelled.");
+  const idsToDelete = [...document.querySelectorAll(".userCheckbox:checked")].map(cb => cb.getAttribute("data-id"));
+  if (!confirm(`Delete ${idsToDelete.length} user(s)?`)) return;
 
-  for (const cb of checked) {
-    const uid = cb.getAttribute("data-id");
-    await deleteDoc(doc(db, "users", uid));
-    await addDoc(collection(db, "adminActions"), {
-      uid,
-      action: "delete",
-      timestamp: new Date(),
-      status: "pending"
-    });
+  for (const id of idsToDelete) {
+    try {
+      await addDoc(collection(db, "adminActions"), {
+        uid: id,
+        action: "delete",
+        requestedAt: new Date()
+      });
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
   }
-
-  alert("Selected users deleted.");
-  loadUsers();
+  alert("Delete action(s) requested.");
+  await loadUsers();
 });
 
-function handleSearch() {
-  const value = searchInput.value.toLowerCase();
-  filteredUsers = allUsers.filter(u =>
-    (`${u.firstName} ${u.lastName} ${u.email} ${u.role}`).toLowerCase().includes(value)
+searchBtn.addEventListener("click", () => {
+  const searchValue = searchInput.value.toLowerCase();
+  const filtered = allUsers.filter(u =>
+    (u.firstName && u.firstName.toLowerCase().includes(searchValue)) ||
+    (u.lastName && u.lastName.toLowerCase().includes(searchValue)) ||
+    (u.email && u.email.toLowerCase().includes(searchValue))
   );
+  allUsers = filtered;
   currentPage = 1;
-  renderTable(filteredUsers);
-  userCount.textContent = `Total Users: ${filteredUsers.length}`;
-}
+  displayUsers();
+});
 
-searchBtn.addEventListener("click", handleSearch);
-searchInput.addEventListener("input", handleSearch);
+nextBtn.addEventListener("click", () => {
+  if (currentPage * USERS_PER_PAGE < allUsers.length) {
+    currentPage++;
+    displayUsers();
+  }
+});
 
-document.getElementById("prevBtn").addEventListener("click", () => {
+prevBtn.addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
-    renderTable(filteredUsers);
+    displayUsers();
   }
-});
-
-document.getElementById("nextBtn").addEventListener("click", () => {
-  if ((currentPage * rowsPerPage) < filteredUsers.length) {
-    currentPage++;
-    renderTable(filteredUsers);
-  }
-});
-
-function loadUsers() {
-  getDocs(collection(db, "users")).then(snapshot => {
-    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    filteredUsers = [...allUsers];
-    currentPage = 1;
-    renderTable(filteredUsers);
-    deleteSelectedBtn.style.display = "none";
-    selectAllCheckbox.checked = false;
-    userCount.textContent = `Total Users: ${filteredUsers.length}`;
-  }).catch(err => {
-    console.error("Failed to load users:", err);
-    alert("Failed to load users.");
-  });
-}
-
-onAuthStateChanged(auth, user => {
-  if (user) loadUsers();
-  else window.location.href = "index.html";
 });
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
+  signOut(auth).then(() => window.location.href = "index.html");
+});
+
+// Auth check
+onAuthStateChanged(auth, (user) => {
+  if (user) loadUsers();
+  else window.location.href = "index.html";
 });
