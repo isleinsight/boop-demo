@@ -1,7 +1,6 @@
 console.log("gov-logic.js loaded");
 
-// Updated register.js for handling multiple login redirects based on user roles
-
+// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -22,7 +21,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM references
+// DOM elements
 const loginForm = document.getElementById("loginForm");
 const loginStatus = document.getElementById("loginStatus");
 
@@ -42,7 +41,7 @@ loginForm.addEventListener("submit", async (e) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Fetch role from Firestore users collection
+    // Get the user's Firestore profile
     const userDoc = await getDoc(doc(db, "users", user.uid));
 
     if (!userDoc.exists()) {
@@ -52,7 +51,7 @@ loginForm.addEventListener("submit", async (e) => {
 
     const role = userDoc.data().role;
 
-    // Redirect based on role
+    // Role-based redirect
     switch (role) {
       case "admin":
         window.location.href = "government.html";
@@ -73,19 +72,25 @@ loginForm.addEventListener("submit", async (e) => {
         window.location.href = "cardholder.html";
         break;
       default:
-      
         loginStatus.textContent = "Invalid role. Please contact support.";
     }
   } catch (error) {
     console.error("Login error:", error);
-    if (error.code === 'auth/user-not-found') {
-      loginStatus.textContent = "No user found with this email.";
-    } else if (error.code === 'auth/wrong-password') {
-      loginStatus.textContent = "Incorrect password.";
-    } else if (error.code === 'auth/invalid-email') {
-      loginStatus.textContent = "Invalid email format.";
-    } else {
-      loginStatus.textContent = "Error: " + error.message;
+    switch (error.code) {
+      case "auth/user-disabled":
+        loginStatus.textContent = "🚫 Your account has been suspended. Please contact support.";
+        break;
+      case "auth/user-not-found":
+        loginStatus.textContent = "No user found with this email.";
+        break;
+      case "auth/wrong-password":
+        loginStatus.textContent = "Incorrect password.";
+        break;
+      case "auth/invalid-email":
+        loginStatus.textContent = "Invalid email format.";
+        break;
+      default:
+        loginStatus.textContent = "Error: " + error.message;
     }
   }
 });
