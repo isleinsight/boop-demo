@@ -6,24 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .badge {
-      padding: 5px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: bold;
-      color: white;
+    .instructions {
+      text-align: left;
+      font-size: 14px;
+      margin-bottom: 15px;
+      color: #444;
     }
-    .badge.suspended {
+    .badge-suspended {
       background-color: #e74c3c;
-    }
-    .reinstate-btn {
-      background-color: #3498db;
       color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-left: 10px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: inline-block;
+      margin-right: 6px;
     }
   </style>
 </head>
@@ -49,8 +45,8 @@
       <span id="userCount">Total Users: 0</span>
     </div>
 
-    <div style="margin-bottom: 15px; font-weight: bold; color: #555;">
-      Suspended users will show a <span class="badge suspended">Suspended</span> badge and a <strong>"Reinstate"</strong> button.
+    <div class="instructions">
+      🔴 <strong>Suspended</strong> users will show a red badge. Click <em>Reinstate</em> to reactivate their account.
     </div>
 
     <div class="search-bar">
