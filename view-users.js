@@ -13,6 +13,7 @@ import {
   limit,
   startAfter,
   doc,
+  addDoc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -41,7 +42,7 @@ const userCount = document.getElementById("userCount");
 
 let users = [];
 let currentPage = 1;
-const usersPerPage = 5;
+const usersPerPage = 20;
 
 // Authentication check
 onAuthStateChanged(auth, (user) => {
