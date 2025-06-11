@@ -5,6 +5,59 @@
   <title>View Users - BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+      color: white;
+    }
+    .badge-danger {
+      background-color: #e74c3c;
+    }
+    .btn-success {
+      background-color: #2ecc71;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      margin-left: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .action-btn {
+      background-color: #3498db;
+      color: white;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #f9f9f9;
+      box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+      min-width: 160px;
+      z-index: 1;
+    }
+    .dropdown-content a {
+      color: black;
+      padding: 8px 12px;
+      text-decoration: none;
+      display: block;
+    }
+    .dropdown-content a:hover {
+      background-color: #f1f1f1;
+    }
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+  </style>
 </head>
 <body>
   <nav>
@@ -31,6 +84,10 @@
     <div class="search-bar">
       <input type="text" id="searchInput" placeholder="Search by name or email" />
       <button id="searchBtn">Search</button>
+    </div>
+
+    <div style="margin-bottom: 10px;">
+      <span class="badge badge-danger">Suspended</span> = Account is disabled. Click "Reinstate" to reactivate.
     </div>
 
     <table>
