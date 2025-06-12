@@ -3,18 +3,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>View Users</title>
+  <title>View Users - BOOP Admin</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 1rem;
+      padding: 0;
+      margin: 0;
+      background-color: #f4f4f4;
+    }
+
+    nav {
+      background-color: #003366;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    nav img {
+      height: 40px;
+    }
+
+    nav .nav-right a {
+      color: white;
+      margin-left: 15px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    h1 {
+      margin-top: 0;
     }
 
     .filters {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       margin-bottom: 1rem;
-      flex-wrap: wrap;
     }
 
     .filters input[type="text"],
@@ -42,6 +71,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
+      background-color: white;
       margin-bottom: 1rem;
     }
 
@@ -72,55 +102,80 @@
       border: none;
       cursor: pointer;
     }
+
+    #userCount {
+      margin-bottom: 10px;
+    }
+
+    .status-active {
+      color: #27ae60;
+    }
+
+    .status-suspended {
+      color: #e74c3c;
+    }
   </style>
 </head>
 <body>
 
-  <h1>View Users</h1>
+  <nav>
+    <div class="nav-left">
+      <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+    </div>
+    <div class="nav-right">
+      <a href="government.html">Dashboard</a>
+      <a href="add-user.html">Add User</a>
+      <a href="view-users.html">View Users</a>
+      <a href="view-reports.html">View Reports</a>
+      <a href="#" id="logoutBtn">Log Out</a>
+    </div>
+  </nav>
 
-  <div class="filters">
-    <input type="text" id="searchInput" placeholder="Search by name or email" />
-    <select id="roleFilter">
-      <option value="all">All Roles</option>
-      <option value="admin">Admin</option>
-      <option value="parent">Parent</option>
-      <option value="vendor">Vendor</option>
-      <option value="cardholder">Cardholder</option>
-    </select>
-    <select id="statusFilter">
-      <option value="all">All Statuses</option>
-      <option value="active">Active</option>
-      <option value="suspended">Suspended</option>
-    </select>
-    <button id="searchBtn">Search</button>
-    <button id="clearSearchBtn">Clear</button>
+  <div class="container">
+    <h1>View Users</h1>
+
+    <div class="filters">
+      <input type="text" id="searchInput" placeholder="Search by name or email" />
+      <button id="searchBtn">Search</button>
+      <button id="clearSearchBtn">Clear</button>
+      <select id="roleFilter">
+        <option value="all">All Roles</option>
+        <option value="admin">Admin</option>
+        <option value="parent">Parent</option>
+        <option value="vendor">Vendor</option>
+        <option value="cardholder">Cardholder</option>
+      </select>
+      <select id="statusFilter">
+        <option value="all">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="suspended">Suspended</option>
+      </select>
+    </div>
+
+    <button id="deleteSelectedBtn">Delete Selected</button>
+    <div id="userCount">Total Users: 0</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="selectAllCheckbox" /></th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody"></tbody>
+    </table>
+
+    <div class="pagination">
+      <button id="prevBtn">Previous</button>
+      <div id="paginationInfo">Page 1 of 1</div>
+      <button id="nextBtn">Next</button>
+    </div>
   </div>
-
-  <button id="deleteSelectedBtn">Delete Selected</button>
-  <div id="userCount">Total Users: 0</div>
-
-  <table>
-    <thead>
-      <tr>
-        <th><input type="checkbox" id="selectAllCheckbox" /></th>
-        <th>First Name</th>
-        <th>Last Name</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="userTableBody"></tbody>
-  </table>
-
-  <div class="pagination">
-    <button id="prevBtn">Previous</button>
-    <div id="paginationInfo">Page 1 of 1</div>
-    <button id="nextBtn">Next</button>
-  </div>
-
-  <button id="logoutBtn">Log Out</button>
 
   <script type="module" src="./view-users.js"></script>
 </body>
