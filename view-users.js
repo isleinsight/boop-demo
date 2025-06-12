@@ -13,9 +13,9 @@ import {
   doc,
   deleteDoc,
   addDoc,
+  updateDoc,
   query,
-  orderBy,
-  updateDoc
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -32,20 +32,20 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+let currentUserEmail = null;
+let currentPage = 1;
+const usersPerPage = 20;
+let filteredUsers = [];
+
 const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const userCount = document.getElementById("userCount");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const paginationInfo = document.getElementById("paginationInfo");
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
-const paginationInfo = document.getElementById("paginationInfo");
-
-// Pagination settings
-let currentPage = 1;
-const usersPerPage = 20;
-let filteredUsers = [];
 
 function createBadge(status) {
   const span = document.createElement("span");
@@ -68,14 +68,18 @@ function createDropdown(user) {
   `;
   select.addEventListener("change", async () => {
     const action = select.value;
-    select.value = "action"; // Reset dropdown
+    select.value = "action";
 
     if (action === "suspend" || action === "unsuspend" || action === "signout") {
-      const confirmed = await showModalConfirm(`Are you sure you want to ${action} this user?`);
+      const confirmed = confirm(`Are you sure you want to ${action} this user?`);
       if (!confirmed) return;
     }
 
     if (action === "delete") {
+      if (user.email === currentUserEmail) {
+        alert("You cannot delete your own admin account.");
+        return;
+      }
       const input = prompt("Type DELETE to confirm.");
       if (input !== "DELETE") {
         alert("Delete canceled.");
@@ -83,17 +87,10 @@ function createDropdown(user) {
       }
     }
 
-    handleAction(user, action);
+    await handleAction(user, action);
   });
 
   return select;
-}
-
-function showModalConfirm(message) {
-  return new Promise((resolve) => {
-    const confirmed = window.confirm(message);
-    resolve(confirmed);
-  });
 }
 
 async function handleAction(user, action) {
@@ -107,26 +104,26 @@ async function handleAction(user, action) {
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
       filteredUsers = filteredUsers.filter(u => u.id !== user.id);
-    } else if (action === "suspend" || action === "unsuspend") {
-      const newStatus = action === "suspend" ? "suspended" : "active";
-      await updateDoc(doc(db, "users", user.id), { status: newStatus });
+    } else {
+      await updateDoc(doc(db, "users", user.id), {
+        status: action === "suspend" ? "suspended" : "active"
+      });
     }
 
     loadTable();
   } catch (err) {
-    console.error("Action failed:", err);
-    alert("Failed to perform action: " + err.message);
+    console.error("❌ Action failed:", err);
+    alert("Failed to perform action.");
   }
 }
 
 async function loadUsers() {
   const q = query(collection(db, "users"), orderBy("firstName"));
   const snapshot = await getDocs(q);
-  const users = snapshot.docs.map(doc => ({
+  return snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   }));
-  return users;
 }
 
 function renderTablePage() {
@@ -143,6 +140,7 @@ function renderTablePage() {
     checkbox.type = "checkbox";
     checkbox.classList.add("user-checkbox");
     checkbox.dataset.userId = user.id;
+    checkbox.dataset.userEmail = user.email;
     checkboxTd.appendChild(checkbox);
 
     const firstNameTd = document.createElement("td");
@@ -204,6 +202,12 @@ deleteSelectedBtn.addEventListener("click", async () => {
   const checked = document.querySelectorAll(".user-checkbox:checked");
   if (checked.length === 0) return;
 
+  const invalid = Array.from(checked).some(cb => cb.dataset.userEmail === currentUserEmail);
+  if (invalid) {
+    alert("You cannot delete your own admin account.");
+    return;
+  }
+
   const input = prompt(`Type DELETE to confirm deletion of ${checked.length} users.`);
   if (input !== "DELETE") {
     alert("Bulk delete canceled.");
@@ -241,6 +245,7 @@ nextBtn.addEventListener("click", () => {
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
+    currentUserEmail = user.email;
     const allUsers = await loadUsers();
     filteredUsers = allUsers;
     renderTablePage();
