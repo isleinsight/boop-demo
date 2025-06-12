@@ -36,6 +36,7 @@ let currentUserEmail = null;
 let currentPage = 1;
 const usersPerPage = 20;
 let filteredUsers = [];
+let allUsers = [];
 
 const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
@@ -51,10 +52,9 @@ function createBadge(status) {
   const span = document.createElement("span");
   span.className = "badge";
   span.textContent = status === "suspended" ? "Suspended" : "Active";
-  span.style.backgroundColor = "#f9f9f9";
-  span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
-  span.style.border = `1px solid ${span.style.color}`;
+  span.style.backgroundColor = "transparent";
   span.style.fontWeight = "bold";
+  span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
   return span;
 }
 
@@ -107,11 +107,14 @@ async function handleAction(user, action) {
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
       filteredUsers = filteredUsers.filter(u => u.id !== user.id);
-      alert("User successfully deleted.");
+      allUsers = allUsers.filter(u => u.id !== user.id);
     } else {
       await updateDoc(doc(db, "users", user.id), {
         status: action === "suspend" ? "suspended" : "active"
       });
+
+      const updatedUser = allUsers.find(u => u.id === user.id);
+      if (updatedUser) updatedUser.status = action === "suspend" ? "suspended" : "active";
     }
 
     loadTable();
@@ -132,65 +135,70 @@ async function loadUsers() {
 
 function renderTablePage() {
   userTableBody.innerHTML = "";
+
   const start = (currentPage - 1) * usersPerPage;
   const end = start + usersPerPage;
   const pageUsers = filteredUsers.slice(start, end);
 
-  pageUsers.forEach(user => {
-    const row = document.createElement("tr");
+  if (pageUsers.length === 0) {
+    const noResultRow = document.createElement("tr");
+    const noResultCell = document.createElement("td");
+    noResultCell.colSpan = 7;
+    noResultCell.style.textAlign = "center";
+    noResultCell.textContent = "No results found.";
+    noResultRow.appendChild(noResultCell);
+    userTableBody.appendChild(noResultRow);
+  } else {
+    pageUsers.forEach(user => {
+      const row = document.createElement("tr");
 
-    const checkboxTd = document.createElement("td");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.classList.add("user-checkbox");
-    checkbox.dataset.userId = user.id;
-    checkbox.dataset.userEmail = user.email;
-    checkbox.addEventListener("change", toggleDeleteButtonVisibility);
-    checkboxTd.appendChild(checkbox);
+      const checkboxTd = document.createElement("td");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.classList.add("user-checkbox");
+      checkbox.dataset.userId = user.id;
+      checkbox.dataset.userEmail = user.email;
+      checkboxTd.appendChild(checkbox);
 
-    const firstNameTd = document.createElement("td");
-    firstNameTd.textContent = user.firstName || "";
+      const firstNameTd = document.createElement("td");
+      firstNameTd.textContent = user.firstName || "";
 
-    const lastNameTd = document.createElement("td");
-    lastNameTd.textContent = user.lastName || "";
+      const lastNameTd = document.createElement("td");
+      lastNameTd.textContent = user.lastName || "";
 
-    const emailTd = document.createElement("td");
-    emailTd.textContent = user.email || "";
+      const emailTd = document.createElement("td");
+      emailTd.textContent = user.email || "";
 
-    const roleTd = document.createElement("td");
-    roleTd.textContent = user.role || "";
+      const roleTd = document.createElement("td");
+      roleTd.textContent = user.role || "";
 
-    const statusTd = document.createElement("td");
-    statusTd.appendChild(createBadge(user.status || "active"));
+      const statusTd = document.createElement("td");
+      statusTd.appendChild(createBadge(user.status || "active"));
 
-    const actionsTd = document.createElement("td");
-    actionsTd.appendChild(createDropdown(user));
+      const actionsTd = document.createElement("td");
+      actionsTd.appendChild(createDropdown(user));
 
-    row.appendChild(checkboxTd);
-    row.appendChild(firstNameTd);
-    row.appendChild(lastNameTd);
-    row.appendChild(emailTd);
-    row.appendChild(roleTd);
-    row.appendChild(statusTd);
-    row.appendChild(actionsTd);
+      row.appendChild(checkboxTd);
+      row.appendChild(firstNameTd);
+      row.appendChild(lastNameTd);
+      row.appendChild(emailTd);
+      row.appendChild(roleTd);
+      row.appendChild(statusTd);
+      row.appendChild(actionsTd);
 
-    userTableBody.appendChild(row);
-  });
+      userTableBody.appendChild(row);
+    });
+  }
 
-const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  paginationInfo.textContent = totalPages > 0
+    ? `Page ${currentPage} of ${totalPages}`
+    : "No pages";
 
-prevBtn.disabled = currentPage === 1;
-nextBtn.disabled = currentPage === totalPages;
-
-  
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = currentPage >= totalPages;
   userCount.textContent = `Total Users: ${filteredUsers.length}`;
-  toggleDeleteButtonVisibility();
-}
-
-function toggleDeleteButtonVisibility() {
-  const checkedCount = document.querySelectorAll(".user-checkbox:checked").length;
-  deleteSelectedBtn.style.display = checkedCount > 0 ? "inline-block" : "none";
+  deleteSelectedBtn.style.display = document.querySelectorAll(".user-checkbox:checked").length > 0 ? "inline-block" : "none";
 }
 
 function loadTable() {
@@ -199,11 +207,17 @@ function loadTable() {
 
 searchBtn.addEventListener("click", () => {
   const term = searchInput.value.trim().toLowerCase();
-  filteredUsers = filteredUsers.filter(user =>
-    user.firstName?.toLowerCase().includes(term) ||
-    user.lastName?.toLowerCase().includes(term) ||
-    user.email?.toLowerCase().includes(term)
-  );
+
+  if (term === "") {
+    filteredUsers = [...allUsers];
+  } else {
+    filteredUsers = allUsers.filter(user =>
+      user.firstName?.toLowerCase().includes(term) ||
+      user.lastName?.toLowerCase().includes(term) ||
+      user.email?.toLowerCase().includes(term)
+    );
+  }
+
   currentPage = 1;
   loadTable();
 });
@@ -211,7 +225,12 @@ searchBtn.addEventListener("click", () => {
 selectAllCheckbox.addEventListener("change", () => {
   const checkboxes = document.querySelectorAll(".user-checkbox");
   checkboxes.forEach(cb => (cb.checked = selectAllCheckbox.checked));
-  toggleDeleteButtonVisibility();
+  deleteSelectedBtn.style.display = checkboxes.length > 0 && selectAllCheckbox.checked ? "inline-block" : "none";
+});
+
+userTableBody.addEventListener("change", () => {
+  const checked = document.querySelectorAll(".user-checkbox:checked");
+  deleteSelectedBtn.style.display = checked.length > 0 ? "inline-block" : "none";
 });
 
 deleteSelectedBtn.addEventListener("click", async () => {
@@ -241,7 +260,10 @@ deleteSelectedBtn.addEventListener("click", async () => {
   }
 
   alert(`${checked.length} users successfully deleted.`);
-  filteredUsers = filteredUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
+
+  const idsToRemove = [...checked].map(cb => cb.dataset.userId);
+  filteredUsers = filteredUsers.filter(u => !idsToRemove.includes(u.id));
+  allUsers = allUsers.filter(u => !idsToRemove.includes(u.id));
   loadTable();
 });
 
@@ -263,8 +285,8 @@ nextBtn.addEventListener("click", () => {
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUserEmail = user.email;
-    const allUsers = await loadUsers();
-    filteredUsers = allUsers;
+    allUsers = await loadUsers();
+    filteredUsers = [...allUsers];
     renderTablePage();
   } else {
     window.location.href = "index.html";
