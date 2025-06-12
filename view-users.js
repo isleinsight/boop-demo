@@ -51,9 +51,10 @@ function createBadge(status) {
   const span = document.createElement("span");
   span.className = "badge";
   span.textContent = status === "suspended" ? "Suspended" : "Active";
-  span.style.backgroundColor = "#f0f0f0"; // light gray neutral background
-  span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60"; // red or green text
+  span.style.backgroundColor = "#f9f9f9";
+  span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
   span.style.border = `1px solid ${span.style.color}`;
+  span.style.fontWeight = "bold";
   return span;
 }
 
@@ -106,6 +107,7 @@ async function handleAction(user, action) {
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
       filteredUsers = filteredUsers.filter(u => u.id !== user.id);
+      alert("User successfully deleted.");
     } else {
       await updateDoc(doc(db, "users", user.id), {
         status: action === "suspend" ? "suspended" : "active"
@@ -143,6 +145,7 @@ function renderTablePage() {
     checkbox.classList.add("user-checkbox");
     checkbox.dataset.userId = user.id;
     checkbox.dataset.userEmail = user.email;
+    checkbox.addEventListener("change", toggleDeleteButtonVisibility);
     checkboxTd.appendChild(checkbox);
 
     const firstNameTd = document.createElement("td");
@@ -176,7 +179,12 @@ function renderTablePage() {
 
   paginationInfo.textContent = `Page ${currentPage}`;
   userCount.textContent = `Total Users: ${filteredUsers.length}`;
-  deleteSelectedBtn.style.display = document.querySelectorAll(".user-checkbox:checked").length > 0 ? "inline-block" : "none";
+  toggleDeleteButtonVisibility();
+}
+
+function toggleDeleteButtonVisibility() {
+  const checkedCount = document.querySelectorAll(".user-checkbox:checked").length;
+  deleteSelectedBtn.style.display = checkedCount > 0 ? "inline-block" : "none";
 }
 
 function loadTable() {
@@ -197,7 +205,7 @@ searchBtn.addEventListener("click", () => {
 selectAllCheckbox.addEventListener("change", () => {
   const checkboxes = document.querySelectorAll(".user-checkbox");
   checkboxes.forEach(cb => (cb.checked = selectAllCheckbox.checked));
-  deleteSelectedBtn.style.display = checkboxes.length > 0 && selectAllCheckbox.checked ? "inline-block" : "none";
+  toggleDeleteButtonVisibility();
 });
 
 deleteSelectedBtn.addEventListener("click", async () => {
@@ -227,7 +235,6 @@ deleteSelectedBtn.addEventListener("click", async () => {
   }
 
   alert(`${checked.length} users successfully deleted.`);
-
   filteredUsers = filteredUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
   loadTable();
 });
