@@ -54,9 +54,7 @@ function createBadge(status) {
   const span = document.createElement("span");
   span.className = "badge";
   span.textContent = status === "suspended" ? "Suspended" : "Active";
-  span.style.backgroundColor = "#f0f0f0";
   span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
-  span.style.border = `1px solid ${span.style.color}`;
   return span;
 }
 
