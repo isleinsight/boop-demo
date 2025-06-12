@@ -1,4 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -7,14 +9,13 @@ import {
 import {
   getFirestore,
   collection,
-  getDocs,
   query,
   orderBy,
-  limit,
-  startAfter,
+  getDocs,
   doc,
+  deleteDoc,
   addDoc,
-  updateDoc
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -27,141 +28,170 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Init Firebase
+// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 // DOM Elements
-const userTableBody = document.getElementById("userTableBody");
-const searchInput = document.getElementById("searchInput");
-const searchBtn = document.getElementById("searchBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const paginationInfo = document.getElementById("paginationInfo");
+const userTableBody = document.getElementById("userTableBody");
 const userCount = document.getElementById("userCount");
+const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const searchBtn = document.getElementById("searchBtn");
+const searchInput = document.getElementById("searchInput");
+const paginationInfo = document.getElementById("paginationInfo");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
 
-let users = [];
+let allUsers = [];
 let currentPage = 1;
 const usersPerPage = 20;
 
-// Authentication check
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loadUsers();
-  } else {
-    window.location.href = "index.html";
-  }
-});
-
+// Logout
 logoutBtn.addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
 });
 
-// Load users from Firestore
-async function loadUsers() {
-  const snapshot = await getDocs(collection(db, "users"));
-  users = snapshot.docs.map(doc => ({
+// Fetch users
+async function fetchUsers() {
+  const q = query(collection(db, "users"), orderBy("firstName"));
+  const snapshot = await getDocs(q);
+  allUsers = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   }));
-  userCount.textContent = `Total Users: ${users.length}`;
-  renderPage(1);
+  renderUsers();
 }
 
-// Render specific page
-function renderPage(page) {
-  currentPage = page;
-  const start = (page - 1) * usersPerPage;
-  const end = start + usersPerPage;
-  const pageUsers = users.slice(start, end);
-
+// Render users
+function renderUsers() {
   userTableBody.innerHTML = "";
-  pageUsers.forEach(user => {
+  const start = (currentPage - 1) * usersPerPage;
+  const end = start + usersPerPage;
+  const usersToDisplay = allUsers.slice(start, end);
+
+  usersToDisplay.forEach(user => {
     const row = document.createElement("tr");
 
-    const isSuspended = user.disabled === true;
+    const status = user.disabled ? "Suspended" : "Active";
+    const statusColor = user.disabled ? "red" : "green";
 
     row.innerHTML = `
-      <td><input type="checkbox" class="userCheckbox" data-id="${user.id}" /></td>
-      <td>${user.firstName || "-"}</td>
-      <td>${user.lastName || "-"}</td>
-      <td>${user.email || "-"}</td>
-      <td>${user.role || "-"}</td>
+      <td><input type="checkbox" data-id="${user.id}" class="rowCheckbox" /></td>
+      <td>${user.firstName || ""}</td>
+      <td>${user.lastName || ""}</td>
+      <td>${user.email || ""}</td>
+      <td>${user.role || ""}</td>
+      <td><span style="color:${statusColor}; font-weight:bold">${status}</span></td>
       <td>
-        ${isSuspended
-          ? `<span class="badge badge-danger">Suspended</span>
-             <button class="btn-unsuspend" onclick="handleUnsuspend('${user.id}')">Reinstate</button>`
-          : `<div class="dropdown">
-               <button class="action-btn">Actions</button>
-               <div class="dropdown-content">
-                 <a href="user-profile.html?uid=${user.id}">View Profile</a>
-                 <a href="#" onclick="handleSuspend('${user.id}')">Suspend</a>
-                 <a href="#" onclick="handleForceSignOut('${user.id}')">Force Sign Out</a>
-                 <a href="#" onclick="handleDelete('${user.id}')">Delete</a>
-               </div>
-             </div>`}
+        <select class="actionDropdown" data-id="${user.id}" data-disabled="${user.disabled}">
+          <option value="">Action</option>
+          <option value="${user.disabled ? "unsuspend" : "suspend"}">${user.disabled ? "Unsuspend" : "Suspend"}</option>
+          <option value="resetPassword">Reset Password</option>
+          <option value="forceSignout">Force Sign-Out</option>
+          <option value="delete">Delete</option>
+        </select>
       </td>
     `;
+
     userTableBody.appendChild(row);
   });
 
-  paginationInfo.textContent = `Page ${currentPage}`;
+  userCount.textContent = `Total Users: ${allUsers.length}`;
+  paginationInfo.textContent = `Page ${currentPage} of ${Math.ceil(allUsers.length / usersPerPage)}`;
+  attachEventListeners();
 }
 
-// Pagination buttons
-document.getElementById("prevBtn").addEventListener("click", () => {
-  if (currentPage > 1) renderPage(currentPage - 1);
-});
+// Attach listeners
+function attachEventListeners() {
+  document.querySelectorAll(".actionDropdown").forEach(select => {
+    select.addEventListener("change", async () => {
+      const uid = select.getAttribute("data-id");
+      const action = select.value;
+      if (!action) return;
 
-document.getElementById("nextBtn").addEventListener("click", () => {
-  const maxPage = Math.ceil(users.length / usersPerPage);
-  if (currentPage < maxPage) renderPage(currentPage + 1);
+      await addDoc(collection(db, "adminActions"), {
+        uid,
+        action,
+        requestedAt: new Date()
+      });
+
+      setTimeout(fetchUsers, 1500);
+    });
+  });
+
+  document.querySelectorAll(".rowCheckbox").forEach(checkbox => {
+    checkbox.addEventListener("change", toggleDeleteButton);
+  });
+}
+
+// Delete Selected
+deleteSelectedBtn.addEventListener("click", async () => {
+  const selected = document.querySelectorAll(".rowCheckbox:checked");
+  if (!selected.length) return;
+
+  for (const box of selected) {
+    const uid = box.getAttribute("data-id");
+    await addDoc(collection(db, "adminActions"), {
+      uid,
+      action: "delete",
+      requestedAt: new Date()
+    });
+  }
+
+  setTimeout(fetchUsers, 1500);
 });
 
 // Search
 searchBtn.addEventListener("click", () => {
-  const term = searchInput.value.toLowerCase();
-  const filtered = users.filter(user =>
-    (user.firstName + " " + user.lastName + " " + user.email).toLowerCase().includes(term)
+  const query = searchInput.value.toLowerCase();
+  const filtered = allUsers.filter(user =>
+    (user.firstName && user.firstName.toLowerCase().includes(query)) ||
+    (user.lastName && user.lastName.toLowerCase().includes(query)) ||
+    (user.email && user.email.toLowerCase().includes(query))
   );
-  users = filtered;
-  renderPage(1);
+  allUsers = filtered;
+  currentPage = 1;
+  renderUsers();
 });
 
-// Admin action handlers
-window.handleSuspend = async (userId) => {
-  await triggerAdminAction(userId, "suspend");
-  alert("User suspended.");
-  await loadUsers();
-};
-
-window.handleUnsuspend = async (userId) => {
-  await triggerAdminAction(userId, "unsuspend");
-  alert("User reinstated.");
-  await loadUsers();
-};
-
-window.handleDelete = async (userId) => {
-  if (confirm("Are you sure you want to delete this user?")) {
-    await triggerAdminAction(userId, "delete");
-    alert("User deleted.");
-    await loadUsers();
-  }
-};
-
-window.handleForceSignOut = async (userId) => {
-  await triggerAdminAction(userId, "forceSignout");
-  alert("User will be signed out on all devices.");
-};
-
-// Firestore write to adminActions collection
-async function triggerAdminAction(userId, actionType) {
-  const adminActionsRef = collection(db, "adminActions");
-  await addDoc(adminActionsRef, {
-    userId,
-    action: actionType,
-    timestamp: new Date()
+// Select All
+selectAllCheckbox.addEventListener("change", () => {
+  document.querySelectorAll(".rowCheckbox").forEach(box => {
+    box.checked = selectAllCheckbox.checked;
   });
+  toggleDeleteButton();
+});
+
+function toggleDeleteButton() {
+  const anyChecked = document.querySelectorAll(".rowCheckbox:checked").length > 0;
+  deleteSelectedBtn.style.display = anyChecked ? "inline-block" : "none";
 }
+
+// Pagination
+prevBtn.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderUsers();
+  }
+});
+
+nextBtn.addEventListener("click", () => {
+  if (currentPage < Math.ceil(allUsers.length / usersPerPage)) {
+    currentPage++;
+    renderUsers();
+  }
+});
+
+// Auth check
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    fetchUsers();
+  } else {
+    window.location.href = "index.html";
+  }
+});
