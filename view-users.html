@@ -2,104 +2,126 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>View Users - BOOP Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>View Users</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1rem;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .filters input[type="text"],
+    .filters select,
+    .filters button {
+      padding: 0.5rem;
+      font-size: 14px;
+    }
+
+    .filters button {
+      border: none;
+      cursor: pointer;
+    }
+
+    #searchBtn {
+      background-color: #3498db;
+      color: white;
+    }
+
+    #clearSearchBtn {
+      background-color: #ccc;
+      color: black;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+
+    table th,
+    table td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pagination button {
+      padding: 0.5rem 1rem;
+      margin: 0 5px;
+    }
+
+    #deleteSelectedBtn {
+      display: none;
+      background-color: red;
+      color: white;
+      padding: 0.5rem 1rem;
+      margin-bottom: 10px;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-      </div>
-      <div class="nav-right">
-        <a href="government.html">Dashboard</a>
-        <a href="add-user.html">Add User</a>
-        <a href="view-users.html">View Users</a>
-        <a href="view-reports.html">View Reports</a>
-        <a href="#" id="logoutBtn">Log Out</a>
-      </div>
-    </div>
-  </nav>
 
-  <div class="container">
-    <div class="top-bar">
-      <h1>View Users</h1>
-      <span id="userCount">Total Users: 0</span>
-    </div>
+  <h1>View Users</h1>
 
-    <p style="text-align: left; margin-bottom: 10px;">
-      <strong>Status legend:</strong>
-      <span style="color: green;">Active</span> = user is enabled,
-      <span style="color: red;">Suspended</span> = user is disabled
-    </p>
-
-    <div class="search-bar" style="display: flex; gap: 8px; margin-bottom: 15px;">
-      <input
-        type="text"
-        id="searchInput"
-        placeholder="Search by name or email"
-        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;"
-      />
-      <button
-        id="clearSearchBtn"
-        style="background-color: #e0e0e0; color: #000000; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;"
-      >
-        Clear
-      </button>
-      <button
-        id="searchBtn"
-        style="background-color: #3498db; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer;"
-      >
-        Search
-      </button>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th><input type="checkbox" id="selectAllCheckbox" /></th>
-          <th class="sortable" data-column="firstName">First Name <span class="arrow"></span></th>
-          <th class="sortable" data-column="lastName">Last Name <span class="arrow"></span></th>
-          <th class="sortable" data-column="email">Email <span class="arrow"></span></th>
-          <th class="sortable" data-column="role">Role <span class="arrow"></span></th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="userTableBody">
-        <!-- User rows will be injected here -->
-      </tbody>
-    </table>
-
-    <div class="pagination" style="margin-top: 15px;">
-      <button id="prevBtn">Previous</button>
-      <span id="paginationInfo">Page 1</span>
-      <button id="nextBtn">Next</button>
-    </div>
-
-    <div id="deleteSelectedContainer" style="text-align: left; margin-top: 20px;">
-      <button
-        id="deleteSelectedBtn"
-        style="display: none; background-color: #c0392b; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer;"
-      >
-        Delete Selected
-      </button>
-    </div>
+  <div class="filters">
+    <input type="text" id="searchInput" placeholder="Search by name or email" />
+    <select id="roleFilter">
+      <option value="all">All Roles</option>
+      <option value="admin">Admin</option>
+      <option value="parent">Parent</option>
+      <option value="vendor">Vendor</option>
+      <option value="cardholder">Cardholder</option>
+    </select>
+    <select id="statusFilter">
+      <option value="all">All Statuses</option>
+      <option value="active">Active</option>
+      <option value="suspended">Suspended</option>
+    </select>
+    <button id="searchBtn">Search</button>
+    <button id="clearSearchBtn">Clear</button>
   </div>
 
-  <!-- Modal for Confirming Actions -->
-  <div id="modal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <p id="modalMessage"></p>
-      <input type="text" id="modalInput" placeholder="Type DELETE to confirm" style="display: none;" />
-      <div style="margin-top: 20px;">
-        <button id="confirmModalBtn">Confirm</button>
-        <button id="cancelModalBtn">Cancel</button>
-      </div>
-    </div>
+  <button id="deleteSelectedBtn">Delete Selected</button>
+  <div id="userCount">Total Users: 0</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="selectAllCheckbox" /></th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="userTableBody"></tbody>
+  </table>
+
+  <div class="pagination">
+    <button id="prevBtn">Previous</button>
+    <div id="paginationInfo">Page 1 of 1</div>
+    <button id="nextBtn">Next</button>
   </div>
 
-  <script type="module" src="view-users.js"></script>
+  <button id="logoutBtn">Log Out</button>
+
+  <script type="module" src="./view-users.js"></script>
 </body>
 </html>
