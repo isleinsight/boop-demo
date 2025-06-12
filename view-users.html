@@ -6,67 +6,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .filters-bar {
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f8f9fa;
+    }
+    nav {
+      background-color: #0c2d48;
+      color: white;
+      padding: 10px 20px;
+    }
+    .nav-container {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
     }
-
-    .search-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
+    .nav-left img {
+      height: 32px;
     }
-
-    .filter-group {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    input[type="text"],
-    select {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      color: black;
-    }
-
-    button {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    #searchBtn {
-      background-color: #3498db;
+    .nav-right a {
       color: white;
+      margin-left: 20px;
+      text-decoration: none;
     }
-
-    #clearSearchBtn {
-      background-color: #bdc3c7;
-      color: black;
+    .container {
+      padding: 20px;
     }
-
     .top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
     }
-
-    .top-bar h1 {
-      margin: 0;
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      padding: 6px 10px;
+    }
+    button {
+      padding: 6px 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #searchBtn {
+      background-color: #3498db;
+      color: white;
+    }
+    #clearSearchBtn {
+      background-color: #ccc;
+      color: black;
+    }
+    select {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ccc;
+    }
+    .pagination {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .pagination button:disabled {
+      background-color: #eee;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+    .badge {
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <!-- NAVIGATION BAR -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -89,40 +114,30 @@
     </div>
 
     <p style="text-align: left; margin-bottom: 10px;">
-      <strong>Status legend:</strong>
-      <span style="color: green;">Active</span> = user is enabled,
+      <strong>Status legend:</strong> <span style="color: green;">Active</span> = user is enabled,
       <span style="color: red;">Suspended</span> = user is disabled
     </p>
 
-    <!-- SEARCH + FILTER BAR -->
-    <div class="filters-bar">
-      <!-- Left side: search box -->
-      <div class="search-group">
-        <input type="text" id="searchInput" placeholder="Search by name or email" />
-        <button id="searchBtn">Search</button>
-        <button id="clearSearchBtn">Clear</button>
-      </div>
-
-      <!-- Right side: filters -->
-      <div class="filter-group">
-        <select id="filterRole">
-          <option value="">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="student">Student</option>
-          <option value="parent">Parent</option>
-          <option value="vendor">Vendor</option>
-          <option value="cardholder">Cardholder</option>
-          <option value="senior">Senior</option>
-        </select>
-        <select id="filterStatus">
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-        </select>
-      </div>
+    <div class="controls-row">
+      <input type="text" id="searchInput" placeholder="Search by name or email" />
+      <button id="searchBtn">Search</button>
+      <button id="clearSearchBtn">Clear</button>
+      <select id="roleFilter">
+        <option value="">All Roles</option>
+        <option value="admin">Admin</option>
+        <option value="vendor">Vendor</option>
+        <option value="parent">Parent</option>
+        <option value="student">Student</option>
+        <option value="cardholder">Cardholder</option>
+        <option value="senior">Senior</option>
+      </select>
+      <select id="statusFilter">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="suspended">Suspended</option>
+      </select>
     </div>
 
-    <!-- TABLE -->
     <table>
       <thead>
         <tr>
@@ -136,34 +151,20 @@
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <!-- Table content will be added here -->
+        <!-- User rows will be injected here -->
       </tbody>
     </table>
 
-    <!-- PAGINATION -->
     <div class="pagination">
       <button id="prevBtn">Previous</button>
       <span id="paginationInfo">Page 1</span>
       <button id="nextBtn">Next</button>
     </div>
 
-    <!-- BULK DELETE -->
-    <div id="deleteSelectedContainer" style="text-align: left; margin-top: 20px;">
+    <div style="margin-top: 20px;">
       <button id="deleteSelectedBtn" style="display: none; background-color: #c0392b; color: white;">
         Delete Selected
       </button>
-    </div>
-  </div>
-
-  <!-- MODAL -->
-  <div id="modal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <p id="modalMessage"></p>
-      <input type="text" id="modalInput" placeholder="Type DELETE to confirm" style="display: none;" />
-      <div style="margin-top: 20px;">
-        <button id="confirmModalBtn">Confirm</button>
-        <button id="cancelModalBtn">Cancel</button>
-      </div>
     </div>
   </div>
 
