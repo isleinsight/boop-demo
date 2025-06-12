@@ -134,6 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
       firstName,
       lastName,
       role,
+      status: "active",
       addedBy: adminEmail,
       createdAt: serverTimestamp()
     };
