@@ -9,13 +9,12 @@ import {
 import {
   getFirestore,
   collection,
-  query,
   getDocs,
   doc,
   deleteDoc,
   addDoc,
-  updateDoc,
-  where
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -28,181 +27,234 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Elements
-const logoutBtn = document.getElementById("logoutBtn");
+const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
-const userTableBody = document.getElementById("userTableBody");
-const userCountSpan = document.getElementById("userCount");
+const userCount = document.getElementById("userCount");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const paginationInfo = document.getElementById("paginationInfo");
 
-let users = [];
+// Pagination settings
 let currentPage = 1;
-const itemsPerPage = 20;
+const usersPerPage = 20;
+let filteredUsers = [];
 
-// Load users
-async function loadUsers() {
-  const snapshot = await getDocs(collection(db, "users"));
-  users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  displayUsers();
+function createBadge(status) {
+  const span = document.createElement("span");
+  span.className = "badge";
+  span.textContent = status === "suspended" ? "Suspended" : "Active";
+  span.style.backgroundColor = status === "suspended" ? "#e74c3c" : "#27ae60";
+  return span;
 }
 
-// Display users
-function displayUsers(filteredUsers = users) {
-  const start = (currentPage - 1) * itemsPerPage;
-  const end = start + itemsPerPage;
-  const currentUsers = filteredUsers.slice(start, end);
+function createDropdown(user) {
+  const select = document.createElement("select");
+  select.innerHTML = `
+    <option value="action">Action</option>
+    ${user.status === "suspended"
+      ? '<option value="unsuspend">Unsuspend</option>'
+      : '<option value="suspend">Suspend</option>'
+    }
+    <option value="signout">Force Sign-out</option>
+    <option value="delete">Delete</option>
+  `;
+  select.addEventListener("change", async () => {
+    const action = select.value;
+    select.value = "action"; // Reset dropdown
 
+    if (action === "suspend" || action === "unsuspend" || action === "signout") {
+      const confirmed = await showModalConfirm(`Are you sure you want to ${action} this user?`);
+      if (!confirmed) return;
+    }
+
+    if (action === "delete") {
+      const input = prompt("Type DELETE to confirm.");
+      if (input !== "DELETE") {
+        alert("Delete canceled.");
+        return;
+      }
+    }
+
+    handleAction(user, action);
+  });
+
+  return select;
+}
+
+function showModalConfirm(message) {
+  return new Promise((resolve) => {
+    const confirmed = window.confirm(message);
+    resolve(confirmed);
+  });
+}
+
+async function handleAction(user, action) {
+  try {
+    await addDoc(collection(db, "adminActions"), {
+      uid: user.id,
+      action,
+      createdAt: new Date()
+    });
+
+    if (action === "delete") {
+      await deleteDoc(doc(db, "users", user.id));
+      filteredUsers = filteredUsers.filter(u => u.id !== user.id);
+    } else {
+      const ref = doc(db, "users", user.id);
+      await ref.update({ status: action === "suspend" ? "suspended" : "active" });
+    }
+
+    loadTable();
+  } catch (err) {
+    console.error("Action failed:", err);
+    alert("Failed to perform action.");
+  }
+}
+
+
+async function loadUsers() {
+  const q = query(collection(db, "users"), orderBy("firstName"));
+  const snapshot = await getDocs(q);
+  const users = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  return users;
+}
+
+function renderTablePage() {
   userTableBody.innerHTML = "";
+  const start = (currentPage - 1) * usersPerPage;
+  const end = start + usersPerPage;
+  const pageUsers = filteredUsers.slice(start, end);
 
-  currentUsers.forEach(user => {
+  pageUsers.forEach(user => {
     const row = document.createElement("tr");
 
-    const statusColor = user.disabled ? "red" : "green";
-    const statusLabel = user.disabled ? "Suspended" : "Active";
+    // Checkbox
+    const checkboxTd = document.createElement("td");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.classList.add("user-checkbox");
+    checkbox.dataset.userId = user.id;
+    checkboxTd.appendChild(checkbox);
 
-    row.innerHTML = `
-      <td><input type="checkbox" class="userCheckbox" data-id="${user.id}"></td>
-      <td>${user.firstName}</td>
-      <td>${user.lastName}</td>
-      <td>${user.email}</td>
-      <td>${user.role}</td>
-      <td><span class="status-badge" style="color: ${statusColor}; font-weight: bold;">${statusLabel}</span></td>
-      <td>
-        <select class="actionDropdown" data-id="${user.id}">
-          <option value="none">Action</option>
-          <option value="suspend">Suspend</option>
-          <option value="unsuspend">Unsuspend</option>
-          <option value="resetPassword">Reset Password</option>
-          <option value="delete">Delete</option>
-        </select>
-      </td>
-    `;
+    // First name, last name, email, role
+    const firstNameTd = document.createElement("td");
+    firstNameTd.textContent = user.firstName || "";
+
+    const lastNameTd = document.createElement("td");
+    lastNameTd.textContent = user.lastName || "";
+
+    const emailTd = document.createElement("td");
+    emailTd.textContent = user.email || "";
+
+    const roleTd = document.createElement("td");
+    roleTd.textContent = user.role || "";
+
+    // Status
+    const statusTd = document.createElement("td");
+    statusTd.appendChild(createBadge(user.status || "active"));
+
+    // Actions
+    const actionsTd = document.createElement("td");
+    actionsTd.appendChild(createDropdown(user));
+
+    row.appendChild(checkboxTd);
+    row.appendChild(firstNameTd);
+    row.appendChild(lastNameTd);
+    row.appendChild(emailTd);
+    row.appendChild(roleTd);
+    row.appendChild(statusTd);
+    row.appendChild(actionsTd);
+
     userTableBody.appendChild(row);
   });
 
-  userCountSpan.textContent = `Total Users: ${filteredUsers.length}`;
-  setupDropdownListeners();
+  paginationInfo.textContent = `Page ${currentPage}`;
+  userCount.textContent = `Total Users: ${filteredUsers.length}`;
+  deleteSelectedBtn.style.display = document.querySelectorAll(".user-checkbox:checked").length > 0 ? "inline-block" : "none";
 }
 
-// Setup action dropdowns
-function setupDropdownListeners() {
-  document.querySelectorAll(".actionDropdown").forEach(dropdown => {
-    dropdown.addEventListener("change", async (e) => {
-      const userId = dropdown.dataset.id;
-      const action = dropdown.value;
-
-      if (action === "none") return;
-
-      if (action === "delete") {
-        const confirmText = prompt("Type DELETE to confirm deleting this user:");
-        if (confirmText !== "DELETE") {
-          alert("Cancelled. User not deleted.");
-          dropdown.value = "none";
-          return;
-        }
-      }
-
-      await addDoc(collection(db, "adminActions"), {
-        uid: userId,
-        action: action,
-        requestedAt: new Date()
-      });
-
-      alert(`✅ ${action.charAt(0).toUpperCase() + action.slice(1)} issued.`);
-      dropdown.value = "none";
-      await loadUsers();
-    });
-  });
+function loadTable() {
+  renderTablePage();
 }
 
-// Bulk delete
-deleteSelectedBtn.addEventListener("click", async () => {
-  const selectedCheckboxes = document.querySelectorAll(".userCheckbox:checked");
-  if (selectedCheckboxes.length === 0) {
-    alert("Please select users to delete.");
-    return;
-  }
-
-  const confirmText = prompt(`Type DELETE to confirm deleting ${selectedCheckboxes.length} user(s):`);
-  if (confirmText !== "DELETE") {
-    alert("Cancelled. No users were deleted.");
-    return;
-  }
-
-  for (let checkbox of selectedCheckboxes) {
-    const uid = checkbox.dataset.id;
-    await addDoc(collection(db, "adminActions"), {
-      uid,
-      action: "delete",
-      requestedAt: new Date()
-    });
-  }
-
-  alert(`✅ Bulk delete issued for ${selectedCheckboxes.length} user(s).`);
-  await loadUsers();
-});
-
-// Select All checkbox
-selectAllCheckbox.addEventListener("change", () => {
-  const checkboxes = document.querySelectorAll(".userCheckbox");
-  checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
-  toggleDeleteButton();
-});
-
-// Toggle delete button visibility
-function toggleDeleteButton() {
-  const anyChecked = document.querySelectorAll(".userCheckbox:checked").length > 0;
-  deleteSelectedBtn.style.display = anyChecked ? "inline-block" : "none";
-}
-
-document.addEventListener("change", toggleDeleteButton);
-
-// Search
 searchBtn.addEventListener("click", () => {
-  const searchTerm = searchInput.value.trim().toLowerCase();
-  const filtered = users.filter(user =>
-    user.firstName?.toLowerCase().includes(searchTerm) ||
-    user.lastName?.toLowerCase().includes(searchTerm) ||
-    user.email?.toLowerCase().includes(searchTerm)
+  const term = searchInput.value.trim().toLowerCase();
+  filteredUsers = filteredUsers.filter(user =>
+    user.firstName?.toLowerCase().includes(term) ||
+    user.lastName?.toLowerCase().includes(term) ||
+    user.email?.toLowerCase().includes(term)
   );
   currentPage = 1;
-  displayUsers(filtered);
+  loadTable();
 });
 
-// Pagination
-document.getElementById("prevBtn").addEventListener("click", () => {
+selectAllCheckbox.addEventListener("change", () => {
+  const checkboxes = document.querySelectorAll(".user-checkbox");
+  checkboxes.forEach(cb => (cb.checked = selectAllCheckbox.checked));
+  deleteSelectedBtn.style.display = checkboxes.length > 0 && selectAllCheckbox.checked ? "inline-block" : "none";
+});
+
+deleteSelectedBtn.addEventListener("click", async () => {
+  const checked = document.querySelectorAll(".user-checkbox:checked");
+  if (checked.length === 0) return;
+
+  const input = prompt(`Type DELETE to confirm deletion of ${checked.length} users.`);
+  if (input !== "DELETE") {
+    alert("Bulk delete canceled.");
+    return;
+  }
+
+  for (const cb of checked) {
+    const userId = cb.dataset.userId;
+    await addDoc(collection(db, "adminActions"), {
+      uid: userId,
+      action: "delete",
+      createdAt: new Date()
+    });
+    await deleteDoc(doc(db, "users", userId));
+  }
+
+  filteredUsers = filteredUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
+  loadTable();
+});
+
+prevBtn.addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
-    displayUsers();
+    renderTablePage();
   }
 });
-document.getElementById("nextBtn").addEventListener("click", () => {
-  const maxPage = Math.ceil(users.length / itemsPerPage);
-  if (currentPage < maxPage) {
+
+nextBtn.addEventListener("click", () => {
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  if (currentPage < totalPages) {
     currentPage++;
-    displayUsers();
+    renderTablePage();
   }
 });
 
-// Logout
-logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
-});
-
-// Auth check
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
-    loadUsers();
+    const allUsers = await loadUsers();
+    filteredUsers = allUsers;
+    renderTablePage();
   } else {
     window.location.href = "index.html";
   }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
 });
