@@ -12,36 +12,51 @@
       border-radius: 10px;
       margin-top: 20px;
     }
-    .filters {
+
+    .filters-row {
       display: flex;
+      justify-content: space-between;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
       align-items: center;
+      margin-bottom: 20px;
+      gap: 10px;
     }
-    .filters input[type="text"] {
+
+    .search-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filters-row input[type="text"],
+    .filters-row select {
       padding: 8px;
       border: 1px solid #ccc;
       border-radius: 5px;
+      color: black;
     }
-    .filters button {
+
+    .filters-row button {
       padding: 8px 14px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
+
     #searchBtn {
       background-color: #3498db;
       color: white;
     }
+
     #clearSearchBtn {
       background-color: #bdc3c7;
       color: black;
-    }
-    #filterRole, #filterStatus {
-      padding: 8px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
     }
   </style>
 </head>
@@ -64,31 +79,37 @@
 
   <div class="container">
     <div class="container-box">
-      <h1>View Users</h1>
+      <h1 style="margin-top: 0;">View Users</h1>
+
       <p style="text-align: left; margin-bottom: 10px;">
         <strong>Status legend:</strong>
         <span style="color: green;">Active</span> = user is enabled,
         <span style="color: red;">Suspended</span> = user is disabled
       </p>
 
-      <div class="filters">
-        <input type="text" id="searchInput" placeholder="Search by name or email" />
-        <button id="searchBtn">Search</button>
-        <button id="clearSearchBtn">Clear</button>
-        <select id="filterRole">
-          <option value="">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="student">Student</option>
-          <option value="parent">Parent</option>
-          <option value="vendor">Vendor</option>
-          <option value="cardholder">Cardholder</option>
-          <option value="senior">Senior</option>
-        </select>
-        <select id="filterStatus">
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-        </select>
+      <!-- Filters -->
+      <div class="filters-row">
+        <div class="search-group">
+          <input type="text" id="searchInput" placeholder="Search by name or email" />
+          <button id="searchBtn">Search</button>
+          <button id="clearSearchBtn">Clear</button>
+        </div>
+        <div class="filter-group">
+          <select id="filterRole">
+            <option value="">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="student">Student</option>
+            <option value="parent">Parent</option>
+            <option value="vendor">Vendor</option>
+            <option value="cardholder">Cardholder</option>
+            <option value="senior">Senior</option>
+          </select>
+          <select id="filterStatus">
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
       </div>
 
       <span id="userCount">Total Users: 0</span>
@@ -106,7 +127,7 @@
           </tr>
         </thead>
         <tbody id="userTableBody">
-          <!-- Rows injected via JavaScript -->
+          <!-- Injected rows -->
         </tbody>
       </table>
 
@@ -124,7 +145,7 @@
     </div>
   </div>
 
-  <!-- Modal for Confirming Actions -->
+  <!-- Modal -->
   <div id="modal" class="modal" style="display: none;">
     <div class="modal-content">
       <p id="modalMessage"></p>
