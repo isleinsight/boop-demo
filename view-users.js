@@ -1,8 +1,23 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+// view-users.js
+
 import {
-  getFirestore, collection, getDocs, doc, deleteDoc,
-  addDoc, updateDoc, query, orderBy
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  deleteDoc,
+  addDoc,
+  updateDoc,
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -23,14 +38,14 @@ const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
-const roleFilter = document.getElementById("roleFilter");
-const statusFilter = document.getElementById("statusFilter");
 const userCount = document.getElementById("userCount");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 const paginationInfo = document.getElementById("paginationInfo");
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
+const roleFilter = document.getElementById("roleFilter");
+const statusFilter = document.getElementById("statusFilter");
 
 let currentUserEmail = null;
 let currentPage = 1;
@@ -38,7 +53,7 @@ const usersPerPage = 20;
 let allUsers = [];
 let filteredUsers = [];
 
-function createStatusText(status) {
+function createBadge(status) {
   const span = document.createElement("span");
   span.textContent = status === "suspended" ? "Suspended" : "Active";
   span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
@@ -49,14 +64,13 @@ function createDropdown(user) {
   const select = document.createElement("select");
   select.innerHTML = `
     <option value="action">Action</option>
-    <option value="view">View Profile</option>
     ${user.status === "suspended"
       ? '<option value="unsuspend">Unsuspend</option>'
       : '<option value="suspend">Suspend</option>'}
     <option value="signout">Force Sign-out</option>
     <option value="delete">Delete</option>
+    <option value="view">View Profile</option>
   `;
-
   select.addEventListener("change", async () => {
     const action = select.value;
     select.value = "action";
@@ -66,7 +80,7 @@ function createDropdown(user) {
       return;
     }
 
-    if (action === "suspend" || action === "unsuspend" || action === "signout") {
+    if (["suspend", "unsuspend", "signout"].includes(action)) {
       const confirmed = confirm(`Are you sure you want to ${action} this user?`);
       if (!confirmed) return;
     }
@@ -101,15 +115,13 @@ async function handleAction(user, action) {
       await deleteDoc(doc(db, "users", user.id));
       filteredUsers = filteredUsers.filter(u => u.id !== user.id);
       alert("✅ User successfully deleted.");
-    } else if (action === "suspend") {
-      user.status = "suspended";
-      await updateDoc(doc(db, "users", user.id), { status: "suspended" });
-    } else if (action === "unsuspend") {
-      user.status = "active";
-      await updateDoc(doc(db, "users", user.id), { status: "active" });
+    } else {
+      await updateDoc(doc(db, "users", user.id), {
+        status: action === "suspend" ? "suspended" : "active"
+      });
     }
 
-    renderTablePage();
+    applyFilters();
   } catch (err) {
     console.error("❌ Action failed:", err);
     alert("Failed to perform action.");
@@ -165,7 +177,7 @@ function renderTablePage() {
     roleTd.textContent = user.role || "";
 
     const statusTd = document.createElement("td");
-    statusTd.appendChild(createStatusText(user.status || "active"));
+    statusTd.appendChild(createBadge(user.status || "active"));
 
     const actionsTd = document.createElement("td");
     actionsTd.appendChild(createDropdown(user));
@@ -192,27 +204,38 @@ function updateDeleteButtonVisibility() {
   deleteSelectedBtn.style.display = checked.length > 0 ? "inline-block" : "none";
 }
 
-function handleSearch() {
-  const term = searchInput.value.trim().toLowerCase();
+function applyFilters() {
+  const searchTerm = searchInput.value.trim().toLowerCase();
   const selectedRole = roleFilter.value;
   const selectedStatus = statusFilter.value;
 
   filteredUsers = allUsers.filter(user => {
     const matchesSearch = (
-      user.firstName?.toLowerCase().includes(term) ||
-      user.lastName?.toLowerCase().includes(term) ||
-      user.email?.toLowerCase().includes(term)
+      user.firstName?.toLowerCase().includes(searchTerm) ||
+      user.lastName?.toLowerCase().includes(searchTerm) ||
+      user.email?.toLowerCase().includes(searchTerm)
     );
-
-    const matchesRole = selectedRole === "all" || user.role === selectedRole;
-    const matchesStatus = selectedStatus === "all" || user.status === selectedStatus;
-
+    const matchesRole = !selectedRole || user.role === selectedRole;
+    const matchesStatus = !selectedStatus || user.status === selectedStatus;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
   currentPage = 1;
   renderTablePage();
 }
+
+searchBtn.addEventListener("click", applyFilters);
+searchInput.addEventListener("input", applyFilters);
+clearSearchBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  roleFilter.value = "";
+  statusFilter.value = "";
+  filteredUsers = [...allUsers];
+  currentPage = 1;
+  renderTablePage();
+});
+roleFilter.addEventListener("change", applyFilters);
+statusFilter.addEventListener("change", applyFilters);
 
 selectAllCheckbox.addEventListener("change", () => {
   const checkboxes = document.querySelectorAll(".user-checkbox");
@@ -250,19 +273,6 @@ deleteSelectedBtn.addEventListener("click", async () => {
   filteredUsers = filteredUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
   renderTablePage();
 });
-
-searchBtn.addEventListener("click", handleSearch);
-clearSearchBtn.addEventListener("click", () => {
-  searchInput.value = "";
-  roleFilter.value = "all";
-  statusFilter.value = "all";
-  filteredUsers = [...allUsers];
-  currentPage = 1;
-  renderTablePage();
-});
-searchInput.addEventListener("input", handleSearch);
-roleFilter.addEventListener("change", handleSearch);
-statusFilter.addEventListener("change", handleSearch);
 
 prevBtn.addEventListener("click", () => {
   if (currentPage > 1) {
