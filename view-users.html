@@ -59,16 +59,15 @@ p strong {
   font-weight: 600;
 }
 
-/* Search and filter controls */
 .search-filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
-.search-filter-bar input[type="text"],
+.search-filter-bar input,
 .search-filter-bar select {
   padding: 8px;
   border-radius: 4px;
@@ -80,6 +79,21 @@ p strong {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+#searchBtn {
+  background-color: #3498db;
+  color: white;
+}
+
+#clearSearchBtn {
+  background-color: #ccc;
+  color: black;
+}
+
+.filter-label {
+  font-weight: bold;
+  margin-left: 10px;
 }
 
 #searchBtn {
