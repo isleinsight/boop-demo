@@ -6,17 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .filters-row {
+    .filters-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      margin-bottom: 20px;
       gap: 10px;
+      margin-bottom: 20px;
     }
 
     .search-group {
       display: flex;
+      align-items: center;
       gap: 10px;
       flex-wrap: wrap;
     }
@@ -27,18 +28,18 @@
       flex-wrap: wrap;
     }
 
-    .filters-row input[type="text"],
-    .filters-row select {
+    input[type="text"],
+    select {
       padding: 8px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      border-radius: 4px;
       color: black;
     }
 
-    .filters-row button {
+    button {
       padding: 8px 14px;
       border: none;
-      border-radius: 5px;
+      border-radius: 4px;
       cursor: pointer;
     }
 
@@ -54,7 +55,7 @@
   </style>
 </head>
 <body>
-  <!-- Top Navigation -->
+  <!-- NAVIGATION BAR -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -79,13 +80,16 @@
       <span style="color: red;">Suspended</span> = user is disabled
     </p>
 
-    <!-- Filters -->
-    <div class="filters-row">
+    <!-- SEARCH + FILTER BAR -->
+    <div class="filters-bar">
+      <!-- Left side: search box -->
       <div class="search-group">
         <input type="text" id="searchInput" placeholder="Search by name or email" />
         <button id="searchBtn">Search</button>
         <button id="clearSearchBtn">Clear</button>
       </div>
+
+      <!-- Right side: filters -->
       <div class="filter-group">
         <select id="filterRole">
           <option value="">All Roles</option>
@@ -106,6 +110,7 @@
 
     <span id="userCount">Total Users: 0</span>
 
+    <!-- TABLE -->
     <table>
       <thead>
         <tr>
@@ -119,24 +124,26 @@
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <!-- Injected rows -->
+        <!-- Table content will be added here -->
       </tbody>
     </table>
 
+    <!-- PAGINATION -->
     <div class="pagination">
       <button id="prevBtn">Previous</button>
       <span id="paginationInfo">Page 1</span>
       <button id="nextBtn">Next</button>
     </div>
 
+    <!-- BULK DELETE -->
     <div id="deleteSelectedContainer" style="text-align: left; margin-top: 20px;">
-      <button id="deleteSelectedBtn" style="display: none; background-color: #c0392b; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer;">
+      <button id="deleteSelectedBtn" style="display: none; background-color: #c0392b; color: white;">
         Delete Selected
       </button>
     </div>
   </div>
 
-  <!-- Modal -->
+  <!-- MODAL -->
   <div id="modal" class="modal" style="display: none;">
     <div class="modal-content">
       <p id="modalMessage"></p>
