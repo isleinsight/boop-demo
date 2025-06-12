@@ -193,38 +193,40 @@ tbody tr:hover {
   </nav>
 
   <div class="container">
-    <div class="top-bar">
-      <h1>View Users</h1>
-      <span id="userCount">Total Users: 0</span>
-    </div>
+    <!-- Top bar -->
+<div class="top-bar">
+  <h1>View Users</h1>
+  <span id="userCount">Total Users: 0</span>
+</div>
 
-    <p style="text-align: left; margin-bottom: 10px;">
-      <strong>Status legend:</strong> <span style="color: green;">Active</span> = user is enabled,
-      <span style="color: red;">Suspended</span> = user is disabled
-    </p>
+<p style="text-align: left; margin-bottom: 10px;">
+  <strong>Status legend:</strong> <span style="color: green;">Active</span> = user is enabled, <span style="color: red;">Suspended</span> = user is disabled
+</p>
 
-    <!-- Search and Filter Controls -->
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
-      <input type="text" id="searchInput" placeholder="Search by name or email" style="padding: 8px;" />
-      <button id="searchBtn" style="background-color: #3498db; color: white; padding: 8px 12px; border: none; border-radius: 4px;">Search</button>
-      <button id="clearSearchBtn" style="background-color: #ccc; color: black; padding: 8px 12px; border: none; border-radius: 4px;">Clear</button>
+<!-- Unified search + filter bar -->
+<div class="search-filter-bar">
+  <input type="text" id="searchInput" placeholder="Search by name or email" />
+  <button id="searchBtn">Search</button>
+  <button id="clearSearchBtn">Clear</button>
 
-      <select id="roleFilter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-        <option value="">All Roles</option>
-        <option value="admin">Admin</option>
-        <option value="cardholder">Cardholder</option>
-        <option value="parent">Parent</option>
-        <option value="student">Student</option>
-        <option value="vendor">Vendor</option>
-        <option value="senior">Senior</option>
-      </select>
+  <label for="roleFilter" class="filter-label">Filter by Role:</label>
+  <select id="roleFilter">
+    <option value="">All Roles</option>
+    <option value="admin">Admin</option>
+    <option value="vendor">Vendor</option>
+    <option value="cardholder">Cardholder</option>
+    <option value="parent">Parent</option>
+    <option value="student">Student</option>
+    <option value="senior">Senior</option>
+  </select>
 
-      <select id="statusFilter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-        <option value="">All Statuses</option>
-        <option value="active">Active</option>
-        <option value="suspended">Suspended</option>
-      </select>
-    </div>
+  <label for="statusFilter" class="filter-label">Filter by Status:</label>
+  <select id="statusFilter">
+    <option value="">All Statuses</option>
+    <option value="active">Active</option>
+    <option value="suspended">Suspended</option>
+  </select>
+</div>
 
     <!-- Table -->
     <table style="width: 100%; border-collapse: collapse;">
