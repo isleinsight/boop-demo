@@ -9,26 +9,45 @@
     .search-wrapper {
       position: relative;
       display: inline-block;
+      width: 100%;
+      max-width: 400px;
     }
 
     .search-wrapper input[type="text"] {
+      width: 100%;
       padding-right: 30px;
+      padding-left: 10px;
+      height: 32px;
+      box-sizing: border-box;
     }
 
     .clear-btn {
       position: absolute;
-      right: 6px;
+      right: 8px;
       top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
-      font-size: 16px;
-      color: #aaa;
+      font-size: 18px;
+      color: #999;
       cursor: pointer;
+      padding: 0;
+      line-height: 1;
     }
 
     .clear-btn:hover {
       color: #000;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    #searchBtn {
+      height: 34px;
     }
   </style>
 </head>
@@ -55,13 +74,15 @@
     </div>
 
     <p style="text-align: left; margin-bottom: 10px;">
-      <strong>Status legend:</strong> <span style="color: green;">Active</span> = user is enabled, <span style="color: red;">Suspended</span> = user is disabled
+      <strong>Status legend:</strong> 
+      <span style="color: green;">Active</span> = user is enabled, 
+      <span style="color: red;">Suspended</span> = user is disabled
     </p>
 
     <div class="search-bar">
       <div class="search-wrapper">
         <input type="text" id="searchInput" placeholder="Search by name or email" />
-        <button class="clear-btn" id="clearSearchBtn" title="Clear search">×</button>
+        <button class="clear-btn" id="clearSearchBtn" title="Clear search">✕</button>
       </div>
       <button id="searchBtn">Search</button>
     </div>
