@@ -177,7 +177,13 @@ function renderTablePage() {
     userTableBody.appendChild(row);
   });
 
-  paginationInfo.textContent = `Page ${currentPage}`;
+const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+prevBtn.disabled = currentPage === 1;
+nextBtn.disabled = currentPage === totalPages;
+
+  
   userCount.textContent = `Total Users: ${filteredUsers.length}`;
   toggleDeleteButtonVisibility();
 }
