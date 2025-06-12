@@ -5,51 +5,6 @@
   <title>View Users - BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    .search-wrapper {
-      position: relative;
-      display: inline-block;
-      width: 100%;
-      max-width: 400px;
-    }
-
-    .search-wrapper input[type="text"] {
-      width: 100%;
-      padding-right: 30px;
-      padding-left: 10px;
-      height: 32px;
-      box-sizing: border-box;
-    }
-
-    .clear-btn {
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      font-size: 18px;
-      color: #999;
-      cursor: pointer;
-      padding: 0;
-      line-height: 1;
-    }
-
-    .clear-btn:hover {
-      color: #000;
-    }
-
-    .search-bar {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    #searchBtn {
-      height: 34px;
-    }
-  </style>
 </head>
 <body>
   <nav>
@@ -74,17 +29,30 @@
     </div>
 
     <p style="text-align: left; margin-bottom: 10px;">
-      <strong>Status legend:</strong> 
-      <span style="color: green;">Active</span> = user is enabled, 
+      <strong>Status legend:</strong>
+      <span style="color: green;">Active</span> = user is enabled,
       <span style="color: red;">Suspended</span> = user is disabled
     </p>
 
-    <div class="search-bar">
-      <div class="search-wrapper">
-        <input type="text" id="searchInput" placeholder="Search by name or email" />
-        <button class="clear-btn" id="clearSearchBtn" title="Clear search">✕</button>
-      </div>
-      <button id="searchBtn">Search</button>
+    <div class="search-bar" style="display: flex; gap: 8px; margin-bottom: 15px;">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Search by name or email"
+        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;"
+      />
+      <button
+        id="clearSearchBtn"
+        style="background-color: #e0e0e0; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;"
+      >
+        Clear
+      </button>
+      <button
+        id="searchBtn"
+        style="background-color: #3498db; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer;"
+      >
+        Search
+      </button>
     </div>
 
     <table>
@@ -104,14 +72,17 @@
       </tbody>
     </table>
 
-    <div class="pagination">
+    <div class="pagination" style="margin-top: 15px;">
       <button id="prevBtn">Previous</button>
       <span id="paginationInfo">Page 1</span>
       <button id="nextBtn">Next</button>
     </div>
 
     <div id="deleteSelectedContainer" style="text-align: left; margin-top: 20px;">
-      <button id="deleteSelectedBtn" style="display: none; background-color: #c0392b; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer;">
+      <button
+        id="deleteSelectedBtn"
+        style="display: none; background-color: #c0392b; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer;"
+      >
         Delete Selected
       </button>
     </div>
