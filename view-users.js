@@ -1,5 +1,3 @@
-// view-users.js
-
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -34,18 +32,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// DOM Elements
 const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
 const userCount = document.getElementById("userCount");
+const roleFilter = document.getElementById("roleFilter");
+const statusFilter = document.getElementById("statusFilter");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 const paginationInfo = document.getElementById("paginationInfo");
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
-const roleFilter = document.getElementById("roleFilter");
-const statusFilter = document.getElementById("statusFilter");
 
 let currentUserEmail = null;
 let currentPage = 1;
@@ -64,13 +63,14 @@ function createDropdown(user) {
   const select = document.createElement("select");
   select.innerHTML = `
     <option value="action">Action</option>
+    <option value="view">View Profile</option>
     ${user.status === "suspended"
       ? '<option value="unsuspend">Unsuspend</option>'
       : '<option value="suspend">Suspend</option>'}
     <option value="signout">Force Sign-out</option>
     <option value="delete">Delete</option>
-    <option value="view">View Profile</option>
   `;
+
   select.addEventListener("change", async () => {
     const action = select.value;
     select.value = "action";
@@ -80,7 +80,7 @@ function createDropdown(user) {
       return;
     }
 
-    if (["suspend", "unsuspend", "signout"].includes(action)) {
+    if (action === "suspend" || action === "unsuspend" || action === "signout") {
       const confirmed = confirm(`Are you sure you want to ${action} this user?`);
       if (!confirmed) return;
     }
@@ -113,12 +113,13 @@ async function handleAction(user, action) {
 
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
-      filteredUsers = filteredUsers.filter(u => u.id !== user.id);
-      alert("✅ User successfully deleted.");
+      allUsers = allUsers.filter(u => u.id !== user.id);
     } else {
       await updateDoc(doc(db, "users", user.id), {
         status: action === "suspend" ? "suspended" : "active"
       });
+      const updated = allUsers.find(u => u.id === user.id);
+      if (updated) updated.status = action === "suspend" ? "suspended" : "active";
     }
 
     applyFilters();
@@ -210,13 +211,14 @@ function applyFilters() {
   const selectedStatus = statusFilter.value;
 
   filteredUsers = allUsers.filter(user => {
-    const matchesSearch = (
+    const matchesSearch =
       user.firstName?.toLowerCase().includes(searchTerm) ||
       user.lastName?.toLowerCase().includes(searchTerm) ||
-      user.email?.toLowerCase().includes(searchTerm)
-    );
-    const matchesRole = !selectedRole || user.role === selectedRole;
-    const matchesStatus = !selectedStatus || user.status === selectedStatus;
+      user.email?.toLowerCase().includes(searchTerm);
+
+    const matchesRole = selectedRole === "" || user.role === selectedRole;
+    const matchesStatus = selectedStatus === "" || user.status === selectedStatus;
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -224,15 +226,14 @@ function applyFilters() {
   renderTablePage();
 }
 
+// Event Listeners
 searchBtn.addEventListener("click", applyFilters);
 searchInput.addEventListener("input", applyFilters);
 clearSearchBtn.addEventListener("click", () => {
   searchInput.value = "";
   roleFilter.value = "";
   statusFilter.value = "";
-  filteredUsers = [...allUsers];
-  currentPage = 1;
-  renderTablePage();
+  applyFilters();
 });
 roleFilter.addEventListener("change", applyFilters);
 statusFilter.addEventListener("change", applyFilters);
@@ -269,9 +270,8 @@ deleteSelectedBtn.addEventListener("click", async () => {
     await deleteDoc(doc(db, "users", userId));
   }
 
-  alert(`${checked.length} users successfully deleted.`);
-  filteredUsers = filteredUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
-  renderTablePage();
+  allUsers = allUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
+  applyFilters();
 });
 
 prevBtn.addEventListener("click", () => {
@@ -294,7 +294,7 @@ onAuthStateChanged(auth, async (user) => {
     currentUserEmail = user.email;
     allUsers = await loadUsers();
     filteredUsers = [...allUsers];
-    renderTablePage();
+    applyFilters();
   } else {
     window.location.href = "index.html";
   }
