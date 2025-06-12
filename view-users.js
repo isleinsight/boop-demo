@@ -35,8 +35,8 @@ const db = getFirestore(app);
 let currentUserEmail = null;
 let currentPage = 1;
 const usersPerPage = 20;
-let filteredUsers = [];
 let allUsers = [];
+let filteredUsers = [];
 
 const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
@@ -52,9 +52,10 @@ function createBadge(status) {
   const span = document.createElement("span");
   span.className = "badge";
   span.textContent = status === "suspended" ? "Suspended" : "Active";
-  span.style.backgroundColor = "transparent";
-  span.style.fontWeight = "bold";
+  span.style.backgroundColor = "#f9f9f9";
   span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
+  span.style.border = `1px solid ${span.style.color}`;
+  span.style.fontWeight = "bold";
   return span;
 }
 
@@ -64,8 +65,7 @@ function createDropdown(user) {
     <option value="action">Action</option>
     ${user.status === "suspended"
       ? '<option value="unsuspend">Unsuspend</option>'
-      : '<option value="suspend">Suspend</option>'
-    }
+      : '<option value="suspend">Suspend</option>'}
     <option value="signout">Force Sign-out</option>
     <option value="delete">Delete</option>
   `;
@@ -107,14 +107,11 @@ async function handleAction(user, action) {
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
       filteredUsers = filteredUsers.filter(u => u.id !== user.id);
-      allUsers = allUsers.filter(u => u.id !== user.id);
+      alert("User successfully deleted.");
     } else {
       await updateDoc(doc(db, "users", user.id), {
         status: action === "suspend" ? "suspended" : "active"
       });
-
-      const updatedUser = allUsers.find(u => u.id === user.id);
-      if (updatedUser) updatedUser.status = action === "suspend" ? "suspended" : "active";
     }
 
     loadTable();
@@ -140,14 +137,14 @@ function renderTablePage() {
   const end = start + usersPerPage;
   const pageUsers = filteredUsers.slice(start, end);
 
-  if (pageUsers.length === 0) {
-    const noResultRow = document.createElement("tr");
-    const noResultCell = document.createElement("td");
-    noResultCell.colSpan = 7;
-    noResultCell.style.textAlign = "center";
-    noResultCell.textContent = "No results found.";
-    noResultRow.appendChild(noResultCell);
-    userTableBody.appendChild(noResultRow);
+  if (filteredUsers.length === 0) {
+    const row = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 7;
+    td.textContent = "No users found.";
+    td.style.textAlign = "center";
+    row.appendChild(td);
+    userTableBody.appendChild(row);
   } else {
     pageUsers.forEach(user => {
       const row = document.createElement("tr");
@@ -158,6 +155,7 @@ function renderTablePage() {
       checkbox.classList.add("user-checkbox");
       checkbox.dataset.userId = user.id;
       checkbox.dataset.userEmail = user.email;
+      checkbox.addEventListener("change", updateDeleteButtonVisibility);
       checkboxTd.appendChild(checkbox);
 
       const firstNameTd = document.createElement("td");
@@ -190,26 +188,26 @@ function renderTablePage() {
     });
   }
 
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-  paginationInfo.textContent = totalPages > 0
-    ? `Page ${currentPage} of ${totalPages}`
-    : "No pages";
-
-  prevBtn.disabled = currentPage <= 1;
-  nextBtn.disabled = currentPage >= totalPages;
-  userCount.textContent = `Total Users: ${filteredUsers.length}`;
-  deleteSelectedBtn.style.display = document.querySelectorAll(".user-checkbox:checked").length > 0 ? "inline-block" : "none";
+  paginationInfo.textContent = `Page ${currentPage} of ${Math.max(1, Math.ceil(filteredUsers.length / usersPerPage))}`;
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = currentPage >= Math.ceil(filteredUsers.length / usersPerPage);
+  updateDeleteButtonVisibility();
+  selectAllCheckbox.checked = false;
 }
 
 function loadTable() {
   renderTablePage();
 }
 
+function updateDeleteButtonVisibility() {
+  const anyChecked = document.querySelectorAll(".user-checkbox:checked").length > 0;
+  deleteSelectedBtn.style.display = anyChecked ? "inline-block" : "none";
+}
+
 searchBtn.addEventListener("click", () => {
   const term = searchInput.value.trim().toLowerCase();
-
-  if (term === "") {
-    filteredUsers = [...allUsers];
+  if (!term) {
+    filteredUsers = allUsers;
   } else {
     filteredUsers = allUsers.filter(user =>
       user.firstName?.toLowerCase().includes(term) ||
@@ -217,28 +215,30 @@ searchBtn.addEventListener("click", () => {
       user.email?.toLowerCase().includes(term)
     );
   }
-
   currentPage = 1;
   loadTable();
+});
+
+searchInput.addEventListener("input", () => {
+  if (searchInput.value.trim() === "") {
+    filteredUsers = allUsers;
+    currentPage = 1;
+    loadTable();
+  }
 });
 
 selectAllCheckbox.addEventListener("change", () => {
   const checkboxes = document.querySelectorAll(".user-checkbox");
   checkboxes.forEach(cb => (cb.checked = selectAllCheckbox.checked));
-  deleteSelectedBtn.style.display = checkboxes.length > 0 && selectAllCheckbox.checked ? "inline-block" : "none";
-});
-
-userTableBody.addEventListener("change", () => {
-  const checked = document.querySelectorAll(".user-checkbox:checked");
-  deleteSelectedBtn.style.display = checked.length > 0 ? "inline-block" : "none";
+  updateDeleteButtonVisibility();
 });
 
 deleteSelectedBtn.addEventListener("click", async () => {
   const checked = document.querySelectorAll(".user-checkbox:checked");
   if (checked.length === 0) return;
 
-  const invalid = Array.from(checked).some(cb => cb.dataset.userEmail === currentUserEmail);
-  if (invalid) {
+  const includesSelf = Array.from(checked).some(cb => cb.dataset.userEmail === currentUserEmail);
+  if (includesSelf) {
     alert("You cannot delete your own admin account.");
     return;
   }
@@ -260,10 +260,7 @@ deleteSelectedBtn.addEventListener("click", async () => {
   }
 
   alert(`${checked.length} users successfully deleted.`);
-
-  const idsToRemove = [...checked].map(cb => cb.dataset.userId);
-  filteredUsers = filteredUsers.filter(u => !idsToRemove.includes(u.id));
-  allUsers = allUsers.filter(u => !idsToRemove.includes(u.id));
+  filteredUsers = filteredUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
   loadTable();
 });
 
@@ -286,8 +283,8 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUserEmail = user.email;
     allUsers = await loadUsers();
-    filteredUsers = [...allUsers];
-    renderTablePage();
+    filteredUsers = allUsers;
+    loadTable();
   } else {
     window.location.href = "index.html";
   }
