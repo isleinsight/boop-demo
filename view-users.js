@@ -1,10 +1,9 @@
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+// Import Firebase modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
-  signOut
+  signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore,
@@ -15,7 +14,7 @@ import {
   addDoc,
   updateDoc,
   query,
-  orderBy
+  orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -25,7 +24,7 @@ const firebaseConfig = {
   projectId: "boop-becff",
   storageBucket: "boop-becff.appspot.com",
   messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
+  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -50,14 +49,15 @@ const usersPerPage = 20;
 let allUsers = [];
 let filteredUsers = [];
 
-function createBadge(status) {
+// Utility: Create green/red status label
+function createStatusLabel(status) {
   const span = document.createElement("span");
-  span.className = "badge";
   span.textContent = status === "suspended" ? "Suspended" : "Active";
   span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
   return span;
 }
 
+// Dropdown for actions
 function createDropdown(user) {
   const select = document.createElement("select");
   select.innerHTML = `
@@ -69,6 +69,7 @@ function createDropdown(user) {
     <option value="signout">Force Sign-out</option>
     <option value="delete">Delete</option>
   `;
+
   select.addEventListener("change", async () => {
     const action = select.value;
     select.value = "action";
@@ -96,22 +97,28 @@ function createDropdown(user) {
   return select;
 }
 
+// Perform suspend/delete/etc.
 async function handleAction(user, action) {
   try {
     await addDoc(collection(db, "adminActions"), {
       uid: user.id,
       action,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
       filteredUsers = filteredUsers.filter(u => u.id !== user.id);
+      allUsers = allUsers.filter(u => u.id !== user.id);
       alert("✅ User successfully deleted.");
     } else {
       await updateDoc(doc(db, "users", user.id), {
-        status: action === "suspend" ? "suspended" : "active"
+        status: action === "suspend" ? "suspended" : "active",
       });
+
+      // Update status in memory
+      const target = allUsers.find(u => u.id === user.id);
+      if (target) target.status = action === "suspend" ? "suspended" : "active";
     }
 
     renderTablePage();
@@ -121,15 +128,14 @@ async function handleAction(user, action) {
   }
 }
 
+// Load all users
 async function loadUsers() {
   const q = query(collection(db, "users"), orderBy("firstName"));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+// Build user table
 function renderTablePage() {
   userTableBody.innerHTML = "";
   const start = (currentPage - 1) * usersPerPage;
@@ -170,7 +176,7 @@ function renderTablePage() {
     roleTd.textContent = user.role || "";
 
     const statusTd = document.createElement("td");
-    statusTd.appendChild(createBadge(user.status || "active"));
+    statusTd.appendChild(createStatusLabel(user.status || "active"));
 
     const actionsTd = document.createElement("td");
     actionsTd.appendChild(createDropdown(user));
@@ -186,17 +192,20 @@ function renderTablePage() {
     userTableBody.appendChild(row);
   });
 
-  paginationInfo.textContent = `Page ${currentPage} of ${Math.max(1, Math.ceil(filteredUsers.length / usersPerPage))}`;
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / usersPerPage));
+  paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
   userCount.textContent = `Total Users: ${filteredUsers.length}`;
   prevBtn.disabled = currentPage === 1;
-  nextBtn.disabled = end >= filteredUsers.length;
+  nextBtn.disabled = currentPage >= totalPages;
 }
 
+// Show or hide delete button
 function updateDeleteButtonVisibility() {
   const checked = document.querySelectorAll(".user-checkbox:checked");
   deleteSelectedBtn.style.display = checked.length > 0 ? "inline-block" : "none";
 }
 
+// Search users
 function handleSearch() {
   const term = searchInput.value.trim().toLowerCase();
   if (term === "") {
@@ -212,12 +221,7 @@ function handleSearch() {
   renderTablePage();
 }
 
-selectAllCheckbox.addEventListener("change", () => {
-  const checkboxes = document.querySelectorAll(".user-checkbox");
-  checkboxes.forEach(cb => (cb.checked = selectAllCheckbox.checked));
-  updateDeleteButtonVisibility();
-});
-
+// Delete selected users
 deleteSelectedBtn.addEventListener("click", async () => {
   const checked = document.querySelectorAll(".user-checkbox:checked");
   if (checked.length === 0) return;
@@ -239,16 +243,18 @@ deleteSelectedBtn.addEventListener("click", async () => {
     await addDoc(collection(db, "adminActions"), {
       uid: userId,
       action: "delete",
-      createdAt: new Date()
+      createdAt: new Date(),
     });
     await deleteDoc(doc(db, "users", userId));
   }
 
   alert(`${checked.length} users successfully deleted.`);
   filteredUsers = filteredUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
+  allUsers = allUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
   renderTablePage();
 });
 
+// Button events
 searchBtn.addEventListener("click", handleSearch);
 searchInput.addEventListener("input", handleSearch);
 clearSearchBtn.addEventListener("click", () => {
@@ -257,14 +263,17 @@ clearSearchBtn.addEventListener("click", () => {
   currentPage = 1;
   renderTablePage();
 });
-
+selectAllCheckbox.addEventListener("change", () => {
+  const checkboxes = document.querySelectorAll(".user-checkbox");
+  checkboxes.forEach(cb => (cb.checked = selectAllCheckbox.checked));
+  updateDeleteButtonVisibility();
+});
 prevBtn.addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
     renderTablePage();
   }
 });
-
 nextBtn.addEventListener("click", () => {
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
   if (currentPage < totalPages) {
@@ -273,6 +282,7 @@ nextBtn.addEventListener("click", () => {
   }
 });
 
+// Auth state
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUserEmail = user.email;
@@ -284,6 +294,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+// Logout
 document.getElementById("logoutBtn").addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
