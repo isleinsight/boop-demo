@@ -52,6 +52,17 @@
       background-color: #bdc3c7;
       color: black;
     }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .top-bar h1 {
+      margin: 0;
+    }
   </style>
 </head>
 <body>
@@ -72,7 +83,10 @@
   </nav>
 
   <div class="container">
-    <h1>View Users</h1>
+    <div class="top-bar">
+      <h1>View Users</h1>
+      <span id="userCount">Total Users: 0</span>
+    </div>
 
     <p style="text-align: left; margin-bottom: 10px;">
       <strong>Status legend:</strong>
@@ -107,8 +121,6 @@
         </select>
       </div>
     </div>
-
-    <span id="userCount">Total Users: 0</span>
 
     <!-- TABLE -->
     <table>
