@@ -51,7 +51,9 @@ function createBadge(status) {
   const span = document.createElement("span");
   span.className = "badge";
   span.textContent = status === "suspended" ? "Suspended" : "Active";
-  span.style.backgroundColor = status === "suspended" ? "#e74c3c" : "#27ae60";
+  span.style.backgroundColor = "#f0f0f0"; // light gray neutral background
+  span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60"; // red or green text
+  span.style.border = `1px solid ${span.style.color}`;
   return span;
 }
 
@@ -223,6 +225,8 @@ deleteSelectedBtn.addEventListener("click", async () => {
     });
     await deleteDoc(doc(db, "users", userId));
   }
+
+  alert(`${checked.length} users successfully deleted.`);
 
   filteredUsers = filteredUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
   loadTable();
