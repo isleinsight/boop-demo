@@ -5,6 +5,32 @@
   <title>View Users - BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .search-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .search-wrapper input[type="text"] {
+      padding-right: 30px;
+    }
+
+    .clear-btn {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      font-size: 16px;
+      color: #aaa;
+      cursor: pointer;
+    }
+
+    .clear-btn:hover {
+      color: #000;
+    }
+  </style>
 </head>
 <body>
   <nav>
@@ -33,7 +59,10 @@
     </p>
 
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Search by name or email" />
+      <div class="search-wrapper">
+        <input type="text" id="searchInput" placeholder="Search by name or email" />
+        <button class="clear-btn" id="clearSearchBtn" title="Clear search">×</button>
+      </div>
       <button id="searchBtn">Search</button>
     </div>
 
