@@ -118,25 +118,33 @@
       <span style="color: red;">Suspended</span> = user is disabled
     </p>
 
-    <div class="controls-row">
-      <input type="text" id="searchInput" placeholder="Search by name or email" />
-      <button id="searchBtn">Search</button>
-      <button id="clearSearchBtn">Clear</button>
-      <select id="roleFilter">
-        <option value="">All Roles</option>
-        <option value="admin">Admin</option>
-        <option value="vendor">Vendor</option>
-        <option value="parent">Parent</option>
-        <option value="student">Student</option>
-        <option value="cardholder">Cardholder</option>
-        <option value="senior">Senior</option>
-      </select>
-      <select id="statusFilter">
-        <option value="">All Statuses</option>
-        <option value="active">Active</option>
-        <option value="suspended">Suspended</option>
-      </select>
-    </div>
+    <!-- Control bar: search + filters -->
+<div class="control-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+  <!-- Left side: Search + Buttons -->
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+    <input type="text" id="searchInput" placeholder="Search by name or email" />
+    <button id="searchBtn" style="background-color: #3498db; color: white;">Search</button>
+    <button id="clearSearchBtn" style="background-color: #ccc; color: black;">Clear</button>
+  </div>
+
+  <!-- Right side: Filters -->
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+    <select id="roleFilter">
+      <option value="">All Roles</option>
+      <option value="admin">Admin</option>
+      <option value="cardholder">Cardholder</option>
+      <option value="parent">Parent</option>
+      <option value="student">Student</option>
+      <option value="vendor">Vendor</option>
+      <option value="senior">Senior</option>
+    </select>
+    <select id="statusFilter">
+      <option value="">All Statuses</option>
+      <option value="active">Active</option>
+      <option value="suspended">Suspended</option>
+    </select>
+  </div>
+</div>
 
     <table>
       <thead>
