@@ -7,187 +7,181 @@
   <link rel="stylesheet" href="styles.css" />
   <style>
     /* Reset and base styles */
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  background-color: #f8f9fa;
-}
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f8f9fa;
+    }
 
-h1 {
-  font-size: 28px;
-  margin-bottom: 10px;
-}
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
 
-/* Navigation bar */
-nav {
-  background-color: #0a3557;
-  padding: 10px 20px;
-}
+    /* Navigation bar */
+    nav {
+      background-color: #0a3557;
+      padding: 10px 20px;
+    }
 
-nav a {
-  color: white;
-  text-decoration: none;
-  margin-left: 20px;
-  font-weight: 500;
-}
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin-left: 20px;
+      font-weight: 500;
+    }
 
-nav img {
-  height: 40px;
-}
+    nav img {
+      height: 40px;
+    }
 
-.container {
-  max-width: 95%;
-  margin: 30px auto;
-  background-color: white;
-  padding: 20px;
-  border-radius: 10px;
-}
+    .container {
+      max-width: 95%;
+      margin: 30px auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
 
-/* Top bar */
-.container > div:first-child {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+    /* Top bar */
+    .container > .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-#userCount {
-  font-weight: bold;
-}
+    #userCount {
+      font-weight: bold;
+    }
 
-/* Status legend */
-p strong {
-  font-weight: 600;
-}
+    /* Status legend */
+    p strong {
+      font-weight: 600;
+    }
 
-.search-filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-}
+    /* Search and filters in a single line */
+    .search-filter-bar {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
 
-.search-filter-bar input,
-.search-filter-bar select {
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
+    .search-filter-bar input,
+    .search-filter-bar select {
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      min-width: 180px;
+      max-width: 250px;
+    }
 
-.search-filter-bar button {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
+    .search-filter-bar button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
 
-#searchBtn {
-  background-color: #3498db;
-  color: white;
-}
+    #searchBtn {
+      background-color: #3498db;
+      color: white;
+    }
 
-#clearSearchBtn {
-  background-color: #ccc;
-  color: black;
-}
+    #clearSearchBtn {
+      background-color: #ccc;
+      color: black;
+    }
 
-.filter-label {
-  font-weight: bold;
-  margin-left: 10px;
-}
+    .filter-label {
+      font-weight: bold;
+      margin-left: 10px;
+    }
 
-#searchBtn {
-  background-color: #3498db;
-  color: white;
-}
+    /* Table styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
 
-#clearSearchBtn {
-  background-color: #ccc;
-  color: black;
-}
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
 
-/* Table styles */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
+    th {
+      background-color: #f2f2f2;
+    }
 
-th, td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
+    tbody tr:hover {
+      background-color: #f9f9f9;
+    }
 
-th {
-  background-color: #f2f2f2;
-}
+    /* Status color */
+    .badge {
+      font-weight: bold;
+    }
 
-tbody tr:hover {
-  background-color: #f9f9f9;
-}
+    .badge.active {
+      color: #27ae60;
+    }
 
-/* Status color */
-.badge {
-  font-weight: bold;
-}
+    .badge.suspended {
+      color: #e74c3c;
+    }
 
-.badge.active {
-  color: #27ae60;
-}
+    /* Pagination */
+    .pagination {
+      margin-top: 20px;
+      text-align: center;
+    }
 
-.badge.suspended {
-  color: #e74c3c;
-}
+    .pagination button {
+      padding: 6px 12px;
+      margin: 0 5px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      background-color: #f2f2f2;
+    }
 
-/* Pagination */
-.pagination {
-  margin-top: 20px;
-  text-align: center;
-}
+    .pagination button:disabled {
+      color: #aaa;
+      background-color: #eee;
+      cursor: not-allowed;
+    }
 
-.pagination button {
-  padding: 6px 12px;
-  margin: 0 5px;
-  cursor: pointer;
-  border: 1px solid #ccc;
-  background-color: #f2f2f2;
-}
+    /* Delete button */
+    #deleteSelectedBtn {
+      margin-top: 20px;
+    }
 
-.pagination button:disabled {
-  color: #aaa;
-  background-color: #eee;
-  cursor: not-allowed;
-}
+    /* Modal styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+    }
 
-/* Delete button */
-#deleteSelectedBtn {
-  margin-top: 20px;
-}
+    .modal-content {
+      background: white;
+      padding: 20px;
+      max-width: 400px;
+      margin: 100px auto;
+      border-radius: 8px;
+    }
 
-/* Modal styles */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  background: white;
-  padding: 20px;
-  max-width: 400px;
-  margin: 100px auto;
-  border-radius: 8px;
-}
-
-.modal-content input {
-  width: 100%;
-  padding: 8px;
-  margin-top: 10px;
-}
+    .modal-content input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -208,42 +202,44 @@ tbody tr:hover {
 
   <div class="container">
     <!-- Top bar -->
-<div class="top-bar">
-  <h1>View Users</h1>
-  <span id="userCount">Total Users: 0</span>
-</div>
+    <div class="top-bar">
+      <h1>View Users</h1>
+      <span id="userCount">Total Users: 0</span>
+    </div>
 
-<p style="text-align: left; margin-bottom: 10px;">
-  <strong>Status legend:</strong> <span style="color: green;">Active</span> = user is enabled, <span style="color: red;">Suspended</span> = user is disabled
-</p>
+    <p style="text-align: left; margin-bottom: 10px;">
+      <strong>Status legend:</strong>
+      <span style="color: green;">Active</span> = user is enabled,
+      <span style="color: red;">Suspended</span> = user is disabled
+    </p>
 
-<!-- Unified search + filter bar -->
-<div class="search-filter-bar">
-  <input type="text" id="searchInput" placeholder="Search by name or email" />
-  <button id="searchBtn">Search</button>
-  <button id="clearSearchBtn">Clear</button>
+    <!-- Unified search + filter bar -->
+    <div class="search-filter-bar">
+      <input type="text" id="searchInput" placeholder="Search by name or email" />
+      <button id="searchBtn">Search</button>
+      <button id="clearSearchBtn">Clear</button>
 
-  <label for="roleFilter" class="filter-label">Filter by Role:</label>
-  <select id="roleFilter">
-    <option value="">All Roles</option>
-    <option value="admin">Admin</option>
-    <option value="vendor">Vendor</option>
-    <option value="cardholder">Cardholder</option>
-    <option value="parent">Parent</option>
-    <option value="student">Student</option>
-    <option value="senior">Senior</option>
-  </select>
+      <label for="roleFilter" class="filter-label">Filter by Role:</label>
+      <select id="roleFilter">
+        <option value="">All Roles</option>
+        <option value="admin">Admin</option>
+        <option value="vendor">Vendor</option>
+        <option value="cardholder">Cardholder</option>
+        <option value="parent">Parent</option>
+        <option value="student">Student</option>
+        <option value="senior">Senior</option>
+      </select>
 
-  <label for="statusFilter" class="filter-label">Filter by Status:</label>
-  <select id="statusFilter">
-    <option value="">All Statuses</option>
-    <option value="active">Active</option>
-    <option value="suspended">Suspended</option>
-  </select>
-</div>
+      <label for="statusFilter" class="filter-label">Filter by Status:</label>
+      <select id="statusFilter">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="suspended">Suspended</option>
+      </select>
+    </div>
 
     <!-- Table -->
-    <table style="width: 100%; border-collapse: collapse;">
+    <table>
       <thead>
         <tr>
           <th><input type="checkbox" id="selectAllCheckbox" /></th>
@@ -261,14 +257,14 @@ tbody tr:hover {
     </table>
 
     <!-- Pagination -->
-    <div class="pagination" style="margin-top: 20px;">
-      <button id="prevBtn" disabled style="padding: 6px 12px;">Previous</button>
-      <span id="paginationInfo" style="margin: 0 10px;">Page 1</span>
-      <button id="nextBtn" disabled style="padding: 6px 12px;">Next</button>
+    <div class="pagination">
+      <button id="prevBtn" disabled>Previous</button>
+      <span id="paginationInfo">Page 1</span>
+      <button id="nextBtn" disabled>Next</button>
     </div>
 
     <!-- Delete Selected -->
-    <div id="deleteSelectedContainer" style="margin-top: 20px;">
+    <div id="deleteSelectedContainer">
       <button id="deleteSelectedBtn" style="display: none; background-color: #c0392b; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer;">
         Delete Selected
       </button>
@@ -276,10 +272,10 @@ tbody tr:hover {
   </div>
 
   <!-- Modal -->
-  <div id="modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
-    <div class="modal-content" style="background: white; padding: 20px; max-width: 400px; margin: 100px auto; border-radius: 8px;">
+  <div id="modal" class="modal" style="display: none;">
+    <div class="modal-content">
       <p id="modalMessage"></p>
-      <input type="text" id="modalInput" placeholder="Type DELETE to confirm" style="display: none; width: 100%; margin-top: 10px;" />
+      <input type="text" id="modalInput" placeholder="Type DELETE to confirm" style="display: none;" />
       <div style="margin-top: 20px; display: flex; justify-content: space-between;">
         <button id="confirmModalBtn">Confirm</button>
         <button id="cancelModalBtn">Cancel</button>
