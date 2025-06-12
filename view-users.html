@@ -6,20 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
+    .badge {
+      padding: 4px 8px;
+      border-radius: 5px;
+      font-size: 12px;
+      color: white;
+    }
+
+    .green {
+      background-color: #27ae60;
+    }
+
+    .red {
+      background-color: #c0392b;
+    }
+
     .instructions {
       text-align: left;
-      font-size: 14px;
-      margin-bottom: 15px;
-      color: #444;
-    }
-    .badge-suspended {
-      background-color: #e74c3c;
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      display: inline-block;
-      margin-right: 6px;
+      margin-bottom: 10px;
+      font-style: italic;
+      color: #555;
     }
   </style>
 </head>
@@ -45,9 +51,9 @@
       <span id="userCount">Total Users: 0</span>
     </div>
 
-    <div class="instructions">
-      🔴 <strong>Suspended</strong> users will show a red badge. Click <em>Reinstate</em> to reactivate their account.
-    </div>
+    <p class="instructions">
+      Suspended users will show a red badge under Status. Use the Actions dropdown to suspend or reinstate users.
+    </p>
 
     <div class="search-bar">
       <input type="text" id="searchInput" placeholder="Search by name or email" />
@@ -62,7 +68,8 @@
           <th class="sortable" data-column="lastName">Last Name <span class="arrow"></span></th>
           <th class="sortable" data-column="email">Email <span class="arrow"></span></th>
           <th class="sortable" data-column="role">Role <span class="arrow"></span></th>
-          <th>Actions / Status</th>
+          <th>Status</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="userTableBody">
