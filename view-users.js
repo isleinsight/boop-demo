@@ -14,7 +14,8 @@ import {
   deleteDoc,
   addDoc,
   query,
-  orderBy
+  orderBy,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -106,18 +107,17 @@ async function handleAction(user, action) {
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
       filteredUsers = filteredUsers.filter(u => u.id !== user.id);
-    } else {
-      const ref = doc(db, "users", user.id);
-      await ref.update({ status: action === "suspend" ? "suspended" : "active" });
+    } else if (action === "suspend" || action === "unsuspend") {
+      const newStatus = action === "suspend" ? "suspended" : "active";
+      await updateDoc(doc(db, "users", user.id), { status: newStatus });
     }
 
     loadTable();
   } catch (err) {
     console.error("Action failed:", err);
-    alert("Failed to perform action.");
+    alert("Failed to perform action: " + err.message);
   }
 }
-
 
 async function loadUsers() {
   const q = query(collection(db, "users"), orderBy("firstName"));
@@ -138,7 +138,6 @@ function renderTablePage() {
   pageUsers.forEach(user => {
     const row = document.createElement("tr");
 
-    // Checkbox
     const checkboxTd = document.createElement("td");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -146,7 +145,6 @@ function renderTablePage() {
     checkbox.dataset.userId = user.id;
     checkboxTd.appendChild(checkbox);
 
-    // First name, last name, email, role
     const firstNameTd = document.createElement("td");
     firstNameTd.textContent = user.firstName || "";
 
@@ -159,11 +157,9 @@ function renderTablePage() {
     const roleTd = document.createElement("td");
     roleTd.textContent = user.role || "";
 
-    // Status
     const statusTd = document.createElement("td");
     statusTd.appendChild(createBadge(user.status || "active"));
 
-    // Actions
     const actionsTd = document.createElement("td");
     actionsTd.appendChild(createDropdown(user));
 
