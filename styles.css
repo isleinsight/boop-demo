@@ -1,4 +1,4 @@
-/* General styles */
+/* === General styles === */
 body {
   font-family: 'Poppins', sans-serif;
   background: #f4f7fa;
@@ -6,14 +6,18 @@ body {
   padding: 0;
 }
 
-.bottom-bar {
-  display: flex;
-  justify-content: flex-start;
-  margin-top: 20px;
+h1 {
+  color: #000000;
+  font-size: 2em;
+  margin-bottom: 20px;
 }
 
+p {
+  color: #334e68;
+  font-size: 1.1em;
+}
 
-/* Navbar */
+/* === Navbar === */
 nav {
   background-color: #102a43;
   padding: 12px 20px;
@@ -38,29 +42,28 @@ nav {
   gap: 15px;
 }
 
- .nav-right a {
-      margin-left: 12px;
-      text-decoration: none;
-      color: white;
-      background: none;
-      border: none;
-      font-size: 0.95em;
-      cursor: pointer;
-    }
+.nav-right a {
+  margin-left: 12px;
+  text-decoration: none;
+  color: white;
+  background: none;
+  border: none;
+  font-size: 0.95em;
+  cursor: pointer;
+}
 
 .nav-right a:hover {
   text-decoration: underline;
   color: #90cdf4;
 }
 
-/* Page layout */
+/* === Page layout === */
 .container {
   max-width: 1100px;
   margin: 20px auto;
   padding: 40px 30px;
   background: white;
   border-radius: 12px;
-  text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
@@ -71,43 +74,14 @@ nav {
   margin-bottom: 20px;
 }
 
-
-h1 {
-  color: #000000;
-  font-size: 2em;
-  margin-bottom: 20px;
-}
-
-p {
-  color: #334e68;
-  font-size: 1.1em;
-
-}
-
-/* Buttons */
-.button-grid {
+.bottom-bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  justify-content: center;
+  justify-content: flex-start;
+  margin-top: 20px;
+  text-align: left;
 }
 
-.button-grid a {
-  display: inline-block;
-  background-color: #2f80ed;
-  color: white;
-  padding: 12px 20px;
-  text-decoration: none;
-  border-radius: 8px;
-  transition: background-color 0.3s ease;
-}
-
-.button-grid a:hover {
-  background-color: #1c60b3;
-}
-
-
-/* Input fields */
+/* === Forms & Inputs === */
 form input {
   display: block;
   width: 100%;
@@ -119,7 +93,6 @@ form input {
   box-sizing: border-box;
 }
 
-/* Submit button */
 form button {
   background-color: #2f80ed;
   color: white;
@@ -136,14 +109,56 @@ form button:hover {
   background-color: #1c60b3;
 }
 
-/* Error or status message */
 #loginStatus {
   margin-top: 15px;
   font-size: 0.95em;
 }
 
+/* === Buttons === */
+.button-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+}
 
-/* Tables */
+.button-grid a {
+  background-color: #2f80ed;
+  color: white;
+  padding: 12px 20px;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.button-grid a:hover {
+  background-color: #1c60b3;
+}
+
+.btnEdit {
+  display: inline-block;
+  background-color: #007BFF;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+  border: none;
+  margin-bottom: 15px;
+  text-decoration: none;
+}
+
+.btnEdit:hover {
+  background-color: #0056b3;
+  cursor: pointer;
+}
+
+.btn-wrapper {
+  margin-bottom: 20px;
+}
+
+/* === Tables === */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -153,49 +168,65 @@ table {
 
 th, td {
   padding: 12px 15px;
+  border: 1px solid #ccc;
   text-align: left;
-  border-bottom: 1px solid #ddd;
 }
 
 th {
   background-color: #f0f4f8;
   font-weight: 600;
   color: #102a43;
+  cursor: pointer;
+  position: relative;
+}
+
+th .sort-label::after {
+  content: "";
+  margin-left: 6px;
+  font-size: 0.8em;
+}
+
+th.sortable .arrow::after {
+  content: '';
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.8em;
+}
+
+th.sorted-asc .arrow::after {
+  content: '▲';
+}
+
+th.sorted-desc .arrow::after {
+  content: '▼';
 }
 
 tr:hover {
   background-color: #f9fafb;
 }
 
-.actions-button {
-  padding: 6px 12px;
-  font-size: 0.9em;
+/* === Actions & Dropdown === */
+.action-btn {
+  background-color: #2f80ed;
+  color: white;
   border: none;
   border-radius: 4px;
-  background-color: #f56565;
-  color: white;
+  padding: 6px 12px;
+  font-size: 0.9em;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.actions-button:hover {
-  background-color: #c53030;
+.action-btn:hover .dropdown-icon {
+  transform: rotate(180deg);
+  transition: transform 0.2s ease-in-out;
 }
 
-
-
-select {
-  display: block;
-  width: 100%;
-  margin-bottom: 20px;
-  padding: 22px;
-  font-size: 1em;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  box-sizing: border-box;
+.dropdown-icon {
+  font-size: 0.75em;
 }
-
-
 
 .dropdown {
   position: relative;
@@ -215,7 +246,7 @@ select {
 .dropdown-content {
   display: none;
   position: absolute;
-  background-color: #f9f9f9;
+  background-color: white;
   min-width: 140px;
   box-shadow: 0 8px 16px rgba(0,0,0,0.2);
   z-index: 1;
@@ -239,176 +270,57 @@ select {
   display: block;
 }
 
-
-th, td {
-      padding: 12px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-
-    th {
-      background-color: #f1f5f9;
-      cursor: pointer;
-      position: relative;
-    }
-
-th .sort-label::after {
-  content: "";
-  margin-left: 6px;
-  font-size: 0.8em;
+/* === Search Bar === */
+.search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-th.sortable {
-  cursor: pointer;
+.search-bar input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
 }
 
-th.sortable .arrow::after {
-  content: '';
-  display: inline-block;
-  margin-left: 6px;
-  font-size: 0.8em;
-}
-
-th.sorted-asc .arrow::after {
-  content: '▲';
-}
-
-th.sorted-desc .arrow::after {
-  content: '▼';
-}
-
-
-.action-btn {
+.search-bar button {
+  padding: 10px 18px;
+  border: none;
   background-color: #2f80ed;
   color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 0.9em;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dropdown-icon {
-  font-size: 0.75em;
-}
-
-.action-btn:hover .dropdown-icon {
-  transform: rotate(180deg);
-  transition: transform 0.2s ease-in-out;
-}
-
-
-.btnEdit {
-  display: inline-block;
-  background-color: #007BFF; /* Bootstrap blue */
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 5px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
-  border: none;
-  margin-bottom: 15px;
-}
-
-.btnEdit:hover {
-  background-color: #0056b3;
+  border-radius: 6px;
   cursor: pointer;
 }
 
-.btn-wrapper {
+.search-bar button:hover {
+  background-color: #1c60b3;
+}
+
+/* === Select Fields === */
+select {
+  display: block;
+  width: 100%;
   margin-bottom: 20px;
+  padding: 12px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
 }
 
+/* === Pagination === */
+.pagination {
+  margin-top: 20px;
+  text-align: center;
+}
 
- .search-bar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
+.pagination button {
+  padding: 8px 16px;
+  margin: 0 8px;
+}
 
-    .search-bar input {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-
-    .search-bar button {
-      padding: 10px 18px;
-      border: none;
-      background-color: #2f80ed;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .search-bar button:hover {
-      background-color: #1c60b3;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 0.95em;
-    }
-
-
-
-   .dropdown {
-      position: relative;
-      display: inline-block;
-    }
-
-    .action-btn {
-      background-color: #2f80ed;
-      color: white;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 0.85em;
-    }
-
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      background-color: white;
-      min-width: 120px;
-      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-      z-index: 1;
-    }
-
-    .dropdown-content a {
-      color: black;
-      padding: 10px 12px;
-      text-decoration: none;
-      display: block;
-      font-size: 0.85em;
-    }
-
-    .dropdown-content a:hover {
-      background-color: #f0f0f0;
-    }
-
-    .dropdown:hover .dropdown-content {
-      display: block;
-    }
-
-    .pagination {
-      margin-top: 20px;
-      text-align: center;
-    }
-
-    .pagination button {
-      padding: 8px 16px;
-      margin: 0 8px;
-
+/* === Badges & Alerts === */
 .badge-danger {
   background-color: #dc3545;
   color: white;
