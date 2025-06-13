@@ -32,30 +32,49 @@
 
   
 
-    <!-- Unified search + filter bar -->
-    <div class="search-filter-bar">
-      <input type="text" id="searchInput" placeholder="Search by name or email" />
-      <button id="searchBtn">Search</button>
-      <button id="clearSearchBtn">Clear</button>
+<!-- Unified search + filter bar -->
+<div style="display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; overflow-x: auto; margin-bottom: 20px; padding-bottom: 5px; white-space: nowrap;">
+  <input type="text" id="searchInput" placeholder="Search by name or email"
+    style="padding: 8px 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; height: 36px; flex-shrink: 0;" />
 
-      <label for="roleFilter" class="filter-label">Filter by Role:</label>
-      <select id="roleFilter">
-        <option value="">All Roles</option>
-        <option value="admin">Admin</option>
-        <option value="vendor">Vendor</option>
-        <option value="cardholder">Cardholder</option>
-        <option value="parent">Parent</option>
-        <option value="student">Student</option>
-        <option value="senior">Senior</option>
-      </select>
+  <button id="searchBtn"
+    style="padding: 8px 12px; font-size: 14px; background-color: #2f80ed; color: white; border: none; border-radius: 4px; height: 36px; flex-shrink: 0;">
+    Search
+  </button>
 
-      <label for="statusFilter" class="filter-label">Filter by Status:</label>
-      <select id="statusFilter">
-        <option value="">All Statuses</option>
-        <option value="active">Active</option>
-        <option value="suspended">Suspended</option>
-      </select>
-    </div>
+  <button id="clearSearchBtn"
+    style="padding: 8px 12px; font-size: 14px; background-color: #ccc; color: black; border: none; border-radius: 4px; height: 36px; flex-shrink: 0;">
+    Clear
+  </button>
+
+  <label for="roleFilter"
+    style="font-weight: bold; margin: 0; padding-top: 3px; white-space: nowrap; flex-shrink: 0;">
+    Filter by Role:
+  </label>
+
+  <select id="roleFilter"
+    style="padding: 8px 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; height: 36px; flex-shrink: 0;">
+    <option value="">All Roles</option>
+    <option value="admin">Admin</option>
+    <option value="vendor">Vendor</option>
+    <option value="cardholder">Cardholder</option>
+    <option value="parent">Parent</option>
+    <option value="student">Student</option>
+    <option value="senior">Senior</option>
+  </select>
+
+  <label for="statusFilter"
+    style="font-weight: bold; margin: 0; padding-top: 3px; white-space: nowrap; flex-shrink: 0;">
+    Filter by Status:
+  </label>
+
+  <select id="statusFilter"
+    style="padding: 8px 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; height: 36px; flex-shrink: 0;">
+    <option value="">All Statuses</option>
+    <option value="active">Active</option>
+    <option value="suspended">Suspended</option>
+  </select>
+</div>
 
     <!-- Table -->
     <table>
