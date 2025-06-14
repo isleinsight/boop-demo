@@ -249,17 +249,17 @@
 
     <!-- Table -->
     <table>
-      <thead>
-        <tr>
-          <th><input type="checkbox" id="selectAllCheckbox" /></th>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>Email</th>
-          <th>Role</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
+  <thead>
+  <tr>
+    <th><input type="checkbox" id="selectAllCheckbox" /></th>
+    <th class="sortable" data-sort="firstName">First Name <span class="arrow"></span></th>
+    <th class="sortable" data-sort="lastName">Last Name <span class="arrow"></span></th>
+    <th class="sortable" data-sort="email">Email <span class="arrow"></span></th>
+    <th>Role</th>
+    <th>Status</th>
+    <th>Actions</th>
+  </tr>
+</thead>
       <tbody id="userTableBody">
         <!-- Injected by JS -->
       </tbody>
