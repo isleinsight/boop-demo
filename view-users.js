@@ -32,7 +32,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM Elements
+// DOM elements
 const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
@@ -80,7 +80,7 @@ function createDropdown(user) {
       return;
     }
 
-    if (action === "suspend" || action === "unsuspend" || action === "signout") {
+    if (["suspend", "unsuspend", "signout"].includes(action)) {
       const confirmed = confirm(`Are you sure you want to ${action} this user?`);
       if (!confirmed) return;
     }
@@ -225,6 +225,38 @@ function applyFilters() {
   currentPage = 1;
   renderTablePage();
 }
+
+// Sort functionality
+let currentSort = { field: null, direction: 'asc' };
+
+document.querySelectorAll(".sortable").forEach(header => {
+  header.addEventListener("click", () => {
+    const field = header.dataset.sort;
+
+    if (currentSort.field === field) {
+      currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
+    } else {
+      currentSort.field = field;
+      currentSort.direction = "asc";
+    }
+
+    document.querySelectorAll(".sortable").forEach(h => {
+      h.classList.remove("sorted-asc", "sorted-desc");
+    });
+    header.classList.add(currentSort.direction === "asc" ? "sorted-asc" : "sorted-desc");
+
+    filteredUsers.sort((a, b) => {
+      const valA = (a[field] || "").toLowerCase();
+      const valB = (b[field] || "").toLowerCase();
+      if (valA < valB) return currentSort.direction === "asc" ? -1 : 1;
+      if (valA > valB) return currentSort.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    currentPage = 1;
+    renderTablePage();
+  });
+});
 
 // Event Listeners
 searchBtn.addEventListener("click", applyFilters);
