@@ -1,4 +1,3 @@
- 
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -35,6 +34,7 @@ const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
 const logoutBtn = document.getElementById("logoutBtn");
+const actionsDropdown = document.getElementById("actionsDropdown");
 
 let editFirstName, editLastName, editRole, editEmail;
 let viewFirstName, viewLastName, viewRole, viewEmail, viewStatus;
@@ -59,8 +59,6 @@ async function loadUserProfile() {
 
   const user = snap.data();
   currentUserData = user;
-  const statusColor = user.status === "suspended" ? "#e74c3c" : "#27ae60";
-  const statusLabel = user.status === "suspended" ? "Suspended" : "Active";
 
   userInfo.innerHTML = `
     <div>
@@ -90,20 +88,29 @@ async function loadUserProfile() {
     </div>
     <div>
       <span class="label">Status</span>
-      <span class="value" id="viewStatus" style="color: ${statusColor}; font-weight: 600;">${statusLabel}</span>
+      <span class="value" id="viewStatus" style="color: ${user.status === "suspended" ? "#e74c3c" : "#27ae60"};">
+        ${user.status === "suspended" ? "Suspended" : "Active"}
+      </span>
     </div>
+  `;
+
+  // Update dropdown menu
+  const isSuspended = user.status === "suspended";
+  actionsDropdown.innerHTML = `
+    <a href="#" id="toggleSuspendBtn">${isSuspended ? "Unsuspend" : "Suspend"}</a>
+    <a href="#" id="signoutBtn">Force Sign-out</a>
+    <a href="#" id="deleteBtn" style="color: red;">Delete</a>
   `;
 
   editFirstName = document.getElementById("editFirstName");
   editLastName = document.getElementById("editLastName");
-  editEmail = document.getElementById("editEmail");
   editRole = document.getElementById("editRole");
+  editEmail = document.getElementById("editEmail");
 
   viewFirstName = document.getElementById("viewFirstName");
   viewLastName = document.getElementById("viewLastName");
-  viewEmail = document.getElementById("viewEmail");
   viewRole = document.getElementById("viewRole");
-  viewStatus = document.getElementById("viewStatus");
+  viewEmail = document.getElementById("viewEmail");
 
   if (editRole) editRole.value = user.role || "cardholder";
 }
@@ -113,13 +120,13 @@ editBtn?.addEventListener("click", () => {
 
   viewFirstName.style.display = "none";
   viewLastName.style.display = "none";
-  viewEmail.style.display = "none";
   viewRole.style.display = "none";
+  viewEmail.style.display = "none";
 
   editFirstName.style.display = "block";
   editLastName.style.display = "block";
-  editEmail.style.display = "block";
   editRole.style.display = "block";
+  editEmail.style.display = "block";
 
   saveBtn.style.display = "inline-block";
 });
@@ -135,35 +142,43 @@ saveBtn?.addEventListener("click", async () => {
   };
 
   await updateDoc(doc(db, "users", currentUserId), updatedData);
-  alert("Profile updated. Note: Auth email not yet updated.");
+  alert("Profile updated.");
   location.reload();
 });
 
-document.getElementById("suspendBtn")?.addEventListener("click", async () => {
-  const confirmed = confirm("Suspend this user?");
-  if (confirmed) {
-    await logAdminAction("suspend");
-    await updateDoc(doc(db, "users", currentUserId), { status: "suspended" });
-    alert("User suspended.");
+document.addEventListener("click", async (e) => {
+  if (e.target.id === "toggleSuspendBtn") {
+    e.preventDefault();
+    const action = currentUserData.status === "suspended" ? "unsuspend" : "suspend";
+    const confirmed = confirm(`${action === "suspend" ? "Suspend" : "Unsuspend"} this user?`);
+    if (!confirmed) return;
+
+    await logAdminAction(action);
+    const newStatus = action === "suspend" ? "suspended" : "active";
+    await updateDoc(doc(db, "users", currentUserId), { status: newStatus });
+
+    alert(`User ${newStatus === "suspended" ? "suspended" : "unsuspended"}.`);
     location.reload();
   }
-});
 
-document.getElementById("signoutBtn")?.addEventListener("click", async () => {
-  const confirmed = confirm("Force sign out?");
-  if (confirmed) {
-    await logAdminAction("signout");
-    alert("Sign-out action recorded.");
+  if (e.target.id === "signoutBtn") {
+    e.preventDefault();
+    const confirmed = confirm("Force sign out?");
+    if (confirmed) {
+      await logAdminAction("signout");
+      alert("Sign-out action recorded.");
+    }
   }
-});
 
-document.getElementById("deleteBtn")?.addEventListener("click", async () => {
-  const input = prompt("Type DELETE to confirm.");
-  if (input === "DELETE") {
-    await logAdminAction("delete");
-    await deleteDoc(doc(db, "users", currentUserId));
-    alert("User deleted.");
-    window.location.href = "view-users.html";
+  if (e.target.id === "deleteBtn") {
+    e.preventDefault();
+    const input = prompt("Type DELETE to confirm.");
+    if (input === "DELETE") {
+      await logAdminAction("delete");
+      await deleteDoc(doc(db, "users", currentUserId));
+      alert("User deleted.");
+      window.location.href = "view-users.html";
+    }
   }
 });
 
