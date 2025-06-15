@@ -24,36 +24,6 @@
       padding-bottom: 5px;
     }
 
-.dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.dropdown-content {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background-color: white;
-  min-width: 160px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  z-index: 1000;
-  display: none;
-}
-
-.dropdown-content a {
-  display: block;
-  padding: 10px 15px;
-  color: #333;
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.dropdown-content a:hover {
-  background-color: #f1f1f1;
-}
-    
     .user-details-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -195,6 +165,12 @@
   <button id="addStudentBtn" style="display:none;" class="btnEdit">Add Student</button>
 
   <div class="dropdown">
+    <button class="actionsToggleBtn">Actions ▾</button>
+    <div class="dropdown-content" style="display: none;">
+      <a href="#" id="suspendBtn">Suspend</a>
+      <a href="#" id="signoutBtn">Force Sign-out</a>
+      <a href="#" id="deleteBtn" style="color: red;">Delete</a>
+    </div>
   <button id="actionsToggleBtn" class="editBtn">Actions ▾</button>
   <div id="actionsDropdown" class="dropdown-content" style="display: none;">
     <a href="#" id="suspendBtn">Suspend</a>
