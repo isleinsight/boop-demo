@@ -159,23 +159,22 @@
     <a href="view-users.html" class="back-button">← Back to Users</a>
     <h2>User Profile</h2>
 
+    <div style="margin-top: 20px; margin-bottom: 20px;">
+      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+      <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
+      <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
     <div style="margin-top: 20px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
   <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
   <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
   <button id="addStudentBtn" style="display:none;" class="btnEdit">Add Student</button>
 
   <div class="dropdown">
-    <button class="actionsToggleBtn">Actions ▾</button>
+    <button class="btnEdit">Actions ▾</button>
     <div class="dropdown-content" style="display: none;">
       <a href="#" id="suspendBtn">Suspend</a>
       <a href="#" id="signoutBtn">Force Sign-out</a>
       <a href="#" id="deleteBtn" style="color: red;">Delete</a>
     </div>
-  <button id="actionsToggleBtn" class="editBtn">Actions ▾</button>
-  <div id="actionsDropdown" class="dropdown-content" style="display: none;">
-    <a href="#" id="suspendBtn">Suspend</a>
-    <a href="#" id="signoutBtn">Force Sign-out</a>
-    <a href="#" id="deleteBtn" style="color: red;">Delete</a>
   </div>
 </div>
 
