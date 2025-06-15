@@ -37,7 +37,7 @@ const saveBtn = document.getElementById("saveProfileBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 
 let editFirstName, editLastName, editEmail, editRole;
-let viewFirstName, viewLastName, viewEmail, viewRole;
+let viewFirstName, viewLastName, viewEmail, viewRole, viewStatus;
 let currentUserId = null;
 let currentUserData = null;
 
@@ -51,68 +51,74 @@ currentUserId = uid;
 
 // Load user info
 async function loadUserProfile() {
-  const userRef = doc(db, "users", currentUserId);
-  const snap = await getDoc(userRef);
+  try {
+    const userRef = doc(db, "users", currentUserId);
+    const snap = await getDoc(userRef);
 
-  if (!snap.exists()) {
-    alert("User not found.");
-    return;
+    if (!snap.exists()) {
+      alert("User not found.");
+      return;
+    }
+
+    const user = snap.data();
+    currentUserData = user;
+
+    const statusColor = user.status === "suspended" ? "red" : "green";
+
+    userInfo.innerHTML = `
+      <div>
+        <span class="label">First Name</span>
+        <span class="value" id="viewFirstName">${user.firstName || "-"}</span>
+        <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display: none; width: 100%;" />
+      </div>
+      <div>
+        <span class="label">Last Name</span>
+        <span class="value" id="viewLastName">${user.lastName || "-"}</span>
+        <input type="text" id="editLastName" value="${user.lastName || ""}" style="display: none; width: 100%;" />
+      </div>
+      <div>
+        <span class="label">Email</span>
+        <span class="value" id="viewEmail">${user.email || "-"}</span>
+        <input type="email" id="editEmail" value="${user.email || ""}" style="display: none; width: 100%;" />
+      </div>
+      <div>
+        <span class="label">Role</span>
+        <span class="value" id="viewRole">${user.role || "-"}</span>
+        <select id="editRole" style="display: none; width: 100%;">
+          <option value="cardholder">Cardholder</option>
+          <option value="parent">Parent</option>
+          <option value="vendor">Vendor</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div>
+        <span class="label">Status</span>
+        <span class="value" id="viewStatus" style="color: ${statusColor};">${user.status || "active"}</span>
+      </div>
+    `;
+
+    // Assign after DOM is updated
+    editFirstName = document.getElementById("editFirstName");
+    editLastName = document.getElementById("editLastName");
+    editEmail = document.getElementById("editEmail");
+    editRole = document.getElementById("editRole");
+
+    viewFirstName = document.getElementById("viewFirstName");
+    viewLastName = document.getElementById("viewLastName");
+    viewEmail = document.getElementById("viewEmail");
+    viewRole = document.getElementById("viewRole");
+    viewStatus = document.getElementById("viewStatus");
+
+    if (editRole) editRole.value = user.role || "cardholder";
+  } catch (err) {
+    console.error("Error loading user:", err);
+    alert("Failed to load user profile.");
   }
-
-  const user = snap.data();
-  currentUserData = user;
-
-  const statusColor = user.status === "suspended" ? "red" : "green";
-  const statusText = user.status || "active";
-
-  userInfo.innerHTML = `
-    <div>
-      <span class="label">First Name</span>
-      <span class="value" id="viewFirstName">${user.firstName || "-"}</span>
-      <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display: none; width: 100%;" />
-    </div>
-    <div>
-      <span class="label">Last Name</span>
-      <span class="value" id="viewLastName">${user.lastName || "-"}</span>
-      <input type="text" id="editLastName" value="${user.lastName || ""}" style="display: none; width: 100%;" />
-    </div>
-    <div>
-      <span class="label">Email</span>
-      <span class="value" id="viewEmail">${user.email || "-"}</span>
-      <input type="email" id="editEmail" value="${user.email || ""}" style="display: none; width: 100%;" />
-    </div>
-    <div>
-      <span class="label">Role</span>
-      <span class="value" id="viewRole">${user.role || "-"}</span>
-      <select id="editRole" style="display: none; width: 100%;">
-        <option value="cardholder">Cardholder</option>
-        <option value="parent">Parent</option>
-        <option value="vendor">Vendor</option>
-        <option value="admin">Admin</option>
-      </select>
-    </div>
-    <div>
-      <span class="label">Status</span>
-      <span class="value" style="color: ${statusColor}; font-weight: bold;">${statusText}</span>
-    </div>
-  `;
-
-  editFirstName = document.getElementById("editFirstName");
-  editLastName = document.getElementById("editLastName");
-  editEmail = document.getElementById("editEmail");
-  editRole = document.getElementById("editRole");
-
-  viewFirstName = document.getElementById("viewFirstName");
-  viewLastName = document.getElementById("viewLastName");
-  viewEmail = document.getElementById("viewEmail");
-  viewRole = document.getElementById("viewRole");
-
-  if (editRole) editRole.value = user.role || "cardholder";
 }
 
 // Enable edit mode
 editBtn?.addEventListener("click", () => {
-  if (!editFirstName || !editLastName || !editRole || !editEmail) return;
+  if (!editFirstName || !editLastName || !editEmail || !editRole) return;
 
   viewFirstName.style.display = "none";
   viewLastName.style.display = "none";
@@ -140,13 +146,11 @@ saveBtn?.addEventListener("click", async () => {
 
   await updateDoc(doc(db, "users", currentUserId), updatedData);
 
-  // If email changed, log it for Cloud Function to handle Auth update
   if (updatedData.email !== currentUserData.email) {
     await addDoc(collection(db, "adminActions"), {
       uid: currentUserId,
       action: "updateEmail",
       newEmail: updatedData.email,
-      requestedBy: auth.currentUser?.uid || "unknown",
       createdAt: new Date()
     });
   }
@@ -156,30 +160,33 @@ saveBtn?.addEventListener("click", async () => {
 });
 
 // Action buttons
-function updateActionsMenu() {
-  const btn = document.getElementById("suspendBtn");
-  if (!btn || !currentUserData) return;
+document.getElementById("suspendBtn")?.addEventListener("click", async () => {
+  const action = currentUserData.status === "suspended" ? "unsuspend" : "suspend";
+  const confirmed = confirm(`Are you sure you want to ${action} this user?`);
+  if (!confirmed) return;
 
-  const suspended = currentUserData.status === "suspended";
-  btn.textContent = suspended ? "Unsuspend" : "Suspend";
-  btn.dataset.action = suspended ? "unsuspend" : "suspend";
-}
+  await updateDoc(doc(db, "users", currentUserId), {
+    status: action === "suspend" ? "suspended" : "active"
+  });
 
-document.getElementById("suspendBtn")?.addEventListener("click", async (e) => {
-  const action = e.target.dataset.action || "suspend";
-  const confirmMsg = action === "suspend" ? "Suspend this user?" : "Unsuspend this user?";
+  await addDoc(collection(db, "adminActions"), {
+    uid: currentUserId,
+    action,
+    createdAt: new Date()
+  });
 
-  if (confirm(confirmMsg)) {
-    await logAdminAction(action);
-    await updateDoc(doc(db, "users", currentUserId), { status: action === "suspend" ? "suspended" : "active" });
-    alert(\`User \${action === "suspend" ? "suspended" : "unsuspended"}.\`);
-    location.reload();
-  }
+  alert(`User ${action}ed.`);
+  location.reload();
 });
 
 document.getElementById("signoutBtn")?.addEventListener("click", async () => {
-  if (confirm("Force sign out?")) {
-    await logAdminAction("signout");
+  const confirmed = confirm("Force sign out?");
+  if (confirmed) {
+    await addDoc(collection(db, "adminActions"), {
+      uid: currentUserId,
+      action: "signout",
+      createdAt: new Date()
+    });
     alert("Sign-out action recorded.");
   }
 });
@@ -187,22 +194,18 @@ document.getElementById("signoutBtn")?.addEventListener("click", async () => {
 document.getElementById("deleteBtn")?.addEventListener("click", async () => {
   const input = prompt("Type DELETE to confirm.");
   if (input === "DELETE") {
-    await logAdminAction("delete");
+    await addDoc(collection(db, "adminActions"), {
+      uid: currentUserId,
+      action: "delete",
+      createdAt: new Date()
+    });
     await deleteDoc(doc(db, "users", currentUserId));
     alert("User deleted.");
     window.location.href = "view-users.html";
   }
 });
 
-async function logAdminAction(action) {
-  await addDoc(collection(db, "adminActions"), {
-    uid: currentUserId,
-    action,
-    requestedBy: auth.currentUser?.uid || "unknown",
-    createdAt: new Date()
-  });
-}
-
+// Dropdown toggle
 document.getElementById("actionsToggleBtn")?.addEventListener("click", () => {
   const dropdown = document.getElementById("actionsDropdown");
   dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
@@ -212,19 +215,22 @@ document.addEventListener("click", (e) => {
   const toggle = document.getElementById("actionsToggleBtn");
   const menu = document.getElementById("actionsDropdown");
   if (!toggle || !menu) return;
+
   if (!toggle.contains(e.target) && !menu.contains(e.target)) {
     menu.style.display = "none";
   }
 });
 
+// Auth check
 onAuthStateChanged(auth, user => {
   if (!user) {
     window.location.href = "index.html";
   } else {
-    loadUserProfile().then(updateActionsMenu);
+    loadUserProfile();
   }
 });
 
+// Logout
 logoutBtn?.addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
