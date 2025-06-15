@@ -30,54 +30,48 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM elements
+// DOM refs
 const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
-const roleSelect = document.getElementById("editRole");
+const logoutBtn = document.getElementById("logoutBtn");
 
-const editFirstName = document.getElementById("editFirstName");
-const editLastName = document.getElementById("editLastName");
-
-const suspendBtn = document.getElementById("suspendBtn");
-const signoutBtn = document.getElementById("signoutBtn");
-const deleteBtn = document.getElementById("deleteBtn");
-
+let editFirstName, editLastName, editRole;
+let viewFirstName, viewLastName, viewRole;
 let currentUserId = null;
 let currentUserData = null;
 
-// Parse user ID from URL
-const urlParams = new URLSearchParams(window.location.search);
-const uid = urlParams.get("uid");
+// Get UID from URL
+const uid = new URLSearchParams(window.location.search).get("uid");
 if (!uid) {
-  alert("No user ID provided.");
+  alert("User ID not found.");
   window.location.href = "view-users.html";
 }
 currentUserId = uid;
 
-// Load and display user info
+// Load user info
 async function loadUserProfile() {
   const userRef = doc(db, "users", currentUserId);
-  const userSnap = await getDoc(userRef);
+  const snap = await getDoc(userRef);
 
-  if (!userSnap.exists()) {
+  if (!snap.exists()) {
     alert("User not found.");
     return;
   }
 
-  const user = userSnap.data();
+  const user = snap.data();
   currentUserData = user;
 
   userInfo.innerHTML = `
     <div>
       <span class="label">First Name</span>
       <span class="value" id="viewFirstName">${user.firstName || "-"}</span>
-      <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display: none;" />
+      <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display: none; width: 100%;" />
     </div>
     <div>
       <span class="label">Last Name</span>
       <span class="value" id="viewLastName">${user.lastName || "-"}</span>
-      <input type="text" id="editLastName" value="${user.lastName || ""}" style="display: none;" />
+      <input type="text" id="editLastName" value="${user.lastName || ""}" style="display: none; width: 100%;" />
     </div>
     <div>
       <span class="label">Email</span>
@@ -86,7 +80,7 @@ async function loadUserProfile() {
     <div>
       <span class="label">Role</span>
       <span class="value" id="viewRole">${user.role || "-"}</span>
-      <select id="editRole" style="display: none;">
+      <select id="editRole" style="display: none; width: 100%;">
         <option value="cardholder">Cardholder</option>
         <option value="parent">Parent</option>
         <option value="vendor">Vendor</option>
@@ -95,34 +89,37 @@ async function loadUserProfile() {
     </div>
   `;
 
-  // Set selected role
-  const roleSelect = document.getElementById("editRole");
-  if (roleSelect) roleSelect.value = user.role || "cardholder";
+  // Assign after DOM is updated
+  editFirstName = document.getElementById("editFirstName");
+  editLastName = document.getElementById("editLastName");
+  editRole = document.getElementById("editRole");
 
-  // Re-assign editable inputs
-  window.editFirstName = document.getElementById("editFirstName");
-  window.editLastName = document.getElementById("editLastName");
-  window.viewFirstName = document.getElementById("viewFirstName");
-  window.viewLastName = document.getElementById("viewLastName");
-  window.viewRole = document.getElementById("viewRole");
-  window.editRole = document.getElementById("editRole");
+  viewFirstName = document.getElementById("viewFirstName");
+  viewLastName = document.getElementById("viewLastName");
+  viewRole = document.getElementById("viewRole");
+
+  if (editRole) editRole.value = user.role || "cardholder";
 }
 
-// Toggle to edit mode
-editBtn.addEventListener("click", () => {
+// Enable edit mode
+editBtn?.addEventListener("click", () => {
+  if (!editFirstName || !editLastName || !editRole) return;
+
   viewFirstName.style.display = "none";
   viewLastName.style.display = "none";
   viewRole.style.display = "none";
 
-  editFirstName.style.display = "inline-block";
-  editLastName.style.display = "inline-block";
-  editRole.style.display = "inline-block";
+  editFirstName.style.display = "block";
+  editLastName.style.display = "block";
+  editRole.style.display = "block";
 
   saveBtn.style.display = "inline-block";
 });
 
-// Save updated info
-saveBtn.addEventListener("click", async () => {
+// Save edits
+saveBtn?.addEventListener("click", async () => {
+  if (!editFirstName || !editLastName || !editRole) return;
+
   const updatedData = {
     firstName: editFirstName.value.trim(),
     lastName: editLastName.value.trim(),
@@ -130,28 +127,31 @@ saveBtn.addEventListener("click", async () => {
   };
 
   await updateDoc(doc(db, "users", currentUserId), updatedData);
-  alert("User updated.");
+  alert("Profile updated.");
   location.reload();
 });
 
-// Action handlers
-suspendBtn?.addEventListener("click", async () => {
+// Action buttons (Suspend, Signout, Delete)
+document.getElementById("suspendBtn")?.addEventListener("click", async () => {
   const confirmed = confirm("Suspend this user?");
   if (confirmed) {
-    await updateUserStatus("suspended");
+    await logAdminAction("suspend");
+    await updateDoc(doc(db, "users", currentUserId), { status: "suspended" });
+    alert("User suspended.");
+    location.reload();
   }
 });
 
-signoutBtn?.addEventListener("click", async () => {
-  const confirmed = confirm("Force sign out this user?");
+document.getElementById("signoutBtn")?.addEventListener("click", async () => {
+  const confirmed = confirm("Force sign out?");
   if (confirmed) {
     await logAdminAction("signout");
     alert("Sign-out action recorded.");
   }
 });
 
-deleteBtn?.addEventListener("click", async () => {
-  const input = prompt("Type DELETE to confirm deletion.");
+document.getElementById("deleteBtn")?.addEventListener("click", async () => {
+  const input = prompt("Type DELETE to confirm.");
   if (input === "DELETE") {
     await logAdminAction("delete");
     await deleteDoc(doc(db, "users", currentUserId));
@@ -160,7 +160,7 @@ deleteBtn?.addEventListener("click", async () => {
   }
 });
 
-// Helpers
+// Action log helper
 async function logAdminAction(action) {
   await addDoc(collection(db, "adminActions"), {
     uid: currentUserId,
@@ -169,23 +169,33 @@ async function logAdminAction(action) {
   });
 }
 
-async function updateUserStatus(status) {
-  await logAdminAction(status === "suspended" ? "suspend" : "unsuspend");
-  await updateDoc(doc(db, "users", currentUserId), { status });
-  alert(`User status updated to ${status}`);
-  location.reload();
-}
+// Toggle dropdown
+document.getElementById("actionsToggleBtn")?.addEventListener("click", () => {
+  const dropdown = document.getElementById("actionsDropdown");
+  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+});
 
-// Auth check
-onAuthStateChanged(auth, user => {
-  if (user) {
-    loadUserProfile();
-  } else {
-    window.location.href = "index.html";
+document.addEventListener("click", (e) => {
+  const toggle = document.getElementById("actionsToggleBtn");
+  const menu = document.getElementById("actionsDropdown");
+  if (!toggle || !menu) return;
+
+  if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = "none";
   }
 });
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
+// Auth check
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window.location.href = "index.html";
+  } else {
+    loadUserProfile();
+  }
+});
+
+// Logout
+logoutBtn?.addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
