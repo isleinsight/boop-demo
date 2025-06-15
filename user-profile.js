@@ -87,6 +87,7 @@ async function loadUserProfile() {
         <select id="editRole" style="display: none; width: 100%;">
           <option value="cardholder">Cardholder</option>
           <option value="parent">Parent</option>
+          <option value="student">Student</option>
           <option value="vendor">Vendor</option>
           <option value="admin">Admin</option>
         </select>
