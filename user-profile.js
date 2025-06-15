@@ -1,3 +1,4 @@
+ 
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -30,18 +31,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM refs
 const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 
-let editFirstName, editLastName, editRole;
-let viewFirstName, viewLastName, viewRole;
+let editFirstName, editLastName, editRole, editEmail;
+let viewFirstName, viewLastName, viewRole, viewEmail, viewStatus;
 let currentUserId = null;
 let currentUserData = null;
 
-// Get UID from URL
 const uid = new URLSearchParams(window.location.search).get("uid");
 if (!uid) {
   alert("User ID not found.");
@@ -49,7 +48,6 @@ if (!uid) {
 }
 currentUserId = uid;
 
-// Load user info
 async function loadUserProfile() {
   const userRef = doc(db, "users", currentUserId);
   const snap = await getDoc(userRef);
@@ -61,6 +59,8 @@ async function loadUserProfile() {
 
   const user = snap.data();
   currentUserData = user;
+  const statusColor = user.status === "suspended" ? "#e74c3c" : "#27ae60";
+  const statusLabel = user.status === "suspended" ? "Suspended" : "Active";
 
   userInfo.innerHTML = `
     <div>
@@ -76,6 +76,7 @@ async function loadUserProfile() {
     <div>
       <span class="label">Email</span>
       <span class="value" id="viewEmail">${user.email || "-"}</span>
+      <input type="text" id="editEmail" value="${user.email || ""}" style="display: none; width: 100%;" />
     </div>
     <div>
       <span class="label">Role</span>
@@ -87,51 +88,57 @@ async function loadUserProfile() {
         <option value="admin">Admin</option>
       </select>
     </div>
+    <div>
+      <span class="label">Status</span>
+      <span class="value" id="viewStatus" style="color: ${statusColor}; font-weight: 600;">${statusLabel}</span>
+    </div>
   `;
 
-  // Assign after DOM is updated
   editFirstName = document.getElementById("editFirstName");
   editLastName = document.getElementById("editLastName");
+  editEmail = document.getElementById("editEmail");
   editRole = document.getElementById("editRole");
 
   viewFirstName = document.getElementById("viewFirstName");
   viewLastName = document.getElementById("viewLastName");
+  viewEmail = document.getElementById("viewEmail");
   viewRole = document.getElementById("viewRole");
+  viewStatus = document.getElementById("viewStatus");
 
   if (editRole) editRole.value = user.role || "cardholder";
 }
 
-// Enable edit mode
 editBtn?.addEventListener("click", () => {
-  if (!editFirstName || !editLastName || !editRole) return;
+  if (!editFirstName || !editLastName || !editRole || !editEmail) return;
 
   viewFirstName.style.display = "none";
   viewLastName.style.display = "none";
+  viewEmail.style.display = "none";
   viewRole.style.display = "none";
 
   editFirstName.style.display = "block";
   editLastName.style.display = "block";
+  editEmail.style.display = "block";
   editRole.style.display = "block";
 
   saveBtn.style.display = "inline-block";
 });
 
-// Save edits
 saveBtn?.addEventListener("click", async () => {
-  if (!editFirstName || !editLastName || !editRole) return;
+  if (!editFirstName || !editLastName || !editRole || !editEmail) return;
 
   const updatedData = {
     firstName: editFirstName.value.trim(),
     lastName: editLastName.value.trim(),
-    role: editRole.value
+    role: editRole.value,
+    email: editEmail.value.trim()
   };
 
   await updateDoc(doc(db, "users", currentUserId), updatedData);
-  alert("Profile updated.");
+  alert("Profile updated. Note: Auth email not yet updated.");
   location.reload();
 });
 
-// Action buttons (Suspend, Signout, Delete)
 document.getElementById("suspendBtn")?.addEventListener("click", async () => {
   const confirmed = confirm("Suspend this user?");
   if (confirmed) {
@@ -160,7 +167,6 @@ document.getElementById("deleteBtn")?.addEventListener("click", async () => {
   }
 });
 
-// Action log helper
 async function logAdminAction(action) {
   await addDoc(collection(db, "adminActions"), {
     uid: currentUserId,
@@ -169,7 +175,6 @@ async function logAdminAction(action) {
   });
 }
 
-// Toggle dropdown
 document.getElementById("actionsToggleBtn")?.addEventListener("click", () => {
   const dropdown = document.getElementById("actionsDropdown");
   dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
@@ -185,7 +190,6 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// Auth check
 onAuthStateChanged(auth, user => {
   if (!user) {
     window.location.href = "index.html";
@@ -194,7 +198,6 @@ onAuthStateChanged(auth, user => {
   }
 });
 
-// Logout
 logoutBtn?.addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "index.html";
