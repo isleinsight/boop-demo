@@ -67,6 +67,11 @@ async function loadUserProfile() {
     <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
     <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
 
+    <div><span class="label">Status</span>
+    <span class="value" id="viewStatus" style="color: ${user.status === "suspended" ? "red" : "green"};">
+      ${user.status ? user.status.charAt(0).toUpperCase() + user.status.slice(1) : "-"}
+    </span></div>
+
     <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
     <select id="editRole" style="display:none; width: 100%;">
       <option value="cardholder">Cardholder</option>
