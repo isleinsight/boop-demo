@@ -11,7 +11,10 @@ import {
   updateDoc,
   deleteDoc,
   addDoc,
-  collection
+  collection,
+  query,
+  where,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -32,118 +35,122 @@ const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const addStudentBtn = document.getElementById("addStudentBtn");
+const parentSection = document.getElementById("parentSection");
+const studentSection = document.getElementById("studentSection");
+const parentNameEl = document.getElementById("parentName");
+const parentEmailEl = document.getElementById("parentEmail");
+const assignedStudentsList = document.getElementById("assignedStudentsList");
 
-let editFirstName, editLastName, editRole;
-let viewFirstName, viewLastName, viewRole, viewEmail;
-let currentUserId = null;
+let editFirstName, editLastName, editEmail, editRole;
+let currentUserId = new URLSearchParams(window.location.search).get("uid");
 let currentUserData = null;
 
-const uid = new URLSearchParams(window.location.search).get("uid");
-if (!uid) {
+if (!currentUserId) {
   alert("User ID not found.");
   window.location.href = "view-users.html";
 }
-currentUserId = uid;
 
 async function loadUserProfile() {
   const userRef = doc(db, "users", currentUserId);
   const snap = await getDoc(userRef);
-
-  if (!snap.exists()) {
-    alert("User not found.");
-    return;
-  }
-
+  if (!snap.exists()) return alert("User not found.");
   const user = snap.data();
   currentUserData = user;
 
   userInfo.innerHTML = `
-    <div>
-      <span class="label">First Name</span>
-      <span class="value" id="viewFirstName">${user.firstName || "-"}</span>
-      <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display: none; width: 100%;" />
-    </div>
-    <div>
-      <span class="label">Last Name</span>
-      <span class="value" id="viewLastName">${user.lastName || "-"}</span>
-      <input type="text" id="editLastName" value="${user.lastName || ""}" style="display: none; width: 100%;" />
-    </div>
-    <div>
-      <span class="label">Email</span>
-      <span class="value" id="viewEmail">${user.email || "-"}</span>
-      <input type="email" id="editEmail" value="${user.email || ""}" style="display: none; width: 100%;" />
-    </div>
-    <div>
-      <span class="label">Role</span>
-      <span class="value" id="viewRole">${user.role || "-"}</span>
-      <select id="editRole" style="display: none; width: 100%;">
-        <option value="cardholder">Cardholder</option>
-        <option value="parent">Parent</option>
-        <option value="vendor">Vendor</option>
-        <option value="admin">Admin</option>
-        <option value="student">Student</option>
-      </select>
-    </div>
+    <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.firstName || "-"}</span>
+    <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display:none; width: 100%;" /></div>
+
+    <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.lastName || "-"}</span>
+    <input type="text" id="editLastName" value="${user.lastName || ""}" style="display:none; width: 100%;" /></div>
+
+    <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
+    <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
+
+    <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
+    <select id="editRole" style="display:none; width: 100%;">
+      <option value="cardholder">Cardholder</option>
+      <option value="parent">Parent</option>
+      <option value="vendor">Vendor</option>
+      <option value="admin">Admin</option>
+      <option value="student">Student</option>
+    </select></div>
   `;
 
   editFirstName = document.getElementById("editFirstName");
   editLastName = document.getElementById("editLastName");
+  editEmail = document.getElementById("editEmail");
   editRole = document.getElementById("editRole");
 
-  viewFirstName = document.getElementById("viewFirstName");
-  viewLastName = document.getElementById("viewLastName");
-  viewRole = document.getElementById("viewRole");
-  viewEmail = document.getElementById("viewEmail");
-
-  if (editRole) editRole.value = user.role || "cardholder";
-
-  // Show Add Student button if role is parent
-  if (user.role?.toLowerCase() === "parent" && addStudentBtn) {
+  if ((user.role || "").toLowerCase() === "parent") {
     addStudentBtn.style.display = "inline-block";
+    studentSection.style.display = "block";
+    loadAssignedStudents(currentUserId);
+  }
+
+  if ((user.role || "").toLowerCase() === "student" && user.parentId) {
+    parentSection.style.display = "block";
+    const parentSnap = await getDoc(doc(db, "users", user.parentId));
+    if (parentSnap.exists()) {
+      const parent = parentSnap.data();
+      parentNameEl.innerHTML = `<a href="user-profile.html?uid=${user.parentId}">${parent.firstName} ${parent.lastName}</a>`;
+      parentEmailEl.textContent = parent.email || "-";
+    }
   }
 }
 
-editBtn?.addEventListener("click", () => {
-  if (!editFirstName || !editLastName || !editRole) return;
+async function loadAssignedStudents(parentId) {
+  const q = query(collection(db, "users"), where("parentId", "==", parentId));
+  const snap = await getDocs(q);
+  if (snap.empty) {
+    assignedStudentsList.innerHTML = "<div>No assigned students found.</div>";
+    return;
+  }
 
-  viewFirstName.style.display = "none";
-  viewLastName.style.display = "none";
-  viewRole.style.display = "none";
-  viewEmail.style.display = "none";
+  assignedStudentsList.innerHTML = "";
+  snap.forEach((doc) => {
+    const student = doc.data();
+    const div = document.createElement("div");
+    div.innerHTML = `<span class="label">Name</span>
+                     <span class="value"><a href="user-profile.html?uid=${doc.id}">${student.firstName} ${student.lastName}</a></span>`;
+    assignedStudentsList.appendChild(div);
+  });
+}
+
+editBtn?.addEventListener("click", () => {
+  document.getElementById("viewFirstName").style.display = "none";
+  document.getElementById("viewLastName").style.display = "none";
+  document.getElementById("viewEmail").style.display = "none";
+  document.getElementById("viewRole").style.display = "none";
 
   editFirstName.style.display = "block";
   editLastName.style.display = "block";
+  editEmail.style.display = "block";
   editRole.style.display = "block";
-  document.getElementById("editEmail").style.display = "block";
 
   saveBtn.style.display = "inline-block";
 });
 
 saveBtn?.addEventListener("click", async () => {
-  if (!editFirstName || !editLastName || !editRole) return;
-
-  const updatedData = {
+  const updated = {
     firstName: editFirstName.value.trim(),
     lastName: editLastName.value.trim(),
-    email: document.getElementById("editEmail").value.trim(),
+    email: editEmail.value.trim(),
     role: editRole.value
   };
-
-  await updateDoc(doc(db, "users", currentUserId), updatedData);
+  await updateDoc(doc(db, "users", currentUserId), updated);
   alert("Profile updated.");
   location.reload();
 });
 
-onAuthStateChanged(auth, user => {
+logoutBtn?.addEventListener("click", () => {
+  signOut(auth).then(() => window.location.href = "index.html");
+});
+
+onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "index.html";
   } else {
     loadUserProfile();
   }
-});
-
-logoutBtn?.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
 });
