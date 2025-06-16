@@ -42,6 +42,7 @@ const businessNameEl = document.getElementById("businessName");
 const phoneEl = document.getElementById("phone");
 const categoryEl = document.getElementById("category");
 const approvedEl = document.getElementById("approved");
+const vendorHeader = document.getElementById("vendorHeader");
 
 const redeemBtn = document.getElementById("redeemBtn");
 const redeemModal = document.getElementById("redeemModal");
@@ -70,6 +71,10 @@ onAuthStateChanged(auth, async (user) => {
   vendorEmailEl.textContent = userData.email || "-";
   walletIdEl.textContent = userData.walletId || "N/A";
   walletBalanceEl.textContent = "$" + (userData.walletBalance || 0).toFixed(2);
+
+  if (vendorHeader) {
+    vendorHeader.textContent = `Welcome, ${userData.firstName} ${userData.lastName}`;
+  }
 
   // Load vendor-specific info
   const vendorDoc = await getDoc(doc(db, "vendors", currentUserId));
@@ -136,7 +141,7 @@ redeemBtn.addEventListener("click", () => {
 submitRedeemBtn.addEventListener("click", async () => {
   const amount = parseFloat(redeemAmount.value);
   if (isNaN(amount) || amount <= 0) {
-    redeemStatus.textContent = "❌ Please enter a valid amount.";
+    redeemStatus.textContent = "â Please enter a valid amount.";
     redeemStatus.style.color = "red";
     return;
   }
@@ -151,12 +156,12 @@ submitRedeemBtn.addEventListener("click", async () => {
       timestamp: serverTimestamp()
     });
 
-    redeemStatus.textContent = "✅ Request submitted!";
+    redeemStatus.textContent = "â Request submitted!";
     redeemStatus.style.color = "green";
     redeemAmount.value = "";
   } catch (err) {
     console.error("Redeem failed:", err);
-    redeemStatus.textContent = "❌ Failed to submit request.";
+    redeemStatus.textContent = "â Failed to submit request.";
     redeemStatus.style.color = "red";
   }
 });
