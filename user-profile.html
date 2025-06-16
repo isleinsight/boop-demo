@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
+    /* Styling remains the same as previous */
     .profile-container {
       max-width: 1000px;
       margin: 40px auto;
@@ -53,22 +54,14 @@
       color: #1a73e8;
     }
 
-    .transaction-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 0.95em;
+    .status-active {
+      color: green;
+      font-weight: bold;
     }
 
-    .transaction-table th,
-    .transaction-table td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-
-    .transaction-table th {
-      background-color: #f1f5f9;
+    .status-suspended {
+      color: red;
+      font-weight: bold;
     }
 
     .admin-controls {
@@ -130,6 +123,18 @@
       background-color: #1c60b3;
     }
 
+    .student-remove-btn {
+      background: red;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .student-remove-btn:hover {
+      background-color: darkred;
+    }
+
     @media screen and (max-width: 600px) {
       .user-details-grid {
         grid-template-columns: 1fr;
@@ -142,7 +147,6 @@
   </style>
 </head>
 <body>
-  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -166,8 +170,7 @@
       <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
       <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
       <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
-
-      <div class="dropdown">
+      <div class="dropdown" style="display:inline-block;">
         <button id="actionsToggleBtn" class="btnEdit">Actions ▾</button>
         <div id="actionsDropdown" class="dropdown-content">
           <a href="#" id="suspendBtn">Suspend</a>
@@ -178,14 +181,9 @@
     </div>
 
     <!-- User Info -->
-    <div class="user-details-grid" id="userInfo">
-      <div>
-        <span class="label">Status</span>
-        <span class="value" id="viewStatus" class="status-active">Loading...</span>
-      </div>
-    </div>
+    <div class="user-details-grid" id="userInfo"></div>
 
-    <!-- Parent Info -->
+    <!-- Parent Info (on student profile) -->
     <div id="parentSection" style="display: none; margin-top: 40px;">
       <div class="section-title">Parent</div>
       <div class="user-details-grid">
@@ -200,17 +198,18 @@
       </div>
     </div>
 
-    <!-- Students -->
+    <!-- Assigned Students -->
     <div id="studentSection" style="display: none;">
       <div class="section-title">Assigned Students</div>
       <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
 
+      <!-- Add Student Search + Results -->
       <div id="assignStudentForm" style="display: none; margin-top: 20px;">
         <div class="search-bar">
-          <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
+          <input type="text" id="studentSearchInput" placeholder="Search students by name or email..." />
           <button id="studentSearchBtn">Search</button>
         </div>
-        <table style="width: 100%; margin-top: 15px;">
+        <table style="width: 100%; margin-top: 15px;" id="studentResultsTable">
           <thead>
             <tr>
               <th>First Name</th>
@@ -223,70 +222,6 @@
         </table>
         <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
       </div>
-    </div>
-
-    <!-- Edit Mode Fields -->
-    <div id="editFields" style="display:none;">
-      <div class="user-details-grid">
-        <div>
-          <span class="label">First Name</span>
-          <input type="text" id="editFirstName" />
-        </div>
-        <div>
-          <span class="label">Last Name</span>
-          <input type="text" id="editLastName" />
-        </div>
-        <div>
-          <span class="label">Role</span>
-          <select id="editRole">
-            <option value="cardholder">Cardholder</option>
-            <option value="parent">Parent</option>
-            <option value="vendor">Vendor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Vendor Info -->
-    <div id="vendorInfoSection" style="display: none;">
-      <div class="section-title">Vendor Info</div>
-      <div class="user-details-grid" id="vendorDetailsGrid">
-        <div>
-          <span class="label">Business Name</span>
-          <span class="value" id="vendorName">-</span>
-          <input type="text" id="vendorNameInput" class="edit-field" style="display: none;">
-        </div>
-        <div>
-          <span class="label">Category</span>
-          <span class="value" id="vendorCategory">-</span>
-          <input type="text" id="vendorCategoryInput" class="edit-field" style="display: none;">
-        </div>
-        <div>
-          <span class="label">Location</span>
-          <span class="value" id="vendorLocation">-</span>
-          <input type="text" id="vendorLocationInput" class="edit-field" style="display: none;">
-        </div>
-      </div>
-    </div>
-
-    <!-- Wallet Info -->
-    <div class="section-title">Wallet</div>
-    <div class="user-details-grid">
-      <div>
-        <span class="label">Wallet ID</span>
-        <span class="value" id="walletId">Loading...</span>
-      </div>
-      <div>
-        <span class="label">Wallet Balance</span>
-        <span class="wallet-balance" id="walletBalance">$0.00</span>
-      </div>
-    </div>
-
-    <!-- Admin Buttons -->
-    <div class="admin-controls" id="adminControls" style="display: none;">
-      <button id="addFundsBtn">Add Funds</button>
-      <button id="freezeWalletBtn">Freeze Wallet</button>
     </div>
 
     <!-- Transactions -->
@@ -304,7 +239,7 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Transactions go here -->
+        <!-- Rows injected by JS -->
       </tbody>
     </table>
   </div>
