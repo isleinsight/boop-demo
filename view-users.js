@@ -1,21 +1,21 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
-  signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore,
-  doc,
-  getDoc,
-  updateDoc,
   collection,
-  query,
-  where,
-  orderBy,
   getDocs,
-  limit,
-  startAfter
+  doc,
+  deleteDoc,
+  addDoc,
+  updateDoc,
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -28,272 +28,314 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM refs
-const userInfo = document.getElementById("userInfo");
-const editBtn = document.getElementById("editProfileBtn");
-const saveBtn = document.getElementById("saveProfileBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const addStudentBtn = document.getElementById("addStudentBtn");
-const parentSection = document.getElementById("parentSection");
-const studentSection = document.getElementById("studentSection");
-const parentNameEl = document.getElementById("parentName");
-const parentEmailEl = document.getElementById("parentEmail");
-const assignedStudentsList = document.getElementById("assignedStudentsList");
-const assignStudentForm = document.getElementById("assignStudentForm");
-const studentSearchInput = document.getElementById("studentSearchInput");
-const studentSearchBtn = document.getElementById("studentSearchBtn");
-const studentSearchResults = document.getElementById("studentSearchResults");
-const assignSelectedBtn = document.getElementById("assignSelectedStudentsBtn");
-const nextPageBtn = document.getElementById("nextStudentPageBtn");
-const prevPageBtn = document.getElementById("prevStudentPageBtn");
+// DOM Elements
+// DOM elements
+const userTableBody = document.getElementById("userTableBody");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+const clearSearchBtn = document.getElementById("clearSearchBtn");
+const userCount = document.getElementById("userCount");
+const roleFilter = document.getElementById("roleFilter");
+const statusFilter = document.getElementById("statusFilter");
+const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const paginationInfo = document.getElementById("paginationInfo");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
 
-let editFirstName, editLastName, editEmail, editRole;
-let currentUserId = new URLSearchParams(window.location.search).get("uid");
-let currentUserData = null;
-let lastVisible = null;
+let currentUserEmail = null;
+let currentPage = 1;
+const usersPerPage = 20;
+let allUsers = [];
+let filteredUsers = [];
 
-if (!currentUserId) {
-  alert("User ID not found.");
-  window.location.href = "view-users.html";
+function createBadge(status) {
+  const span = document.createElement("span");
+  span.textContent = status === "suspended" ? "Suspended" : "Active";
+  span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
+  return span;
 }
 
-async function loadUserProfile() {
-  const userRef = doc(db, "users", currentUserId);
-  const snap = await getDoc(userRef);
-  if (!snap.exists()) return alert("User not found.");
-  const user = snap.data();
-  currentUserData = user;
-
-  userInfo.innerHTML = `
-    <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.firstName || "-"}</span>
-    <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display:none; width: 100%;" /></div>
-
-    <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.lastName || "-"}</span>
-    <input type="text" id="editLastName" value="${user.lastName || ""}" style="display:none; width: 100%;" /></div>
-
-    <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
-    <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
-
-    <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:${user.status === 'suspended' ? 'red' : 'green'}">${user.status || "active"}</span></div>
-
-    <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
-    <select id="editRole" style="display:none; width: 100%;">
-      <option value="cardholder">Cardholder</option>
-      <option value="parent">Parent</option>
-      <option value="vendor">Vendor</option>
-      <option value="admin">Admin</option>
-      <option value="student">Student</option>
-    </select></div>
+function createDropdown(user) {
+  const select = document.createElement("select");
+  select.innerHTML = `
+    <option value="action">Action</option>
+    <option value="view">View Profile</option>
+    ${user.status === "suspended"
+      ? '<option value="unsuspend">Unsuspend</option>'
+      : '<option value="suspend">Suspend</option>'}
+    <option value="signout">Force Sign-out</option>
+    <option value="delete">Delete</option>
   `;
 
-  editFirstName = document.getElementById("editFirstName");
-  editLastName = document.getElementById("editLastName");
-  editEmail = document.getElementById("editEmail");
-  editRole = document.getElementById("editRole");
+  select.addEventListener("change", async () => {
+    const action = select.value;
+    select.value = "action";
 
-  if ((user.role || "").toLowerCase() === "parent") {
-    addStudentBtn.style.display = "inline-block";
-    studentSection.style.display = "block";
-    loadAssignedStudents(currentUserId);
-  }
-
-  if ((user.role || "").toLowerCase() === "student" && user.parentId) {
-    parentSection.style.display = "block";
-    const parentSnap = await getDoc(doc(db, "users", user.parentId));
-    if (parentSnap.exists()) {
-      const parent = parentSnap.data();
-      parentNameEl.innerHTML = `<a href="user-profile.html?uid=${user.parentId}">${parent.firstName} ${parent.lastName}</a>`;
-      parentEmailEl.textContent = parent.email || "-";
+    if (action === "view") {
+      window.location.href = `user-profile.html?uid=${user.id}`;
+      return;
     }
-  }
-}
 
-async function loadAssignedStudents(parentId) {
-  const q = query(collection(db, "users"), where("parentId", "==", parentId));
-  const snap = await getDocs(q);
-  assignedStudentsList.innerHTML = "";
+    if (action === "suspend" || action === "unsuspend" || action === "signout") {
+    if (["suspend", "unsuspend", "signout"].includes(action)) {
+      const confirmed = confirm(`Are you sure you want to ${action} this user?`);
+      if (!confirmed) return;
+    }
 
-  if (snap.empty) {
-    assignedStudentsList.innerHTML = "<div>No assigned students found.</div>";
-    return;
-  }
-
-  snap.forEach((docSnap) => {
-    const student = docSnap.data();
-    const div = document.createElement("div");
-    div.style.display = "flex";
-    div.style.justifyContent = "space-between";
-    div.style.alignItems = "center";
-    div.style.gap = "10px";
-
-    div.innerHTML = `
-      <div>
-        <span class="label">Name</span>
-        <span class="value"><a href="user-profile.html?uid=${docSnap.id}">${student.firstName} ${student.lastName}</a></span>
-      </div>
-      <button class="student-remove-btn" data-id="${docSnap.id}">Remove</button>
-    `;
-
-    assignedStudentsList.appendChild(div);
-  });
-
-  // Hook remove buttons
-  assignedStudentsList.querySelectorAll(".student-remove-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const studentId = btn.getAttribute("data-id");
-      if (confirm("Remove this student?")) {
-        await updateDoc(doc(db, "users", studentId), { parentId: null });
-        loadAssignedStudents(parentId);
+    if (action === "delete") {
+      if (user.email === currentUserEmail) {
+        alert("You cannot delete your own admin account.");
+        return;
       }
-    });
-  });
-}
+      const input = prompt("Type DELETE to confirm.");
+      if (input !== "DELETE") {
+        alert("Delete canceled.");
+        return;
+      }
+    }
 
-// Edit Profile
-editBtn?.addEventListener("click", () => {
-  document.getElementById("viewFirstName").style.display = "none";
-  document.getElementById("viewLastName").style.display = "none";
-  document.getElementById("viewEmail").style.display = "none";
-  document.getElementById("viewRole").style.display = "none";
-
-  editFirstName.style.display = "block";
-  editLastName.style.display = "block";
-  editEmail.style.display = "block";
-  editRole.style.display = "block";
-  saveBtn.style.display = "inline-block";
-});
-
-saveBtn?.addEventListener("click", async () => {
-  const updated = {
-    firstName: editFirstName.value.trim(),
-    lastName: editLastName.value.trim(),
-    email: editEmail.value.trim(),
-    role: editRole.value
-  };
-  await updateDoc(doc(db, "users", currentUserId), updated);
-  alert("Profile updated.");
-  location.reload();
-});
-
-logoutBtn?.addEventListener("click", () => {
-  signOut(auth).then(() => window.location.href = "index.html");
-});
-
-addStudentBtn?.addEventListener("click", () => {
-  assignStudentForm.style.display = "block";
-  assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
-  loadStudentSearch(true);
-});
-
-// Search & Pagination Logic
-let searchQuery = "";
-let studentPages = [];
-let currentPageIndex = 0;
-
-async function fetchStudentsPage(startAfterDoc = null) {
-  let q = query(
-    collection(db, "users"),
-    where("role", "==", "student"),
-    where("parentId", "==", null),
-    orderBy("firstName"),
-    limit(5)
-  );
-
-  if (startAfterDoc) {
-    q = query(q, startAfter(startAfterDoc));
-  }
-
-  const snap = await getDocs(q);
-  return snap.docs;
-}
-
-async function loadStudentSearch(newSearch = false) {
-  const input = studentSearchInput.value.trim().toLowerCase();
-  if (newSearch) {
-    studentPages = [];
-    currentPageIndex = 0;
-    searchQuery = input;
-  }
-
-  const pageDocs = await fetchStudentsPage(studentPages[currentPageIndex - 1] || null);
-  if (!pageDocs.length) {
-    studentSearchResults.innerHTML = "<tr><td colspan='4'>No students found.</td></tr>";
-    nextPageBtn.style.display = "none";
-    prevPageBtn.style.display = currentPageIndex > 0 ? "inline-block" : "none";
-    return;
-  }
-
-  if (!studentPages[currentPageIndex]) {
-    studentPages[currentPageIndex] = pageDocs[pageDocs.length - 1];
-  }
-
-  const filtered = pageDocs.filter(docSnap => {
-    const s = docSnap.data();
-    const fullName = `${s.firstName || ""} ${s.lastName || ""}`.toLowerCase();
-    const email = (s.email || "").toLowerCase();
-    return fullName.includes(searchQuery) || email.includes(searchQuery);
+    await handleAction(user, action);
   });
 
-  studentSearchResults.innerHTML = "";
-
-  if (filtered.length === 0) {
-    studentSearchResults.innerHTML = "<tr><td colspan='4'>No matching students.</td></tr>";
-  } else {
-    filtered.forEach(docSnap => {
-      const s = docSnap.data();
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${s.firstName || "-"}</td>
-        <td>${s.lastName || "-"}</td>
-        <td>${s.email || "-"}</td>
-        <td><input type="checkbox" value="${docSnap.id}" /></td>
-      `;
-      studentSearchResults.appendChild(row);
-    });
-  }
-
-  nextPageBtn.style.display = "inline-block";
-  prevPageBtn.style.display = currentPageIndex > 0 ? "inline-block" : "none";
+  return select;
 }
 
-// Assign Students
-assignSelectedBtn?.addEventListener("click", async () => {
-  const selected = studentSearchResults.querySelectorAll('input[type="checkbox"]:checked');
-  if (!selected.length) return alert("No students selected.");
+async function handleAction(user, action) {
+  try {
+    await addDoc(collection(db, "adminActions"), {
+      uid: user.id,
+      action,
+      createdAt: new Date()
+    });
 
-  const updates = Array.from(selected).map(cb =>
-    updateDoc(doc(db, "users", cb.value), { parentId: currentUserId })
-  );
+    if (action === "delete") {
+      await deleteDoc(doc(db, "users", user.id));
+      allUsers = allUsers.filter(u => u.id !== user.id);
+    } else {
+      await updateDoc(doc(db, "users", user.id), {
+        status: action === "suspend" ? "suspended" : "active"
+      });
+      const updated = allUsers.find(u => u.id === user.id);
+      if (updated) updated.status = action === "suspend" ? "suspended" : "active";
+    }
 
-  await Promise.all(updates);
-  alert("Students assigned.");
-  loadAssignedStudents(currentUserId);
-  loadStudentSearch(true);
+    applyFilters();
+  } catch (err) {
+    console.error("❌ Action failed:", err);
+    alert("Failed to perform action.");
+  }
+}
+
+async function loadUsers() {
+  const q = query(collection(db, "users"), orderBy("firstName"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+}
+
+function renderTablePage() {
+  userTableBody.innerHTML = "";
+  const start = (currentPage - 1) * usersPerPage;
+  const end = start + usersPerPage;
+  const pageUsers = filteredUsers.slice(start, end);
+
+  if (filteredUsers.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 7;
+    cell.textContent = "No users found.";
+    row.appendChild(cell);
+    userTableBody.appendChild(row);
+  }
+
+  pageUsers.forEach(user => {
+    const row = document.createElement("tr");
+
+    const checkboxTd = document.createElement("td");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.classList.add("user-checkbox");
+    checkbox.dataset.userId = user.id;
+    checkbox.dataset.userEmail = user.email;
+    checkbox.addEventListener("change", updateDeleteButtonVisibility);
+    checkboxTd.appendChild(checkbox);
+
+    const firstNameTd = document.createElement("td");
+    firstNameTd.textContent = user.firstName || "";
+
+    const lastNameTd = document.createElement("td");
+    lastNameTd.textContent = user.lastName || "";
+
+    const emailTd = document.createElement("td");
+    emailTd.textContent = user.email || "";
+
+    const roleTd = document.createElement("td");
+    roleTd.textContent = user.role || "";
+
+    const statusTd = document.createElement("td");
+    statusTd.appendChild(createBadge(user.status || "active"));
+
+    const actionsTd = document.createElement("td");
+    actionsTd.appendChild(createDropdown(user));
+
+    row.appendChild(checkboxTd);
+    row.appendChild(firstNameTd);
+    row.appendChild(lastNameTd);
+    row.appendChild(emailTd);
+    row.appendChild(roleTd);
+    row.appendChild(statusTd);
+    row.appendChild(actionsTd);
+
+    userTableBody.appendChild(row);
+  });
+
+  paginationInfo.textContent = `Page ${currentPage} of ${Math.max(1, Math.ceil(filteredUsers.length / usersPerPage))}`;
+  userCount.textContent = `Total Users: ${filteredUsers.length}`;
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = end >= filteredUsers.length;
+}
+
+function updateDeleteButtonVisibility() {
+  const checked = document.querySelectorAll(".user-checkbox:checked");
+  deleteSelectedBtn.style.display = checked.length > 0 ? "inline-block" : "none";
+}
+
+function applyFilters() {
+  const searchTerm = searchInput.value.trim().toLowerCase();
+  const selectedRole = roleFilter.value;
+  const selectedStatus = statusFilter.value;
+
+  filteredUsers = allUsers.filter(user => {
+    const matchesSearch =
+      user.firstName?.toLowerCase().includes(searchTerm) ||
+      user.lastName?.toLowerCase().includes(searchTerm) ||
+      user.email?.toLowerCase().includes(searchTerm);
+
+    const matchesRole = selectedRole === "" || user.role === selectedRole;
+    const matchesStatus = selectedStatus === "" || user.status === selectedStatus;
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  currentPage = 1;
+  renderTablePage();
+}
+
+// Sort functionality
+let currentSort = { field: null, direction: 'asc' };
+
+document.querySelectorAll(".sortable").forEach(header => {
+  header.addEventListener("click", () => {
+    const field = header.dataset.sort;
+
+    if (currentSort.field === field) {
+      currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
+    } else {
+      currentSort.field = field;
+      currentSort.direction = "asc";
+    }
+
+    document.querySelectorAll(".sortable").forEach(h => {
+      h.classList.remove("sorted-asc", "sorted-desc");
+    });
+    header.classList.add(currentSort.direction === "asc" ? "sorted-asc" : "sorted-desc");
+
+    filteredUsers.sort((a, b) => {
+      const valA = (a[field] || "").toLowerCase();
+      const valB = (b[field] || "").toLowerCase();
+      if (valA < valB) return currentSort.direction === "asc" ? -1 : 1;
+      if (valA > valB) return currentSort.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    currentPage = 1;
+    renderTablePage();
+  });
 });
 
 // Event Listeners
-studentSearchBtn?.addEventListener("click", () => loadStudentSearch(true));
-nextPageBtn?.addEventListener("click", () => {
-  currentPageIndex++;
-  loadStudentSearch();
+searchBtn.addEventListener("click", applyFilters);
+searchInput.addEventListener("input", applyFilters);
+clearSearchBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  roleFilter.value = "";
+  statusFilter.value = "";
+  applyFilters();
 });
-prevPageBtn?.addEventListener("click", () => {
-  if (currentPageIndex > 0) {
-    currentPageIndex--;
-    loadStudentSearch();
+roleFilter.addEventListener("change", applyFilters);
+statusFilter.addEventListener("change", applyFilters);
+
+selectAllCheckbox.addEventListener("change", () => {
+  const checkboxes = document.querySelectorAll(".user-checkbox");
+  checkboxes.forEach(cb => (cb.checked = selectAllCheckbox.checked));
+  updateDeleteButtonVisibility();
+});
+
+deleteSelectedBtn.addEventListener("click", async () => {
+  const checked = document.querySelectorAll(".user-checkbox:checked");
+  if (checked.length === 0) return;
+
+  const invalid = Array.from(checked).some(cb => cb.dataset.userEmail === currentUserEmail);
+  if (invalid) {
+    alert("You cannot delete your own admin account.");
+    return;
+  }
+
+  const input = prompt(`Type DELETE to confirm deletion of ${checked.length} users.`);
+  if (input !== "DELETE") {
+    alert("Bulk delete canceled.");
+    return;
+  }
+
+  for (const cb of checked) {
+    const userId = cb.dataset.userId;
+    await addDoc(collection(db, "adminActions"), {
+      uid: userId,
+      action: "delete",
+      createdAt: new Date()
+    });
+    await deleteDoc(doc(db, "users", userId));
+  }
+
+  allUsers = allUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
+  applyFilters();
+});
+
+prevBtn.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTablePage();
   }
 });
 
-// Auth check
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-  } else {
-    loadUserProfile();
+nextBtn.addEventListener("click", () => {
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderTablePage();
   }
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUserEmail = user.email;
+    allUsers = await loadUsers();
+    filteredUsers = [...allUsers];
+    applyFilters();
+  } else {
+    window.location.href = "index.html";
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
 });
