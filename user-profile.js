@@ -9,15 +9,12 @@ import {
   doc,
   getDoc,
   updateDoc,
-  deleteDoc,
-  addDoc,
   collection,
   query,
   where,
   getDocs,
   limit,
   startAfter
-  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -30,11 +27,12 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
+// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM Elements
+// DOM refs
 const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
@@ -49,12 +47,13 @@ const assignStudentForm = document.getElementById("assignStudentForm");
 const studentSearchResults = document.getElementById("studentSearchResults");
 const studentSearchInput = document.getElementById("studentSearchInput");
 const studentSearchBtn = document.getElementById("studentSearchBtn");
+const assignSelectedBtn = document.getElementById("assignSelectedStudentsBtn");
+const nextPageBtn = document.getElementById("nextStudentPageBtn");
 
 let editFirstName, editLastName, editEmail, editRole;
 let currentUserId = new URLSearchParams(window.location.search).get("uid");
 let currentUserData = null;
 let lastVisible = null;
-let firstLoad = true;
 
 if (!currentUserId) {
   alert("User ID not found.");
@@ -78,7 +77,7 @@ async function loadUserProfile() {
     <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
     <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
 
-    <div><span class="label">Status</span><span class="value" id="viewStatus" style="color: ${user.status === 'suspended' ? 'red' : 'green'};">${user.status || "active"}</span></div>
+    <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:${user.status === 'suspended' ? 'red' : 'green'}">${user.status || "active"}</span></div>
 
     <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
     <select id="editRole" style="display:none; width: 100%;">
@@ -88,11 +87,9 @@ async function loadUserProfile() {
       <option value="admin">Admin</option>
       <option value="student">Student</option>
     </select></div>
-
-    <div><span class="label">Status</span>
-    <span class="value" id="viewStatus" style="color: ${user.disabled ? 'red' : 'green'};">${user.disabled ? 'Suspended' : 'Active'}</span></div>
   `;
 
+  // Refresh references
   editFirstName = document.getElementById("editFirstName");
   editLastName = document.getElementById("editLastName");
   editEmail = document.getElementById("editEmail");
@@ -118,42 +115,46 @@ async function loadUserProfile() {
 async function loadAssignedStudents(parentId) {
   const q = query(collection(db, "users"), where("parentId", "==", parentId));
   const snap = await getDocs(q);
+  assignedStudentsList.innerHTML = "";
+
   if (snap.empty) {
     assignedStudentsList.innerHTML = "<div>No assigned students found.</div>";
-    assignedStudentsList.innerHTML = "<div>No students assigned.</div>";
     return;
   }
 
-  assignedStudentsList.innerHTML = "";
-  snap.forEach((doc) => {
-    const student = doc.data();
   snap.forEach((docSnap) => {
     const student = docSnap.data();
     const div = document.createElement("div");
-    div.innerHTML = `<span class="label">Name</span>
-                     <span class="value"><a href="user-profile.html?uid=${doc.id}">${student.firstName} ${student.lastName}</a></span>`;
     div.style.display = "flex";
     div.style.justifyContent = "space-between";
     div.style.alignItems = "center";
+    div.style.gap = "10px";
+
     div.innerHTML = `
       <div>
         <span class="label">Name</span>
         <span class="value"><a href="user-profile.html?uid=${docSnap.id}">${student.firstName} ${student.lastName}</a></span>
       </div>
-      <button class="btnEdit" onclick="removeStudent('${parentId}', '${docSnap.id}')">Remove</button>
+      <button class="student-remove-btn" data-id="${docSnap.id}">Remove</button>
     `;
+
     assignedStudentsList.appendChild(div);
+  });
+
+  // Attach remove handlers
+  const removeButtons = assignedStudentsList.querySelectorAll(".student-remove-btn");
+  removeButtons.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const studentId = btn.getAttribute("data-id");
+      if (confirm("Are you sure you want to remove this student from this parent?")) {
+        await updateDoc(doc(db, "users", studentId), { parentId: null });
+        loadAssignedStudents(parentId);
+      }
+    });
   });
 }
 
-window.removeStudent = async function(parentId, studentId) {
-  const confirmRemove = confirm("Remove this student from the parent?");
-  if (!confirmRemove) return;
-
-  await updateDoc(doc(db, "users", studentId), { parentId: null });
-  loadAssignedStudents(parentId);
-};
-
+// Edit mode
 editBtn?.addEventListener("click", () => {
   document.getElementById("viewFirstName").style.display = "none";
   document.getElementById("viewLastName").style.display = "none";
@@ -164,10 +165,10 @@ editBtn?.addEventListener("click", () => {
   editLastName.style.display = "block";
   editEmail.style.display = "block";
   editRole.style.display = "block";
-
   saveBtn.style.display = "inline-block";
 });
 
+// Save user profile
 saveBtn?.addEventListener("click", async () => {
   const updated = {
     firstName: editFirstName.value.trim(),
@@ -180,18 +181,22 @@ saveBtn?.addEventListener("click", async () => {
   location.reload();
 });
 
+// Logout
+logoutBtn?.addEventListener("click", () => {
+  signOut(auth).then(() => window.location.href = "index.html");
+});
+
+// Show Add Student section and scroll
 addStudentBtn?.addEventListener("click", () => {
   assignStudentForm.style.display = "block";
-  scrollToForm();
+  assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
   loadStudentSearch();
 });
 
-function scrollToForm() {
-  assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
+// Load paginated student results
 async function loadStudentSearch(startAfterDoc = null) {
   studentSearchResults.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
+
   let studentQuery = query(
     collection(db, "users"),
     where("role", "==", "student"),
@@ -203,13 +208,17 @@ async function loadStudentSearch(startAfterDoc = null) {
   }
 
   const snap = await getDocs(studentQuery);
+  studentSearchResults.innerHTML = "";
+
   if (snap.empty) {
     studentSearchResults.innerHTML = "<tr><td colspan='4'>No students found.</td></tr>";
+    nextPageBtn.style.display = "none";
     return;
   }
 
   lastVisible = snap.docs[snap.docs.length - 1];
-  studentSearchResults.innerHTML = "";
+  nextPageBtn.style.display = "inline-block";
+
   snap.forEach(docSnap => {
     const student = docSnap.data();
     const row = document.createElement("tr");
@@ -223,14 +232,33 @@ async function loadStudentSearch(startAfterDoc = null) {
   });
 }
 
-studentSearchBtn?.addEventListener("click", async () => {
+// Trigger search
+studentSearchBtn?.addEventListener("click", () => {
   loadStudentSearch();
 });
 
-logoutBtn?.addEventListener("click", () => {
-  signOut(auth).then(() => window.location.href = "index.html");
+// Next page
+nextPageBtn?.addEventListener("click", () => {
+  if (lastVisible) {
+    loadStudentSearch(lastVisible);
+  }
 });
 
+// Save selected students
+assignSelectedBtn?.addEventListener("click", async () => {
+  const checkboxes = studentSearchResults.querySelectorAll('input[type="checkbox"]:checked');
+  if (!checkboxes.length) return alert("No students selected.");
+
+  const batchPromises = Array.from(checkboxes).map(cb =>
+    updateDoc(doc(db, "users", cb.value), { parentId: currentUserId })
+  );
+
+  await Promise.all(batchPromises);
+  alert("Students assigned successfully.");
+  loadAssignedStudents(currentUserId);
+});
+
+// Auth check
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "index.html";
