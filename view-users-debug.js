@@ -14,8 +14,7 @@ import {
   deleteDoc,
   addDoc,
   updateDoc,
-  query,
-  orderBy
+  query
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -32,7 +31,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DEBUGGING OUTPUTS
 console.log("🔥 view-users.js loaded");
 console.log("Firebase initialized:", !!app);
 
@@ -45,7 +43,7 @@ let allUsers = [];
 async function loadUsers() {
   try {
     console.log("🔄 Loading users...");
-    const q = query(collection(db, "users"), orderBy("firstName"));
+    const q = query(collection(db, "users")); // <-- orderBy removed
     const snapshot = await getDocs(q);
     console.log("✅ Users snapshot size:", snapshot.size);
     snapshot.forEach(doc => {
@@ -78,15 +76,15 @@ function renderTable(users) {
 
   users.forEach(user => {
     const row = document.createElement("tr");
-    row.innerHTML = \`
+    row.innerHTML = `
       <td>•</td>
-      <td>\${user.firstName || ""}</td>
-      <td>\${user.lastName || ""}</td>
-      <td>\${user.email || ""}</td>
-      <td>\${user.role || ""}</td>
-      <td>\${user.status || ""}</td>
-      <td><a href="user-profile.html?uid=\${user.id}">View</a></td>
-    \`;
+      <td>${user.firstName || ""}</td>
+      <td>${user.lastName || ""}</td>
+      <td>${user.email || ""}</td>
+      <td>${user.role || ""}</td>
+      <td>${user.status || ""}</td>
+      <td><a href="user-profile.html?uid=${user.id}">View</a></td>
+    `;
     userTableBody.appendChild(row);
   });
   console.log("✅ Rendered", users.length, "users to table");
