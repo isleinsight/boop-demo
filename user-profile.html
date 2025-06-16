@@ -49,10 +49,12 @@
 
     .status-active {
       color: green;
+      font-weight: bold;
     }
 
     .status-suspended {
       color: red;
+      font-weight: bold;
     }
 
     .wallet-balance {
@@ -61,37 +63,158 @@
       color: #1a73e8;
     }
 
-    /* other styles unchanged ... */
+    .transaction-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.95em;
+    }
+
+    .transaction-table th,
+    .transaction-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .transaction-table th {
+      background-color: #f1f5f9;
+    }
+
+    .admin-controls {
+      margin-top: 30px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .admin-controls button {
+      padding: 10px 20px;
+      font-size: 0.95em;
+      background-color: #2f80ed;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .admin-controls button:hover {
+      background-color: #1c60b3;
+    }
+
+    .back-button {
+      margin-bottom: 20px;
+      display: inline-block;
+      text-decoration: none;
+      color: #2f80ed;
+      font-weight: 500;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .search-bar button {
+      padding: 8px 18px;
+      border: none;
+      background-color: #2f80ed;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .search-bar button:hover {
+      background-color: #1c60b3;
+    }
+
+    @media screen and (max-width: 600px) {
+      .user-details-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-controls {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
-  <!-- Navbar, buttons, dropdowns here... -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+      </div>
+      <div class="nav-right">
+        <a href="government.html">Dashboard</a>
+        <a href="add-user.html">Add User</a>
+        <a href="view-users.html">View Users</a>
+        <a href="view-reports.html">View Reports</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
 
-  <!-- User Info Grid -->
-  <div class="user-details-grid" id="userInfo">
-    <div>
-      <span class="label">First Name</span>
-      <span class="value" id="viewFirstName">-</span>
+  <div class="profile-container">
+    <a href="view-users.html" class="back-button">← Back to Users</a>
+    <h2>User Profile</h2>
+
+    <div style="margin-top: 20px; margin-bottom: 20px;">
+      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+      <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
+      <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
+
+      <div class="dropdown" style="display:inline-block;">
+        <button id="actionsToggleBtn" class="btnEdit">Actions ▾</button>
+        <div id="actionsDropdown" class="dropdown-content" style="display:none; position:absolute; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,0.1); border-radius:5px;">
+          <a href="#" id="suspendBtn">Suspend</a>
+          <a href="#" id="signoutBtn">Force Sign-out</a>
+          <a href="#" id="deleteBtn" style="color: red;">Delete</a>
+        </div>
+      </div>
     </div>
-    <div>
-      <span class="label">Last Name</span>
-      <span class="value" id="viewLastName">-</span>
+
+    <!-- User Info -->
+    <div class="user-details-grid" id="userInfo">
+      <div>
+        <span class="label">First Name</span>
+        <span class="value" id="viewFirstName">-</span>
+      </div>
+      <div>
+        <span class="label">Last Name</span>
+        <span class="value" id="viewLastName">-</span>
+      </div>
+      <div>
+        <span class="label">Email</span>
+        <span class="value" id="viewEmail">-</span>
+      </div>
+      <div>
+        <span class="label">Role</span>
+        <span class="value" id="viewRole">-</span>
+      </div>
+      <div>
+        <span class="label">Status</span>
+        <span class="value" id="viewStatus" class="status-active">-</span>
+      </div>
     </div>
-    <div>
-      <span class="label">Email</span>
-      <span class="value" id="viewEmail">-</span>
-    </div>
-    <div>
-      <span class="label">Role</span>
-      <span class="value" id="viewRole">-</span>
-    </div>
-    <div>
-      <span class="label">Status</span>
-      <span class="value" id="viewStatus" class="status-active">-</span>
-    </div>
+
+    <!-- Sections: Parent Info, Students, Edit Fields, Wallet, Transactions... -->
+    <!-- Keep rest of the sections exactly as you already had, no changes required there -->
+
   </div>
 
-  <!-- Rest of the HTML... -->
   <script type="module" src="user-profile.js"></script>
 </body>
 </html>
