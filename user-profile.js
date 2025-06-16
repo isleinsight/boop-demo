@@ -13,7 +13,10 @@ import {
   updateDoc,
   deleteDoc,
   addDoc,
-  collection
+  collection,
+  query,
+  where,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -30,210 +33,151 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM refs
-const userInfo = document.getElementById("userInfo");
-const editBtn = document.getElementById("editProfileBtn");
-const saveBtn = document.getElementById("saveProfileBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-
-let editFirstName, editLastName, editEmail, editRole;
-let viewFirstName, viewLastName, viewEmail, viewRole, viewStatus;
-let currentUserId = null;
-let currentUserData = null;
-
-// Get UID from URL
 const uid = new URLSearchParams(window.location.search).get("uid");
 if (!uid) {
   alert("User ID not found.");
   window.location.href = "view-users.html";
 }
-currentUserId = uid;
 
-// Load user info
-async function loadUserProfile() {
-  try {
-    const userRef = doc(db, "users", currentUserId);
-    const snap = await getDoc(userRef);
+let currentUserData = null;
 
-    if (!snap.exists()) {
-      alert("User not found.");
-      return;
+// DOM elements
+const userInfo = document.getElementById("userInfo");
+const logoutBtn = document.getElementById("logoutBtn");
+const editBtn = document.getElementById("editProfileBtn");
+const saveBtn = document.getElementById("saveProfileBtn");
+const studentSection = document.getElementById("studentSection");
+const assignedStudentsList = document.getElementById("assignedStudentsList");
+const parentSection = document.getElementById("parentSection");
+const parentName = document.getElementById("parentName");
+const parentEmail = document.getElementById("parentEmail");
+const addStudentBtn = document.getElementById("addStudentBtn");
+const assignStudentForm = document.getElementById("assignStudentForm");
+const studentSearchInput = document.getElementById("studentSearchInput");
+const studentSearchBtn = document.getElementById("studentSearchBtn");
+const studentSearchResults = document.getElementById("studentSearchResults");
+const assignSelectedStudentsBtn = document.getElementById("assignSelectedStudentsBtn");
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return window.location.href = "index.html";
+
+  const userDoc = await getDoc(doc(db, "users", uid));
+  if (!userDoc.exists()) return alert("User not found.");
+
+  const data = userDoc.data();
+  currentUserData = data;
+
+  // Display user details
+  userInfo.innerHTML = `
+    <div>
+      <span class="label">First Name</span>
+      <span class="value">${data.firstName || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Last Name</span>
+      <span class="value">${data.lastName || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Email</span>
+      <span class="value">${data.email || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Role</span>
+      <span class="value">${data.role || "-"}</span>
+    </div>
+    <div>
+      <span class="label">Status</span>
+      <span class="value" style="color:${data.status === "suspended" ? "#e74c3c" : "#27ae60"};">
+        ${data.status === "suspended" ? "Suspended" : "Active"}
+      </span>
+    </div>
+  `;
+
+  // Show parent if role is student
+  if (data.role === "student" && data.parent) {
+    parentSection.style.display = "block";
+    const parentDoc = await getDoc(doc(db, "users", data.parent));
+    if (parentDoc.exists()) {
+      const p = parentDoc.data();
+      parentName.innerHTML = `<a href="user-profile.html?uid=${data.parent}">${p.firstName} ${p.lastName}</a>`;
+      parentEmail.textContent = p.email || "-";
     }
-
-    const user = snap.data();
-    currentUserData = user;
-
-    const statusColor = user.status === "suspended" ? "red" : "green";
-
-    userInfo.innerHTML = `
-      <div>
-        <span class="label">First Name</span>
-        <span class="value" id="viewFirstName">${user.firstName || "-"}</span>
-        <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display: none; width: 100%;" />
-      </div>
-      <div>
-        <span class="label">Last Name</span>
-        <span class="value" id="viewLastName">${user.lastName || "-"}</span>
-        <input type="text" id="editLastName" value="${user.lastName || ""}" style="display: none; width: 100%;" />
-      </div>
-      <div>
-        <span class="label">Email</span>
-        <span class="value" id="viewEmail">${user.email || "-"}</span>
-        <input type="email" id="editEmail" value="${user.email || ""}" style="display: none; width: 100%;" />
-      </div>
-      <div>
-        <span class="label">Role</span>
-        <span class="value" id="viewRole">${user.role || "-"}</span>
-        <select id="editRole" style="display: none; width: 100%;">
-          <option value="cardholder">Cardholder</option>
-          <option value="parent">Parent</option>
-          <option value="student">Student</option>
-          <option value="vendor">Vendor</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-      <div>
-        <span class="label">Status</span>
-        <span class="value" id="viewStatus" style="color: ${statusColor};">${user.status || "active"}</span>
-      </div>
-    `;
-
-    // Assign after DOM is updated
-    editFirstName = document.getElementById("editFirstName");
-    editLastName = document.getElementById("editLastName");
-    editEmail = document.getElementById("editEmail");
-    editRole = document.getElementById("editRole");
-
-    viewFirstName = document.getElementById("viewFirstName");
-    viewLastName = document.getElementById("viewLastName");
-    viewEmail = document.getElementById("viewEmail");
-    viewRole = document.getElementById("viewRole");
-    viewStatus = document.getElementById("viewStatus");
-
-    if (editRole) editRole.value = user.role || "cardholder";
-  } catch (err) {
-    console.error("Error loading user:", err);
-    alert("Failed to load user profile.");
-  }
-}
-
-// Enable edit mode
-editBtn?.addEventListener("click", () => {
-  if (!editFirstName || !editLastName || !editEmail || !editRole) return;
-
-  viewFirstName.style.display = "none";
-  viewLastName.style.display = "none";
-  viewEmail.style.display = "none";
-  viewRole.style.display = "none";
-
-  editFirstName.style.display = "block";
-  editLastName.style.display = "block";
-  editEmail.style.display = "block";
-  editRole.style.display = "block";
-
-  saveBtn.style.display = "inline-block";
-});
-
-// Save edits
-saveBtn?.addEventListener("click", async () => {
-  if (!editFirstName || !editLastName || !editEmail || !editRole) return;
-
-  const updatedData = {
-    firstName: editFirstName.value.trim(),
-    lastName: editLastName.value.trim(),
-    email: editEmail.value.trim(),
-    role: editRole.value
-  };
-
-  await updateDoc(doc(db, "users", currentUserId), updatedData);
-
-  if (updatedData.email !== currentUserData.email) {
-    await addDoc(collection(db, "adminActions"), {
-      uid: currentUserId,
-      action: "updateEmail",
-      newEmail: updatedData.email,
-      createdAt: new Date()
-    });
   }
 
-  alert("Profile updated.");
-  location.reload();
+  // Show students if role is parent
+  if (data.role === "parent") {
+    studentSection.style.display = "block";
+    if (data.assignedStudents?.length) {
+      for (const sid of data.assignedStudents) {
+        const sDoc = await getDoc(doc(db, "users", sid));
+        if (sDoc.exists()) {
+          const s = sDoc.data();
+          const el = document.createElement("div");
+          el.innerHTML = \`
+            <span class="label">Student</span>
+            <a class="value" href="user-profile.html?uid=\${sid}">\${s.firstName} \${s.lastName}</a>
+          \`;
+          assignedStudentsList.appendChild(el);
+        }
+      }
+    }
+  }
 });
 
-// Action buttons
-document.getElementById("suspendBtn")?.addEventListener("click", async () => {
-  const action = currentUserData.status === "suspended" ? "unsuspend" : "suspend";
-  const confirmed = confirm(`Are you sure you want to ${action} this user?`);
-  if (!confirmed) return;
+// Add student form toggle
+addStudentBtn.addEventListener("click", () => {
+  assignStudentForm.style.display = assignStudentForm.style.display === "none" ? "block" : "none";
+});
 
-  await updateDoc(doc(db, "users", currentUserId), {
-    status: action === "suspend" ? "suspended" : "active"
+// Search for students
+studentSearchBtn.addEventListener("click", async () => {
+  const input = studentSearchInput.value.trim().toLowerCase();
+  if (!input) return;
+
+  const q = query(collection(db, "users"), where("role", "==", "student"));
+  const snap = await getDocs(q);
+  const results = [];
+  snap.forEach(doc => {
+    const data = doc.data();
+    const match = (data.firstName + data.lastName + data.email).toLowerCase().includes(input);
+    if (match) results.push({ id: doc.id, ...data });
   });
 
-  await addDoc(collection(db, "adminActions"), {
-    uid: currentUserId,
-    action,
-    createdAt: new Date()
+  studentSearchResults.innerHTML = "";
+  results.slice(0, 5).forEach(s => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = \`
+      <td>\${s.firstName}</td>
+      <td>\${s.lastName}</td>
+      <td>\${s.email}</td>
+      <td><input type="checkbox" data-id="\${s.id}"></td>
+    \`;
+    studentSearchResults.appendChild(tr);
+  });
+});
+
+// Save assigned students
+assignSelectedStudentsBtn.addEventListener("click", async () => {
+  const checkboxes = studentSearchResults.querySelectorAll("input[type='checkbox']:checked");
+  const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+  if (!selectedIds.length) return alert("Select at least one student.");
+
+  // Update parent doc
+  await updateDoc(doc(db, "users", uid), {
+    assignedStudents: selectedIds
   });
 
-  alert(`User ${action}ed.`);
+  // Update each student with parent ID
+  for (const sid of selectedIds) {
+    await updateDoc(doc(db, "users", sid), { parent: uid });
+  }
+
+  alert("Students assigned.");
   location.reload();
-});
-
-document.getElementById("signoutBtn")?.addEventListener("click", async () => {
-  const confirmed = confirm("Force sign out?");
-  if (confirmed) {
-    await addDoc(collection(db, "adminActions"), {
-      uid: currentUserId,
-      action: "signout",
-      createdAt: new Date()
-    });
-    alert("Sign-out action recorded.");
-  }
-});
-
-document.getElementById("deleteBtn")?.addEventListener("click", async () => {
-  const input = prompt("Type DELETE to confirm.");
-  if (input === "DELETE") {
-    await addDoc(collection(db, "adminActions"), {
-      uid: currentUserId,
-      action: "delete",
-      createdAt: new Date()
-    });
-    await deleteDoc(doc(db, "users", currentUserId));
-    alert("User deleted.");
-    window.location.href = "view-users.html";
-  }
-});
-
-// Dropdown toggle
-document.getElementById("actionsToggleBtn")?.addEventListener("click", () => {
-  const dropdown = document.getElementById("actionsDropdown");
-  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-});
-
-document.addEventListener("click", (e) => {
-  const toggle = document.getElementById("actionsToggleBtn");
-  const menu = document.getElementById("actionsDropdown");
-  if (!toggle || !menu) return;
-
-  if (!toggle.contains(e.target) && !menu.contains(e.target)) {
-    menu.style.display = "none";
-  }
-});
-
-// Auth check
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    window.location.href = "index.html";
-  } else {
-    loadUserProfile();
-  }
 });
 
 // Logout
-logoutBtn?.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
+logoutBtn.addEventListener("click", () => {
+  signOut(auth).then(() => window.location.href = "index.html");
 });
