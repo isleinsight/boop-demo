@@ -1,175 +1,249 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  updateDoc,
-  deleteDoc,
-  addDoc,
-  collection,
-  query,
-  where,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-  authDomain: "boop-becff.firebaseapp.com",
-  projectId: "boop-becff",
-  storageBucket: "boop-becff.appspot.com",
-  messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-const userInfo = document.getElementById("userInfo");
-const editBtn = document.getElementById("editProfileBtn");
-const saveBtn = document.getElementById("saveProfileBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const addStudentBtn = document.getElementById("addStudentBtn");
-const parentSection = document.getElementById("parentSection");
-const studentSection = document.getElementById("studentSection");
-const parentNameEl = document.getElementById("parentName");
-const parentEmailEl = document.getElementById("parentEmail");
-const assignedStudentsList = document.getElementById("assignedStudentsList");
-
-let editFirstName, editLastName, editEmail, editRole;
-let currentUserId = new URLSearchParams(window.location.search).get("uid");
-let currentUserData = null;
-
-if (!currentUserId) {
-  alert("User ID not found.");
-  window.location.href = "view-users.html";
-}
-
-async function loadUserProfile() {
-  const userRef = doc(db, "users", currentUserId);
-  const snap = await getDoc(userRef);
-  if (!snap.exists()) return alert("User not found.");
-  const user = snap.data();
-  currentUserData = user;
-
-  userInfo.innerHTML = `
-    <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.firstName || "-"}</span>
-    <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display:none; width: 100%;" /></div>
-
-    <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.lastName || "-"}</span>
-    <input type="text" id="editLastName" value="${user.lastName || ""}" style="display:none; width: 100%;" /></div>
-
-    <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
-    <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
-
-    <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
-    <select id="editRole" style="display:none; width: 100%;">
-      <option value="cardholder">Cardholder</option>
-      <option value="parent">Parent</option>
-      <option value="vendor">Vendor</option>
-      <option value="admin">Admin</option>
-      <option value="student">Student</option>
-    </select></div>
-
-    <div><span class="label">Status</span>
-    <span class="value" id="viewStatus" style="color: ${user.disabled ? 'red' : 'green'};">${user.disabled ? 'Suspended' : 'Active'}</span></div>
-  `;
-
-  editFirstName = document.getElementById("editFirstName");
-  editLastName = document.getElementById("editLastName");
-  editEmail = document.getElementById("editEmail");
-  editRole = document.getElementById("editRole");
-
-  if ((user.role || "").toLowerCase() === "parent") {
-    addStudentBtn.style.display = "inline-block";
-    studentSection.style.display = "block";
-    loadAssignedStudents(currentUserId);
-  }
-
-  if ((user.role || "").toLowerCase() === "student" && user.parentId) {
-    parentSection.style.display = "block";
-    const parentSnap = await getDoc(doc(db, "users", user.parentId));
-    if (parentSnap.exists()) {
-      const parent = parentSnap.data();
-      parentNameEl.innerHTML = `<a href="user-profile.html?uid=${user.parentId}">${parent.firstName} ${parent.lastName}</a>`;
-      parentEmailEl.textContent = parent.email || "-";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>User Profile - BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Styling remains the same as previous */
+    .profile-container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-  }
-}
 
-async function loadAssignedStudents(parentId) {
-  const q = query(collection(db, "users"), where("parentId", "==", parentId));
-  const snap = await getDocs(q);
-  if (snap.empty) {
-    assignedStudentsList.innerHTML = "<div>No students assigned.</div>";
-    return;
-  }
+    .section-title {
+      margin-top: 40px;
+      margin-bottom: 10px;
+      font-size: 1.3em;
+      color: #333;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
 
-  assignedStudentsList.innerHTML = "";
-  snap.forEach((docSnap) => {
-    const student = docSnap.data();
-    const div = document.createElement("div");
-    div.style.display = "flex";
-    div.style.justifyContent = "space-between";
-    div.style.alignItems = "center";
-    div.innerHTML = `
-      <div>
-        <span class="label">Name</span>
-        <span class="value"><a href="user-profile.html?uid=${docSnap.id}">${student.firstName} ${student.lastName}</a></span>
+    .user-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .user-details-grid div {
+      background: #f9fafc;
+      padding: 12px 16px;
+      border-radius: 6px;
+    }
+
+    .label {
+      font-weight: bold;
+      display: block;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    .value {
+      color: #222;
+    }
+
+    .wallet-balance {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #1a73e8;
+    }
+
+    .status-active {
+      color: green;
+      font-weight: bold;
+    }
+
+    .status-suspended {
+      color: red;
+      font-weight: bold;
+    }
+
+    .admin-controls {
+      margin-top: 30px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .admin-controls button {
+      padding: 10px 20px;
+      font-size: 0.95em;
+      background-color: #2f80ed;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .admin-controls button:hover {
+      background-color: #1c60b3;
+    }
+
+    .back-button {
+      margin-bottom: 20px;
+      display: inline-block;
+      text-decoration: none;
+      color: #2f80ed;
+      font-weight: 500;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .search-bar button {
+      padding: 8px 18px;
+      border: none;
+      background-color: #2f80ed;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .search-bar button:hover {
+      background-color: #1c60b3;
+    }
+
+    .student-remove-btn {
+      background: red;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .student-remove-btn:hover {
+      background-color: darkred;
+    }
+
+    @media screen and (max-width: 600px) {
+      .user-details-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-controls {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="government.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
-      <button class="btnEdit" onclick="removeStudent('${parentId}', '${docSnap.id}')">Remove</button>
-    `;
-    assignedStudentsList.appendChild(div);
-  });
-}
+      <div class="nav-right">
+        <a href="government.html">Dashboard</a>
+        <a href="add-user.html">Add User</a>
+        <a href="view-users.html">View Users</a>
+        <a href="view-reports.html">View Reports</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
 
-window.removeStudent = async function(parentId, studentId) {
-  const confirmRemove = confirm("Remove this student from the parent?");
-  if (!confirmRemove) return;
+  <div class="profile-container">
+    <a href="view-users.html" class="back-button">← Back to Users</a>
+    <h2>User Profile</h2>
 
-  await updateDoc(doc(db, "users", studentId), { parentId: null });
-  loadAssignedStudents(parentId);
-};
+    <div style="margin-top: 20px; margin-bottom: 20px;">
+      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+      <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
+      <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
+      <div class="dropdown" style="display:inline-block;">
+        <button id="actionsToggleBtn" class="btnEdit">Actions ▾</button>
+        <div id="actionsDropdown" class="dropdown-content">
+          <a href="#" id="suspendBtn">Suspend</a>
+          <a href="#" id="signoutBtn">Force Sign-out</a>
+          <a href="#" id="deleteBtn" style="color: red;">Delete</a>
+        </div>
+      </div>
+    </div>
 
-editBtn?.addEventListener("click", () => {
-  document.getElementById("viewFirstName").style.display = "none";
-  document.getElementById("viewLastName").style.display = "none";
-  document.getElementById("viewEmail").style.display = "none";
-  document.getElementById("viewRole").style.display = "none";
+    <!-- User Info -->
+    <div class="user-details-grid" id="userInfo"></div>
 
-  editFirstName.style.display = "block";
-  editLastName.style.display = "block";
-  editEmail.style.display = "block";
-  editRole.style.display = "block";
+    <!-- Parent Info (on student profile) -->
+    <div id="parentSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Parent</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">Name</span>
+          <span class="value" id="parentName">-</span>
+        </div>
+        <div>
+          <span class="label">Email</span>
+          <span class="value" id="parentEmail">-</span>
+        </div>
+      </div>
+    </div>
 
-  saveBtn.style.display = "inline-block";
-});
+    <!-- Assigned Students -->
+    <div id="studentSection" style="display: none;">
+      <div class="section-title">Assigned Students</div>
+      <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
 
-saveBtn?.addEventListener("click", async () => {
-  const updated = {
-    firstName: editFirstName.value.trim(),
-    lastName: editLastName.value.trim(),
-    email: editEmail.value.trim(),
-    role: editRole.value
-  };
-  await updateDoc(doc(db, "users", currentUserId), updated);
-  alert("Profile updated.");
-  location.reload();
-});
+      <!-- Add Student Search + Results -->
+      <div id="assignStudentForm" style="display: none; margin-top: 20px;">
+        <div class="search-bar">
+          <input type="text" id="studentSearchInput" placeholder="Search students by name or email..." />
+          <button id="studentSearchBtn">Search</button>
+        </div>
+        <table style="width: 100%; margin-top: 15px;" id="studentResultsTable">
+          <thead>
+            <tr>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Email</th>
+              <th>Select</th>
+            </tr>
+          </thead>
+          <tbody id="studentSearchResults"></tbody>
+        </table>
+        <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
+      </div>
+    </div>
 
-logoutBtn?.addEventListener("click", () => {
-  signOut(auth).then(() => window.location.href = "index.html");
-});
+    <!-- Transactions -->
+    <div class="section-title">Transaction History</div>
+    <table class="transaction-table" id="transactionTable">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Amount</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Category</th>
+          <th>Transaction ID</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Rows injected by JS -->
+      </tbody>
+    </table>
+  </div>
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-  } else {
-    loadUserProfile();
-  }
-});
+  <script type="module" src="user-profile.js"></script>
+</body>
+</html>
