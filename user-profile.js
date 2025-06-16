@@ -134,3 +134,19 @@ onAuthStateChanged(auth, user => {
   if (!user) return (window.location.href = "index.html");
   loadUserProfile();
 });
+
+editBtn?.addEventListener("click", () => {
+  if (!editFirstName || !editLastName || !editRole) return;
+
+  viewFirstName.style.display = "none";
+  viewLastName.style.display = "none";
+  viewRole.style.display = "none";
+  viewEmail.style.display = "none";
+
+  editFirstName.style.display = "block";
+  editLastName.style.display = "block";
+  editRole.style.display = "block";
+  editEmail.style.display = "block";
+
+  saveBtn.style.display = "inline-block";
+});
