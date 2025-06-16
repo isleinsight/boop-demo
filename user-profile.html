@@ -47,16 +47,6 @@
       color: #222;
     }
 
-    .status-active {
-      color: green;
-      font-weight: bold;
-    }
-
-    .status-suspended {
-      color: red;
-      font-weight: bold;
-    }
-
     .wallet-balance {
       font-size: 1.5em;
       font-weight: bold;
@@ -152,6 +142,7 @@
   </style>
 </head>
 <body>
+   <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -175,44 +166,144 @@
       <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
       <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
       <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
+ <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
 
-      <div class="dropdown" style="display:inline-block;">
-        <button id="actionsToggleBtn" class="btnEdit">Actions ▾</button>
-        <div id="actionsDropdown" class="dropdown-content" style="display:none; position:absolute; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,0.1); border-radius:5px;">
-          <a href="#" id="suspendBtn">Suspend</a>
-          <a href="#" id="signoutBtn">Force Sign-out</a>
-          <a href="#" id="deleteBtn" style="color: red;">Delete</a>
+
+  <div class="dropdown">
+  <button id="actionsToggleBtn" class="btnEdit">Actions ▾</button>
+  <div id="actionsDropdown" class="dropdown-content">
+    <a href="#" id="suspendBtn">Suspend</a>
+    <a href="#" id="signoutBtn">Force Sign-out</a>
+    <a href="#" id="deleteBtn" style="color: red;">Delete</a>
+  </div>
+</div>
+
+    <!-- User Info -->
+    <div class="user-details-grid" id="userInfo"></div>
+
+    <!-- Parent Info (visible on student profile) -->
+    <div id="parentSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Parent</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">Name</span>
+          <span class="value" id="parentName">-</span>
+        </div>
+        <div>
+          <span class="label">Email</span>
+          <span class="value" id="parentEmail">-</span>
         </div>
       </div>
     </div>
 
-    <!-- User Info -->
-    <div class="user-details-grid" id="userInfo">
-      <div>
-        <span class="label">First Name</span>
-        <span class="value" id="viewFirstName">-</span>
-      </div>
-      <div>
-        <span class="label">Last Name</span>
-        <span class="value" id="viewLastName">-</span>
-      </div>
-      <div>
-        <span class="label">Email</span>
-        <span class="value" id="viewEmail">-</span>
-      </div>
-      <div>
-        <span class="label">Role</span>
-        <span class="value" id="viewRole">-</span>
-      </div>
-      <div>
-        <span class="label">Status</span>
-        <span class="value" id="viewStatus" class="status-active">-</span>
+    <!-- Assigned Students (visible on parent profile) -->
+    <div id="studentSection" style="display: none;">
+      <div class="section-title">Assigned Students</div>
+      <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
+
+      <!-- Add Student Form (visible after clicking the button) -->
+      <div id="assignStudentForm" style="display: none; margin-top: 20px;">
+        <div class="search-bar">
+          <input type="text" id="studentSearchInput" placeholder="Search students by name or email" />
+          <button id="studentSearchBtn">Search</button>
+        </div>
+        <table style="width: 100%; margin-top: 15px;">
+          <thead>
+            <tr>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Email</th>
+              <th>Select</th>
+            </tr>
+          </thead>
+          <tbody id="studentSearchResults"></tbody>
+        </table>
+        <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
       </div>
     </div>
 
-    <!-- Sections: Parent Info, Students, Edit Fields, Wallet, Transactions... -->
-    <!-- Keep rest of the sections exactly as you already had, no changes required there -->
+    <!-- Edit fields -->
+    <div id="editFields" style="display:none;">
+      <div class="user-details-grid">
+        <div>
+          <span class="label">First Name</span>
+          <input type="text" id="editFirstName" />
+        </div>
+        <div>
+          <span class="label">Last Name</span>
+          <input type="text" id="editLastName" />
+        </div>
+        <div>
+          <span class="label">Role</span>
+          <select id="editRole">
+            <option value="cardholder">Cardholder</option>
+            <option value="parent">Parent</option>
+            <option value="vendor">Vendor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+    </div>
 
+    <!-- Vendor Info -->
+    <div id="vendorInfoSection" style="display: none;">
+      <div class="section-title">Vendor Info</div>
+      <div class="user-details-grid" id="vendorDetailsGrid">
+        <div>
+          <span class="label">Business Name</span>
+          <span class="value" id="vendorName">-</span>
+          <input type="text" id="vendorNameInput" class="edit-field" style="display: none;">
+        </div>
+        <div>
+          <span class="label">Category</span>
+          <span class="value" id="vendorCategory">-</span>
+          <input type="text" id="vendorCategoryInput" class="edit-field" style="display: none;">
+        </div>
+        <div>
+          <span class="label">Location</span>
+          <span class="value" id="vendorLocation">-</span>
+          <input type="text" id="vendorLocationInput" class="edit-field" style="display: none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet Info -->
+    <div class="section-title">Wallet</div>
+    <div class="user-details-grid">
+      <div>
+        <span class="label">Wallet ID</span>
+        <span class="value" id="walletId">Loading...</span>
+      </div>
+      <div>
+        <span class="label">Wallet Balance</span>
+        <span class="wallet-balance" id="walletBalance">$0.00</span>
+      </div>
+    </div>
+
+    <!-- Admin Buttons -->
+    <div class="admin-controls" id="adminControls" style="display: none;">
+      <button id="addFundsBtn">Add Funds</button>
+      <button id="freezeWalletBtn">Freeze Wallet</button>
+    </div>
+
+    <!-- Transactions -->
+    <div class="section-title">Transaction History</div>
+    <table class="transaction-table" id="transactionTable">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Amount</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Category</th>
+          <th>Transaction ID</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Transactions go here -->
+      </tbody>
+    </table>
   </div>
 
   <script type="module" src="user-profile.js"></script>
