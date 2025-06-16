@@ -69,6 +69,12 @@ onAuthStateChanged(auth, async (user) => {
   const userData = docSnap.data();
   vendorNameEl.textContent = `${userData.firstName} ${userData.lastName}`;
   vendorEmailEl.textContent = userData.email || "-";
+
+const vendorHeader = document.getElementById("vendorHeader");
+if (vendorHeader) {
+  vendorHeader.textContent = `Welcome, ${userData.firstName} ${userData.lastName}`;
+}
+  
   walletIdEl.textContent = userData.walletId || "N/A";
   walletBalanceEl.textContent = "$" + (userData.walletBalance || 0).toFixed(2);
 
