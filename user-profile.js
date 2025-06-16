@@ -12,6 +12,7 @@ import {
   collection,
   query,
   where,
+  orderBy,
   getDocs,
   limit,
   startAfter
@@ -27,12 +28,11 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM refs
+// DOM references
 const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
@@ -44,11 +44,12 @@ const parentNameEl = document.getElementById("parentName");
 const parentEmailEl = document.getElementById("parentEmail");
 const assignedStudentsList = document.getElementById("assignedStudentsList");
 const assignStudentForm = document.getElementById("assignStudentForm");
-const studentSearchResults = document.getElementById("studentSearchResults");
 const studentSearchInput = document.getElementById("studentSearchInput");
 const studentSearchBtn = document.getElementById("studentSearchBtn");
+const studentSearchResults = document.getElementById("studentSearchResults");
 const assignSelectedBtn = document.getElementById("assignSelectedStudentsBtn");
 const nextPageBtn = document.getElementById("nextStudentPageBtn");
+const prevPageBtn = document.getElementById("prevStudentPageBtn");
 
 let editFirstName, editLastName, editEmail, editRole;
 let currentUserId = new URLSearchParams(window.location.search).get("uid");
@@ -89,7 +90,6 @@ async function loadUserProfile() {
     </select></div>
   `;
 
-  // Refresh references
   editFirstName = document.getElementById("editFirstName");
   editLastName = document.getElementById("editLastName");
   editEmail = document.getElementById("editEmail");
@@ -141,12 +141,10 @@ async function loadAssignedStudents(parentId) {
     assignedStudentsList.appendChild(div);
   });
 
-  // Attach remove handlers
-  const removeButtons = assignedStudentsList.querySelectorAll(".student-remove-btn");
-  removeButtons.forEach((btn) => {
+  assignedStudentsList.querySelectorAll(".student-remove-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const studentId = btn.getAttribute("data-id");
-      if (confirm("Are you sure you want to remove this student from this parent?")) {
+      if (confirm("Remove this student?")) {
         await updateDoc(doc(db, "users", studentId), { parentId: null });
         loadAssignedStudents(parentId);
       }
@@ -154,7 +152,7 @@ async function loadAssignedStudents(parentId) {
   });
 }
 
-// Edit mode
+// Edit Mode
 editBtn?.addEventListener("click", () => {
   document.getElementById("viewFirstName").style.display = "none";
   document.getElementById("viewLastName").style.display = "none";
@@ -168,7 +166,6 @@ editBtn?.addEventListener("click", () => {
   saveBtn.style.display = "inline-block";
 });
 
-// Save user profile
 saveBtn?.addEventListener("click", async () => {
   const updated = {
     firstName: editFirstName.value.trim(),
@@ -181,88 +178,108 @@ saveBtn?.addEventListener("click", async () => {
   location.reload();
 });
 
-// Logout
 logoutBtn?.addEventListener("click", () => {
   signOut(auth).then(() => window.location.href = "index.html");
 });
 
-// Show Add Student section and scroll
 addStudentBtn?.addEventListener("click", () => {
   assignStudentForm.style.display = "block";
   assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
-  loadStudentSearch();
+  loadStudentSearch(true);
 });
 
-// Load paginated student results
-async function loadStudentSearch(startAfterDoc = null) {
-  studentSearchResults.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
+// Student Search + Pagination
+let searchQuery = "";
+let studentPages = [];
+let currentPageIndex = 0;
 
-  let studentQuery = query(
+async function fetchStudentsPage(startAfterDoc = null) {
+  let q = query(
     collection(db, "users"),
     where("role", "==", "student"),
+    where("parentId", "==", null),
+    orderBy("firstName"),
     limit(5)
   );
-
   if (startAfterDoc) {
-    studentQuery = query(studentQuery, startAfter(startAfterDoc));
+    q = query(q, startAfter(startAfterDoc));
+  }
+  return (await getDocs(q)).docs;
+}
+
+async function loadStudentSearch(newSearch = false) {
+  const input = studentSearchInput.value.trim().toLowerCase();
+  if (newSearch) {
+    studentPages = [];
+    currentPageIndex = 0;
+    searchQuery = input;
   }
 
-  const snap = await getDocs(studentQuery);
-  studentSearchResults.innerHTML = "";
-
-  if (snap.empty) {
+  const pageDocs = await fetchStudentsPage(studentPages[currentPageIndex - 1] || null);
+  if (!pageDocs.length) {
     studentSearchResults.innerHTML = "<tr><td colspan='4'>No students found.</td></tr>";
     nextPageBtn.style.display = "none";
+    prevPageBtn.style.display = currentPageIndex > 0 ? "inline-block" : "none";
     return;
   }
 
-  lastVisible = snap.docs[snap.docs.length - 1];
-  nextPageBtn.style.display = "inline-block";
+  if (!studentPages[currentPageIndex]) {
+    studentPages[currentPageIndex] = pageDocs[pageDocs.length - 1];
+  }
 
-  snap.forEach(docSnap => {
-    const student = docSnap.data();
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${student.firstName || "-"}</td>
-      <td>${student.lastName || "-"}</td>
-      <td>${student.email || "-"}</td>
-      <td><input type="checkbox" value="${docSnap.id}" /></td>
-    `;
-    studentSearchResults.appendChild(row);
+  const filtered = pageDocs.filter(docSnap => {
+    const s = docSnap.data();
+    const fullName = `${s.firstName || ""} ${s.lastName || ""}`.toLowerCase();
+    const email = (s.email || "").toLowerCase();
+    return fullName.includes(searchQuery) || email.includes(searchQuery);
   });
+
+  studentSearchResults.innerHTML = "";
+
+  if (!filtered.length) {
+    studentSearchResults.innerHTML = "<tr><td colspan='4'>No matching students.</td></tr>";
+  } else {
+    filtered.forEach(docSnap => {
+      const s = docSnap.data();
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${s.firstName || "-"}</td>
+        <td>${s.lastName || "-"}</td>
+        <td>${s.email || "-"}</td>
+        <td><input type="checkbox" value="${docSnap.id}" /></td>
+      `;
+      studentSearchResults.appendChild(row);
+    });
+  }
+
+  nextPageBtn.style.display = "inline-block";
+  prevPageBtn.style.display = currentPageIndex > 0 ? "inline-block" : "none";
 }
 
-// Trigger search
-studentSearchBtn?.addEventListener("click", () => {
+assignSelectedBtn?.addEventListener("click", async () => {
+  const selected = studentSearchResults.querySelectorAll('input[type="checkbox"]:checked');
+  if (!selected.length) return alert("No students selected.");
+  await Promise.all(Array.from(selected).map(cb =>
+    updateDoc(doc(db, "users", cb.value), { parentId: currentUserId })
+  ));
+  alert("Students assigned.");
+  loadAssignedStudents(currentUserId);
+  loadStudentSearch(true);
+});
+
+studentSearchBtn?.addEventListener("click", () => loadStudentSearch(true));
+nextPageBtn?.addEventListener("click", () => {
+  currentPageIndex++;
   loadStudentSearch();
 });
-
-// Next page
-nextPageBtn?.addEventListener("click", () => {
-  if (lastVisible) {
-    loadStudentSearch(lastVisible);
+prevPageBtn?.addEventListener("click", () => {
+  if (currentPageIndex > 0) {
+    currentPageIndex--;
+    loadStudentSearch();
   }
 });
 
-// Save selected students
-assignSelectedBtn?.addEventListener("click", async () => {
-  const checkboxes = studentSearchResults.querySelectorAll('input[type="checkbox"]:checked');
-  if (!checkboxes.length) return alert("No students selected.");
-
-  const batchPromises = Array.from(checkboxes).map(cb =>
-    updateDoc(doc(db, "users", cb.value), { parentId: currentUserId })
-  );
-
-  await Promise.all(batchPromises);
-  alert("Students assigned successfully.");
-  loadAssignedStudents(currentUserId);
-});
-
-// Auth check
 onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-  } else {
-    loadUserProfile();
-  }
+  if (!user) window.location.href = "index.html";
+  else loadUserProfile();
 });
