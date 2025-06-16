@@ -14,7 +14,9 @@ import {
   collection,
   query,
   where,
-  getDocs
+  getDocs,
+  limit,
+  startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -27,12 +29,11 @@ const firebaseConfig = {
   appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
 };
 
-// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM refs
+// DOM Elements
 const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
@@ -43,11 +44,16 @@ const studentSection = document.getElementById("studentSection");
 const parentNameEl = document.getElementById("parentName");
 const parentEmailEl = document.getElementById("parentEmail");
 const assignedStudentsList = document.getElementById("assignedStudentsList");
-const viewStatusEl = document.getElementById("viewStatus");
+const assignStudentForm = document.getElementById("assignStudentForm");
+const studentSearchResults = document.getElementById("studentSearchResults");
+const studentSearchInput = document.getElementById("studentSearchInput");
+const studentSearchBtn = document.getElementById("studentSearchBtn");
 
 let editFirstName, editLastName, editEmail, editRole;
 let currentUserId = new URLSearchParams(window.location.search).get("uid");
 let currentUserData = null;
+let lastVisible = null;
+let firstLoad = true;
 
 if (!currentUserId) {
   alert("User ID not found.");
@@ -71,7 +77,7 @@ async function loadUserProfile() {
     <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
     <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
 
-    <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:${user.status === 'suspended' ? 'red' : 'green'}">${user.status || "active"}</span></div>
+    <div><span class="label">Status</span><span class="value" id="viewStatus" style="color: ${user.status === 'suspended' ? 'red' : 'green'};">${user.status || "active"}</span></div>
 
     <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
     <select id="editRole" style="display:none; width: 100%;">
@@ -83,7 +89,6 @@ async function loadUserProfile() {
     </select></div>
   `;
 
-  // Field references after DOM update
   editFirstName = document.getElementById("editFirstName");
   editLastName = document.getElementById("editLastName");
   editEmail = document.getElementById("editEmail");
@@ -124,7 +129,6 @@ async function loadAssignedStudents(parentId) {
   });
 }
 
-// Edit Mode
 editBtn?.addEventListener("click", () => {
   document.getElementById("viewFirstName").style.display = "none";
   document.getElementById("viewLastName").style.display = "none";
@@ -139,7 +143,6 @@ editBtn?.addEventListener("click", () => {
   saveBtn.style.display = "inline-block";
 });
 
-// Save Profile
 saveBtn?.addEventListener("click", async () => {
   const updated = {
     firstName: editFirstName.value.trim(),
@@ -152,18 +155,57 @@ saveBtn?.addEventListener("click", async () => {
   location.reload();
 });
 
-// Logout
+addStudentBtn?.addEventListener("click", () => {
+  assignStudentForm.style.display = "block";
+  scrollToForm();
+  loadStudentSearch();
+});
+
+function scrollToForm() {
+  assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function loadStudentSearch(startAfterDoc = null) {
+  studentSearchResults.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
+  let studentQuery = query(
+    collection(db, "users"),
+    where("role", "==", "student"),
+    limit(5)
+  );
+
+  if (startAfterDoc) {
+    studentQuery = query(studentQuery, startAfter(startAfterDoc));
+  }
+
+  const snap = await getDocs(studentQuery);
+  if (snap.empty) {
+    studentSearchResults.innerHTML = "<tr><td colspan='4'>No students found.</td></tr>";
+    return;
+  }
+
+  lastVisible = snap.docs[snap.docs.length - 1];
+  studentSearchResults.innerHTML = "";
+  snap.forEach(docSnap => {
+    const student = docSnap.data();
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${student.firstName || "-"}</td>
+      <td>${student.lastName || "-"}</td>
+      <td>${student.email || "-"}</td>
+      <td><input type="checkbox" value="${docSnap.id}" /></td>
+    `;
+    studentSearchResults.appendChild(row);
+  });
+}
+
+studentSearchBtn?.addEventListener("click", async () => {
+  loadStudentSearch();
+});
+
 logoutBtn?.addEventListener("click", () => {
   signOut(auth).then(() => window.location.href = "index.html");
 });
 
-// Add Student Button
-addStudentBtn?.addEventListener("click", () => {
-  const form = document.getElementById("assignStudentForm");
-  form.style.display = form.style.display === "none" ? "block" : "none";
-});
-
-// Auth Check
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "index.html";
