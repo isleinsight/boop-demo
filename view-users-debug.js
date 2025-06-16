@@ -31,7 +31,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DEBUGGING OUTPUTS
 console.log("🔥 view-users.js loaded");
 console.log("Firebase initialized:", !!app);
 
@@ -44,7 +43,7 @@ let allUsers = [];
 async function loadUsers() {
   try {
     console.log("🔄 Loading users...");
-    const q = query(collection(db, "users"));
+    const q = query(collection(db, "users")); // <-- orderBy removed
     const snapshot = await getDocs(q);
     console.log("✅ Users snapshot size:", snapshot.size);
     snapshot.forEach(doc => {
