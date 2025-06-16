@@ -67,22 +67,17 @@ onAuthStateChanged(auth, async (user) => {
   if (!docSnap.exists()) return;
 
   const userData = docSnap.data();
-  vendorNameEl.textContent = `${userData.firstName} ${userData.lastName}`;
-  vendorEmailEl.textContent = userData.email || "-";
+  const fullName = \`\${userData.firstName} \${userData.lastName}\`;
 
-const vendorHeader = document.getElementById("vendorHeader");
-if (vendorHeader) {
-  vendorHeader.textContent = `Welcome, ${userData.firstName} ${userData.lastName}`;
-}
-  
+  vendorNameEl.textContent = fullName;
+  vendorEmailEl.textContent = userData.email || "-";
   walletIdEl.textContent = userData.walletId || "N/A";
   walletBalanceEl.textContent = "$" + (userData.walletBalance || 0).toFixed(2);
 
   if (vendorHeader) {
-    vendorHeader.textContent = `Welcome, ${userData.firstName} ${userData.lastName}`;
+    vendorHeader.textContent = \`Welcome, \${fullName}\`;
   }
 
-  // Load vendor-specific info
   const vendorDoc = await getDoc(doc(db, "vendors", currentUserId));
   if (vendorDoc.exists()) {
     const vendor = vendorDoc.data();
@@ -118,13 +113,13 @@ async function loadTransactions(vendorId) {
     snap.forEach((docSnap) => {
       const tx = docSnap.data();
       const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
-        <td>$${(tx.amount || 0).toFixed(2)}</td>
-        <td>${tx.to || "-"}</td>
-        <td>${docSnap.id}</td>
-        <td>${tx.status || "-"}</td>
-      `;
+      row.innerHTML = \`
+        <td>\${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
+        <td>$\${(tx.amount || 0).toFixed(2)}</td>
+        <td>\${tx.to || "-"}</td>
+        <td>\${docSnap.id}</td>
+        <td>\${tx.status || "-"}</td>
+      \`;
       transactionBody.appendChild(row);
     });
   } catch (err) {
