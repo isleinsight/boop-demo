@@ -14,12 +14,9 @@ import {
   collection,
   query,
   where,
-  getDocs,
-  limit,
-  startAfter
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
@@ -33,7 +30,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM Elements
 const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
@@ -44,16 +40,10 @@ const studentSection = document.getElementById("studentSection");
 const parentNameEl = document.getElementById("parentName");
 const parentEmailEl = document.getElementById("parentEmail");
 const assignedStudentsList = document.getElementById("assignedStudentsList");
-const assignStudentForm = document.getElementById("assignStudentForm");
-const studentSearchResults = document.getElementById("studentSearchResults");
-const studentSearchInput = document.getElementById("studentSearchInput");
-const studentSearchBtn = document.getElementById("studentSearchBtn");
 
 let editFirstName, editLastName, editEmail, editRole;
 let currentUserId = new URLSearchParams(window.location.search).get("uid");
 let currentUserData = null;
-let lastVisible = null;
-let firstLoad = true;
 
 if (!currentUserId) {
   alert("User ID not found.");
@@ -77,8 +67,6 @@ async function loadUserProfile() {
     <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
     <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
 
-    <div><span class="label">Status</span><span class="value" id="viewStatus" style="color: ${user.status === 'suspended' ? 'red' : 'green'};">${user.status || "active"}</span></div>
-
     <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
     <select id="editRole" style="display:none; width: 100%;">
       <option value="cardholder">Cardholder</option>
@@ -87,6 +75,9 @@ async function loadUserProfile() {
       <option value="admin">Admin</option>
       <option value="student">Student</option>
     </select></div>
+
+    <div><span class="label">Status</span>
+    <span class="value" id="viewStatus" style="color: ${user.disabled ? 'red' : 'green'};">${user.disabled ? 'Suspended' : 'Active'}</span></div>
   `;
 
   editFirstName = document.getElementById("editFirstName");
@@ -115,19 +106,35 @@ async function loadAssignedStudents(parentId) {
   const q = query(collection(db, "users"), where("parentId", "==", parentId));
   const snap = await getDocs(q);
   if (snap.empty) {
-    assignedStudentsList.innerHTML = "<div>No assigned students found.</div>";
+    assignedStudentsList.innerHTML = "<div>No students assigned.</div>";
     return;
   }
 
   assignedStudentsList.innerHTML = "";
-  snap.forEach((doc) => {
-    const student = doc.data();
+  snap.forEach((docSnap) => {
+    const student = docSnap.data();
     const div = document.createElement("div");
-    div.innerHTML = `<span class="label">Name</span>
-                     <span class="value"><a href="user-profile.html?uid=${doc.id}">${student.firstName} ${student.lastName}</a></span>`;
+    div.style.display = "flex";
+    div.style.justifyContent = "space-between";
+    div.style.alignItems = "center";
+    div.innerHTML = `
+      <div>
+        <span class="label">Name</span>
+        <span class="value"><a href="user-profile.html?uid=${docSnap.id}">${student.firstName} ${student.lastName}</a></span>
+      </div>
+      <button class="btnEdit" onclick="removeStudent('${parentId}', '${docSnap.id}')">Remove</button>
+    `;
     assignedStudentsList.appendChild(div);
   });
 }
+
+window.removeStudent = async function(parentId, studentId) {
+  const confirmRemove = confirm("Remove this student from the parent?");
+  if (!confirmRemove) return;
+
+  await updateDoc(doc(db, "users", studentId), { parentId: null });
+  loadAssignedStudents(parentId);
+};
 
 editBtn?.addEventListener("click", () => {
   document.getElementById("viewFirstName").style.display = "none";
@@ -153,53 +160,6 @@ saveBtn?.addEventListener("click", async () => {
   await updateDoc(doc(db, "users", currentUserId), updated);
   alert("Profile updated.");
   location.reload();
-});
-
-addStudentBtn?.addEventListener("click", () => {
-  assignStudentForm.style.display = "block";
-  scrollToForm();
-  loadStudentSearch();
-});
-
-function scrollToForm() {
-  assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-async function loadStudentSearch(startAfterDoc = null) {
-  studentSearchResults.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
-  let studentQuery = query(
-    collection(db, "users"),
-    where("role", "==", "student"),
-    limit(5)
-  );
-
-  if (startAfterDoc) {
-    studentQuery = query(studentQuery, startAfter(startAfterDoc));
-  }
-
-  const snap = await getDocs(studentQuery);
-  if (snap.empty) {
-    studentSearchResults.innerHTML = "<tr><td colspan='4'>No students found.</td></tr>";
-    return;
-  }
-
-  lastVisible = snap.docs[snap.docs.length - 1];
-  studentSearchResults.innerHTML = "";
-  snap.forEach(docSnap => {
-    const student = docSnap.data();
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${student.firstName || "-"}</td>
-      <td>${student.lastName || "-"}</td>
-      <td>${student.email || "-"}</td>
-      <td><input type="checkbox" value="${docSnap.id}" /></td>
-    `;
-    studentSearchResults.appendChild(row);
-  });
-}
-
-studentSearchBtn?.addEventListener("click", async () => {
-  loadStudentSearch();
 });
 
 logoutBtn?.addEventListener("click", () => {
