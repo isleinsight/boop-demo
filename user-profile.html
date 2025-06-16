@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* Styling remains the same as previous */
     .profile-container {
       max-width: 1000px;
       margin: 40px auto;
@@ -46,22 +45,6 @@
 
     .value {
       color: #222;
-    }
-
-    .wallet-balance {
-      font-size: 1.5em;
-      font-weight: bold;
-      color: #1a73e8;
-    }
-
-    .status-active {
-      color: green;
-      font-weight: bold;
-    }
-
-    .status-suspended {
-      color: red;
-      font-weight: bold;
     }
 
     .admin-controls {
@@ -209,6 +192,7 @@
           <input type="text" id="studentSearchInput" placeholder="Search students by name or email..." />
           <button id="studentSearchBtn">Search</button>
         </div>
+
         <table style="width: 100%; margin-top: 15px;" id="studentResultsTable">
           <thead>
             <tr>
@@ -220,6 +204,12 @@
           </thead>
           <tbody id="studentSearchResults"></tbody>
         </table>
+
+        <div style="margin-top: 10px; display: flex; gap: 10px;">
+          <button id="prevStudentPageBtn" class="btnEdit" style="display: none;">Previous</button>
+          <button id="nextStudentPageBtn" class="btnEdit" style="display: none;">Next</button>
+        </div>
+
         <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
       </div>
     </div>
