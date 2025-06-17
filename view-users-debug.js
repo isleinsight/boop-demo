@@ -1,6 +1,4 @@
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -12,7 +10,6 @@ import {
   getDocs,
   doc,
   deleteDoc,
-  addDoc,
   updateDoc,
   query
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -31,6 +28,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Elements
 const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
@@ -49,6 +47,13 @@ let currentPage = 1;
 const usersPerPage = 20;
 let allUsers = [];
 let filteredUsers = [];
+
+function createBadge(status) {
+  const span = document.createElement("span");
+  span.textContent = status;
+  span.classList.add("badge", status === "suspended" ? "suspended" : "active");
+  return span;
+}
 
 function createDropdown(user) {
   const select = document.createElement("select");
@@ -69,27 +74,23 @@ function createDropdown(user) {
       return;
     }
 
-    if (["suspend", "unsuspend", "signout", "delete"].includes(action)) {
-      const confirmMsg = action === "delete"
-        ? "Type DELETE to confirm deletion."
-        : \`Are you sure you want to \${action} this user?\`;
+    const confirmed =
+      action === "delete"
+        ? prompt("Type DELETE to confirm.") === "DELETE"
+        : confirm(\`Are you sure you want to \${action} this user?\`);
 
-      const confirmed = action === "delete"
-        ? prompt(confirmMsg) === "DELETE"
-        : confirm(confirmMsg);
+    if (!confirmed) return;
 
-      if (!confirmed) return;
-
-      if (action === "delete") {
-        await deleteDoc(doc(db, "users", user.id));
-      } else {
-        await updateDoc(doc(db, "users", user.id), {
-          status: action === "suspend" ? "suspended" : "active"
-        });
-      }
-      allUsers = await loadUsers();
-      applyFilters();
+    if (action === "delete") {
+      await deleteDoc(doc(db, "users", user.id));
+    } else {
+      await updateDoc(doc(db, "users", user.id), {
+        status: action === "suspend" ? "suspended" : "active"
+      });
     }
+
+    allUsers = await loadUsers();
+    applyFilters();
   });
   return select;
 }
@@ -134,7 +135,7 @@ function renderTablePage() {
     roleTd.textContent = user.role || "";
 
     const statusTd = document.createElement("td");
-    statusTd.textContent = user.status || "active";
+    statusTd.appendChild(createBadge(user.status || "active"));
 
     const actionsTd = document.createElement("td");
     actionsTd.appendChild(createDropdown(user));
