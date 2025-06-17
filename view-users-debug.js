@@ -1,4 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -10,8 +12,10 @@ import {
   getDocs,
   doc,
   deleteDoc,
+  addDoc,
   updateDoc,
-  query
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -28,7 +32,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Elements
+// DOM Elements
 const userTableBody = document.getElementById("userTableBody");
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
@@ -50,55 +54,95 @@ let filteredUsers = [];
 
 function createBadge(status) {
   const span = document.createElement("span");
-  span.textContent = status;
-  span.classList.add("badge", status === "suspended" ? "suspended" : "active");
+  span.textContent = status === "suspended" ? "Suspended" : "Active";
+  span.style.color = status === "suspended" ? "#e74c3c" : "#27ae60";
   return span;
 }
 
 function createDropdown(user) {
   const select = document.createElement("select");
-  select.innerHTML = \`
+  select.innerHTML = `
     <option value="action">Action</option>
     <option value="view">View Profile</option>
-    <option value="suspend">Suspend</option>
-    <option value="unsuspend">Unsuspend</option>
+    ${user.status === "suspended"
+      ? '<option value="unsuspend">Unsuspend</option>'
+      : '<option value="suspend">Suspend</option>'}
     <option value="signout">Force Sign-out</option>
     <option value="delete">Delete</option>
-  \`;
+  `;
+
   select.addEventListener("change", async () => {
     const action = select.value;
     select.value = "action";
 
     if (action === "view") {
-      window.location.href = \`user-profile.html?uid=\${user.id}\`;
+      window.location.href = `user-profile.html?uid=${user.id}`;
       return;
     }
 
-    const confirmed =
-      action === "delete"
-        ? prompt("Type DELETE to confirm.") === "DELETE"
-        : confirm(\`Are you sure you want to \${action} this user?\`);
+    if (action === "suspend" || action === "unsuspend" || action === "signout") {
+      const confirmed = confirm(`Are you sure you want to ${action} this user?`);
+      if (!confirmed) return;
+    }
 
-    if (!confirmed) return;
+    if (action === "delete") {
+      if (user.email === currentUserEmail) {
+        alert("You cannot delete your own admin account.");
+        return;
+      }
+      const input = prompt("Type DELETE to confirm.");
+      if (input !== "DELETE") {
+        alert("Delete canceled.");
+        return;
+      }
+    }
+
+    await handleAction(user, action);
+  });
+
+  return select;
+}
+
+async function handleAction(user, action) {
+  try {
+    await addDoc(collection(db, "adminActions"), {
+      uid: user.id,
+      action,
+      createdAt: new Date()
+    });
 
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
+      allUsers = allUsers.filter(u => u.id !== user.id);
     } else {
       await updateDoc(doc(db, "users", user.id), {
         status: action === "suspend" ? "suspended" : "active"
       });
+      const updated = allUsers.find(u => u.id === user.id);
+      if (updated) updated.status = action === "suspend" ? "suspended" : "active";
     }
 
-    allUsers = await loadUsers();
     applyFilters();
-  });
-  return select;
+  } catch (err) {
+    console.error("❌ Action failed:", err);
+    alert("Failed to perform action.");
+  }
+}
+
+async function loadUsers() {
+  const q = query(collection(db, "users"), orderBy("firstName"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
 }
 
 function renderTablePage() {
   userTableBody.innerHTML = "";
   const start = (currentPage - 1) * usersPerPage;
-  const pageUsers = filteredUsers.slice(start, start + usersPerPage);
+  const end = start + usersPerPage;
+  const pageUsers = filteredUsers.slice(start, end);
 
   if (filteredUsers.length === 0) {
     const row = document.createElement("tr");
@@ -107,7 +151,6 @@ function renderTablePage() {
     cell.textContent = "No users found.";
     row.appendChild(cell);
     userTableBody.appendChild(row);
-    return;
   }
 
   pageUsers.forEach(user => {
@@ -151,10 +194,10 @@ function renderTablePage() {
     userTableBody.appendChild(row);
   });
 
-  paginationInfo.textContent = \`Page \${currentPage} of \${Math.max(1, Math.ceil(filteredUsers.length / usersPerPage))}\`;
-  userCount.textContent = \`Total Users: \${filteredUsers.length}\`;
+  paginationInfo.textContent = `Page ${currentPage} of ${Math.max(1, Math.ceil(filteredUsers.length / usersPerPage))}`;
+  userCount.textContent = `Total Users: ${filteredUsers.length}`;
   prevBtn.disabled = currentPage === 1;
-  nextBtn.disabled = (currentPage * usersPerPage) >= filteredUsers.length;
+  nextBtn.disabled = end >= filteredUsers.length;
 }
 
 function updateDeleteButtonVisibility() {
@@ -163,16 +206,19 @@ function updateDeleteButtonVisibility() {
 }
 
 function applyFilters() {
-  const searchTerm = searchInput.value.toLowerCase();
+  const searchTerm = searchInput.value.trim().toLowerCase();
   const selectedRole = roleFilter.value;
   const selectedStatus = statusFilter.value;
 
   filteredUsers = allUsers.filter(user => {
-    const matchesSearch = [user.firstName, user.lastName, user.email].some(field =>
-      field?.toLowerCase().includes(searchTerm)
-    );
-    const matchesRole = !selectedRole || user.role === selectedRole;
-    const matchesStatus = !selectedStatus || user.status === selectedStatus;
+    const matchesSearch =
+      user.firstName?.toLowerCase().includes(searchTerm) ||
+      user.lastName?.toLowerCase().includes(searchTerm) ||
+      user.email?.toLowerCase().includes(searchTerm);
+
+    const matchesRole = selectedRole === "" || user.role === selectedRole;
+    const matchesStatus = selectedStatus === "" || user.status === selectedStatus;
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -180,12 +226,9 @@ function applyFilters() {
   renderTablePage();
 }
 
-async function loadUsers() {
-  const snapshot = await getDocs(query(collection(db, "users")));
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
+// Event Listeners
 searchBtn.addEventListener("click", applyFilters);
+searchInput.addEventListener("input", applyFilters);
 clearSearchBtn.addEventListener("click", () => {
   searchInput.value = "";
   roleFilter.value = "";
@@ -197,22 +240,37 @@ statusFilter.addEventListener("change", applyFilters);
 
 selectAllCheckbox.addEventListener("change", () => {
   const checkboxes = document.querySelectorAll(".user-checkbox");
-  checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+  checkboxes.forEach(cb => (cb.checked = selectAllCheckbox.checked));
   updateDeleteButtonVisibility();
 });
 
 deleteSelectedBtn.addEventListener("click", async () => {
-  const selected = document.querySelectorAll(".user-checkbox:checked");
-  if (selected.length === 0) return;
+  const checked = document.querySelectorAll(".user-checkbox:checked");
+  if (checked.length === 0) return;
 
-  const confirmDelete = prompt("Type DELETE to confirm.");
-  if (confirmDelete !== "DELETE") return;
-
-  for (const cb of selected) {
-    await deleteDoc(doc(db, "users", cb.dataset.userId));
+  const invalid = Array.from(checked).some(cb => cb.dataset.userEmail === currentUserEmail);
+  if (invalid) {
+    alert("You cannot delete your own admin account.");
+    return;
   }
 
-  allUsers = await loadUsers();
+  const input = prompt(`Type DELETE to confirm deletion of ${checked.length} users.`);
+  if (input !== "DELETE") {
+    alert("Bulk delete canceled.");
+    return;
+  }
+
+  for (const cb of checked) {
+    const userId = cb.dataset.userId;
+    await addDoc(collection(db, "adminActions"), {
+      uid: userId,
+      action: "delete",
+      createdAt: new Date()
+    });
+    await deleteDoc(doc(db, "users", userId));
+  }
+
+  allUsers = allUsers.filter(u => ![...checked].map(cb => cb.dataset.userId).includes(u.id));
   applyFilters();
 });
 
@@ -222,24 +280,28 @@ prevBtn.addEventListener("click", () => {
     renderTablePage();
   }
 });
+
 nextBtn.addEventListener("click", () => {
-  if ((currentPage * usersPerPage) < filteredUsers.length) {
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  if (currentPage < totalPages) {
     currentPage++;
     renderTablePage();
   }
 });
 
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
+  if (user) {
+    currentUserEmail = user.email;
+    allUsers = await loadUsers();
+    filteredUsers = [...allUsers];
+    applyFilters();
+  } else {
     window.location.href = "index.html";
-    return;
   }
-
-  currentUserEmail = user.email;
-  allUsers = await loadUsers();
-  applyFilters();
 });
 
-document.getElementById("logoutBtn")?.addEventListener("click", () => {
-  signOut(auth).then(() => window.location.href = "index.html");
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
 });
