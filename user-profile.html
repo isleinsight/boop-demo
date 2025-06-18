@@ -5,10 +5,8 @@
   <title>User Profile - BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
-
 </head>
 <body>
-<!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -42,10 +40,8 @@
       </div>
     </div>
 
-    <!-- User Info -->
     <div class="user-details-grid" id="userInfo"></div>
 
-    <!-- Parent Info (on student profile) -->
     <div id="parentSection" style="display: none; margin-top: 40px;">
       <div class="section-title">Parent</div>
       <div class="user-details-grid">
@@ -60,12 +56,10 @@
       </div>
     </div>
 
-    <!-- Assigned Students -->
     <div id="studentSection" style="display: none;">
       <div class="section-title">Assigned Students</div>
       <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
 
-      <!-- Add Student Search + Results -->
       <div id="assignStudentForm" style="display: none; margin-top: 20px;">
         <div class="search-bar">
           <input type="text" id="studentSearchInput" placeholder="Search students by name or email..." />
@@ -85,15 +79,16 @@
         </table>
 
         <div id="paginationContainer" style="margin-top: 15px;">
-  <button id="prevStudentPageBtn" style="display: none;">Previous</button>
-  <button id="nextStudentPageBtn" style="display: none;">Next</button>
-</div>
+          <button id="prevStudentPageBtn" style="display: none;">Previous</button>
+          <button id="nextStudentPageBtn" style="display: none;">Next</button>
+        </div>
+
+        <div id="studentPaginationInfo" style="margin-top: 10px; font-weight: bold;"></div>
 
         <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
       </div>
     </div>
 
-    <!-- Transactions -->
     <div class="section-title">Transaction History</div>
     <table class="transaction-table" id="transactionTable">
       <thead>
@@ -111,7 +106,6 @@
         <!-- Rows injected by JS -->
       </tbody>
     </table>
-    <div id="studentPaginationInfo" style="margin-top: 10px; font-weight: bold;"></div>
   </div>
 
   <script type="module" src="user-profile.js"></script>
