@@ -25,7 +25,7 @@ nav {
 }
 
 .nav-container {
-  max-width: 1100;
+  max-width: 1000;
   margin: auto;
   display: flex;
   justify-content: space-between;
