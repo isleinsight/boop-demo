@@ -17,6 +17,7 @@ p {
   font-size: 1.1em;
 }
 
+
 /* === Navbar === */
 nav {
   background-color: #102a43;
@@ -59,7 +60,7 @@ nav {
 
 /* === Page layout === */
 .container {
-  max-width: 1100px;
+  max-width: 95%;
   margin: 20px auto;
   padding: 40px 30px;
   background: white;
