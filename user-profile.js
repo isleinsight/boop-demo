@@ -81,14 +81,10 @@ async function loadUserProfile() {
     <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:${user.status === 'suspended' ? 'red' : 'green'}">${user.status || "active"}</span></div>
 
     <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
-    <select id="editRole" style="display:none; width: 100%;">
-      <option value="cardholder">Cardholder</option>
-      <option value="parent">Parent</option>
-      <option value="senior">Senior</option>
-      <option value="vendor">Vendor</option>
-      <option value="admin">Admin</option>
-      <option value="student">Student</option>
-    </select></div>
+    const roleOptions = ['cardholder', 'parent', 'senior', 'vendor', 'admin', 'student'];
+let optionsHtml = roleOptions.map(role =>
+  `<option value="${role}" ${user.role === role ? 'selected' : ''}>${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
+).join('');</div>
   `;
 
   editFirstName = document.getElementById("editFirstName");
