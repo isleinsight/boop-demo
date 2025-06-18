@@ -69,7 +69,7 @@ async function loadUserProfile() {
   currentUserData = user;
 
   const roleOptions = ['cardholder', 'parent', 'senior', 'vendor', 'admin', 'student'];
-  let optionsHtml = roleOptions.map(role =>
+  const roleOptionsHtml = roleOptions.map(role =>
     \`<option value="\${role}" \${user.role === role ? 'selected' : ''}>\${role.charAt(0).toUpperCase() + role.slice(1)}</option>\`
   ).join('');
 
@@ -86,7 +86,7 @@ async function loadUserProfile() {
     <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:\${user.status === 'suspended' ? 'red' : 'green'}">\${user.status || "active"}</span></div>
 
     <div><span class="label">Role</span><span class="value" id="viewRole">\${user.role || "-"}</span>
-    <select id="editRole" style="display:none; width: 100%;">\${optionsHtml}</select></div>
+    <select id="editRole" style="display:none; width: 100%;">\${roleOptionsHtml}</select></div>
   \`;
 
   editFirstName = document.getElementById("editFirstName");
@@ -110,3 +110,10 @@ async function loadUserProfile() {
     }
   }
 }
+
+// [Other functions remain the same...]
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) window.location.href = "index.html";
+  else loadUserProfile();
+});
