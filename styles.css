@@ -41,6 +41,16 @@
       border-radius: 10px;
     }
 
+    .loginContainer {
+      max-width: 600px;
+      text-align: center;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
     /* Top bar */
     .container > .top-bar {
       display: flex;
