@@ -197,7 +197,7 @@ async function fetchStudentsPage(startAfterDoc = null) {
   let q = query(
     collection(db, "users"),
     where("role", "==", "student"),
-    where("parentId", "==", null),
+   // where("parentId", "==", null),
     orderBy("firstName"),
     limit(5)
   );
