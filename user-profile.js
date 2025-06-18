@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";More actions
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   signOut,
@@ -85,13 +85,6 @@ async function loadUserProfile() {
   const user = snap.data();
   currentUserData = user;
 
-  // ✅ Build role options HTML FIRST
-  const roleOptions = ['cardholder', 'parent', 'senior', 'vendor', 'admin', 'student'];
-  const optionsHtml = roleOptions.map(role =>
-    `<option value="${role}" ${user.role === role ? 'selected' : ''}>${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
-  ).join('');
-
-  // ✅ Now use it in your HTML template
   userInfo.innerHTML = `
     <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.firstName || "-"}</span>
     <input type="text" id="editFirstName" value="${user.firstName || ""}" style="display:none; width: 100%;" /></div>
@@ -102,11 +95,17 @@ async function loadUserProfile() {
     <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
     <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
 
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return [];
     <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:${user.status === 'suspended' ? 'red' : 'green'}">${user.status || "active"}</span></div>
 
     <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
     <select id="editRole" style="display:none; width: 100%;">
-      ${optionsHtml}
+      <option value="cardholder">Cardholder</option>
+      <option value="parent">Parent</option>
+      <option value="vendor">Vendor</option>
+      <option value="admin">Admin</option>
+      <option value="student">Student</option>
     </select></div>
   `;
 
