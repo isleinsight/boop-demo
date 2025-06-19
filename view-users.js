@@ -54,6 +54,7 @@ const usersPerPage = 10;
 
 function createDropdown(user) {
   const select = document.createElement("select");
+  select.classList.add("btnEdit");
   select.innerHTML = `
     <option value="action">Action</option>
     <option value="view">View Profile</option>
