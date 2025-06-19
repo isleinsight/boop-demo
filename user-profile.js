@@ -79,9 +79,20 @@ if (!currentUserId) {
     q = query(q, startAfter(pageMap[page - 2]));
   }
 async function loadUserProfile() {
+  if (!currentUserId) {
+    alert("User ID not found.");
+    window.location.href = "view-users.html";
+    return;
+  }
+
   const userRef = doc(db, "users", currentUserId);
   const snap = await getDoc(userRef);
-  if (!snap.exists()) return alert("User not found.");
+
+  if (!snap.exists()) {
+    alert("User not found.");
+    return;
+  }
+
   const user = snap.data();
   currentUserData = user;
 
@@ -95,8 +106,6 @@ async function loadUserProfile() {
     <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email || "-"}</span>
     <input type="email" id="editEmail" value="${user.email || ""}" style="display:none; width: 100%;" /></div>
 
-  const snapshot = await getDocs(q);
-  if (snapshot.empty) return [];
     <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:${user.status === 'suspended' ? 'red' : 'green'}">${user.status || "active"}</span></div>
 
     <div><span class="label">Role</span><span class="value" id="viewRole">${user.role || "-"}</span>
@@ -109,19 +118,19 @@ async function loadUserProfile() {
     </select></div>
   `;
 
+  // Update global refs to the edit inputs
   editFirstName = document.getElementById("editFirstName");
   editLastName = document.getElementById("editLastName");
   editEmail = document.getElementById("editEmail");
   editRole = document.getElementById("editRole");
 
+  // Role-based extra sections
   if ((user.role || "").toLowerCase() === "parent") {
     addStudentBtn.style.display = "inline-block";
     studentSection.style.display = "block";
     loadAssignedStudents(currentUserId);
   }
 
-  pageMap[page - 1] = snapshot.docs[snapshot.docs.length - 1];
-  return snapshot.docs;
   if ((user.role || "").toLowerCase() === "student" && user.parentId) {
     parentSection.style.display = "block";
     const parentSnap = await getDoc(doc(db, "users", user.parentId));
