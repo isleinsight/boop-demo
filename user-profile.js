@@ -13,7 +13,9 @@ import {
   query,
   where,
   orderBy,
-  getDocs
+  getDocs,
+  limit,
+  startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -46,10 +48,17 @@ const studentSearchInput = document.getElementById("studentSearchInput");
 const studentSearchBtn = document.getElementById("studentSearchBtn");
 const studentSearchResults = document.getElementById("studentSearchResults");
 const assignSelectedBtn = document.getElementById("assignSelectedStudentsBtn");
+const nextPageBtn = document.getElementById("nextStudentPageBtn");
+const prevPageBtn = document.getElementById("prevStudentPageBtn");
+const paginationInfo = document.getElementById("studentPaginationInfo");
 
 let editFirstName, editLastName, editEmail, editRole;
 let currentUserId = new URLSearchParams(window.location.search).get("uid");
 let currentUserData = null;
+
+// Student Pagination
+let studentPages = [];
+let currentStudentPageIndex = 0;
 
 async function loadUserProfile() {
   if (!currentUserId) {
@@ -92,12 +101,10 @@ async function loadUserProfile() {
   `;
 
   editFirstName = document.getElementById("editFirstName");
-editLastName = document.getElementById("editLastName");
-editEmail = document.getElementById("editEmail");
-editRole = document.getElementById("editRole");
-
-// 🛠️ Fix: Set the dropdown to match the user's current role
-editRole.value = user.role || "cardholder";
+  editLastName = document.getElementById("editLastName");
+  editEmail = document.getElementById("editEmail");
+  editRole = document.getElementById("editRole");
+  editRole.value = user.role || "cardholder";
 
   if ((user.role || "").toLowerCase() === "parent") {
     addStudentBtn.style.display = "inline-block";
@@ -155,6 +162,77 @@ async function loadAssignedStudents(parentId) {
   });
 }
 
+async function fetchStudentsPage(startAfterDoc = null) {
+  let q = query(
+    collection(db, "users"),
+    where("role", "==", "student"),
+    orderBy("firstName"),
+    limit(5)
+  );
+
+  if (startAfterDoc) {
+    q = query(q, startAfter(startAfterDoc));
+  }
+
+  const snap = await getDocs(q);
+  return snap.docs;
+}
+
+async function loadStudentSearch(newSearch = false) {
+  if (newSearch) {
+    studentPages = [];
+    currentStudentPageIndex = 0;
+  }
+
+  const lastDoc = studentPages[currentStudentPageIndex - 1] || null;
+  const pageDocs = await fetchStudentsPage(lastDoc);
+
+  if (pageDocs.length > 0) {
+    studentPages[currentStudentPageIndex] = pageDocs[pageDocs.length - 1];
+  }
+
+  renderStudents(pageDocs);
+  renderPaginationControls();
+}
+
+function renderStudents(docs) {
+  studentSearchResults.innerHTML = "";
+
+  if (docs.length === 0) {
+    studentSearchResults.innerHTML = "<tr><td colspan='4'>No students found.</td></tr>";
+    return;
+  }
+
+  docs.forEach((docSnap) => {
+    const s = docSnap.data();
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${s.firstName || "-"}</td>
+      <td>${s.lastName || "-"}</td>
+      <td>${s.email || "-"}</td>
+      <td><input type="checkbox" value="${docSnap.id}" /></td>
+    `;
+    studentSearchResults.appendChild(row);
+  });
+}
+
+function renderPaginationControls() {
+  nextPageBtn.style.display = "inline-block";
+  prevPageBtn.style.display = currentStudentPageIndex > 0 ? "inline-block" : "none";
+
+  nextPageBtn.onclick = () => {
+    currentStudentPageIndex++;
+    loadStudentSearch();
+  };
+
+  prevPageBtn.onclick = () => {
+    if (currentStudentPageIndex > 0) {
+      currentStudentPageIndex--;
+      loadStudentSearch();
+    }
+  };
+}
+
 editBtn?.addEventListener("click", () => {
   document.getElementById("viewFirstName").style.display = "none";
   document.getElementById("viewLastName").style.display = "none";
@@ -183,6 +261,11 @@ saveBtn?.addEventListener("click", async () => {
 addStudentBtn?.addEventListener("click", () => {
   assignStudentForm.style.display = "block";
   assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  loadStudentSearch(true);
+});
+
+studentSearchBtn?.addEventListener("click", () => {
+  loadStudentSearch(true);
 });
 
 logoutBtn?.addEventListener("click", () => {
