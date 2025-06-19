@@ -1,3 +1,17 @@
+console.log("Script loaded");
+window.addEventListener('load', () => console.log("Page fully loaded"));
+
+setTimeout(() => {
+  console.log("Current URL:", window.location.href);
+  console.log("UID param:", new URLSearchParams(window.location.search).get("uid"));
+}, 500);
+
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+onAuthStateChanged(getAuth(), (user) => {
+  console.log("Auth state changed:", user ? "User signed in" : "Not signed in");
+});
+
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
