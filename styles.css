@@ -1,3 +1,15 @@
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+#userTable {
+  min-width: 900px; /* or however wide your table naturally is */
+  width: max-content; /* prevent shrinking */
+  border-collapse: collapse;
+}
+
 .nav-container {
       max-width: 1100px;
       margin: auto;
