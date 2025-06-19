@@ -94,6 +94,7 @@ async function loadUserProfile() {
       <option value="cardholder">Cardholder</option>
       <option value="parent">Parent</option>
       <option value="vendor">Vendor</option>
+      <option value="senior">Senior</option>
       <option value="admin">Admin</option>
       <option value="student">Student</option>
     </select></div>
