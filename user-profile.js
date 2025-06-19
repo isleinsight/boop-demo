@@ -191,7 +191,15 @@ async function loadStudentSearch(newSearch = false) {
     studentPages[currentStudentPageIndex] = pageDocs[pageDocs.length - 1];
   }
 
-  renderStudents(pageDocs);
+  const input = studentSearchInput.value.trim().toLowerCase();
+  const filtered = pageDocs.filter(docSnap => {
+    const s = docSnap.data();
+    const fullName = `${s.firstName || ""} ${s.lastName || ""}`.toLowerCase();
+    const email = (s.email || "").toLowerCase();
+    return fullName.includes(input) || email.includes(input);
+  });
+
+  renderStudents(filtered);
   renderPaginationControls();
 }
 
@@ -232,6 +240,24 @@ function renderPaginationControls() {
     }
   };
 }
+
+assignSelectedBtn?.addEventListener("click", async () => {
+  const selected = studentSearchResults.querySelectorAll('input[type="checkbox"]:checked');
+  if (!selected.length) {
+    alert("No students selected.");
+    return;
+  }
+
+  await Promise.all(
+    Array.from(selected).map(cb =>
+      updateDoc(doc(db, "users", cb.value), { parentId: currentUserId })
+    )
+  );
+
+  alert("Students assigned.");
+  loadAssignedStudents(currentUserId);
+  loadStudentSearch(true);
+});
 
 editBtn?.addEventListener("click", () => {
   document.getElementById("viewFirstName").style.display = "none";
