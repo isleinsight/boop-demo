@@ -1,17 +1,3 @@
-console.log("Script loaded");
-window.addEventListener('load', () => console.log("Page fully loaded"));
-
-setTimeout(() => {
-  console.log("Current URL:", window.location.href);
-  console.log("UID param:", new URLSearchParams(window.location.search).get("uid"));
-}, 500);
-
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-onAuthStateChanged(getAuth(), (user) => {
-  console.log("Auth state changed:", user ? "User signed in" : "Not signed in");
-});
-
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -45,6 +31,60 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+console.log("✅ View Users script loaded");
+
+window.addEventListener('load', () => console.log("✅ Page fully loaded"));
+
+setTimeout(() => {
+  console.log("Current URL:", window.location.href);
+}, 300);
+
+import {
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Initialize Firebase again (just in case)
+const firebaseConfig = {
+  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+  authDomain: "boop-becff.firebaseapp.com",
+  projectId: "boop-becff",
+  storageBucket: "boop-becff.appspot.com",
+  messagingSenderId: "570567453336",
+  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
+};
+
+const app = firebase.initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    console.warn("⚠️ Not logged in. Redirecting...");
+    window.location.href = "index.html";
+    return;
+  }
+
+  console.log("✅ Authenticated as:", user.email);
+
+  try {
+    const usersCol = collection(db, "users");
+    const snap = await getDocs(usersCol);
+    console.log(`✅ Retrieved ${snap.size} users`);
+    snap.forEach(doc => {
+      const data = doc.data();
+      console.log(`- ${data.firstName} ${data.lastName} (${data.role})`);
+    });
+  } catch (err) {
+    console.error("🔥 Firestore error:", err.message);
+  }
+});
 
 // DEBUGGING OUTPUTS
 console.log("🔥 view-users.js loaded");
