@@ -103,7 +103,7 @@ async function loadUserProfile() {
   // Actions dropdown
   const actionsDropdown = document.createElement("select");
   actionsDropdown.innerHTML = `
-    <option value="">Action</option>
+    <option value="">Actions</option>
     <option value="view">View Profile</option>
     <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">
       ${user.status === "suspended" ? "Unsuspend" : "Suspend"}
