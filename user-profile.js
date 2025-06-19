@@ -13,9 +13,7 @@ import {
   query,
   where,
   orderBy,
-  getDocs,
-  limit,
-  startAfter
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -32,7 +30,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM refs
+// DOM references
 const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
@@ -48,17 +46,9 @@ const studentSearchInput = document.getElementById("studentSearchInput");
 const studentSearchBtn = document.getElementById("studentSearchBtn");
 const studentSearchResults = document.getElementById("studentSearchResults");
 const assignSelectedBtn = document.getElementById("assignSelectedStudentsBtn");
-const paginationContainer = document.getElementById("paginationContainer");
-const nextPageBtn = document.getElementById("nextStudentPageBtn");
-const prevPageBtn = document.getElementById("prevStudentPageBtn");
-const paginationInfo = document.getElementById("studentPaginationInfo");
 
 let editFirstName, editLastName, editEmail, editRole;
 let currentUserId = new URLSearchParams(window.location.search).get("uid");
-let currentPage = 1;
-let studentsPerPage = 5;
-let lastVisibleDoc = null;
-let pageMap = [];
 let currentUserData = null;
 
 async function loadUserProfile() {
@@ -122,6 +112,79 @@ async function loadUserProfile() {
     }
   }
 }
+
+async function loadAssignedStudents(parentId) {
+  const q = query(collection(db, "users"), where("parentId", "==", parentId));
+  const snap = await getDocs(q);
+  assignedStudentsList.innerHTML = "";
+
+  if (snap.empty) {
+    assignedStudentsList.innerHTML = "<div>No assigned students found.</div>";
+    return;
+  }
+
+  snap.forEach((docSnap) => {
+    const student = docSnap.data();
+    const div = document.createElement("div");
+    div.style.display = "flex";
+    div.style.justifyContent = "space-between";
+    div.style.alignItems = "center";
+    div.style.gap = "10px";
+
+    div.innerHTML = `
+      <div>
+        <span class="label">Name</span>
+        <span class="value"><a href="user-profile.html?uid=${docSnap.id}">${student.firstName} ${student.lastName}</a></span>
+      </div>
+      <button class="student-remove-btn" data-id="${docSnap.id}">Remove</button>
+    `;
+    assignedStudentsList.appendChild(div);
+  });
+
+  assignedStudentsList.querySelectorAll(".student-remove-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const studentId = btn.getAttribute("data-id");
+      if (confirm("Remove this student?")) {
+        await updateDoc(doc(db, "users", studentId), { parentId: null });
+        loadAssignedStudents(parentId);
+      }
+    });
+  });
+}
+
+editBtn?.addEventListener("click", () => {
+  document.getElementById("viewFirstName").style.display = "none";
+  document.getElementById("viewLastName").style.display = "none";
+  document.getElementById("viewEmail").style.display = "none";
+  document.getElementById("viewRole").style.display = "none";
+
+  editFirstName.style.display = "block";
+  editLastName.style.display = "block";
+  editEmail.style.display = "block";
+  editRole.style.display = "block";
+  saveBtn.style.display = "inline-block";
+});
+
+saveBtn?.addEventListener("click", async () => {
+  const updated = {
+    firstName: editFirstName.value.trim(),
+    lastName: editLastName.value.trim(),
+    email: editEmail.value.trim(),
+    role: editRole.value
+  };
+  await updateDoc(doc(db, "users", currentUserId), updated);
+  alert("Profile updated.");
+  location.reload();
+});
+
+addStudentBtn?.addEventListener("click", () => {
+  assignStudentForm.style.display = "block";
+  assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+logoutBtn?.addEventListener("click", () => {
+  signOut(auth).then(() => window.location.href = "index.html");
+});
 
 onAuthStateChanged(auth, (user) => {
   if (!user) window.location.href = "index.html";
