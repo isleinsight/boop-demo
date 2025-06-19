@@ -73,6 +73,7 @@
   flex-wrap: nowrap;
   align-items: center;
   gap: 10px;
+  margin-top: 20px;
   overflow-x: auto;
   color: #000000; 
 
@@ -98,16 +99,13 @@
 .search-filter-bar input,
 .search-filter-bar select,
 .search-filter-bar button {
-  padding: 8px;
+  margin: 0;
+  padding: 8px 10px;
   border-radius: 4px;
   border: 1px solid #ccc;
+  height: 38px;
   font-size: 14px;
   align-items: center;
-}
-
-.search-filter-bar input,
-{
-margin-top: 20px;
 }
 
     #clearSearchBtn {
