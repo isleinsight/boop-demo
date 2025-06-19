@@ -149,6 +149,18 @@ function renderTablePage() {
   paginationInfo.textContent = `Page ${currentPage}`;
   prevBtn.disabled = currentPage === 1;
   nextBtn.disabled = end >= filteredUsers.length;
+
+  // Reset "select all" checkbox
+  selectAllCheckbox.checked = false;
+
+  // Attach change event to each user checkbox
+  document.querySelectorAll(".user-checkbox").forEach(cb => {
+    cb.addEventListener("change", updateDeleteButton);
+  });
+
+  // Set the delete button visibility correctly
+  updateDeleteButton();
+  
 }
 
 function applyFilters() {
