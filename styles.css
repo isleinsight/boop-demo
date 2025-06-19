@@ -1,17 +1,3 @@
-input[type="text"],
-input[type="email"],
-select {
-  max-width: 90%;
-  width: 90%;
-  box-sizing: border-box;
-}
-
-.label + .value,
-.label + input,
-.label + select {
-  max-width: 300px; /* Adjust to your preference */
-}
-
 .table-scroll-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
