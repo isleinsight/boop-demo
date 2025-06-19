@@ -1,4 +1,4 @@
-//⛔️
+//⛔️✅
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
@@ -19,6 +19,7 @@ import {
   startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
   authDomain: "boop-becff.firebaseapp.com",
@@ -32,6 +33,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// DOM references
 const userInfo = document.getElementById("userInfo");
 const editBtn = document.getElementById("editProfileBtn");
 const saveBtn = document.getElementById("saveProfileBtn");
@@ -69,7 +71,7 @@ async function loadUserProfile() {
 
   const roleOptions = ['cardholder', 'parent', 'senior', 'vendor', 'admin', 'student'];
   const optionsHtml = roleOptions.map(role =>
-    `<option value="\${role}" \${user.role === role ? 'selected' : ''}>\${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
+    \`<option value="\${role}" \${user.role === role ? 'selected' : ''}>\${role.charAt(0).toUpperCase() + role.slice(1)}</option>\`
   ).join('');
 
   userInfo.innerHTML = \`
@@ -109,3 +111,171 @@ async function loadUserProfile() {
     }
   }
 }
+
+async function loadAssignedStudents(parentId) {
+  const q = query(collection(db, "users"), where("parentId", "==", parentId));
+  const snap = await getDocs(q);
+  assignedStudentsList.innerHTML = "";
+
+  if (snap.empty) {
+    assignedStudentsList.innerHTML = "<div>No assigned students found.</div>";
+    return;
+  }
+
+  snap.forEach((docSnap) => {
+    const student = docSnap.data();
+    const div = document.createElement("div");
+    div.style.display = "flex";
+    div.style.justifyContent = "space-between";
+    div.style.alignItems = "center";
+    div.style.gap = "10px";
+
+    div.innerHTML = \`
+      <div>
+        <span class="label">Name</span>
+        <span class="value"><a href="user-profile.html?uid=\${docSnap.id}">\${student.firstName} \${student.lastName}</a></span>
+      </div>
+      <button class="student-remove-btn" data-id="\${docSnap.id}">Remove</button>
+    \`;
+
+    assignedStudentsList.appendChild(div);
+  });
+
+  assignedStudentsList.querySelectorAll(".student-remove-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const studentId = btn.getAttribute("data-id");
+      if (confirm("Remove this student?")) {
+        await updateDoc(doc(db, "users", studentId), { parentId: null });
+        loadAssignedStudents(parentId);
+      }
+    });
+  });
+}
+
+editBtn?.addEventListener("click", () => {
+  document.getElementById("viewFirstName").style.display = "none";
+  document.getElementById("viewLastName").style.display = "none";
+  document.getElementById("viewEmail").style.display = "none";
+  document.getElementById("viewRole").style.display = "none";
+
+  editFirstName.style.display = "block";
+  editLastName.style.display = "block";
+  editEmail.style.display = "block";
+  editRole.style.display = "block";
+  saveBtn.style.display = "inline-block";
+});
+
+saveBtn?.addEventListener("click", async () => {
+  const updated = {
+    firstName: editFirstName.value.trim(),
+    lastName: editLastName.value.trim(),
+    email: editEmail.value.trim(),
+    role: editRole.value
+  };
+  await updateDoc(doc(db, "users", currentUserId), updated);
+  alert("Profile updated.");
+  location.reload();
+});
+
+logoutBtn?.addEventListener("click", () => {
+  signOut(auth).then(() => window.location.href = "index.html");
+});
+
+addStudentBtn?.addEventListener("click", () => {
+  assignStudentForm.style.display = "block";
+  assignStudentForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  loadStudentSearch(true);
+});
+
+// Pagination logic
+let searchQuery = "";
+let studentPages = [];
+let currentPageIndex = 0;
+let cachedStudentResults = [];
+
+async function fetchStudentsPage(startAfterDoc = null) {
+  let q = query(
+    collection(db, "users"),
+    where("role", "==", "student"),
+    orderBy("firstName"),
+    limit(5)
+  );
+  if (startAfterDoc) {
+    q = query(q, startAfter(startAfterDoc));
+  }
+  return (await getDocs(q)).docs;
+}
+
+async function loadStudentSearch(newSearch = false) {
+  const input = studentSearchInput.value.trim().toLowerCase();
+  if (newSearch) {
+    studentPages = [];
+    currentPageIndex = 0;
+    searchQuery = input;
+    cachedStudentResults = [];
+  }
+
+  let startAfterDoc = studentPages[currentPageIndex - 1] || null;
+  let pageDocs = await fetchStudentsPage(startAfterDoc);
+
+  if (!studentPages[currentPageIndex]) {
+    studentPages[currentPageIndex] = pageDocs[pageDocs.length - 1];
+  }
+
+  const filtered = pageDocs.filter(docSnap => {
+    const s = docSnap.data();
+    const fullName = `${s.firstName || ""} ${s.lastName || ""}`.toLowerCase();
+    const email = (s.email || "").toLowerCase();
+    return fullName.includes(searchQuery) || email.includes(searchQuery);
+  });
+
+  studentSearchResults.innerHTML = "";
+
+  if (!filtered.length) {
+    studentSearchResults.innerHTML = "<tr><td colspan='4'>No matching students.</td></tr>";
+  } else {
+    filtered.forEach(docSnap => {
+      const s = docSnap.data();
+      const row = document.createElement("tr");
+      row.innerHTML = \`
+        <td>\${s.firstName || "-"}</td>
+        <td>\${s.lastName || "-"}</td>
+        <td>\${s.email || "-"}</td>
+        <td><input type="checkbox" value="\${docSnap.id}" /></td>
+      \`;
+      studentSearchResults.appendChild(row);
+    });
+  }
+
+  paginationInfo.textContent = \`Page \${currentPageIndex + 1}\`;
+  nextPageBtn.style.display = "inline-block";
+  prevPageBtn.style.display = currentPageIndex > 0 ? "inline-block" : "none";
+}
+
+assignSelectedBtn?.addEventListener("click", async () => {
+  const selected = studentSearchResults.querySelectorAll('input[type="checkbox"]:checked');
+  if (!selected.length) return alert("No students selected.");
+  await Promise.all(Array.from(selected).map(cb =>
+    updateDoc(doc(db, "users", cb.value), { parentId: currentUserId })
+  ));
+  alert("Students assigned.");
+  loadAssignedStudents(currentUserId);
+  loadStudentSearch(true);
+});
+
+studentSearchBtn?.addEventListener("click", () => loadStudentSearch(true));
+nextPageBtn?.addEventListener("click", () => {
+  currentPageIndex++;
+  loadStudentSearch();
+});
+prevPageBtn?.addEventListener("click", () => {
+  if (currentPageIndex > 0) {
+    currentPageIndex--;
+    loadStudentSearch();
+  }
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) window.location.href = "index.html";
+  else loadUserProfile();
+});
