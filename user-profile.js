@@ -92,9 +92,12 @@ async function loadUserProfile() {
   `;
 
   editFirstName = document.getElementById("editFirstName");
-  editLastName = document.getElementById("editLastName");
-  editEmail = document.getElementById("editEmail");
-  editRole = document.getElementById("editRole");
+editLastName = document.getElementById("editLastName");
+editEmail = document.getElementById("editEmail");
+editRole = document.getElementById("editRole");
+
+// 🛠️ Fix: Set the dropdown to match the user's current role
+editRole.value = user.role || "cardholder";
 
   if ((user.role || "").toLowerCase() === "parent") {
     addStudentBtn.style.display = "inline-block";
