@@ -10,6 +10,8 @@ import {
   getDoc,
   updateDoc,
   collection,
+  addDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -50,13 +52,10 @@ const studentSearchResults = document.getElementById("studentSearchResults");
 const assignSelectedBtn = document.getElementById("assignSelectedStudentsBtn");
 const nextPageBtn = document.getElementById("nextStudentPageBtn");
 const prevPageBtn = document.getElementById("prevStudentPageBtn");
-const paginationInfo = document.getElementById("studentPaginationInfo");
 
 let editFirstName, editLastName, editEmail, editRole;
 let currentUserId = new URLSearchParams(window.location.search).get("uid");
 let currentUserData = null;
-
-// Student Pagination
 let studentPages = [];
 let currentStudentPageIndex = 0;
 
@@ -100,6 +99,36 @@ async function loadUserProfile() {
     </select></div>
   `;
 
+  // Actions dropdown
+  const actionsDropdown = document.createElement("select");
+  actionsDropdown.innerHTML = `
+    <option value="">Action</option>
+    <option value="view">View Profile</option>
+    <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">
+      ${user.status === "suspended" ? "Unsuspend" : "Suspend"}
+    </option>
+    <option value="signout">Force Sign-out</option>
+    <option value="delete">Delete</option>
+  `;
+  actionsDropdown.addEventListener("change", async () => {
+    const action = actionsDropdown.value;
+    actionsDropdown.value = "";
+    if (action === "delete") {
+      const input = prompt("Type DELETE to confirm.");
+      if (input !== "DELETE") {
+        alert("Canceled.");
+        return;
+      }
+    }
+    await handleUserAction(currentUserId, action);
+    await loadUserProfile();
+  });
+
+  const actionContainer = document.createElement("div");
+  actionContainer.style.marginTop = "20px";
+  actionContainer.appendChild(actionsDropdown);
+  userInfo.appendChild(actionContainer);
+
   editFirstName = document.getElementById("editFirstName");
   editLastName = document.getElementById("editLastName");
   editEmail = document.getElementById("editEmail");
@@ -120,6 +149,32 @@ async function loadUserProfile() {
       parentNameEl.innerHTML = `<a href="user-profile.html?uid=${user.parentId}">${parent.firstName} ${parent.lastName}</a>`;
       parentEmailEl.textContent = parent.email || "-";
     }
+  }
+}
+
+async function handleUserAction(userId, action) {
+  try {
+    await addDoc(collection(db, "adminActions"), {
+      uid: userId,
+      action,
+      createdAt: new Date()
+    });
+
+    if (action === "delete") {
+      await deleteDoc(doc(db, "users", userId));
+      alert("User deleted.");
+      window.location.href = "view-users.html";
+    } else if (action === "suspend" || action === "unsuspend") {
+      await updateDoc(doc(db, "users", userId), {
+        status: action === "suspend" ? "suspended" : "active"
+      });
+      alert(`User ${action === "suspend" ? "suspended" : "unsuspended"}.`);
+    } else if (action === "signout") {
+      alert("Force Sign-out requested. (Not implemented yet)");
+    }
+  } catch (err) {
+    console.error("❌ Action failed:", err);
+    alert("Action failed.");
   }
 }
 
