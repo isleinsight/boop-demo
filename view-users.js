@@ -130,7 +130,11 @@ function renderTablePage() {
       <td>${user.lastName || "-"}</td>
       <td>${user.email || "-"}</td>
       <td>${user.role || "-"}</td>
-      <td>${user.status || "-"}</td>
+      <td>
+  <span style="color: ${user.status === 'suspended' ? '#e74c3c' : '#27ae60'};">
+    ${user.status || "-"}
+  </span>
+</td>
     `;
 
     const actionsTd = document.createElement("td");
