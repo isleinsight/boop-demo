@@ -22,14 +22,17 @@
     </div>
   </nav>
 
-  <div class="profile-container">
+  <!-- 🔒 Scope all styles to this page -->
+  <div class="profile-container user-profile-page">
     <a href="view-users.html" class="back-button">← Back to Users</a>
     <h2>User Profile</h2>
 
+    <!-- Action buttons -->
     <div style="margin-top: 20px; margin-bottom: 20px;">
       <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
       <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
       <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
+
       <div class="dropdown" style="display:inline-block;">
         <button id="actionsToggleBtn" class="btnEdit">Actions ▾</button>
         <div id="actionsDropdown" class="dropdown-content">
@@ -40,8 +43,10 @@
       </div>
     </div>
 
+    <!-- Injected profile fields go here -->
     <div class="user-details-grid" id="userInfo"></div>
-<div class="user-profile-page">
+
+    <!-- Parent info section -->
     <div id="parentSection" style="display: none; margin-top: 40px;">
       <div class="section-title">Parent</div>
       <div class="user-details-grid">
@@ -55,11 +60,13 @@
         </div>
       </div>
     </div>
-   </div>
+
+    <!-- Student section -->
     <div id="studentSection" style="display: none;">
       <div class="section-title">Assigned Students</div>
       <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
 
+      <!-- Student assignment form -->
       <div id="assignStudentForm" style="display: none; margin-top: 20px;">
         <div class="search-bar">
           <input type="text" id="studentSearchInput" placeholder="Search students by name or email..." />
@@ -89,6 +96,7 @@
       </div>
     </div>
 
+    <!-- Transaction History -->
     <div class="section-title">Transaction History</div>
     <table class="transaction-table" id="transactionTable">
       <thead>
@@ -108,6 +116,7 @@
     </table>
   </div>
 
+  <!-- JS logic for loading and saving profile -->
   <script type="module" src="user-profile.js"></script>
 </body>
 </html>
