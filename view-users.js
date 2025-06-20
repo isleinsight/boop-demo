@@ -33,82 +33,49 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Toast utility
-function showToast(message, isError = false) {
-  const toast = document.createElement("div");
-  toast.className = `toast ${isError ? 'error' : 'success'}`;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
-}
-
-// Add toast styles
-const style = document.createElement("style");
-style.textContent = `
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  background-color: #333;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 6px;
-  font-size: 14px;
-  z-index: 9999;
-  opacity: 0.9;
-}
-.toast.success { background-color: #28a745; }
-.toast.error { background-color: #dc3545; }
-`;
-document.head.appendChild(style);
-
-// Admin Action Handler
+// Request Admin Action
 async function requestAdminAction(uid, action) {
   const user = auth.currentUser;
   if (!user) {
-    showToast("Not authenticated.", true);
+    alert("Not authenticated.");
     return;
   }
 
   if (action === "forceSignout") {
     try {
       await updateDoc(doc(db, "users", uid), { forceSignout: true });
-      showToast("✅ Force Sign Out triggered.");
-    } catch (err) {
-      console.error(err);
-      showToast("❌ Failed to trigger Force Sign Out.", true);
+      alert("✅ Force Sign Out triggered.");
+    } catch (error) {
+      console.error("Error triggering forceSignout:", error);
+      alert("❌ Failed to trigger force sign out.");
     }
     return;
   }
 
+  const actionsRef = collection(db, "adminActions");
+  const payload = {
+    uid: uid,
+    action: action,
+    requestedBy: user.uid,
+    timestamp: new Date(),
+    status: "pending"
+  };
+
   try {
-    const actionsRef = collection(db, "adminActions");
-    await addDoc(actionsRef, {
-      uid: uid,
-      action: action,
-      requestedBy: user.uid,
-      timestamp: new Date(),
-      status: "pending"
-    });
-    showToast(`✅ ${action} request sent.`);
-  } catch (err) {
-    console.error(err);
-    showToast("❌ Action failed.", true);
+    await addDoc(actionsRef, payload);
+    alert(`✅ ${action} request sent. It may take a moment to process.`);
+  } catch (error) {
+    console.error("Error submitting admin action:", error);
+    alert("❌ Failed to send admin action.");
   }
 }
 
-// Globals
 let allUsers = [];
 let filteredUsers = [];
 let currentPage = 1;
 const rowsPerPage = 10;
-const selectedUserIds = new Set();
 
 const tableBody = document.getElementById("userTableBody");
-const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
-const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 
 function renderTable(users) {
   const start = (currentPage - 1) * rowsPerPage;
@@ -116,90 +83,35 @@ function renderTable(users) {
   tableBody.innerHTML = "";
 
   paginatedUsers.forEach((user) => {
-    const isSuspended = user.status === "suspended";
-    const isChecked = selectedUserIds.has(user.id);
-
     const row = document.createElement("tr");
+    const isSuspended = user.suspended === true;
+
     row.innerHTML = `
-      <td><input type="checkbox" class="user-checkbox" value="${user.id}" ${isChecked ? "checked" : ""}></td>
       <td>${user.firstName || ""}</td>
       <td>${user.lastName || ""}</td>
       <td>${user.email || ""}</td>
       <td>${user.role || ""}</td>
       <td>
-        <span style="color: ${isSuspended ? 'red' : 'green'};">
-  ${isSuspended ? "Suspended" : "Active"}
-</span>
-      </td>
-      <td>
-        <div class="dropdown">
-          <button class="action-btn">Actions ▼</button>
-          <div class="dropdown-content">
-            <a href="user-profile.html?uid=${user.id}">View Profile</a>
-            <a href="#" class="request-delete" data-id="${user.id}">Delete</a>
-            <a href="#" class="admin-action" data-id="${user.id}" data-action="${isSuspended ? "unsuspend" : "suspend"}">
-              ${isSuspended ? "Unsuspend" : "Suspend"}
-            </a>
-            <a href="#" class="admin-action" data-id="${user.id}" data-action="forceSignout">Force Sign Out</a>
-          </div>
-        </div>
+        ${
+          isSuspended
+            ? `<span class="badge badge-danger">Suspended</span> 
+               <button class="btn btn-sm btn-success reinstate-btn" data-id="${user.id}">Reinstate</button>`
+            : `<div class="dropdown">
+                <button class="action-btn">Actions ▼</button>
+                <div class="dropdown-content">
+                  <a href="user-profile.html?uid=${user.id}">View Profile</a>
+                  <a href="#" class="request-delete" data-id="${user.id}">Delete</a>
+                  <a href="#" class="admin-action" data-id="${user.id}" data-action="suspend">Suspend</a>
+                  <a href="#" class="admin-action" data-id="${user.id}" data-action="forceSignout">Force Sign Out</a>
+                </div>
+              </div>`
+        }
       </td>
     `;
     tableBody.appendChild(row);
   });
 
-  attachEventListeners();
-  updateDeleteSelectedVisibility();
-}
-
-function attachEventListeners() {
-  // Checkboxes
-  document.querySelectorAll(".user-checkbox").forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-      const uid = checkbox.value;
-      if (checkbox.checked) {
-        selectedUserIds.add(uid);
-      } else {
-        selectedUserIds.delete(uid);
-      }
-      updateDeleteSelectedVisibility();
-    });
-  });
-
-  // Delete Selected
-  deleteSelectedBtn.addEventListener("click", async () => {
-    if (!selectedUserIds.size) return;
-
-    const confirm1 = confirm("Are you sure you want to delete selected users?");
-    if (!confirm1) return;
-
-    const confirm2 = prompt("Type DELETE to confirm:");
-    if (confirm2 !== "DELETE") return showToast("Cancelled.", true);
-
-    for (const uid of selectedUserIds) {
-      await deleteDoc(doc(db, "users", uid));
-      await requestAdminAction(uid, "delete");
-    }
-
-    selectedUserIds.clear();
-    showToast("Selected users deleted.");
-    loadUsers();
-  });
-
-  // Select All
-  selectAllCheckbox.addEventListener("change", () => {
-    document.querySelectorAll(".user-checkbox").forEach((checkbox) => {
-      checkbox.checked = selectAllCheckbox.checked;
-      if (selectAllCheckbox.checked) {
-        selectedUserIds.add(checkbox.value);
-      } else {
-        selectedUserIds.delete(checkbox.value);
-      }
-    });
-    updateDeleteSelectedVisibility();
-  });
-
-  // Single delete
+  // Delete
   document.querySelectorAll(".request-delete").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -207,14 +119,14 @@ function attachEventListeners() {
       const confirm1 = confirm("Are you sure you want to delete this user?");
       if (!confirm1) return;
       const confirm2 = prompt("Type DELETE to confirm:");
-      if (confirm2 !== "DELETE") return showToast("Cancelled.", true);
+      if (confirm2 !== "DELETE") return alert("Cancelled.");
       await deleteDoc(doc(db, "users", uid));
       await requestAdminAction(uid, "delete");
       loadUsers();
     });
   });
 
-  // Admin actions
+  // Admin Actions
   document.querySelectorAll(".admin-action").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -222,15 +134,18 @@ function attachEventListeners() {
       const action = btn.getAttribute("data-action");
       if (!confirm(`Are you sure you want to ${action} this user?`)) return;
       await requestAdminAction(uid, action);
+    });
+  });
+
+  // Reinstate
+  document.querySelectorAll(".reinstate-btn").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      const uid = btn.getAttribute("data-id");
+      if (!confirm("Reinstate this user?")) return;
+      await requestAdminAction(uid, "unsuspend");
       loadUsers();
     });
   });
-}
-
-function updateDeleteSelectedVisibility() {
-  if (deleteSelectedBtn) {
-    deleteSelectedBtn.style.display = selectedUserIds.size > 0 ? "inline-block" : "none";
-  }
 }
 
 function loadUsers() {
@@ -241,10 +156,21 @@ function loadUsers() {
   });
 }
 
-// Auth check
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loadUsers();
+
+    // Listen for forceSignout flag
+    const userRef = doc(db, "users", user.uid);
+    onSnapshot(userRef, async (docSnap) => {
+      if (docSnap.exists() && docSnap.data().forceSignout) {
+        alert("⚠️ You have been signed out by an admin.");
+        await updateDoc(userRef, { forceSignout: false });
+        await signOut(auth);
+        window.location.href = "index.html";
+      }
+    });
+
   } else {
     window.location.href = "index.html";
   }
