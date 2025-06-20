@@ -1,4 +1,4 @@
-import {
+I need you to update the force quit function. It’s not working. import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
