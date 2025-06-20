@@ -14,9 +14,7 @@ import {
   getDocs,
   deleteDoc,
   doc,
-  addDoc,
-  updateDoc,
-  onSnapshot
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -33,41 +31,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Request Admin Action
 async function requestAdminAction(uid, action) {
-  const user = auth.currentUser;
-  if (!user) {
-    alert("Not authenticated.");
-    return;
-  }
-
-  if (action === "forceSignout") {
-    try {
-      await updateDoc(doc(db, "users", uid), { forceSignout: true });
-      alert("✅ Force Sign Out triggered.");
-    } catch (error) {
-      console.error("Error triggering forceSignout:", error);
-      alert("❌ Failed to trigger force sign out.");
-    }
-    return;
-  }
-
   const actionsRef = collection(db, "adminActions");
   const payload = {
     uid: uid,
     action: action,
-    requestedBy: user.uid,
     timestamp: new Date(),
     status: "pending"
   };
-
-  try {
-    await addDoc(actionsRef, payload);
-    alert(`✅ ${action} request sent. It may take a moment to process.`);
-  } catch (error) {
-    console.error("Error submitting admin action:", error);
-    alert("❌ Failed to send admin action.");
-  }
+  await addDoc(actionsRef, payload);
+  alert(`✅ ${action} request sent. It may take a moment to process.`);
 }
 
 let allUsers = [];
@@ -126,7 +99,7 @@ function renderTable(users) {
     });
   });
 
-  // Admin Actions
+  // Admin action
   document.querySelectorAll(".admin-action").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -159,18 +132,6 @@ function loadUsers() {
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loadUsers();
-
-    // Listen for forceSignout flag
-    const userRef = doc(db, "users", user.uid);
-    onSnapshot(userRef, async (docSnap) => {
-      if (docSnap.exists() && docSnap.data().forceSignout) {
-        alert("⚠️ You have been signed out by an admin.");
-        await updateDoc(userRef, { forceSignout: false });
-        await signOut(auth);
-        window.location.href = "index.html";
-      }
-    });
-
   } else {
     window.location.href = "index.html";
   }
