@@ -127,9 +127,9 @@ function renderTable(users) {
       <td>${user.email || ""}</td>
       <td>${user.role || ""}</td>
       <td>
-        <span class="badge" style="color: white; background-color: ${isSuspended ? "#dc3545" : "#28a745"};">
-          ${isSuspended ? "Suspended" : "Active"}
-        </span>
+        <span style="color: ${isSuspended ? 'red' : 'green'};">
+  ${isSuspended ? "Suspended" : "Active"}
+</span>
       </td>
       <td>
         <div class="dropdown">
