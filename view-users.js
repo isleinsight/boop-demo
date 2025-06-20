@@ -65,54 +65,51 @@ function createDropdown(user) {
     <option value="delete">Delete</option>
   `;
   select.addEventListener("change", async () => {
-  const action = select.value;
-  select.value = "action";
-
-  if (action === "view") {
-    window.location.href = `user-profile.html?uid=${user.id}`;
-    return;
-  }
-
-  if (action === "delete") {
-    if (user.email === currentUserEmail) {
-      alert("You cannot delete your own account.");
+    const action = select.value;
+    select.value = "action";
+    if (action === "view") {
+      window.location.href = `user-profile.html?uid=${user.id}`;
       return;
     }
-    const input = prompt("Type DELETE to confirm.");
-    if (input !== "DELETE") {
-      alert("Canceled.");
-      return;
+    if (action === "delete") {
+      if (user.email === currentUserEmail) {
+        alert("You cannot delete your own account.");
+        return;
+      }
+      const input = prompt("Type DELETE to confirm.");
+      if (input !== "DELETE") {
+        alert("Canceled.");
+        return;
+      }
     }
-    await deleteDoc(doc(db, "users", user.id));
+    await performAction(user, action);
+  });
+  return select;
+}
+
+async function performAction(user, action) {
+  try {
     await addDoc(collection(db, "adminActions"), {
       uid: user.id,
       action,
       createdAt: new Date()
     });
-    allUsers = allUsers.filter(u => u.id !== user.id);
+    if (action === "delete") {
+      await deleteDoc(doc(db, "users", user.id));
+      allUsers = allUsers.filter(u => u.id !== user.id);
+    } else {
+      await updateDoc(doc(db, "users", user.id), {
+        status: action === "suspend" ? "suspended" : "active"
+      });
+      const updated = allUsers.find(u => u.id === user.id);
+      if (updated) updated.status = action === "suspend" ? "suspended" : "active";
+    }
     applyFilters();
-    return;
+  } catch (err) {
+    console.error("❌ Action failed:", err);
+    alert("Action failed.");
   }
-
-  if (action === "signout") {
-    await updateDoc(doc(db, "users", user.id), { forceSignout: true });
-    alert("✅ Force Sign Out triggered.");
-    return;
-  }
-
-  // Handle suspend/unsuspend
-  await addDoc(collection(db, "adminActions"), {
-    uid: user.id,
-    action,
-    createdAt: new Date()
-  });
-
-  const newStatus = action === "suspend" ? "suspended" : "active";
-  await updateDoc(doc(db, "users", user.id), { status: newStatus });
-  const updated = allUsers.find(u => u.id === user.id);
-  if (updated) updated.status = newStatus;
-  applyFilters();
-});
+}
 
 function renderTablePage() {
   userTableBody.innerHTML = "";
