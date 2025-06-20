@@ -94,9 +94,14 @@ async function performAction(user, action) {
       action,
       createdAt: new Date()
     });
+
     if (action === "delete") {
       await deleteDoc(doc(db, "users", user.id));
       allUsers = allUsers.filter(u => u.id !== user.id);
+
+    } else if (action === "signout") {
+      await updateDoc(doc(db, "users", user.id), { forceSignout: true });
+
     } else {
       await updateDoc(doc(db, "users", user.id), {
         status: action === "suspend" ? "suspended" : "active"
@@ -104,6 +109,7 @@ async function performAction(user, action) {
       const updated = allUsers.find(u => u.id === user.id);
       if (updated) updated.status = action === "suspend" ? "suspended" : "active";
     }
+
     applyFilters();
   } catch (err) {
     console.error("❌ Action failed:", err);
