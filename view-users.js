@@ -1,20 +1,21 @@
-I need you to update the force quit function. It’s not working. import {
+import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
 import {
   getAuth,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
 import {
   getFirestore,
   collection,
   getDocs,
-  deleteDoc,
   doc,
-  addDoc
+  deleteDoc,
+  addDoc,
+  updateDoc,
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase config
@@ -31,114 +32,223 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-async function requestAdminAction(uid, action) {
-  const actionsRef = collection(db, "adminActions");
-  const payload = {
-    uid: uid,
-    action: action,
-    timestamp: new Date(),
-    status: "pending"
-  };
-  await addDoc(actionsRef, payload);
-  alert(`✅ ${action} request sent. It may take a moment to process.`);
-}
+// DOM references
+const userTableBody = document.getElementById("userTableBody");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+const clearSearchBtn = document.getElementById("clearSearchBtn");
+const userCount = document.getElementById("userCount");
+const roleFilter = document.getElementById("roleFilter");
+const statusFilter = document.getElementById("statusFilter");
+const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const paginationInfo = document.getElementById("paginationInfo");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
 
 let allUsers = [];
 let filteredUsers = [];
+let currentUserEmail = null;
 let currentPage = 1;
-const rowsPerPage = 10;
+const usersPerPage = 10;
 
-const tableBody = document.getElementById("userTableBody");
+function createDropdown(user) {
+  const select = document.createElement("select");
+  select.classList.add("btnEdit");
+  select.innerHTML = `
+    <option value="action">Action</option>
+    <option value="view">View Profile</option>
+    ${user.status === "suspended"
+      ? '<option value="unsuspend">Unsuspend</option>'
+      : '<option value="suspend">Suspend</option>'}
+    <option value="signout">Force Sign-out</option>
+    <option value="delete">Delete</option>
+  `;
+  select.addEventListener("change", async () => {
+    const action = select.value;
+    select.value = "action";
+    if (action === "view") {
+      window.location.href = `user-profile.html?uid=${user.id}`;
+      return;
+    }
+    if (action === "delete") {
+      if (user.email === currentUserEmail) {
+        alert("You cannot delete your own account.");
+        return;
+      }
+      const input = prompt("Type DELETE to confirm.");
+      if (input !== "DELETE") {
+        alert("Canceled.");
+        return;
+      }
+    }
+    await performAction(user, action);
+  });
+  return select;
+}
 
-function renderTable(users) {
-  const start = (currentPage - 1) * rowsPerPage;
-  const paginatedUsers = users.slice(start, start + rowsPerPage);
-  tableBody.innerHTML = "";
+async function performAction(user, action) {
+  try {
+    await addDoc(collection(db, "adminActions"), {
+      uid: user.id,
+      action,
+      createdAt: new Date()
+    });
+    if (action === "delete") {
+      await deleteDoc(doc(db, "users", user.id));
+      allUsers = allUsers.filter(u => u.id !== user.id);
+    } else {
+      await updateDoc(doc(db, "users", user.id), {
+        status: action === "suspend" ? "suspended" : "active"
+      });
+      const updated = allUsers.find(u => u.id === user.id);
+      if (updated) updated.status = action === "suspend" ? "suspended" : "active";
+    }
+    applyFilters();
+  } catch (err) {
+    console.error("❌ Action failed:", err);
+    alert("Action failed.");
+  }
+}
 
-  paginatedUsers.forEach((user) => {
+function renderTablePage() {
+  userTableBody.innerHTML = "";
+  const start = (currentPage - 1) * usersPerPage;
+  const end = start + usersPerPage;
+  const users = filteredUsers.slice(start, end);
+
+  if (users.length === 0) {
+    userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
+    return;
+  }
+
+  users.forEach(user => {
     const row = document.createElement("tr");
-    const isSuspended = user.suspended === true;
 
     row.innerHTML = `
-      <td>${user.firstName || ""}</td>
-      <td>${user.lastName || ""}</td>
-      <td>${user.email || ""}</td>
-      <td>${user.role || ""}</td>
+      <td><input type="checkbox" class="user-checkbox" data-id="${user.id}" data-email="${user.email}" /></td>
+      <td>${user.firstName || "-"}</td>
+      <td>${user.lastName || "-"}</td>
+      <td>${user.email || "-"}</td>
+      <td>${user.role || "-"}</td>
       <td>
-        ${
-          isSuspended
-            ? `<span class="badge badge-danger">Suspended</span> 
-               <button class="btn btn-sm btn-success reinstate-btn" data-id="${user.id}">Reinstate</button>`
-            : `<div class="dropdown">
-                <button class="action-btn">Actions ▼</button>
-                <div class="dropdown-content">
-                  <a href="user-profile.html?uid=${user.id}">View Profile</a>
-                  <a href="#" class="request-delete" data-id="${user.id}">Delete</a>
-                  <a href="#" class="admin-action" data-id="${user.id}" data-action="suspend">Suspend</a>
-                  <a href="#" class="admin-action" data-id="${user.id}" data-action="forceSignout">Force Sign Out</a>
-                </div>
-              </div>`
-        }
-      </td>
+  <span style="color: ${user.status === 'suspended' ? '#e74c3c' : '#27ae60'};">
+    ${user.status || "-"}
+  </span>
+</td>
     `;
-    tableBody.appendChild(row);
+
+    const actionsTd = document.createElement("td");
+    actionsTd.appendChild(createDropdown(user));
+    row.appendChild(actionsTd);
+
+    userTableBody.appendChild(row);
   });
 
-  // Delete
-  document.querySelectorAll(".request-delete").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const uid = btn.getAttribute("data-id");
-      const confirm1 = confirm("Are you sure you want to delete this user?");
-      if (!confirm1) return;
-      const confirm2 = prompt("Type DELETE to confirm:");
-      if (confirm2 !== "DELETE") return alert("Cancelled.");
-      await deleteDoc(doc(db, "users", uid));
-      await requestAdminAction(uid, "delete");
-      loadUsers();
-    });
+  document.getElementById("userCount").textContent = `Total Users: ${filteredUsers.length}`;
+  paginationInfo.textContent = `Page ${currentPage}`;
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = end >= filteredUsers.length;
+
+  // Reset "select all" checkbox
+  selectAllCheckbox.checked = false;
+
+  // Attach change event to each user checkbox
+  document.querySelectorAll(".user-checkbox").forEach(cb => {
+    cb.addEventListener("change", updateDeleteButton);
   });
 
-  // Admin action
-  document.querySelectorAll(".admin-action").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const uid = btn.getAttribute("data-id");
-      const action = btn.getAttribute("data-action");
-      if (!confirm(`Are you sure you want to ${action} this user?`)) return;
-      await requestAdminAction(uid, action);
-    });
-  });
-
-  // Reinstate
-  document.querySelectorAll(".reinstate-btn").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      const uid = btn.getAttribute("data-id");
-      if (!confirm("Reinstate this user?")) return;
-      await requestAdminAction(uid, "unsuspend");
-      loadUsers();
-    });
-  });
+  // Set the delete button visibility correctly
+  updateDeleteButton();
+  
 }
 
-function loadUsers() {
-  getDocs(collection(db, "users")).then((snapshot) => {
-    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    filteredUsers = [...allUsers];
-    renderTable(filteredUsers);
+function applyFilters() {
+  const term = searchInput.value.trim().toLowerCase();
+  const role = roleFilter.value;
+  const status = statusFilter.value;
+
+  filteredUsers = allUsers.filter(user => {
+    const matchesSearch =
+      user.firstName?.toLowerCase().includes(term) ||
+      user.lastName?.toLowerCase().includes(term) ||
+      user.email?.toLowerCase().includes(term);
+    const matchesRole = role === "" || user.role === role;
+    const matchesStatus = status === "" || user.status === status;
+    return matchesSearch && matchesRole && matchesStatus;
   });
+
+  currentPage = 1;
+  renderTablePage();
 }
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loadUsers();
-  } else {
-    window.location.href = "index.html";
+searchBtn?.addEventListener("click", applyFilters);
+clearSearchBtn?.addEventListener("click", () => {
+  searchInput.value = "";
+  roleFilter.value = "";
+  statusFilter.value = "";
+  applyFilters();
+});
+roleFilter?.addEventListener("change", applyFilters);
+statusFilter?.addEventListener("change", applyFilters);
+
+selectAllCheckbox?.addEventListener("change", () => {
+  const checkboxes = document.querySelectorAll(".user-checkbox");
+  checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+  updateDeleteButton();
+});
+
+function updateDeleteButton() {
+  const anyChecked = document.querySelectorAll(".user-checkbox:checked").length > 0;
+  deleteSelectedBtn.style.display = anyChecked ? "inline-block" : "none";
+}
+
+deleteSelectedBtn?.addEventListener("click", async () => {
+  const checked = document.querySelectorAll(".user-checkbox:checked");
+  const ids = Array.from(checked).map(cb => cb.dataset.id);
+  if (ids.includes(currentUserEmail)) {
+    alert("You cannot delete your own account.");
+    return;
+  }
+  const input = prompt("Type DELETE to confirm deletion of selected users.");
+  if (input !== "DELETE") return;
+
+  for (const id of ids) {
+    await deleteDoc(doc(db, "users", id));
+    await addDoc(collection(db, "adminActions"), {
+      uid: id,
+      action: "bulk-delete",
+      createdAt: new Date()
+    });
+  }
+
+  allUsers = allUsers.filter(u => !ids.includes(u.id));
+  applyFilters();
+});
+
+prevBtn?.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTablePage();
+  }
+});
+nextBtn?.addEventListener("click", () => {
+  if (currentPage < Math.ceil(filteredUsers.length / usersPerPage)) {
+    currentPage++;
+    renderTablePage();
   }
 });
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
+onAuthStateChanged(auth, async user => {
+  if (!user) return window.location.href = "index.html";
+  currentUserEmail = user.email;
+  const q = query(collection(db, "users"), orderBy("firstName"));
+  const snap = await getDocs(q);
+  allUsers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  filteredUsers = [...allUsers];
+  applyFilters();
+});
+
+document.getElementById("logoutBtn")?.addEventListener("click", () => {
+  signOut(auth).then(() => window.location.href = "index.html");
 });
