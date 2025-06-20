@@ -44,7 +44,7 @@ function showToast(message, isError = false) {
   }, 3000);
 }
 
-// Add CSS for toast
+// Add toast styles
 const style = document.createElement("style");
 style.textContent = `
 .toast {
@@ -58,14 +58,13 @@ style.textContent = `
   font-size: 14px;
   z-index: 9999;
   opacity: 0.9;
-  transition: opacity 0.3s ease-in-out;
 }
 .toast.success { background-color: #28a745; }
 .toast.error { background-color: #dc3545; }
 `;
 document.head.appendChild(style);
 
-// Admin Action Request
+// Admin Action Handler
 async function requestAdminAction(uid, action) {
   const user = auth.currentUser;
   if (!user) {
@@ -100,12 +99,16 @@ async function requestAdminAction(uid, action) {
   }
 }
 
+// Globals
 let allUsers = [];
 let filteredUsers = [];
 let currentPage = 1;
 const rowsPerPage = 10;
+const selectedUserIds = new Set();
 
 const tableBody = document.getElementById("userTableBody");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 
 function renderTable(users) {
   const start = (currentPage - 1) * rowsPerPage;
@@ -113,35 +116,90 @@ function renderTable(users) {
   tableBody.innerHTML = "";
 
   paginatedUsers.forEach((user) => {
-    const row = document.createElement("tr");
-    const isSuspended = user.suspended === true;
+    const isSuspended = user.status === "suspended";
+    const isChecked = selectedUserIds.has(user.id);
 
+    const row = document.createElement("tr");
     row.innerHTML = `
+      <td><input type="checkbox" class="user-checkbox" value="${user.id}" ${isChecked ? "checked" : ""}></td>
       <td>${user.firstName || ""}</td>
       <td>${user.lastName || ""}</td>
       <td>${user.email || ""}</td>
       <td>${user.role || ""}</td>
       <td>
-        ${
-          isSuspended
-            ? `<span class="badge badge-danger">Suspended</span> 
-               <button class="btn btn-sm btn-success reinstate-btn" data-id="${user.id}">Reinstate</button>`
-            : `<div class="dropdown">
-                <button class="action-btn">Actions ▼</button>
-                <div class="dropdown-content">
-                  <a href="user-profile.html?uid=${user.id}">View Profile</a>
-                  <a href="#" class="request-delete" data-id="${user.id}">Delete</a>
-                  <a href="#" class="admin-action" data-id="${user.id}" data-action="suspend">Suspend</a>
-                  <a href="#" class="admin-action" data-id="${user.id}" data-action="forceSignout">Force Sign Out</a>
-                </div>
-              </div>`
-        }
+        <span class="badge" style="color: white; background-color: ${isSuspended ? "#dc3545" : "#28a745"};">
+          ${isSuspended ? "Suspended" : "Active"}
+        </span>
+      </td>
+      <td>
+        <div class="dropdown">
+          <button class="action-btn">Actions ▼</button>
+          <div class="dropdown-content">
+            <a href="user-profile.html?uid=${user.id}">View Profile</a>
+            <a href="#" class="request-delete" data-id="${user.id}">Delete</a>
+            <a href="#" class="admin-action" data-id="${user.id}" data-action="${isSuspended ? "unsuspend" : "suspend"}">
+              ${isSuspended ? "Unsuspend" : "Suspend"}
+            </a>
+            <a href="#" class="admin-action" data-id="${user.id}" data-action="forceSignout">Force Sign Out</a>
+          </div>
+        </div>
       </td>
     `;
     tableBody.appendChild(row);
   });
 
-  // Delete
+  attachEventListeners();
+  updateDeleteSelectedVisibility();
+}
+
+function attachEventListeners() {
+  // Checkboxes
+  document.querySelectorAll(".user-checkbox").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const uid = checkbox.value;
+      if (checkbox.checked) {
+        selectedUserIds.add(uid);
+      } else {
+        selectedUserIds.delete(uid);
+      }
+      updateDeleteSelectedVisibility();
+    });
+  });
+
+  // Delete Selected
+  deleteSelectedBtn.addEventListener("click", async () => {
+    if (!selectedUserIds.size) return;
+
+    const confirm1 = confirm("Are you sure you want to delete selected users?");
+    if (!confirm1) return;
+
+    const confirm2 = prompt("Type DELETE to confirm:");
+    if (confirm2 !== "DELETE") return showToast("Cancelled.", true);
+
+    for (const uid of selectedUserIds) {
+      await deleteDoc(doc(db, "users", uid));
+      await requestAdminAction(uid, "delete");
+    }
+
+    selectedUserIds.clear();
+    showToast("Selected users deleted.");
+    loadUsers();
+  });
+
+  // Select All
+  selectAllCheckbox.addEventListener("change", () => {
+    document.querySelectorAll(".user-checkbox").forEach((checkbox) => {
+      checkbox.checked = selectAllCheckbox.checked;
+      if (selectAllCheckbox.checked) {
+        selectedUserIds.add(checkbox.value);
+      } else {
+        selectedUserIds.delete(checkbox.value);
+      }
+    });
+    updateDeleteSelectedVisibility();
+  });
+
+  // Single delete
   document.querySelectorAll(".request-delete").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -156,7 +214,7 @@ function renderTable(users) {
     });
   });
 
-  // Admin Actions
+  // Admin actions
   document.querySelectorAll(".admin-action").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -164,18 +222,15 @@ function renderTable(users) {
       const action = btn.getAttribute("data-action");
       if (!confirm(`Are you sure you want to ${action} this user?`)) return;
       await requestAdminAction(uid, action);
-    });
-  });
-
-  // Reinstate
-  document.querySelectorAll(".reinstate-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const uid = btn.getAttribute("data-id");
-      if (!confirm("Reinstate this user?")) return;
-      await requestAdminAction(uid, "unsuspend");
       loadUsers();
     });
   });
+}
+
+function updateDeleteSelectedVisibility() {
+  if (deleteSelectedBtn) {
+    deleteSelectedBtn.style.display = selectedUserIds.size > 0 ? "inline-block" : "none";
+  }
 }
 
 function loadUsers() {
@@ -186,6 +241,7 @@ function loadUsers() {
   });
 }
 
+// Auth check
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loadUsers();
