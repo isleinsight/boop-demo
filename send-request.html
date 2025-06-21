@@ -5,39 +5,140 @@
   <title>Send & Request – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
-  <style> 
- .search-section {
-  margin: 20px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
 
-.search-section input {
-  width: 95%;
-  max-width: 500px;
-  padding: 12px 16px;
-  font-size: 1em;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
+    nav {
+      background-color: #102a43;
+      padding: 12px 20px;
+    }
 
-.next-button {
-  margin-top: 15px;
-  padding: 12px 24px;
-  background: #ccc;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 1em;
-  cursor: not-allowed;
-}
+    .nav-container {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-.next-button.enabled {
-  background: #2f80ed;
-  cursor: pointer;
-}
-    </style>
+    .nav-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-left img {
+      height: 36px;
+      margin-right: 20px;
+    }
+
+    .nav-links a {
+      margin-right: 16px;
+      text-decoration: none;
+      color: white;
+      font-size: 0.95em;
+    }
+
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+
+    .nav-right a {
+      text-decoration: none;
+      color: white;
+      font-size: 0.95em;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #ddd;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+    }
+
+    .tab.active {
+      border-bottom: 3px solid #2f80ed;
+      color: #2f80ed;
+    }
+
+    .search-section {
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .search-section input {
+      width: 100%;
+      max-width: 500px;
+      padding: 12px 16px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .next-button {
+      margin-top: 15px;
+      padding: 12px 24px;
+      background: #ccc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
+      cursor: not-allowed;
+    }
+
+    .next-button.enabled {
+      background: #2f80ed;
+      cursor: pointer;
+    }
+
+    #resultsTitle {
+      font-weight: bold;
+      margin-top: 30px;
+      display: none;
+    }
+
+    #resultsList {
+      margin-top: 10px;
+      display: none;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .result-item {
+      background: #eef1f7;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 0.95em;
+      color: #333;
+    }
+
+    .result-item:hover {
+      background: #d9e6f2;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
   <!-- Top Nav -->
@@ -68,141 +169,138 @@
     <div class="search-section">
       <input type="text" id="recipientInput" placeholder="Name, username, email..." />
       <button class="next-button" id="nextBtn" disabled>Next</button>
+      <div id="resultsTitle">Results</div>
+      <div id="resultsList"></div>
     </div>
-
-    <div class="results-title" id="resultsTitle">Results</div>
-    <div class="results-list" id="resultsList"></div>
   </div>
 
-  <!-- Firebase & Logic -->
   <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  query,
-  where
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      query,
+      where
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-  authDomain: "boop-becff.firebaseapp.com",
-  projectId: "boop-becff",
-  storageBucket: "boop-becff.appspot.com",
-  messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
+    };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-const logoutBtn = document.getElementById("logoutBtn");
-logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
-});
+    const logoutBtn = document.getElementById("logoutBtn");
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    });
 
-const recipientInput = document.getElementById("recipientInput");
-const nextBtn = document.getElementById("nextBtn");
-const resultsList = document.getElementById("resultsList");
-const resultsTitle = document.getElementById("resultsTitle");
-const navLinks = document.getElementById("navLinks");
+    const recipientInput = document.getElementById("recipientInput");
+    const nextBtn = document.getElementById("nextBtn");
+    const resultsList = document.getElementById("resultsList");
+    const resultsTitle = document.getElementById("resultsTitle");
+    const navLinks = document.getElementById("navLinks");
 
-let currentUserEmail = "";
-let currentUserUID = "";
+    let currentUserEmail = "";
+    let currentUserUID = "";
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
 
-  currentUserEmail = user.email;
-  currentUserUID = user.uid;
+      currentUserEmail = user.email;
+      currentUserUID = user.uid;
 
-  const userSnap = await getDocs(query(collection(db, "users"), where("email", "==", currentUserEmail)));
-  userSnap.forEach((doc) => {
-    const data = doc.data();
-    if (data.role === "government") {
-      navLinks.style.display = "none";
-    }
-  });
-});
+      const userSnap = await getDocs(query(collection(db, "users"), where("email", "==", currentUserEmail)));
+      userSnap.forEach((doc) => {
+        const data = doc.data();
+        if (data.role === "government") {
+          navLinks.style.display = "none";
+        }
+      });
+    });
 
-recipientInput.addEventListener("input", async () => {
-  const queryVal = recipientInput.value.trim().toLowerCase();
+    recipientInput.addEventListener("input", async () => {
+      const queryVal = recipientInput.value.trim().toLowerCase();
 
-  if (queryVal.length === 0) {
-    nextBtn.disabled = true;
-    nextBtn.classList.remove("enabled");
-    resultsList.style.display = "none";
-    resultsTitle.style.display = "none";
-    return;
-  }
+      if (queryVal.length === 0) {
+        nextBtn.disabled = true;
+        nextBtn.classList.remove("enabled");
+        resultsList.style.display = "none";
+        resultsTitle.style.display = "none";
+        return;
+      }
 
-  nextBtn.disabled = false;
-  nextBtn.classList.add("enabled");
+      nextBtn.disabled = false;
+      nextBtn.classList.add("enabled");
 
-  resultsList.innerHTML = "";
-  resultsList.style.display = "block";
-  resultsTitle.style.display = "block";
+      resultsList.innerHTML = "";
+      resultsList.style.display = "block";
+      resultsTitle.style.display = "block";
 
-  const usersRef = collection(db, "users");
-  const q = query(usersRef, where("role", "==", "cardholder"), where("onAssistance", "==", false));
-  const snapshot = await getDocs(q);
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("role", "==", "cardholder"), where("onAssistance", "==", false));
+      const snapshot = await getDocs(q);
 
-  let matchCount = 0;
+      let matchCount = 0;
 
-  snapshot.forEach((doc) => {
-    const user = doc.data();
+      snapshot.forEach((doc) => {
+        const user = doc.data();
 
-    const userName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim().toLowerCase();
-    const email = (user.email ?? '').toLowerCase();
+        if (doc.id === currentUserUID) return;
 
-    // Exclude current user by UID
-    if (doc.id === currentUserUID) return;
+        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim().toLowerCase();
+        const email = (user.email ?? "").toLowerCase();
 
-    const isMatch =
-      userName.includes(queryVal) ||
-      (user.firstName ?? '').toLowerCase().includes(queryVal) ||
-      (user.lastName ?? '').toLowerCase().includes(queryVal) ||
-      email.includes(queryVal);
+        const isMatch =
+          fullName.includes(queryVal) ||
+          (user.firstName ?? "").toLowerCase().includes(queryVal) ||
+          (user.lastName ?? "").toLowerCase().includes(queryVal) ||
+          email.includes(queryVal);
 
-    if (isMatch) {
-      const div = document.createElement("div");
-      div.className = "result-item";
-      div.textContent = `${user.firstName} ${user.lastName} (${user.email})`;
-      resultsList.appendChild(div);
-      matchCount++;
-    }
-  });
+        if (isMatch) {
+          const div = document.createElement("div");
+          div.className = "result-item";
+          div.textContent = `${user.firstName} ${user.lastName} (${user.email})`;
+          resultsList.appendChild(div);
+          matchCount++;
+        }
+      });
 
-  if (matchCount === 0) {
-    resultsList.innerHTML = '<div class="result-item">No results found</div>';
-  }
-});
+      if (matchCount === 0) {
+        resultsList.innerHTML = '<div class="result-item">No results found</div>';
+      }
+    });
 
-// Tabs
-const sendTab = document.getElementById("sendTab");
-const requestTab = document.getElementById("requestTab");
+    // Tabs
+    const sendTab = document.getElementById("sendTab");
+    const requestTab = document.getElementById("requestTab");
 
-sendTab.addEventListener("click", () => {
-  sendTab.classList.add("active");
-  requestTab.classList.remove("active");
-});
+    sendTab.addEventListener("click", () => {
+      sendTab.classList.add("active");
+      requestTab.classList.remove("active");
+    });
 
-requestTab.addEventListener("click", () => {
-  requestTab.classList.add("active");
-  sendTab.classList.remove("active");
-});
+    requestTab.addEventListener("click", () => {
+      requestTab.classList.add("active");
+      sendTab.classList.remove("active");
+    });
   </script>
 </body>
 </html>
