@@ -37,6 +37,7 @@ const cardholderEmailEl = document.getElementById("cardholderEmail");
 const walletIdEl = document.getElementById("walletId");
 const walletBalanceEl = document.getElementById("walletBalance");
 const transactionBody = document.getElementById("transactionBody");
+const sendReceiveButtons = document.getElementById("sendReceiveButtons"); // ✅ new
 
 // Auth check
 onAuthStateChanged(auth, async (user) => {
@@ -54,6 +55,11 @@ onAuthStateChanged(auth, async (user) => {
       cardholderEmailEl.textContent = data.email || "-";
       walletIdEl.textContent = data.walletId || "N/A";
       walletBalanceEl.textContent = `$${(data.walletBalance || 0).toFixed(2)}`;
+
+      // ✅ Show Send/Receive buttons only if not on assistance
+      if (sendReceiveButtons && !data.isOnGovernmentAssistance) {
+        sendReceiveButtons.classList.remove("hidden");
+      }
 
       loadTransactions(user.uid);
     }
