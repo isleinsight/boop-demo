@@ -85,7 +85,8 @@
     }
 
     .search-section input {
-      width: 100%;
+      width: 60%;
+      max-width: 500px;
       padding: 12px 16px;
       font-size: 1em;
       border-radius: 6px;
@@ -108,31 +109,28 @@
       cursor: pointer;
     }
 
-    .contacts-row {
-      display: flex;
-      overflow-x: auto;
-      gap: 16px;
+    .results-title {
       margin-top: 30px;
-    }
-
-    .contact {
-      flex: 0 0 auto;
-      text-align: center;
-      font-size: 0.85em;
+      font-weight: 600;
+      font-size: 1em;
       color: #333;
     }
 
-    .contact-avatar {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: #2f80ed;
-      color: white;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 8px;
+    .results-list {
+      margin-top: 10px;
+    }
+
+    .result-item {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background-color: #f9f9f9;
+      cursor: pointer;
+    }
+
+    .result-item:hover {
+      background-color: #e9f1ff;
     }
   </style>
 </head>
@@ -142,11 +140,8 @@
     <div class="nav-container">
       <div class="nav-left">
         <a href="cardholder.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-        <div class="nav-links">
-          <a href="send-request.html">Send / Request</a>
-          <a href="wallet.html">Wallet</a>
-          <a href="activity.html">Activity</a>
-          <a href="help.html">Help</a>
+        <div class="nav-links" id="navLinks">
+          <!-- Links inserted by script if not government -->
         </div>
       </div>
       <div class="nav-right">
@@ -167,24 +162,28 @@
       <button class="next-button" id="nextBtn" disabled>Next</button>
     </div>
 
-    <div class="contacts-row">
-      <div class="contact">
-        <div class="contact-avatar">CF</div>
-        Clever Fun Toys
-      </div>
-      <div class="contact">
-        <div class="contact-avatar">ZA</div>
-        Zahra Aalami
-      </div>
-      <div class="contact">
-        <div class="contact-avatar">BM</div>
-        Babymome
-      </div>
-      <!-- Add more as needed -->
+    <div class="results-title">Results</div>
+    <div class="results-list" id="resultsList">
+      <div class="result-item">Clever Fun Toys</div>
+      <div class="result-item">Zahra Aalami</div>
+      <div class="result-item">Babymome</div>
     </div>
   </div>
 
   <script>
+    // Dummy role for conditional nav links
+    const currentUserRole = "cardholder"; // Change to "government" to test hiding
+
+    const navLinks = document.getElementById("navLinks");
+    if (currentUserRole !== "government") {
+      navLinks.innerHTML = `
+        <a href="send-request.html">Send / Request</a>
+        <a href="wallet.html">Wallet</a>
+        <a href="activity.html">Activity</a>
+        <a href="help.html">Help</a>
+      `;
+    }
+
     // Tab switching
     const sendTab = document.getElementById("sendTab");
     const requestTab = document.getElementById("requestTab");
@@ -192,13 +191,11 @@
     sendTab.addEventListener("click", () => {
       sendTab.classList.add("active");
       requestTab.classList.remove("active");
-      // Show/hide send vs request form if needed
     });
 
     requestTab.addEventListener("click", () => {
       requestTab.classList.add("active");
       sendTab.classList.remove("active");
-      // Show/hide request vs send form if needed
     });
 
     // Enable Next button only when input has text
