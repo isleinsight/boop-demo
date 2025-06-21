@@ -2,222 +2,128 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Send & Request – BOOP</title>
+  <title>Cardholder Dashboard - BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-      margin: 0;
-      padding: 0;
-    }
+nav {
+  background-color: #102a43;
+  padding: 12px 20px;
+}
 
-    nav {
-      background-color: #102a43;
-      padding: 12px 20px;
-    }
+.nav-container {
+  max-width: 1100px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
-    .nav-container {
-      max-width: 1100px;
-      margin: auto;
+.nav-left {
+  display: flex;
+  align-items: center;
+}
+
+.nav-left img {
+  height: 36px;
+  margin-right: 20px;
+}
+
+.nav-links a {
+  margin-right: 16px;
+  text-decoration: none;
+  color: white;
+  font-size: 0.95em;
+}
+
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+.nav-right a {
+  margin-left: 16px;
+  text-decoration: none;
+  color: white;
+  font-size: 0.95em;
+}
+
+.nav-right a:hover {
+  text-decoration: underline;
+}
+
+    .action-buttons {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      justify-content: left;
+      gap: 20px;
+      margin: 30px 0;
     }
 
-    .nav-left {
-      display: flex;
-      align-items: center;
-    }
-
-    .nav-left img {
-      height: 36px;
-      margin-right: 20px;
-    }
-
-    .nav-links a {
-      margin-right: 16px;
-      text-decoration: none;
-      color: white;
-      font-size: 0.95em;
-    }
-
-    .nav-links a:hover {
-      text-decoration: underline;
-    }
-
-    .nav-right a {
-      text-decoration: none;
-      color: white;
-      font-size: 0.95em;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 40px auto;
-      background: white;
-      border-radius: 10px;
-      padding: 30px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-
-    .tabs {
-      display: flex;
-      border-bottom: 2px solid #ddd;
-      margin-bottom: 20px;
-    }
-
-    .tab {
-      padding: 10px 20px;
-      cursor: pointer;
-      font-weight: 500;
-      border-bottom: 3px solid transparent;
-    }
-
-    .tab.active {
-      border-bottom: 3px solid #2f80ed;
-      color: #2f80ed;
-    }
-
-    .search-section {
-      margin: 20px 0;
-    }
-
-    .search-section input {
-      width: 100%;
-      padding: 12px 16px;
-      font-size: 1em;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    .next-button {
-      margin-top: 15px;
-      padding: 12px 24px;
-      background: #ccc;
+    .action-buttons button {
+      background-color: #2f80ed;
       color: white;
       border: none;
-      border-radius: 6px;
+      padding: 12px 24px;
       font-size: 1em;
-      cursor: not-allowed;
-    }
-
-    .next-button.enabled {
-      background: #2f80ed;
+      border-radius: 6px;
       cursor: pointer;
     }
 
-    .contacts-row {
-      display: flex;
-      overflow-x: auto;
-      gap: 16px;
-      margin-top: 30px;
+    .action-buttons button:hover {
+      background-color: #155d6b;
     }
 
-    .contact {
-      flex: 0 0 auto;
-      text-align: center;
-      font-size: 0.85em;
-      color: #333;
-    }
-
-    .contact-avatar {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: #2f80ed;
-      color: white;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 8px;
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
   <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="wallet.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-        <div class="nav-links">
-          <a href="send-request.html">Send / Request</a>
-          <a href="wallet.html">Wallet</a>
-          <a href="activity.html">Activity</a>
-          <a href="help.html">Help</a>
-        </div>
-      </div>
-      <div class="nav-right">
-        <a href="#" id="logoutBtn">Log Out</a>
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <a href="wallet.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+      <div class="nav-links">
+        <a href="send-request.html">Send / Request</a>
+        <a href="wallet.html">Wallet</a>
+        <a href="activity.html">Activity</a>
+        <a href="help.html">Help</a>
       </div>
     </div>
-  </nav>
-
-  <!-- Page Body -->
-  <div class="container">
-    <div class="tabs">
-      <div class="tab active" id="sendTab">Send</div>
-      <div class="tab" id="requestTab">Request</div>
-    </div>
-
-    <div class="search-section">
-      <input type="text" id="recipientInput" placeholder="Name, username, email..." />
-      <button class="next-button" id="nextBtn" disabled>Next</button>
-    </div>
-
-    <div class="contacts-row">
-      <div class="contact">
-        <div class="contact-avatar">CF</div>
-        Clever Fun Toys
-      </div>
-      <div class="contact">
-        <div class="contact-avatar">ZA</div>
-        Zahra Aalami
-      </div>
-      <div class="contact">
-        <div class="contact-avatar">BM</div>
-        Babymome
-      </div>
-      <!-- Add more as needed -->
+    <div class="nav-right">
+      <a href="#" id="logoutBtn">Log Out</a>
     </div>
   </div>
+</nav>
 
-  <script>
-    // Tab switching
-    const sendTab = document.getElementById("sendTab");
-    const requestTab = document.getElementById("requestTab");
+  <!-- Main Container -->
+  <div class="container">
+    <h1>Welcome, <span id="cardholderName">Cardholder</span></h1>
 
-    sendTab.addEventListener("click", () => {
-      sendTab.classList.add("active");
-      requestTab.classList.remove("active");
-      // Show/hide send vs request form if needed
-    });
+    <div class="user-details-grid">
+      <div>
+        <span class="label">Email</span>
+        <span class="value" id="cardholderEmail">-</span>
+      </div>
+      <div>
+        <span class="label">Wallet ID</span>
+        <span class="value" id="walletId">-</span>
+      </div>
+      <div>
+        <span class="label">Balance</span>
+        <span class="value" id="walletBalance">$0.00</span>
+      </div>
+    </div>
 
-    requestTab.addEventListener("click", () => {
-      requestTab.classList.add("active");
-      sendTab.classList.remove("active");
-      // Show/hide request vs send form if needed
-    });
+    <!-- ✅ Action Buttons (conditionally shown) -->
+    <div class="action-buttons hidden" id="sendReceiveButtons">
+      <button id="sendMoneyBtn">Send Money</button>
+      <button id="receiveMoneyBtn">Request Money</button>
+      <button id="transferFundsBtn">Transfer</button>
+    </div>
 
-    // Enable Next button only when input has text
-    const recipientInput = document.getElementById("recipientInput");
-    const nextBtn = document.getElementById("nextBtn");
-
-    recipientInput.addEventListener("input", () => {
-      if (recipientInput.value.trim().length > 0) {
-        nextBtn.disabled = false;
-        nextBtn.classList.add("enabled");
-      } else {
-        nextBtn.disabled = true;
-        nextBtn.classList.remove("enabled");
-      }
-    });
-  </script>
-</body>
-</html>
-
-  <script type="module" src="cardholder.js"></script>
-</body>
-</html>
+   
+    <div class="section-title">Recent Activity</div>
+<div class="activity-list" id="transactionBody">
+  <div class="activity-item">Loading...</div>
+</div>
