@@ -37,7 +37,7 @@ const cardholderEmailEl = document.getElementById("cardholderEmail");
 const walletIdEl = document.getElementById("walletId");
 const walletBalanceEl = document.getElementById("walletBalance");
 const transactionBody = document.getElementById("transactionBody");
-const sendReceiveButtons = document.getElementById("sendReceiveButtons"); // ✅ new
+const sendReceiveButtons = document.getElementById("sendReceiveButtons");
 
 // Auth check
 onAuthStateChanged(auth, async (user) => {
@@ -56,7 +56,7 @@ onAuthStateChanged(auth, async (user) => {
       walletIdEl.textContent = data.walletId || "N/A";
       walletBalanceEl.textContent = `$${(data.walletBalance || 0).toFixed(2)}`;
 
-      // ✅ Show Send/Receive buttons only if not on assistance
+      // Show send/receive buttons only if not on assistance
       if (sendReceiveButtons && !data.isOnGovernmentAssistance) {
         sendReceiveButtons.classList.remove("hidden");
       }
@@ -68,38 +68,82 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// Load transactions
+// Load transactions for user as sender or receiver
 async function loadTransactions(userId) {
-  transactionBody.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
+  const container = document.getElementById("transactionBody");
+  container.innerHTML = `<div class="activity-item">Loading...</div>`;
 
   try {
-    const q = query(collection(db, "transactions"), where("to", "==", userId));
-    const snap = await getDocs(q);
+    // Query both incoming and outgoing transactions
+    const toQuery = query(collection(db, "transactions"), where("to", "==", userId));
+    const fromQuery = query(collection(db, "transactions"), where("from", "==", userId));
 
-    transactionBody.innerHTML = "";
+    const [toSnap, fromSnap] = await Promise.all([
+      getDocs(toQuery),
+      getDocs(fromQuery)
+    ]);
 
-    if (snap.empty) {
-      transactionBody.innerHTML = `<tr><td colspan="5">No recent transactions.</td></tr>`;
+    const transactions = [];
+
+    toSnap.forEach((doc) => {
+      const data = doc.data();
+      transactions.push({
+        ...data,
+        direction: "in",
+        id: doc.id
+      });
+    });
+
+    fromSnap.forEach((doc) => {
+      const data = doc.data();
+      transactions.push({
+        ...data,
+        direction: "out",
+        id: doc.id
+      });
+    });
+
+    if (transactions.length === 0) {
+      container.innerHTML = `<div class="activity-item">No recent activity.</div>`;
       return;
     }
 
-    snap.forEach((doc) => {
-      const tx = doc.data();
-      const row = document.createElement("tr");
+    // Sort newest to oldest
+    transactions.sort((a, b) => {
+      return b.timestamp?.toDate() - a.timestamp?.toDate();
+    });
 
-      row.innerHTML = `
-        <td>${tx.timestamp?.toDate().toLocaleString() || "-"}</td>
-        <td>$${(tx.amount || 0).toFixed(2)}</td>
-        <td>${tx.to || "-"}</td>
-        <td>${tx.category || "-"}</td>
-        <td>${tx.status || "-"}</td>
+    // Render all transactions
+    container.innerHTML = "";
+
+    transactions.forEach((tx) => {
+      const date = tx.timestamp?.toDate().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric"
+      }) || "-";
+
+      const name = tx.direction === "in" ? tx.fromName : tx.toName;
+      const sign = tx.direction === "in" ? "+" : "–";
+      const amountClass = tx.direction === "in" ? "in" : "out";
+
+      const item = document.createElement("div");
+      item.className = "activity-item";
+
+      item.innerHTML = `
+        <div class="activity-details">
+          <div class="activity-name">${name || "Unknown"}</div>
+          <div class="activity-meta">${date} • ${tx.category || "Payment"}</div>
+        </div>
+        <div class="activity-amount ${amountClass}">${sign} $${Math.abs(tx.amount || 0).toFixed(2)}</div>
       `;
 
-      transactionBody.appendChild(row);
+      container.appendChild(item);
     });
+
   } catch (err) {
     console.error("Failed to load transactions:", err);
-    transactionBody.innerHTML = `<tr><td colspan="5">Failed to load transactions.</td></tr>`;
+    container.innerHTML = `<div class="activity-item">Error loading activity.</div>`;
   }
 }
 
