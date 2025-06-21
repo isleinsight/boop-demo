@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BOOP Wallet</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f4f8;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .balance {
+      font-size: 2em;
+      color: #27ae60;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+    }
+
+    .actions button {
+      padding: 10px 20px;
+      font-size: 1em;
+      background: #2980b9;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .actions button:hover {
+      background: #1c5a8a;
+    }
+
+    .transaction-list {
+      margin-top: 30px;
+    }
+
+    .transaction {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .transaction.positive {
+      color: #27ae60;
+    }
+
+    .transaction.negative {
+      color: #c0392b;
+    }
+
+    .form-section {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .form-section input {
+      padding: 10px;
+      margin-bottom: 10px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .form-section button {
+      width: 100%;
+      background: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>BOOP Wallet</h1>
+    <div class="balance" id="walletBalance">BMDX $100.00</div>
+
+    <div class="actions">
+      <button onclick="toggleForm('send')">Send Money</button>
+      <button onclick="toggleForm('request')">Request Money</button>
+    </div>
+
+    <!-- Send Form -->
+    <div class="form-section" id="sendForm">
+      <h3>Send Money</h3>
+      <input type="text" placeholder="Recipient Email" />
+      <input type="number" placeholder="Amount (BMDX)" />
+      <button>Send</button>
+    </div>
+
+    <!-- Request Form -->
+    <div class="form-section" id="requestForm">
+      <h3>Request Money</h3>
+      <input type="text" placeholder="From Email" />
+      <input type="number" placeholder="Amount (BMDX)" />
+      <button>Request</button>
+    </div>
+
+    <div class="transaction-list">
+      <h3>Transaction History</h3>
+      <div class="transaction positive">
+        <span>Received from alice@bmdx.com</span>
+        <span>+ BMDX $25.00</span>
+      </div>
+      <div class="transaction negative">
+        <span>Sent to vendor@shop.bm</span>
+        <span>– BMDX $40.00</span>
+      </div>
+      <div class="transaction positive">
+        <span>Top-up from debit card</span>
+        <span>+ BMDX $50.00</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleForm(type) {
+      document.getElementById('sendForm').style.display = type === 'send' ? 'block' : 'none';
+      document.getElementById('requestForm').style.display = type === 'request' ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>
