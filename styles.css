@@ -412,7 +412,7 @@ form button:hover {
   flex-wrap: wrap;
   gap: 15px;
   justify-content: center;
-  bottom-margin: 50px;
+  margin-bottom: 50px;
 }
 
 .button-grid a {
