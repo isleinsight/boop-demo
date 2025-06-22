@@ -173,7 +173,7 @@
 
           if (userSnap.exists()) {
             const data = userSnap.data();
-            const onAssistance = data.onAssistance === true;
+            const onAssistance = data.onAssistance === false;
             const wallet = parseFloat(data.wallet || 0);
 
             if (onAssistance) {
