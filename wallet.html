@@ -76,11 +76,11 @@
     }
 
     .action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-}
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
 
     .action-buttons button {
       padding: 12px 20px;
@@ -98,6 +98,39 @@
 
     .hidden {
       display: none;
+    }
+
+    .amount-row {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto 0;
+    }
+
+    .amount-row input {
+      flex-grow: 1;
+      padding: 10px 14px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-right: none;
+      border-radius: 6px 0 0 6px;
+      height: 45px;
+      box-sizing: border-box;
+    }
+
+    .amount-row button {
+      padding: 0 20px;
+      font-size: 1em;
+      background-color: #2f80ed;
+      color: white;
+      border: 1px solid #2f80ed;
+      border-left: none;
+      height: 45px;
+      cursor: pointer;
+      box-sizing: border-box;
+      border-radius: 0 6px 6px 0;
     }
   </style>
 </head>
@@ -126,8 +159,14 @@
     <h2>Your Wallet</h2>
     <div class="wallet-balance" id="walletBalance">$0.00</div>
     <div class="action-buttons">
-      <button onclick="#">Add Funds</button>
-      <button onclick="alert('Transfer to bank coming soon')">Transfer</button>
+      <button id="addFundsTab">Add Funds</button>
+      <button id="transferTab">Transfer</button>
+    </div>
+
+    <!-- Shared input and button row -->
+    <div class="amount-row hidden" id="amountRow">
+      <input type="number" id="amountInput" placeholder="Enter amount" />
+      <button id="confirmBtn">Confirm</button>
     </div>
   </div>
 
@@ -160,6 +199,15 @@
 
     const walletSection = document.getElementById("walletSection");
     const walletBalanceEl = document.getElementById("walletBalance");
+
+    const amountRow = document.getElementById("amountRow");
+    const amountInput = document.getElementById("amountInput");
+    const confirmBtn = document.getElementById("confirmBtn");
+
+    const addFundsTab = document.getElementById("addFundsTab");
+    const transferTab = document.getElementById("transferTab");
+
+    let currentMode = "";
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -195,6 +243,36 @@
       signOut(auth).then(() => {
         window.location.href = "cardholder-login.html";
       });
+    });
+
+    // Action handlers
+    addFundsTab.addEventListener("click", () => {
+      currentMode = "add";
+      confirmBtn.textContent = "Add Funds";
+      amountRow.classList.remove("hidden");
+    });
+
+    transferTab.addEventListener("click", () => {
+      currentMode = "transfer";
+      confirmBtn.textContent = "Transfer";
+      amountRow.classList.remove("hidden");
+    });
+
+    confirmBtn.addEventListener("click", () => {
+      const amount = parseFloat(amountInput.value);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Enter a valid amount.");
+        return;
+      }
+
+      if (currentMode === "add") {
+        alert(`Simulating: Adding $${amount.toFixed(2)} to wallet.`);
+      } else if (currentMode === "transfer") {
+        alert(`Simulating: Transferring $${amount.toFixed(2)} to bank.`);
+      }
+
+      amountInput.value = "";
+      amountRow.classList.add("hidden");
     });
   </script>
 </body>
