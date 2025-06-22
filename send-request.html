@@ -81,60 +81,38 @@
       color: #2f80ed;
     }
 
-.search-row {
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-  gap: 0;
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto 20px;
-}
+    .search-row {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto 20px;
+    }
 
-.search-row input {
-  flex-grow: 1;
-  padding: 10px 14px;
-  font-size: 1em;
-  border: 1px solid #ccc;
-  border-right: none;
-  border-radius: 6px 0 0 6px;
-  height: 45px;
-  box-sizing: border-box;
-}
+    .search-row input {
+      flex-grow: 1;
+      padding: 10px 14px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-right: none;
+      border-radius: 6px 0 0 6px;
+      height: 45px;
+      box-sizing: border-box;
+    }
 
-.search-row button {
-  padding: 0 20px;
-  font-size: 1em;
-  background-color: #2f80ed;
-  color: white;
-  border: 1px solid #2f80ed;
-  border-radius: 0 6px 6px 0;
-  height: 45px;
-  cursor: pointer;
-  box-sizing: border-box;
-}
+    .search-row button {
+      padding: 0 20px;
+      font-size: 1em;
+      background-color: #2f80ed;
+      color: white;
+      border: 1px solid #2f80ed;
+      border-radius: 0 6px 6px 0;
+      height: 45px;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
 
-.amount-row button {
-  padding: 0 20px;
-  font-size: 1em;
-  background-color: #2f80ed;
-  color: white;
-  border: 1px solid #2f80ed;
-  height: 45px;
-  cursor: pointer;
-  box-sizing: border-box;
-  border-left: none;
-}
-
-#sendBtn {
-  border-radius: 0 6px 6px 0;
-}
-
-#requestBtn {
-  border-radius: 0 6px 6px 0;
-  margin-left: -1px; /* avoids double borders between buttons */
-}
-    
     #resultsTitle {
       font-weight: bold;
       margin-bottom: 10px;
@@ -158,34 +136,38 @@
       cursor: pointer;
     }
 
-    .amount-input {
-      margin-top: 20px;
-      display: none;
-      text-align: center;
+    .amount-row {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto 0;
     }
 
-    .amount-input input {
-      width: 60%;
-      padding: 10px;
+    .amount-row input {
+      flex-grow: 1;
+      padding: 10px 14px;
       font-size: 1em;
-      border-radius: 6px;
       border: 1px solid #ccc;
+      border-right: none;
+      border-radius: 6px 0 0 6px;
+      height: 45px;
+      box-sizing: border-box;
     }
 
-    .action-buttons {
-      margin-top: 20px;
-      display: none;
-      text-align: center;
-    }
-
-    .action-buttons button {
-      padding: 12px 24px;
+    .amount-row button {
+      padding: 0 20px;
       font-size: 1em;
-      border-radius: 6px;
-      border: none;
-      background: #2f80ed;
+      background-color: #2f80ed;
       color: white;
+      border: 1px solid #2f80ed;
+      border-left: none;
+      height: 45px;
       cursor: pointer;
+      box-sizing: border-box;
+      border-radius: 0 6px 6px 0;
+      display: none;
     }
   </style>
 </head>
@@ -221,13 +203,13 @@
 
     <div id="resultsTitle">Results</div>
     <div id="resultsList"></div>
-      
 
-     <div class="search-row amount-row" id="amountSection" style="display: none;">
-  <input type="number" id="amountInput" placeholder="Enter amount" />
-  <button id="sendBtn" style="display:none;">Send</button>
-  <button id="requestBtn" style="display:none;">Request</button>
-</div>
+    <div class="amount-row" id="amountSection" style="display: none;">
+      <input type="number" id="amountInput" placeholder="Enter amount" />
+      <button id="sendBtn">Send</button>
+      <button id="requestBtn">Request</button>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -281,7 +263,6 @@
     const resultsList = document.getElementById("resultsList");
     const resultsTitle = document.getElementById("resultsTitle");
     const amountSection = document.getElementById("amountSection");
-    const actionButtons = document.getElementById("actionButtons");
     const sendBtn = document.getElementById("sendBtn");
     const requestBtn = document.getElementById("requestBtn");
 
@@ -292,7 +273,6 @@
       resultsList.innerHTML = "";
       resultsTitle.style.display = "none";
       amountSection.style.display = "none";
-      actionButtons.style.display = "none";
       sendBtn.style.display = "none";
       requestBtn.style.display = "none";
 
@@ -322,8 +302,7 @@
           div.className = "result-item";
           div.textContent = `${user.firstName} ${user.lastName} (${user.email})`;
           div.addEventListener("click", () => {
-            amountSection.style.display = "block";
-            actionButtons.style.display = "block";
+            amountSection.style.display = "flex";
             if (selectedTab === "send") {
               sendBtn.style.display = "inline-block";
               requestBtn.style.display = "none";
