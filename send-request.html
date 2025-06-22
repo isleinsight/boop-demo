@@ -114,6 +114,27 @@
   box-sizing: border-box;
 }
 
+.amount-row button {
+  padding: 0 20px;
+  font-size: 1em;
+  background-color: #2f80ed;
+  color: white;
+  border: 1px solid #2f80ed;
+  height: 45px;
+  cursor: pointer;
+  box-sizing: border-box;
+  border-left: none;
+}
+
+#sendBtn {
+  border-radius: 0 6px 6px 0;
+}
+
+#requestBtn {
+  border-radius: 0 6px 6px 0;
+  margin-left: -1px; /* avoids double borders between buttons */
+}
+    
     #resultsTitle {
       font-weight: bold;
       margin-bottom: 10px;
@@ -202,14 +223,11 @@
     <div id="resultsList"></div>
       
 
-     <div class="search-row" id="amountSection" style="display:none;">
-      <input type="number" id="amountInput" placeholder="Enter amount" />
-      <div class="action-buttons" id="actionButtons">
-        <button id="sendBtn" style="display:none;">Send</button>
-        <button id="requestBtn" style="display:none;">Request</button>
-      </div>
-    </div>
-  </div>
+     <div class="search-row amount-row" id="amountSection" style="display: none;">
+  <input type="number" id="amountInput" placeholder="Enter amount" />
+  <button id="sendBtn" style="display:none;">Send</button>
+  <button id="requestBtn" style="display:none;">Request</button>
+</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
