@@ -150,7 +150,12 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
-      // your firebase config here
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -160,25 +165,28 @@
     const walletSection = document.getElementById("walletSection");
     const balanceEl = document.getElementById("walletBalance");
 
-    onAuthStateChanged(auth, async user => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
+        try {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
 
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          const isGov = data.governmentAssistance || false;
-          const wallet = parseFloat(data.wallet || 0);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            const isGov = data.governmentAssistance || false;
+            const wallet = parseFloat(data.wallet || 0);
 
-          if (isGov) {
-            // Redirect cardholders on assistance to homepage
-            window.location.href = "cardholder.html";
+            if (isGov) {
+              window.location.href = "cardholder.html";
+            } else {
+              walletSection.classList.remove("hidden");
+              balanceEl.textContent = `$${wallet.toFixed(2)}`;
+            }
           } else {
-            walletSection.classList.remove("hidden");
-            balanceEl.textContent = `$${wallet.toFixed(2)}`;
+            console.error("User document not found.");
           }
-        } else {
-          console.error("User document not found");
+        } catch (err) {
+          console.error("Error loading wallet info:", err);
         }
       } else {
         window.location.href = "login.html";
@@ -192,11 +200,11 @@
     });
 
     document.getElementById("addFundsBtn").addEventListener("click", () => {
-      alert("Add Funds clicked");
+      alert("Add Funds flow not yet implemented.");
     });
 
     document.getElementById("transferBtn").addEventListener("click", () => {
-      alert("Transfer to Bank clicked (implement this flow)");
+      alert("Transfer to Bank flow not yet implemented.");
     });
   </script>
 </body>
