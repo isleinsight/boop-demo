@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Activity – BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    nav {
+      background-color: #102a43;
+      padding: 12px 20px;
+    }
+
+    .nav-container {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-left img {
+      height: 36px;
+      margin-right: 20px;
+    }
+
+    .nav-links a {
+      margin-right: 16px;
+      text-decoration: none;
+      color: white;
+      font-size: 0.95em;
+    }
+
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+
+    .nav-right a {
+      text-decoration: none;
+      color: white;
+      font-size: 0.95em;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #102a43;
+    }
+
+    .search-filter {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-filter input {
+      flex-grow: 1;
+      padding: 10px 14px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .filter-badge {
+      background-color: #b3e5fc;
+      color: #034f6f;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      white-space: nowrap;
+    }
+
+    .activity-item {
+      background: #eef1f7;
+      border-radius: 8px;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .activity-item .left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .activity-item .title {
+      font-weight: bold;
+    }
+
+    .activity-item .meta {
+      font-size: 0.9em;
+      color: #555;
+    }
+
+    .amount.in {
+      font-weight: bold;
+      color: #2ecc71;
+    }
+
+    .amount.out {
+      font-weight: bold;
+      color: #e74c3c;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="wallet.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+        <div class="nav-links">
+          <a href="cardholder.html">Home</a>
+          <a href="send-request.html">Send / Request</a>
+          <a href="wallet.html">Wallet</a>
+          <a href="activity.html">Activity</a>
+          <a href="help.html">Help</a>
+        </div>
+      </div>
+      <div class="nav-right">
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>Recent Activity</h2>
+
+    <div class="search-filter">
+      <input type="text" id="searchInput" placeholder="Search by name or category..." />
+      <div class="filter-badge">Date: Last 90 days</div>
+    </div>
+
+    <div id="activityContainer">
+      <div class="activity-item">Loading...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      collection,
+      query,
+      where,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    const container = document.getElementById("activityContainer");
+    const searchInput = document.getElementById("searchInput");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+      await loadTransactions(user.uid);
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    });
+
+    async function loadTransactions(userId) {
+      container.innerHTML = `<div class="activity-item">Loading...</div>`;
+
+      try {
+        const toQuery = query(collection(db, "transactions"), where("to", "==", userId));
+        const fromQuery = query(collection(db, "transactions"), where("from", "==", userId));
+
+        const [toSnap, fromSnap] = await Promise.all([
+          getDocs(toQuery),
+          getDocs(fromQuery)
+        ]);
+
+        const transactions = [];
+
+        toSnap.forEach((doc) => {
+          const data = doc.data();
+          transactions.push({ ...data, direction: "in", id: doc.id });
+        });
+
+        fromSnap.forEach((doc) => {
+          const data = doc.data();
+          transactions.push({ ...data, direction: "out", id: doc.id });
+        });
+
+        if (transactions.length === 0) {
+          container.innerHTML = `<div class="activity-item">No recent activity.</div>`;
+          return;
+        }
+
+        transactions.sort((a, b) => b.timestamp?.toDate() - a.timestamp?.toDate());
+
+        container.innerHTML = "";
+
+        transactions.forEach(tx => {
+          const name = tx.direction === "in" ? tx.fromName : tx.toName;
+          const sign = tx.direction === "in" ? "+" : "–";
+          const amountClass = tx.direction;
+          const date = tx.timestamp?.toDate().toLocaleDateString("en-GB", {
+            day: "numeric", month: "short", year: "numeric"
+          }) || "-";
+          const category = tx.category || "Payment";
+
+          const item = document.createElement("div");
+          item.className = "activity-item";
+          item.innerHTML = `
+            <div class="left">
+              <span class="title">${name || "Unknown"}</span>
+              <span class="meta">${date} · ${category}</span>
+            </div>
+            <div class="amount ${amountClass}">${sign} $${Math.abs(tx.amount || 0).toFixed(2)}</div>
+          `;
+          container.appendChild(item);
+        });
+      } catch (err) {
+        console.error("Error loading transactions:", err);
+        container.innerHTML = `<div class="activity-item">Error loading activity.</div>`;
+      }
+    }
+
+    // Basic search filter
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.toLowerCase();
+      const items = document.querySelectorAll(".activity-item");
+      items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(query) ? "flex" : "none";
+      });
+    });
+  </script>
+</body>
+</html>
