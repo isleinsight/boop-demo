@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Send & Request – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
   <style>
     body {
       font-family: 'Poppins', sans-serif;
@@ -60,10 +59,12 @@
       border-radius: 10px;
       padding: 30px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      text-align: center;
     }
 
     .tabs {
       display: flex;
+      justify-content: center;
       border-bottom: 2px solid #ddd;
       margin-bottom: 20px;
     }
@@ -80,36 +81,21 @@
       color: #2f80ed;
     }
 
-    .search-section {
-      margin: 20px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .search-section input {
-      width: 100%;
-      max-width: 500px;
+    .search-section input, .search-section button {
       padding: 12px 16px;
       font-size: 1em;
       border-radius: 6px;
       border: 1px solid #ccc;
+      margin-top: 10px;
+      width: 100%;
+      max-width: 500px;
     }
 
-    .next-button {
-      margin-top: 15px;
-      padding: 12px 24px;
-      background: #ccc;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 1em;
-      cursor: not-allowed;
-    }
-
-    .next-button.enabled {
+    .search-section button {
       background: #2f80ed;
+      color: white;
       cursor: pointer;
+      border: none;
     }
 
     #resultsTitle {
@@ -123,6 +109,8 @@
       display: none;
       width: 100%;
       max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .result-item {
@@ -136,6 +124,32 @@
 
     .result-item:hover {
       background: #d9e6f2;
+      cursor: pointer;
+    }
+
+    .transfer-form {
+      margin-top: 30px;
+      display: none;
+    }
+
+    .transfer-form input {
+      width: 100%;
+      max-width: 500px;
+      padding: 12px 16px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-bottom: 15px;
+    }
+
+    .transfer-form button {
+      margin: 0 10px;
+      padding: 12px 24px;
+      background: #2f80ed;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
       cursor: pointer;
     }
   </style>
@@ -168,10 +182,18 @@
     </div>
 
     <div class="search-section">
-      <input type="text" id="recipientInput" placeholder="Name, username, email..." />
-      <button class="next-button" id="nextBtn" disabled>Next</button>
+      <input type="text" id="recipientInput" placeholder="Search by name or email..." />
+      <button id="searchBtn">Search</button>
       <div id="resultsTitle">Results</div>
       <div id="resultsList"></div>
+    </div>
+
+    <div class="transfer-form" id="transferForm">
+      <input type="number" id="amountInput" placeholder="Enter amount..." />
+      <div>
+        <button id="sendMoneyBtn">Send</button>
+        <button id="requestMoneyBtn">Request</button>
+      </div>
     </div>
   </div>
 
@@ -203,6 +225,9 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    let currentUserUID = "";
+    let currentUserEmail = "";
+
     const logoutBtn = document.getElementById("logoutBtn");
     logoutBtn.addEventListener("click", () => {
       signOut(auth).then(() => {
@@ -210,14 +235,21 @@
       });
     });
 
-    const recipientInput = document.getElementById("recipientInput");
-    const nextBtn = document.getElementById("nextBtn");
-    const resultsList = document.getElementById("resultsList");
-    const resultsTitle = document.getElementById("resultsTitle");
-    const navLinks = document.getElementById("navLinks");
+    const sendTab = document.getElementById("sendTab");
+    const requestTab = document.getElementById("requestTab");
+    let currentMode = "send";
 
-    let currentUserEmail = "";
-    let currentUserUID = "";
+    sendTab.addEventListener("click", () => {
+      currentMode = "send";
+      sendTab.classList.add("active");
+      requestTab.classList.remove("active");
+    });
+
+    requestTab.addEventListener("click", () => {
+      currentMode = "request";
+      requestTab.classList.add("active");
+      sendTab.classList.remove("active");
+    });
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -225,82 +257,72 @@
         return;
       }
 
-      currentUserEmail = user.email;
       currentUserUID = user.uid;
-
-      const userSnap = await getDocs(query(collection(db, "users"), where("email", "==", currentUserEmail)));
-      userSnap.forEach((doc) => {
-        const data = doc.data();
-        if (data.role === "government") {
-          navLinks.style.display = "none";
-        }
-      });
+      currentUserEmail = user.email;
     });
 
-    recipientInput.addEventListener("input", async () => {
+    const recipientInput = document.getElementById("recipientInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const resultsList = document.getElementById("resultsList");
+    const resultsTitle = document.getElementById("resultsTitle");
+    const transferForm = document.getElementById("transferForm");
+    let selectedRecipientId = null;
+
+    searchBtn.addEventListener("click", async () => {
       const queryVal = recipientInput.value.trim().toLowerCase();
-
-      if (queryVal.length === 0) {
-        nextBtn.disabled = true;
-        nextBtn.classList.remove("enabled");
-        resultsList.style.display = "none";
-        resultsTitle.style.display = "none";
-        return;
-      }
-
-      nextBtn.disabled = false;
-      nextBtn.classList.add("enabled");
+      if (!queryVal) return;
 
       resultsList.innerHTML = "";
       resultsList.style.display = "block";
       resultsTitle.style.display = "block";
+      transferForm.style.display = "none";
 
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("role", "==", "cardholder"), where("onAssistance", "==", false));
       const snapshot = await getDocs(q);
 
-      let matchCount = 0;
+      let found = 0;
 
       snapshot.forEach((doc) => {
-        const user = doc.data();
-
+        const data = doc.data();
         if (doc.id === currentUserUID) return;
 
-        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim().toLowerCase();
-        const email = (user.email ?? "").toLowerCase();
+        const fullName = `${data.firstName ?? ""} ${data.lastName ?? ""}`.toLowerCase();
+        const email = (data.email ?? "").toLowerCase();
 
-        const isMatch =
+        if (
           fullName.includes(queryVal) ||
-          (user.firstName ?? "").toLowerCase().includes(queryVal) ||
-          (user.lastName ?? "").toLowerCase().includes(queryVal) ||
-          email.includes(queryVal);
-
-        if (isMatch) {
+          (data.firstName ?? "").toLowerCase().includes(queryVal) ||
+          (data.lastName ?? "").toLowerCase().includes(queryVal) ||
+          email.includes(queryVal)
+        ) {
           const div = document.createElement("div");
           div.className = "result-item";
-          div.textContent = `${user.firstName} ${user.lastName} (${user.email})`;
+          div.textContent = `${data.firstName} ${data.lastName} (${data.email})`;
+          div.addEventListener("click", () => {
+            selectedRecipientId = doc.id;
+            transferForm.style.display = "block";
+          });
           resultsList.appendChild(div);
-          matchCount++;
+          found++;
         }
       });
 
-      if (matchCount === 0) {
+      if (found === 0) {
         resultsList.innerHTML = '<div class="result-item">No results found</div>';
       }
     });
 
-    // Tabs
-    const sendTab = document.getElementById("sendTab");
-    const requestTab = document.getElementById("requestTab");
-
-    sendTab.addEventListener("click", () => {
-      sendTab.classList.add("active");
-      requestTab.classList.remove("active");
+    document.getElementById("sendMoneyBtn").addEventListener("click", () => {
+      const amount = parseFloat(document.getElementById("amountInput").value);
+      if (isNaN(amount) || amount <= 0 || !selectedRecipientId) return alert("Please enter a valid amount.");
+      alert(`Sending $${amount} to recipient ID: ${selectedRecipientId}`);
     });
 
-    requestTab.addEventListener("click", () => {
-      requestTab.classList.add("active");
-      sendTab.classList.remove("active");
+    document.getElementById("requestMoneyBtn").addEventListener("click", () => {
+      const amount = parseFloat(document.getElementById("amountInput").value);
+      if (isNaN(amount) || amount <= 0 || !selectedRecipientId) return alert("Please enter a valid amount.");
+      alert(`Requesting $${amount} from recipient ID: ${selectedRecipientId}`);
     });
   </script>
 </body>
