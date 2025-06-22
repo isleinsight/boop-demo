@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Send & Request – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
   <style>
     body {
       font-family: 'Poppins', sans-serif;
@@ -59,14 +60,13 @@
       border-radius: 10px;
       padding: 30px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-      text-align: center;
     }
 
     .tabs {
       display: flex;
-      justify-content: center;
       border-bottom: 2px solid #ddd;
       margin-bottom: 20px;
+      justify-content: center;
     }
 
     .tab {
@@ -81,66 +81,40 @@
       color: #2f80ed;
     }
 
-    .search-section input, .search-section button {
+    .search-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .search-row input {
+      flex: 1;
+      min-width: 220px;
+      max-width: 400px;
       padding: 12px 16px;
       font-size: 1em;
       border-radius: 6px;
       border: 1px solid #ccc;
-      margin-top: 10px;
-      width: 100%;
-      max-width: 500px;
     }
 
-    .search-section button {
+    .search-row button {
+      padding: 12px 20px;
+      font-size: 1em;
+      border-radius: 6px;
       background: #2f80ed;
       color: white;
-      cursor: pointer;
       border: none;
+      cursor: pointer;
+      white-space: nowrap;
     }
 
-    .search-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-}
-
-.search-row input {
-  flex: 1;
-  min-width: 220px;
-  padding: 12px 16px;
-  font-size: 1em;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  max-width: 400px;
-}
-
-.search-row button {
-  padding: 12px 20px;
-  font-size: 1em;
-  border-radius: 6px;
-  background: #2f80ed;
-  color: white;
-  border: none;
-  cursor: pointer;
-  white-space: nowrap;
-}
-    
     #resultsTitle {
       font-weight: bold;
-      margin-top: 30px;
+      margin-bottom: 10px;
       display: none;
-    }
-
-    #resultsList {
-      margin-top: 10px;
-      display: none;
-      width: 100%;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
     }
 
     .result-item {
@@ -157,35 +131,39 @@
       cursor: pointer;
     }
 
-    .transfer-form {
-      margin-top: 30px;
+    .amount-input {
+      margin-top: 20px;
       display: none;
+      text-align: center;
     }
 
-    .transfer-form input {
-      width: 100%;
-      max-width: 500px;
-      padding: 12px 16px;
+    .amount-input input {
+      width: 60%;
+      padding: 10px;
       font-size: 1em;
       border-radius: 6px;
       border: 1px solid #ccc;
-      margin-bottom: 15px;
     }
 
-    .transfer-form button {
-      margin: 0 10px;
+    .action-buttons {
+      margin-top: 20px;
+      display: none;
+      text-align: center;
+    }
+
+    .action-buttons button {
       padding: 12px 24px;
+      margin: 0 10px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: none;
       background: #2f80ed;
       color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 1em;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -204,7 +182,6 @@
     </div>
   </nav>
 
-  <!-- Page Body -->
   <div class="container">
     <div class="tabs">
       <div class="tab active" id="sendTab">Send</div>
@@ -212,16 +189,20 @@
     </div>
 
     <div class="search-row">
-  <input type="text" id="recipientInput" placeholder="Search by name or email..." />
-  <button id="searchBtn">Search</button>
-</div>
+      <input type="text" id="recipientInput" placeholder="Search by name or email..." />
+      <button id="searchBtn">Search</button>
+    </div>
 
-    <div class="transfer-form" id="transferForm">
-      <input type="number" id="amountInput" placeholder="Enter amount..." />
-      <div>
-        <button id="sendMoneyBtn">Send</button>
-        <button id="requestMoneyBtn">Request</button>
-      </div>
+    <div id="resultsTitle">Results</div>
+    <div id="resultsList"></div>
+
+    <div class="amount-input" id="amountSection">
+      <input type="number" id="amountInput" placeholder="Enter amount" />
+    </div>
+
+    <div class="action-buttons" id="actionButtons">
+      <button id="sendBtn">Send</button>
+      <button id="requestBtn">Request</button>
     </div>
   </div>
 
@@ -263,28 +244,11 @@
       });
     });
 
-    const sendTab = document.getElementById("sendTab");
-    const requestTab = document.getElementById("requestTab");
-    let currentMode = "send";
-
-    sendTab.addEventListener("click", () => {
-      currentMode = "send";
-      sendTab.classList.add("active");
-      requestTab.classList.remove("active");
-    });
-
-    requestTab.addEventListener("click", () => {
-      currentMode = "request";
-      requestTab.classList.add("active");
-      sendTab.classList.remove("active");
-    });
-
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "index.html";
         return;
       }
-
       currentUserUID = user.uid;
       currentUserEmail = user.email;
     });
@@ -293,64 +257,69 @@
     const searchBtn = document.getElementById("searchBtn");
     const resultsList = document.getElementById("resultsList");
     const resultsTitle = document.getElementById("resultsTitle");
-    const transferForm = document.getElementById("transferForm");
-    let selectedRecipientId = null;
+    const amountSection = document.getElementById("amountSection");
+    const actionButtons = document.getElementById("actionButtons");
 
     searchBtn.addEventListener("click", async () => {
       const queryVal = recipientInput.value.trim().toLowerCase();
-      if (!queryVal) return;
-
       resultsList.innerHTML = "";
-      resultsList.style.display = "block";
-      resultsTitle.style.display = "block";
-      transferForm.style.display = "none";
+      resultsTitle.style.display = "none";
+      amountSection.style.display = "none";
+      actionButtons.style.display = "none";
+
+      if (queryVal.length === 0) return;
 
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("role", "==", "cardholder"), where("onAssistance", "==", false));
       const snapshot = await getDocs(q);
 
-      let found = 0;
+      let found = false;
 
       snapshot.forEach((doc) => {
-        const data = doc.data();
+        const user = doc.data();
         if (doc.id === currentUserUID) return;
 
-        const fullName = `${data.firstName ?? ""} ${data.lastName ?? ""}`.toLowerCase();
-        const email = (data.email ?? "").toLowerCase();
+        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.toLowerCase();
+        const email = (user.email ?? "").toLowerCase();
 
-        if (
+        const match =
           fullName.includes(queryVal) ||
-          (data.firstName ?? "").toLowerCase().includes(queryVal) ||
-          (data.lastName ?? "").toLowerCase().includes(queryVal) ||
-          email.includes(queryVal)
-        ) {
+          (user.firstName ?? "").toLowerCase().includes(queryVal) ||
+          (user.lastName ?? "").toLowerCase().includes(queryVal) ||
+          email.includes(queryVal);
+
+        if (match) {
           const div = document.createElement("div");
           div.className = "result-item";
-          div.textContent = `${data.firstName} ${data.lastName} (${data.email})`;
+          div.textContent = `${user.firstName} ${user.lastName} (${user.email})`;
           div.addEventListener("click", () => {
-            selectedRecipientId = doc.id;
-            transferForm.style.display = "block";
+            amountSection.style.display = "block";
+            actionButtons.style.display = "block";
           });
           resultsList.appendChild(div);
-          found++;
+          resultsTitle.style.display = "block";
+          found = true;
         }
       });
 
-      if (found === 0) {
+      if (!found) {
         resultsList.innerHTML = '<div class="result-item">No results found</div>';
+        resultsTitle.style.display = "block";
       }
     });
 
-    document.getElementById("sendMoneyBtn").addEventListener("click", () => {
-      const amount = parseFloat(document.getElementById("amountInput").value);
-      if (isNaN(amount) || amount <= 0 || !selectedRecipientId) return alert("Please enter a valid amount.");
-      alert(`Sending $${amount} to recipient ID: ${selectedRecipientId}`);
+    // Tab switching logic
+    const sendTab = document.getElementById("sendTab");
+    const requestTab = document.getElementById("requestTab");
+
+    sendTab.addEventListener("click", () => {
+      sendTab.classList.add("active");
+      requestTab.classList.remove("active");
     });
 
-    document.getElementById("requestMoneyBtn").addEventListener("click", () => {
-      const amount = parseFloat(document.getElementById("amountInput").value);
-      if (isNaN(amount) || amount <= 0 || !selectedRecipientId) return alert("Please enter a valid amount.");
-      alert(`Requesting $${amount} from recipient ID: ${selectedRecipientId}`);
+    requestTab.addEventListener("click", () => {
+      requestTab.classList.add("active");
+      sendTab.classList.remove("active");
     });
   </script>
 </body>
