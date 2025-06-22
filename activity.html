@@ -69,26 +69,84 @@
 
     .search-filter {
       display: flex;
-      align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
       margin-bottom: 20px;
+      flex-wrap: wrap;
     }
 
-    .search-filter input {
+    .search-row {
+      display: flex;
+      flex: 1;
+      max-width: 400px;
+    }
+
+    .search-row input {
       flex-grow: 1;
       padding: 10px 14px;
       font-size: 1em;
       border: 1px solid #ccc;
-      border-radius: 6px;
+      border-right: none;
+      border-radius: 6px 0 0 6px;
+      height: 45px;
+      box-sizing: border-box;
+    }
+
+    .search-row button {
+      padding: 0 20px;
+      font-size: 1em;
+      background-color: #2f80ed;
+      color: white;
+      border: 1px solid #2f80ed;
+      border-radius: 0 6px 6px 0;
+      height: 45px;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .filter-wrapper {
+      position: relative;
     }
 
     .filter-badge {
       background-color: #b3e5fc;
       color: #034f6f;
-      padding: 8px 12px;
-      border-radius: 20px;
-      font-size: 0.85em;
-      white-space: nowrap;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.9em;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      height: 45px;
+      display: flex;
+      align-items: center;
+    }
+
+    .filter-menu {
+      position: absolute;
+      top: 110%;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      z-index: 10;
+      min-width: 160px;
+    }
+
+    .filter-menu div {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+
+    .filter-menu div:hover {
+      background: #f0f4fa;
+    }
+
+    .filter-menu .active {
+      background: #e4f0fb;
+      font-weight: bold;
     }
 
     .activity-item {
@@ -153,8 +211,18 @@
     <h2>Recent Activity</h2>
 
     <div class="search-filter">
-      <input type="text" id="searchInput" placeholder="Search by name or category..." />
-      <div class="filter-badge">Date: Last 90 days</div>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="Search by name or category..." />
+        <button id="searchBtn">Search</button>
+      </div>
+      <div class="filter-wrapper">
+        <button id="filterToggle" class="filter-badge">Date: Last 7 days ▼</button>
+        <div id="filterMenu" class="filter-menu hidden">
+          <div data-range="7" class="active">Last 7 days</div>
+          <div data-range="30">Last 30 days</div>
+          <div data-range="90">Last 90 days</div>
+        </div>
+      </div>
     </div>
 
     <div id="activityContainer">
@@ -171,8 +239,6 @@
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
       getFirestore,
-      doc,
-      getDoc,
       collection,
       query,
       where,
@@ -192,9 +258,11 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const logoutBtn = document.getElementById("logoutBtn");
     const container = document.getElementById("activityContainer");
     const searchInput = document.getElementById("searchInput");
+    const searchBtn = document.getElementById("searchBtn");
+
+    let selectedRange = 7;
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -204,7 +272,7 @@
       await loadTransactions(user.uid);
     });
 
-    logoutBtn.addEventListener("click", () => {
+    document.getElementById("logoutBtn").addEventListener("click", () => {
       signOut(auth).then(() => {
         window.location.href = "index.html";
       });
@@ -212,7 +280,6 @@
 
     async function loadTransactions(userId) {
       container.innerHTML = `<div class="activity-item">Loading...</div>`;
-
       try {
         const toQuery = query(collection(db, "transactions"), where("to", "==", userId));
         const fromQuery = query(collection(db, "transactions"), where("from", "==", userId));
@@ -222,24 +289,30 @@
           getDocs(fromQuery)
         ]);
 
-        const transactions = [];
+        let transactions = [];
 
         toSnap.forEach((doc) => {
-          const data = doc.data();
-          transactions.push({ ...data, direction: "in", id: doc.id });
+          transactions.push({ ...doc.data(), direction: "in", id: doc.id });
         });
 
         fromSnap.forEach((doc) => {
-          const data = doc.data();
-          transactions.push({ ...data, direction: "out", id: doc.id });
+          transactions.push({ ...doc.data(), direction: "out", id: doc.id });
         });
+
+        const now = new Date();
+        const cutoff = new Date();
+        cutoff.setDate(now.getDate() - selectedRange);
+        transactions = transactions.filter(tx => {
+          const txDate = tx.timestamp?.toDate?.();
+          return txDate && txDate >= cutoff;
+        });
+
+        transactions.sort((a, b) => b.timestamp?.toDate() - a.timestamp?.toDate());
 
         if (transactions.length === 0) {
           container.innerHTML = `<div class="activity-item">No recent activity.</div>`;
           return;
         }
-
-        transactions.sort((a, b) => b.timestamp?.toDate() - a.timestamp?.toDate());
 
         container.innerHTML = "";
 
@@ -264,19 +337,45 @@
           container.appendChild(item);
         });
       } catch (err) {
-        console.error("Error loading transactions:", err);
+        console.error("Failed to load transactions:", err);
         container.innerHTML = `<div class="activity-item">Error loading activity.</div>`;
       }
     }
 
-    // Basic search filter
-    searchInput.addEventListener("input", () => {
+    // Search button click
+    searchBtn.addEventListener("click", () => {
       const query = searchInput.value.toLowerCase();
       const items = document.querySelectorAll(".activity-item");
       items.forEach(item => {
         const text = item.textContent.toLowerCase();
         item.style.display = text.includes(query) ? "flex" : "none";
       });
+    });
+
+    // Dropdown filter
+    const filterToggle = document.getElementById("filterToggle");
+    const filterMenu = document.getElementById("filterMenu");
+
+    filterToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      filterMenu.classList.toggle("hidden");
+    });
+
+    filterMenu.querySelectorAll("div").forEach(option => {
+      option.addEventListener("click", () => {
+        filterMenu.classList.add("hidden");
+        filterMenu.querySelectorAll("div").forEach(div => div.classList.remove("active"));
+        option.classList.add("active");
+
+        selectedRange = parseInt(option.dataset.range);
+        filterToggle.textContent = `Date: ${option.textContent} ▼`;
+
+        loadTransactions(auth.currentUser?.uid);
+      });
+    });
+
+    document.addEventListener("click", () => {
+      filterMenu.classList.add("hidden");
     });
   </script>
 </body>
