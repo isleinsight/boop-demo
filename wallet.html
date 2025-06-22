@@ -2,143 +2,213 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BOOP Wallet</title>
+  <title>Wallet – BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f2f4f8;
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
       margin: 0;
       padding: 0;
     }
 
-    .container {
-      max-width: 700px;
-      margin: 50px auto;
-      background: #fff;
-      padding: 30px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      border-radius: 8px;
+    nav {
+      background-color: #102a43;
+      padding: 12px 20px;
     }
 
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-
-    .balance {
-      font-size: 2em;
-      color: #27ae60;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .actions {
+    .nav-container {
+      max-width: 1100px;
+      margin: auto;
       display: flex;
-      justify-content: space-around;
-      margin: 20px 0;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .actions button {
-      padding: 10px 20px;
-      font-size: 1em;
-      background: #2980b9;
+    .nav-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-left img {
+      height: 36px;
+      margin-right: 20px;
+    }
+
+    .nav-links a {
+      margin-right: 16px;
+      text-decoration: none;
       color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      font-size: 0.95em;
     }
 
-    .actions button:hover {
-      background: #1c5a8a;
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+
+    .nav-right a {
+      text-decoration: none;
+      color: white;
+      font-size: 0.95em;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .wallet-balance {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .wallet-balance h2 {
+      font-size: 1.2em;
+      margin: 0;
+      color: #666;
+    }
+
+    .wallet-balance .amount {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin-top: 8px;
+      color: #2f2f2f;
     }
 
     .transaction-list {
-      margin-top: 30px;
-    }
-
-    .transaction {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #ccc;
-    }
-
-    .transaction.positive {
-      color: #27ae60;
-    }
-
-    .transaction.negative {
-      color: #c0392b;
-    }
-
-    .form-section {
-      display: none;
       margin-top: 20px;
     }
 
-    .form-section input {
-      padding: 10px;
-      margin-bottom: 10px;
-      width: 100%;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+    .transaction-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
     }
 
-    .form-section button {
-      width: 100%;
-      background: #27ae60;
+    .transaction-item:last-child {
+      border-bottom: none;
+    }
+
+    .transaction-label {
+      font-size: 1em;
+      color: #333;
+    }
+
+    .transaction-amount {
+      font-size: 1em;
+      font-weight: 500;
+      color: #444;
+    }
+
+    .no-transactions {
+      text-align: center;
+      color: #888;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="cardholder.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+        <div class="nav-links">
+          <a href="send-request.html">Send / Request</a>
+          <a href="wallet.html">Wallet</a>
+          <a href="activity.html">Activity</a>
+          <a href="help.html">Help</a>
+        </div>
+      </div>
+      <div class="nav-right">
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Wallet Section -->
   <div class="container">
-    <h1>BOOP Wallet</h1>
-    <div class="balance" id="walletBalance">BMDX $100.00</div>
-
-    <div class="actions">
-      <button onclick="toggleForm('send')">Send Money</button>
-      <button onclick="toggleForm('request')">Request Money</button>
+    <div class="wallet-balance">
+      <h2>Your Balance</h2>
+      <div class="amount" id="walletBalance">$0.00</div>
     </div>
 
-    <!-- Send Form -->
-    <div class="form-section" id="sendForm">
-      <h3>Send Money</h3>
-      <input type="text" placeholder="Recipient Email" />
-      <input type="number" placeholder="Amount (BMDX)" />
-      <button>Send</button>
+    <div class="transaction-list" id="transactionList">
+      <!-- Transactions will go here -->
     </div>
 
-    <!-- Request Form -->
-    <div class="form-section" id="requestForm">
-      <h3>Request Money</h3>
-      <input type="text" placeholder="From Email" />
-      <input type="number" placeholder="Amount (BMDX)" />
-      <button>Request</button>
-    </div>
-
-    <div class="transaction-list">
-      <h3>Transaction History</h3>
-      <div class="transaction positive">
-        <span>Received from alice@bmdx.com</span>
-        <span>+ BMDX $25.00</span>
-      </div>
-      <div class="transaction negative">
-        <span>Sent to vendor@shop.bm</span>
-        <span>– BMDX $40.00</span>
-      </div>
-      <div class="transaction positive">
-        <span>Top-up from debit card</span>
-        <span>+ BMDX $50.00</span>
-      </div>
+    <div class="no-transactions" id="noTransactions" style="display:none;">
+      No transactions found.
     </div>
   </div>
 
-  <script>
-    function toggleForm(type) {
-      document.getElementById('sendForm').style.display = type === 'send' ? 'block' : 'none';
-      document.getElementById('requestForm').style.display = type === 'request' ? 'block' : 'none';
-    }
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      getDocs,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      // your config here
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth();
+
+    const balanceEl = document.getElementById('walletBalance');
+    const listEl = document.getElementById('transactionList');
+    const noTxEl = document.getElementById('noTransactions');
+
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        const q = query(collection(db, "transactions"), where("userID", "==", user.uid), orderBy("timestamp", "desc"));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+          noTxEl.style.display = 'block';
+        } else {
+          let balance = 0;
+          snapshot.forEach(doc => {
+            const tx = doc.data();
+            balance += parseFloat(tx.amount || 0);
+
+            const item = document.createElement("div");
+            item.className = "transaction-item";
+            item.innerHTML = `
+              <div class="transaction-label">${tx.label || "Transaction"}</div>
+              <div class="transaction-amount">$${parseFloat(tx.amount).toFixed(2)}</div>
+            `;
+            listEl.appendChild(item);
+          });
+          balanceEl.textContent = `$${balance.toFixed(2)}`;
+        }
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "login.html";
+      });
+    });
   </script>
 </body>
 </html>
