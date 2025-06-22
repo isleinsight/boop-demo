@@ -124,7 +124,7 @@
   </nav>
 
   <!-- Wallet Section -->
-  <div class="container">
+  <div class="container hidden" id="walletSection">
     <div class="wallet-balance">
       <h2>Your Balance</h2>
       <div class="amount" id="walletBalance">$0.00</div>
@@ -132,7 +132,7 @@
 
     <div class="wallet-buttons">
       <button id="addFundsBtn">Add Funds</button>
-      <button id="transferBtn" class="hidden">Transfer to Bank</button>
+      <button id="transferBtn">Transfer to Bank</button>
     </div>
   </div>
 
@@ -141,11 +141,7 @@
     import {
       getFirestore,
       doc,
-      getDoc,
-      collection,
-      query,
-      where,
-      getDocs
+      getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import {
       getAuth,
@@ -154,30 +150,35 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
-      // Replace with your config
+      // your firebase config here
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth();
 
-    const balanceEl = document.getElementById('walletBalance');
-    const transferBtn = document.getElementById('transferBtn');
+    const walletSection = document.getElementById("walletSection");
+    const balanceEl = document.getElementById("walletBalance");
 
     onAuthStateChanged(auth, async user => {
       if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          const wallet = parseFloat(data.wallet || 0);
-          const isGov = data.governmentAssistance || false;
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
 
-          balanceEl.textContent = `$${wallet.toFixed(2)}`;
-          if (!isGov) {
-            transferBtn.classList.remove("hidden");
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          const isGov = data.governmentAssistance || false;
+          const wallet = parseFloat(data.wallet || 0);
+
+          if (isGov) {
+            // Redirect cardholders on assistance to homepage
+            window.location.href = "cardholder.html";
+          } else {
+            walletSection.classList.remove("hidden");
+            balanceEl.textContent = `$${wallet.toFixed(2)}`;
           }
         } else {
-          console.error("User doc not found");
+          console.error("User document not found");
         }
       } else {
         window.location.href = "login.html";
@@ -191,11 +192,11 @@
     });
 
     document.getElementById("addFundsBtn").addEventListener("click", () => {
-      alert("Add Funds clicked (link this to Stripe or your method)");
+      alert("Add Funds clicked (link to Stripe or top-up flow)");
     });
 
-    transferBtn.addEventListener("click", () => {
-      alert("Transfer to Bank clicked (only for users NOT on government assistance)");
+    document.getElementById("transferBtn").addEventListener("click", () => {
+      alert("Transfer to Bank clicked (implement this flow)");
     });
   </script>
 </body>
