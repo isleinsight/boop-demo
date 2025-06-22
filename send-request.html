@@ -101,14 +101,16 @@
       background-color: #e6f0fa;
       padding: 12px 16px;
       border-radius: 6px;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .amount-row {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-top: 10px;
+      align-items: center;
     }
 
     .amount-row input {
@@ -116,6 +118,8 @@
       font-size: 1em;
       border-radius: 6px;
       border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .action-btn {
@@ -126,6 +130,7 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      width: 100%;
     }
 
     .centered {
@@ -181,12 +186,12 @@
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyDp9N2smC2zzcTEXAMPLE",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "533059832730",
+      appId: "1:533059832730:web:example"
     };
 
     const app = initializeApp(firebaseConfig);
