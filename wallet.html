@@ -60,11 +60,7 @@
       border-radius: 10px;
       padding: 30px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    }
-
-    .wallet-balance {
       text-align: center;
-      margin-bottom: 30px;
     }
 
     .wallet-balance h2 {
@@ -76,40 +72,35 @@
     .wallet-balance .amount {
       font-size: 2.5em;
       font-weight: bold;
-      margin-top: 8px;
+      margin: 10px 0 20px;
       color: #2f2f2f;
     }
 
-    .transaction-list {
-      margin-top: 20px;
-    }
-
-    .transaction-item {
+    .wallet-buttons {
       display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid #eee;
-    }
-
-    .transaction-item:last-child {
-      border-bottom: none;
-    }
-
-    .transaction-label {
-      font-size: 1em;
-      color: #333;
-    }
-
-    .transaction-amount {
-      font-size: 1em;
-      font-weight: 500;
-      color: #444;
-    }
-
-    .no-transactions {
-      text-align: center;
-      color: #888;
+      justify-content: center;
+      gap: 20px;
       margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .wallet-buttons button {
+      padding: 12px 24px;
+      font-size: 1em;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: #2f80ed;
+      color: white;
+      transition: background 0.2s ease;
+    }
+
+    .wallet-buttons button:hover {
+      background-color: #1e6fce;
+    }
+
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
@@ -139,12 +130,9 @@
       <div class="amount" id="walletBalance">$0.00</div>
     </div>
 
-    <div class="transaction-list" id="transactionList">
-      <!-- Transactions will go here -->
-    </div>
-
-    <div class="no-transactions" id="noTransactions" style="display:none;">
-      No transactions found.
+    <div class="wallet-buttons">
+      <button id="addFundsBtn">Add Funds</button>
+      <button id="transferBtn" class="hidden">Transfer to Bank</button>
     </div>
   </div>
 
@@ -152,11 +140,12 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getFirestore,
+      doc,
+      getDoc,
       collection,
       query,
       where,
-      getDocs,
-      orderBy
+      getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import {
       getAuth,
@@ -165,7 +154,7 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
-      // your config here
+      // Replace with your config
     };
 
     const app = initializeApp(firebaseConfig);
@@ -173,31 +162,22 @@
     const auth = getAuth();
 
     const balanceEl = document.getElementById('walletBalance');
-    const listEl = document.getElementById('transactionList');
-    const noTxEl = document.getElementById('noTransactions');
+    const transferBtn = document.getElementById('transferBtn');
 
     onAuthStateChanged(auth, async user => {
       if (user) {
-        const q = query(collection(db, "transactions"), where("userID", "==", user.uid), orderBy("timestamp", "desc"));
-        const snapshot = await getDocs(q);
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          const wallet = parseFloat(data.wallet || 0);
+          const isGov = data.governmentAssistance || false;
 
-        if (snapshot.empty) {
-          noTxEl.style.display = 'block';
+          balanceEl.textContent = `$${wallet.toFixed(2)}`;
+          if (!isGov) {
+            transferBtn.classList.remove("hidden");
+          }
         } else {
-          let balance = 0;
-          snapshot.forEach(doc => {
-            const tx = doc.data();
-            balance += parseFloat(tx.amount || 0);
-
-            const item = document.createElement("div");
-            item.className = "transaction-item";
-            item.innerHTML = `
-              <div class="transaction-label">${tx.label || "Transaction"}</div>
-              <div class="transaction-amount">$${parseFloat(tx.amount).toFixed(2)}</div>
-            `;
-            listEl.appendChild(item);
-          });
-          balanceEl.textContent = `$${balance.toFixed(2)}`;
+          console.error("User doc not found");
         }
       } else {
         window.location.href = "login.html";
@@ -208,6 +188,14 @@
       signOut(auth).then(() => {
         window.location.href = "login.html";
       });
+    });
+
+    document.getElementById("addFundsBtn").addEventListener("click", () => {
+      alert("Add Funds clicked (link this to Stripe or your method)");
+    });
+
+    transferBtn.addEventListener("click", () => {
+      alert("Transfer to Bank clicked (only for users NOT on government assistance)");
     });
   </script>
 </body>
