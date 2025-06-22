@@ -2,371 +2,51 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Send & Request – BOOP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-      margin: 0;
-      padding: 0;
-    }
-
-    nav {
-      background-color: #102a43;
-      padding: 12px 20px;
-    }
-
-    .nav-container {
-      max-width: 1100px;
-      margin: auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .nav-left {
-      display: flex;
-      align-items: center;
-    }
-
-    .nav-left img {
-      height: 36px;
-      margin-right: 20px;
-    }
-
-    .nav-links a {
-      margin-right: 16px;
-      text-decoration: none;
-      color: white;
-      font-size: 0.95em;
-    }
-
-    .nav-links a:hover {
-      text-decoration: underline;
-    }
-
-    .nav-right a {
-      text-decoration: none;
-      color: white;
-      font-size: 0.95em;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 40px auto;
-      background: white;
-      border-radius: 10px;
-      padding: 30px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-
-    .tabs {
-      display: flex;
-      border-bottom: 2px solid #ddd;
-      margin-bottom: 20px;
-      justify-content: center;
-    }
-
-    .tab {
-      padding: 10px 20px;
-      cursor: pointer;
-      font-weight: 500;
-      border-bottom: 3px solid transparent;
-    }
-
-    .tab.active {
-      border-bottom: 3px solid #2f80ed;
-      color: #2f80ed;
-    }
-
-.search-row {
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-  gap: 0;
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto 20px;
-}
-
-.search-row input {
-  flex-grow: 1;
-  padding: 10px 14px;
-  font-size: 1em;
-  border: 1px solid #ccc;
-  border-right: none;
-  border-radius: 6px 0 0 6px;
-  height: 45px;
-  box-sizing: border-box;
-}
-
-.search-row button {
-  padding: 0 20px;
-  font-size: 1em;
-  background-color: #2f80ed;
-  color: white;
-  border: 1px solid #2f80ed;
-  border-radius: 0 6px 6px 0;
-  height: 45px;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-    #resultsTitle {
-      font-weight: bold;
-      margin-bottom: 10px;
-      display: none;
-      text-align: center;
-    }
-
-    .result-item {
-      background: #eef1f7;
-      padding: 12px 16px;
-      border-radius: 6px;
-      margin-bottom: 8px;
-      font-size: 0.95em;
-      color: #333;
-      text-align: center;
-      max-width: 100%;
-    }
-
-    .result-item:hover {
-      background: #d9e6f2;
-      cursor: pointer;
-    }
-
-
-#amountSection input {
-  flex: 1;
-  min-width: 220px;
-  width: 100%;
-  max-width: 400px;
-  padding: 12px 16px;
-  font-size: 1em;
-  border-radius: 6px 0 0 6px;
-  border: 1px solid #ccc;
-  border-right: none;
-}
-
-#amountSection button {
-  padding: 12px 20px;
-  font-size: 1em;
-  border-radius: 0 6px 6px 0;
-  background: #2f80ed;
-  color: white;
-  border: 1px solid #2f80ed;
-  border-left: none;
-  cursor: pointer;
-  white-space: nowrap;
-  height: 100%;
-}
-    
-
-    .amount-input.search-row input {
-  border-radius: 6px 0 0 6px;
-  border: 1px solid #ccc;
-  border-right: none;
-}
-
-.amount-input.search-row button {
-  border-radius: 0 6px 6px 0;
-  border: 1px solid #2f80ed;
-  border-left: none;
-  width: auto;
-  min-width: 100px;
-}
-    .action-buttons {
-      margin-top: 20px;
-      display: none;
-      text-align: center;
-    }
-
-    .action-buttons button {
-      padding: 12px 24px;
-      font-size: 1em;
-      border-radius: 6px;
-      border: none;
-      background: #2f80ed;
-      color: white;
-      cursor: pointer;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Send / Request</title>
+  <link rel="stylesheet" href="send-request.css" />
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <script defer src="/firebase-init.js"></script>
+  <script defer src="send-request.js"></script>
 </head>
 <body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="cardholder.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-        <div class="nav-links" id="navLinks">
-          <a href="cardholder.html">Home</a>
-          <a href="send-request.html">Send / Request</a>
-          <a href="wallet.html">Wallet</a>
-          <a href="activity.html">Activity</a>
-          <a href="help.html">Help</a>
-        </div>
-      </div>
-      <div class="nav-right">
-        <a href="#" id="logoutBtn">Log Out</a>
-      </div>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="index.html" class="logo">boop</a>
+    </div>
+    <div class="nav-right">
+      <a href="index.html">Home</a>
+      <a href="send-request.html">Send / Request</a>
+      <a href="wallet.html">Wallet</a>
+      <a href="activity.html">Activity</a>
+      <a href="help.html">Help</a>
+      <a href="#" id="logoutBtn">Log Out</a>
     </div>
   </nav>
 
-  <div class="container">
-    <div class="tabs">
-      <div class="tab active" id="sendTab">Send</div>
-      <div class="tab" id="requestTab">Request</div>
+  <main class="main-container">
+    <div class="card">
+      <div class="tab-buttons">
+        <button id="sendTab" class="tab-button active">Send</button>
+        <button id="requestTab" class="tab-button">Request</button>
+      </div>
+
+      <div class="search-row">
+        <input type="text" id="recipientInput" placeholder="Enter name or email" />
+        <button id="searchBtn">Search</button>
+      </div>
+
+      <h3 id="resultsTitle" class="section-title" style="display:none;">Results</h3>
+      <div id="resultsList" class="results-list"></div>
+
+      <div id="amountSection" class="amount-row" style="display:none;">
+        <input type="number" id="amountInput" placeholder="Enter amount" />
+        <button id="sendBtn">Send</button>
+        <button id="requestBtn" style="display:none;">Request</button>
+      </div>
     </div>
-
-    <div class="search-row">
-      <input type="text" id="recipientInput" placeholder="Search by name or email..." />
-      <button id="searchBtn">Search</button>
-    </div>
-
-    <div id="resultsTitle">Results</div>
-    <div id="resultsList"></div>
-
- <div class="search-row" id="amountSection" style="display: none;">
-  <input type="number" id="amountInput" placeholder="Enter amount" />
-  <button id="sendBtn" style="display: none;">Send</button>
-  <button id="requestBtn" style="display: none;">Request</button>
-</div>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      getDocs,
-      query,
-      where
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let currentUserUID = "";
-    let currentUserEmail = "";
-
-    const logoutBtn = document.getElementById("logoutBtn");
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      });
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "index.html";
-        return;
-      }
-      currentUserUID = user.uid;
-      currentUserEmail = user.email;
-    });
-
-    const recipientInput = document.getElementById("recipientInput");
-    const searchBtn = document.getElementById("searchBtn");
-    const resultsList = document.getElementById("resultsList");
-    const resultsTitle = document.getElementById("resultsTitle");
-    const amountSection = document.getElementById("amountSection");
-    const actionButtons = document.getElementById("actionButtons");
-    const sendBtn = document.getElementById("sendBtn");
-    const requestBtn = document.getElementById("requestBtn");
-
-    let selectedTab = "send";
-
-    searchBtn.addEventListener("click", async () => {
-      const queryVal = recipientInput.value.trim().toLowerCase();
-      resultsList.innerHTML = "";
-      resultsTitle.style.display = "none";
-      amountSection.style.display = "none";
-      actionButtons.style.display = "none";
-      sendBtn.style.display = "none";
-      requestBtn.style.display = "none";
-
-      if (queryVal.length === 0) return;
-
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("role", "==", "cardholder"), where("onAssistance", "==", false));
-      const snapshot = await getDocs(q);
-
-      let found = false;
-
-      snapshot.forEach((doc) => {
-        const user = doc.data();
-        if (doc.id === currentUserUID) return;
-
-        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.toLowerCase();
-        const email = (user.email ?? "").toLowerCase();
-
-        const match =
-          fullName.includes(queryVal) ||
-          (user.firstName ?? "").toLowerCase().includes(queryVal) ||
-          (user.lastName ?? "").toLowerCase().includes(queryVal) ||
-          email.includes(queryVal);
-
-        if (match) {
-          const div = document.createElement("div");
-          div.className = "result-item";
-          div.textContent = `${user.firstName} ${user.lastName} (${user.email})`;
-          div.addEventListener("click", () => {
-            amountSection.style.display = "block";
-            actionButtons.style.display = "block";
-            if (selectedTab === "send") {
-              sendBtn.style.display = "inline-block";
-              requestBtn.style.display = "none";
-            } else {
-              requestBtn.style.display = "inline-block";
-              sendBtn.style.display = "none";
-            }
-          });
-          resultsList.appendChild(div);
-          resultsTitle.style.display = "block";
-          found = true;
-        }
-      });
-
-      if (!found) {
-        resultsList.innerHTML = '<div class="result-item">No results found</div>';
-        resultsTitle.style.display = "block";
-      }
-    });
-
-    const sendTab = document.getElementById("sendTab");
-    const requestTab = document.getElementById("requestTab");
-
-    sendTab.addEventListener("click", () => {
-      selectedTab = "send";
-      sendTab.classList.add("active");
-      requestTab.classList.remove("active");
-      sendBtn.style.display = "inline-block";
-      requestBtn.style.display = "none";
-    });
-
-    requestTab.addEventListener("click", () => {
-      selectedTab = "request";
-      requestTab.classList.add("active");
-      sendTab.classList.remove("active");
-      requestBtn.style.display = "inline-block";
-      sendBtn.style.display = "none";
-    });
-  </script>
+  </main>
 </body>
 </html>
