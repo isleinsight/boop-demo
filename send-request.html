@@ -137,20 +137,19 @@
       cursor: pointer;
     }
 
-    .amount-input {
-      margin-top: 20px;
-      display: none;
-      text-align: center;
-    }
+    .amount-input.search-row input {
+  border-radius: 6px 0 0 6px;
+  border: 1px solid #ccc;
+  border-right: none;
+}
 
-    .amount-input input {
-      width: 60%;
-      padding: 10px;
-      font-size: 1em;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
+.amount-input.search-row button {
+  border-radius: 0 6px 6px 0;
+  border: 1px solid #2f80ed;
+  border-left: none;
+  width: auto;
+  min-width: 100px;
+}
     .action-buttons {
       margin-top: 20px;
       display: none;
@@ -201,17 +200,11 @@
     <div id="resultsTitle">Results</div>
     <div id="resultsList"></div>
 
-    <div class="search-row">
-
-    <div class="amount-input" id="amountSection">
-      <input type="number" id="amountInput" placeholder="Enter amount" />
-    </div>
-
-    <div class="action-buttons" id="actionButtons">
-      <button id="sendBtn" style="display: none;">Send</button>
-      <button id="requestBtn" style="display: none;">Request</button>
-    </div>
-      </div>
+ <div class="amount-input search-row" id="amountSection">
+  <input type="number" id="amountInput" placeholder="Enter amount" />
+  <button id="sendBtn" style="display: none;">Send</button>
+  <button id="requestBtn" style="display: none;">Request</button>
+</div>
   </div>
 
   <script type="module">
