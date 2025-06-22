@@ -173,10 +173,10 @@
 
           if (userSnap.exists()) {
             const data = userSnap.data();
-            const isGov = data.governmentAssistance || false;
+            const onAssistance = data.onAssistance === true;
             const wallet = parseFloat(data.wallet || 0);
 
-            if (isGov) {
+            if (onAssistance) {
               window.location.href = "cardholder.html";
             } else {
               walletSection.classList.remove("hidden");
