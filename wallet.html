@@ -75,29 +75,31 @@
       margin-bottom: 20px;
     }
 
-    .action-buttons {
+    .tabs {
       display: flex;
+      border-bottom: 2px solid #ddd;
+      margin-top: 25px;
       justify-content: center;
-      gap: 20px;
-      margin-top: 20px;
     }
 
-    .action-buttons button {
-      padding: 12px 20px;
-      background-color: #2f80ed;
-      color: white;
-      border: none;
-      border-radius: 6px;
+    .tab {
+      padding: 10px 20px;
       cursor: pointer;
-      font-size: 1em;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      color: #102a43;
     }
 
-    .action-buttons button:hover {
-      background-color: #1c6fd9;
+    .tab.active {
+      border-bottom: 3px solid #2f80ed;
+      color: #2f80ed;
     }
 
-    .hidden {
-      display: none;
+    .mode-label {
+      font-weight: 600;
+      color: #102a43;
+      font-size: 1.05em;
+      margin-top: 25px;
     }
 
     .amount-row {
@@ -132,6 +134,10 @@
       box-sizing: border-box;
       border-radius: 0 6px 6px 0;
     }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -158,19 +164,24 @@
   <div class="container hidden" id="walletSection">
     <h2>Your Wallet</h2>
     <div class="wallet-balance" id="walletBalance">$0.00</div>
-    <div class="action-buttons">
-      <button id="addFundsTab">Add Funds</button>
-      <button id="transferTab">Transfer</button>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" id="addTab">Add Funds</div>
+      <div class="tab" id="transferTab">Transfer</div>
     </div>
 
-    <!-- Shared input and button row -->
+    <!-- Mode Label -->
+    <div id="modeLabel" class="mode-label hidden">You are...</div>
+
+    <!-- Amount Row -->
     <div class="amount-row hidden" id="amountRow">
       <input type="number" id="amountInput" placeholder="Enter amount" />
       <button id="confirmBtn">Confirm</button>
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase & Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
@@ -203,11 +214,12 @@
     const amountRow = document.getElementById("amountRow");
     const amountInput = document.getElementById("amountInput");
     const confirmBtn = document.getElementById("confirmBtn");
+    const modeLabel = document.getElementById("modeLabel");
 
-    const addFundsTab = document.getElementById("addFundsTab");
+    const addTab = document.getElementById("addTab");
     const transferTab = document.getElementById("transferTab");
 
-    let currentMode = "";
+    let currentMode = "add"; // default
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -221,7 +233,6 @@
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-
           if (data.onAssistance === true) {
             window.location.href = "cardholder.html";
           } else {
@@ -238,41 +249,48 @@
     });
 
     // Logout
-    const logoutBtn = document.getElementById("logoutBtn");
-    logoutBtn.addEventListener("click", () => {
+    document.getElementById("logoutBtn").addEventListener("click", () => {
       signOut(auth).then(() => {
         window.location.href = "cardholder-login.html";
       });
     });
 
-    // Action handlers
-    addFundsTab.addEventListener("click", () => {
+    // Tab Click Handlers
+    addTab.addEventListener("click", () => {
       currentMode = "add";
-      confirmBtn.textContent = "Add Funds";
+      addTab.classList.add("active");
+      transferTab.classList.remove("active");
+      modeLabel.textContent = "You are adding funds";
+      modeLabel.classList.remove("hidden");
       amountRow.classList.remove("hidden");
     });
 
     transferTab.addEventListener("click", () => {
       currentMode = "transfer";
-      confirmBtn.textContent = "Transfer";
+      transferTab.classList.add("active");
+      addTab.classList.remove("active");
+      modeLabel.textContent = "You are transferring funds";
+      modeLabel.classList.remove("hidden");
       amountRow.classList.remove("hidden");
     });
 
+    // Confirm Handler
     confirmBtn.addEventListener("click", () => {
       const amount = parseFloat(amountInput.value);
       if (isNaN(amount) || amount <= 0) {
-        alert("Enter a valid amount.");
+        alert("Please enter a valid amount.");
         return;
       }
 
       if (currentMode === "add") {
         alert(`Simulating: Adding $${amount.toFixed(2)} to wallet.`);
-      } else if (currentMode === "transfer") {
+      } else {
         alert(`Simulating: Transferring $${amount.toFixed(2)} to bank.`);
       }
 
       amountInput.value = "";
       amountRow.classList.add("hidden");
+      modeLabel.classList.add("hidden");
     });
   </script>
 </body>
