@@ -54,7 +54,7 @@
     }
 
     .container {
-      max-width: 700px;
+      max-width: 600px;
       margin: 40px auto;
       background: white;
       border-radius: 10px;
@@ -81,51 +81,39 @@
       color: #2f80ed;
     }
 
-   .search-row {
-.search-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-  flex-wrap: nowrap; /* prevents wrapping */
-  gap: 0;
-  margin-bottom: 20px;
-}
+    .search-row {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      gap: 0;
+      margin-bottom: 20px;
+    }
 
-.search-row input {
-  flex: 1;
-  min-width: 220px;
-  width: 100%;
-  max-width: 400px;
-  padding: 12px 16px;
-  font-size: 1em;
-  border-radius: 6px;
-  border-radius: 6px 0 0 6px;
-  border: 1px solid #ccc;
-  max-width: 400px;
-  border-right: none;
-}
+    .search-row input {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 1em;
+      border-radius: 6px 0 0 6px;
+      border: 1px solid #ccc;
+      border-right: none;
+    }
 
-.search-row button {
-  padding: 12px 20px;
-  font-size: 1em;
-  border-radius: 6px;
-  border-radius: 0 6px 6px 0;
-  background: #2f80ed;
-  color: white;
-  border: none;
-  border: 1px solid #2f80ed;
-  cursor: pointer;
-  white-space: nowrap;
-  height: 100%;
-}
+    .search-row button {
+      padding: 12px 20px;
+      font-size: 1em;
+      border-radius: 0 6px 6px 0;
+      background: #2f80ed;
+      color: white;
+      border: 1px solid #2f80ed;
+      cursor: pointer;
+      white-space: nowrap;
+    }
 
     #resultsTitle {
       font-weight: bold;
       margin-bottom: 10px;
       display: none;
+      text-align: center;
     }
 
     .result-item {
@@ -135,6 +123,8 @@
       margin-bottom: 8px;
       font-size: 0.95em;
       color: #333;
+      text-align: center;
+      max-width: 100%;
     }
 
     .result-item:hover {
@@ -164,7 +154,6 @@
 
     .action-buttons button {
       padding: 12px 24px;
-      margin: 0 10px;
       font-size: 1em;
       border-radius: 6px;
       border: none;
@@ -212,8 +201,8 @@
     </div>
 
     <div class="action-buttons" id="actionButtons">
-      <button id="sendBtn">Send</button>
-      <button id="requestBtn">Request</button>
+      <button id="sendBtn" style="display: none;">Send</button>
+      <button id="requestBtn" style="display: none;">Request</button>
     </div>
   </div>
 
@@ -270,6 +259,10 @@
     const resultsTitle = document.getElementById("resultsTitle");
     const amountSection = document.getElementById("amountSection");
     const actionButtons = document.getElementById("actionButtons");
+    const sendBtn = document.getElementById("sendBtn");
+    const requestBtn = document.getElementById("requestBtn");
+
+    let selectedTab = "send";
 
     searchBtn.addEventListener("click", async () => {
       const queryVal = recipientInput.value.trim().toLowerCase();
@@ -277,6 +270,8 @@
       resultsTitle.style.display = "none";
       amountSection.style.display = "none";
       actionButtons.style.display = "none";
+      sendBtn.style.display = "none";
+      requestBtn.style.display = "none";
 
       if (queryVal.length === 0) return;
 
@@ -306,6 +301,13 @@
           div.addEventListener("click", () => {
             amountSection.style.display = "block";
             actionButtons.style.display = "block";
+            if (selectedTab === "send") {
+              sendBtn.style.display = "inline-block";
+              requestBtn.style.display = "none";
+            } else {
+              requestBtn.style.display = "inline-block";
+              sendBtn.style.display = "none";
+            }
           });
           resultsList.appendChild(div);
           resultsTitle.style.display = "block";
@@ -319,18 +321,23 @@
       }
     });
 
-    // Tab switching logic
     const sendTab = document.getElementById("sendTab");
     const requestTab = document.getElementById("requestTab");
 
     sendTab.addEventListener("click", () => {
+      selectedTab = "send";
       sendTab.classList.add("active");
       requestTab.classList.remove("active");
+      sendBtn.style.display = "inline-block";
+      requestBtn.style.display = "none";
     });
 
     requestTab.addEventListener("click", () => {
+      selectedTab = "request";
       requestTab.classList.add("active");
       sendTab.classList.remove("active");
+      requestBtn.style.display = "inline-block";
+      sendBtn.style.display = "none";
     });
   </script>
 </body>
