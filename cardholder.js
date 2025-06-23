@@ -51,16 +51,28 @@ onAuthStateChanged(auth, async (user) => {
     if (userDoc.exists()) {
       const data = userDoc.data();
 
+      // Populate profile info
       cardholderNameEl.textContent = `${data.firstName || ""} ${data.lastName || ""}`;
       cardholderEmailEl.textContent = data.email || "-";
       walletIdEl.textContent = data.walletId || "N/A";
       walletBalanceEl.textContent = `$${(data.walletBalance || 0).toFixed(2)}`;
 
-      // Show send/receive buttons only if not on assistance
-      if (sendReceiveButtons && !data.isOnGovernmentAssistance) {
-        sendReceiveButtons.classList.remove("hidden");
+      // Role-based logic for showing transfer/add funds buttons
+      const role = data.role?.toLowerCase(); // normalize casing
+
+      if (sendReceiveButtons) {
+        const showButtons =
+          role === "vendor" ||
+          (role === "cardholder" && !data.isOnGovernmentAssistance);
+
+        if (showButtons) {
+          sendReceiveButtons.classList.remove("hidden");
+        } else {
+          sendReceiveButtons.classList.add("hidden");
+        }
       }
 
+      // Load transaction history
       loadTransactions(user.uid);
     }
   } catch (err) {
@@ -74,7 +86,6 @@ async function loadTransactions(userId) {
   container.innerHTML = `<div class="activity-item">Loading...</div>`;
 
   try {
-    // Query both incoming and outgoing transactions
     const toQuery = query(collection(db, "transactions"), where("to", "==", userId));
     const fromQuery = query(collection(db, "transactions"), where("from", "==", userId));
 
@@ -87,20 +98,12 @@ async function loadTransactions(userId) {
 
     toSnap.forEach((doc) => {
       const data = doc.data();
-      transactions.push({
-        ...data,
-        direction: "in",
-        id: doc.id
-      });
+      transactions.push({ ...data, direction: "in", id: doc.id });
     });
 
     fromSnap.forEach((doc) => {
       const data = doc.data();
-      transactions.push({
-        ...data,
-        direction: "out",
-        id: doc.id
-      });
+      transactions.push({ ...data, direction: "out", id: doc.id });
     });
 
     if (transactions.length === 0) {
@@ -108,12 +111,11 @@ async function loadTransactions(userId) {
       return;
     }
 
-    // Sort newest to oldest
+    // Sort newest first
     transactions.sort((a, b) => {
       return b.timestamp?.toDate() - a.timestamp?.toDate();
     });
 
-    // Render all transactions
     container.innerHTML = "";
 
     transactions.forEach((tx) => {
