@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Assign NFC Card – BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      color: #102a43;
+    }
+
+    label {
+      font-weight: 500;
+      display: block;
+      margin-top: 20px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+
+    button {
+      background: #2f80ed;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    button:hover {
+      background: #1c6fd8;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 0.95em;
+      text-align: center;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Assign NFC Card</h2>
+    
+    <label for="cardUID">Card UID</label>
+    <input type="text" id="cardUID" placeholder="Scan or enter NFC UID" />
+
+    <label for="walletSelect">Assign to Wallet</label>
+    <select id="walletSelect">
+      <option value="">Loading wallets...</option>
+    </select>
+
+    <button id="assignBtn">Assign Card</button>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      addDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
+      authDomain: "boop-becff.firebaseapp.com",
+      projectId: "boop-becff",
+      storageBucket: "boop-becff.appspot.com",
+      messagingSenderId: "570567453336",
+      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const walletSelect = document.getElementById("walletSelect");
+    const assignBtn = document.getElementById("assignBtn");
+    const statusEl = document.getElementById("status");
+
+    async function loadWallets() {
+      try {
+        const snapshot = await getDocs(collection(db, "wallets"));
+        walletSelect.innerHTML = '<option value="">Select a wallet</option>';
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          walletSelect.innerHTML += `<option value="${doc.id}">${data.ownerName || doc.id}</option>`;
+        });
+      } catch (err) {
+        console.error("Failed to load wallets:", err);
+        walletSelect.innerHTML = '<option value="">Error loading wallets</option>';
+      }
+    }
+
+    assignBtn.addEventListener("click", async () => {
+      const uid = document.getElementById("cardUID").value.trim();
+      const walletId = walletSelect.value;
+
+      if (!uid || !walletId) {
+        statusEl.textContent = "Please enter a UID and select a wallet.";
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "cards"), {
+          uid,
+          walletId,
+          type: "bus", // or "spending"
+          status: "active",
+          issuedAt: new Date()
+        });
+
+        statusEl.textContent = "✅ Card assigned successfully.";
+        document.getElementById("cardUID").value = "";
+        walletSelect.value = "";
+      } catch (err) {
+        console.error("Error assigning card:", err);
+        statusEl.textContent = "❌ Failed to assign card.";
+      }
+    });
+
+    loadWallets();
+  </script>
+</body>
+</html>
