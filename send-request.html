@@ -85,6 +85,7 @@
       display: flex;
       justify-content: center;
       align-items: stretch;
+      gap: 0;
       width: 100%;
       max-width: 600px;
       margin: 0 auto 20px;
@@ -137,7 +138,7 @@
     }
 
     .amount-row {
-      display: flex;
+      display: none;
       justify-content: center;
       align-items: stretch;
       width: 100%;
@@ -162,26 +163,26 @@
       background-color: #2f80ed;
       color: white;
       border: 1px solid #2f80ed;
-      border-left: none;
       height: 45px;
       cursor: pointer;
-      box-sizing: border-box;
+      border-left: none;
       border-radius: 0 6px 6px 0;
+      display: none;
     }
 
-    .note-textarea {
+    .notes-section {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .notes-section textarea {
       width: 100%;
+      max-width: 600px;
       padding: 10px;
-      font-size: 0.95em;
+      font-size: 1em;
       border-radius: 6px;
       border: 1px solid #ccc;
-      resize: vertical;
-      margin-top: 10px;
-      box-sizing: border-box;
-    }
-
-    .form-group {
-      margin-top: 20px;
     }
   </style>
 </head>
@@ -190,7 +191,7 @@
     <div class="nav-container">
       <div class="nav-left">
         <a href="cardholder.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-        <div class="nav-links">
+        <div class="nav-links" id="navLinks">
           <a href="cardholder.html">Home</a>
           <a href="send-request.html">Send / Request</a>
           <a href="wallet.html">Wallet</a>
@@ -218,15 +219,14 @@
     <div id="resultsTitle">Results</div>
     <div id="resultsList"></div>
 
-    <div class="amount-row" id="amountSection" style="display: none;">
+    <div class="amount-row" id="amountSection">
       <input type="number" id="amountInput" placeholder="Enter amount" />
-      <button id="sendBtn" style="display:none;">Send</button>
-      <button id="requestBtn" style="display:none;">Request</button>
+      <button id="sendBtn">Send</button>
+      <button id="requestBtn">Request</button>
     </div>
 
-    <div class="form-group" id="noteSection" style="display: none;">
-      <label for="transactionNote">Add a note (optional)</label>
-      <textarea id="transactionNote" rows="3" placeholder="e.g. For lunch, bus pass, groceries..." class="note-textarea"></textarea>
+    <div class="notes-section" id="notesSection">
+      <textarea id="noteInput" rows="3" placeholder="Add a note (optional)"></textarea>
     </div>
   </div>
 
@@ -239,11 +239,10 @@
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
       getFirestore,
-      doc,
-      getDoc,
       collection,
-      addDoc,
-      serverTimestamp
+      getDocs,
+      query,
+      where
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -259,81 +258,110 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const sendBtn = document.getElementById("sendBtn");
-    const requestBtn = document.getElementById("requestBtn");
-    const searchBtn = document.getElementById("searchBtn");
-    const recipientInput = document.getElementById("recipientInput");
-    const amountInput = document.getElementById("amountInput");
-    const noteInput = document.getElementById("transactionNote");
+    let currentUserUID = "";
+    let currentUserEmail = "";
+
     const logoutBtn = document.getElementById("logoutBtn");
-    const amountSection = document.getElementById("amountSection");
-    const noteSection = document.getElementById("noteSection");
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) window.location.href = "index.html";
-    });
-
-    searchBtn.addEventListener("click", () => {
-      if (recipientInput.value.trim() !== "") {
-        amountSection.style.display = "flex";
-        noteSection.style.display = "block";
-        sendBtn.style.display = "inline-block";
-        requestBtn.style.display = "inline-block";
-      }
-    });
-
-    sendBtn.addEventListener("click", () => handleTransaction("send"));
-    requestBtn.addEventListener("click", () => handleTransaction("request"));
-
-    async function handleTransaction(type) {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const recipient = recipientInput.value.trim();
-      const amount = parseFloat(amountInput.value.trim());
-      const note = noteInput.value.trim();
-
-      if (!recipient || isNaN(amount) || amount <= 0) {
-        alert("Please enter a valid recipient and amount.");
-        return;
-      }
-
-      try {
-        const senderDoc = await getDoc(doc(db, "users", user.uid));
-        if (!senderDoc.exists()) throw new Error("Sender not found");
-
-        const senderData = senderDoc.data();
-
-        const txData = {
-          from: type === "send" ? user.uid : recipient,
-          to: type === "send" ? recipient : user.uid,
-          fromName: `${senderData.firstName} ${senderData.lastName}`,
-          toName: "Unknown",
-          amount: amount,
-          category: type === "send" ? "Send" : "Request",
-          note: note || null,
-          status: "pending",
-          timestamp: serverTimestamp()
-        };
-
-        await addDoc(collection(db, "transactions"), txData);
-
-        alert("Transaction submitted successfully.");
-        recipientInput.value = "";
-        amountInput.value = "";
-        noteInput.value = "";
-        amountSection.style.display = "none";
-        noteSection.style.display = "none";
-      } catch (err) {
-        console.error("Transaction failed:", err);
-        alert("Transaction failed.");
-      }
-    }
-
     logoutBtn.addEventListener("click", () => {
       signOut(auth).then(() => {
         window.location.href = "index.html";
       });
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+      currentUserUID = user.uid;
+      currentUserEmail = user.email;
+    });
+
+    const recipientInput = document.getElementById("recipientInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const resultsList = document.getElementById("resultsList");
+    const resultsTitle = document.getElementById("resultsTitle");
+    const amountSection = document.getElementById("amountSection");
+    const notesSection = document.getElementById("notesSection");
+    const sendBtn = document.getElementById("sendBtn");
+    const requestBtn = document.getElementById("requestBtn");
+
+    let selectedTab = "send";
+
+    searchBtn.addEventListener("click", async () => {
+      const queryVal = recipientInput.value.trim().toLowerCase();
+      resultsList.innerHTML = "";
+      resultsTitle.style.display = "none";
+      amountSection.style.display = "none";
+      notesSection.style.display = "none";
+      sendBtn.style.display = "none";
+      requestBtn.style.display = "none";
+
+      if (queryVal.length === 0) return;
+
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("role", "==", "cardholder"), where("onAssistance", "==", false));
+      const snapshot = await getDocs(q);
+
+      let found = false;
+
+      snapshot.forEach((doc) => {
+        const user = doc.data();
+        if (doc.id === currentUserUID) return;
+
+        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.toLowerCase();
+        const email = (user.email ?? "").toLowerCase();
+
+        const match =
+          fullName.includes(queryVal) ||
+          (user.firstName ?? "").toLowerCase().includes(queryVal) ||
+          (user.lastName ?? "").toLowerCase().includes(queryVal) ||
+          email.includes(queryVal);
+
+        if (match) {
+          const div = document.createElement("div");
+          div.className = "result-item";
+          div.textContent = `${user.firstName} ${user.lastName} (${user.email})`;
+          div.addEventListener("click", () => {
+            amountSection.style.display = "flex";
+            notesSection.style.display = "block";
+            if (selectedTab === "send") {
+              sendBtn.style.display = "inline-block";
+              requestBtn.style.display = "none";
+            } else {
+              requestBtn.style.display = "inline-block";
+              sendBtn.style.display = "none";
+            }
+          });
+          resultsList.appendChild(div);
+          resultsTitle.style.display = "block";
+          found = true;
+        }
+      });
+
+      if (!found) {
+        resultsList.innerHTML = '<div class="result-item">No results found</div>';
+        resultsTitle.style.display = "block";
+      }
+    });
+
+    const sendTab = document.getElementById("sendTab");
+    const requestTab = document.getElementById("requestTab");
+
+    sendTab.addEventListener("click", () => {
+      selectedTab = "send";
+      sendTab.classList.add("active");
+      requestTab.classList.remove("active");
+      sendBtn.style.display = "inline-block";
+      requestBtn.style.display = "none";
+    });
+
+    requestTab.addEventListener("click", () => {
+      selectedTab = "request";
+      requestTab.classList.add("active");
+      sendTab.classList.remove("active");
+      requestBtn.style.display = "inline-block";
+      sendBtn.style.display = "none";
     });
   </script>
 </body>
