@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manage Wallet – Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    nav {
+      background-color: #102a43;
+      padding: 12px 20px;
+    }
+
+    .nav-container {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-left img {
+      height: 36px;
+      margin-right: 20px;
+    }
+
+    .nav-links a {
+      color: white;
+      margin-right: 16px;
+      text-decoration: none;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #102a43;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 4px;
+      font-weight: 500;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
+    .btn-primary {
+      background-color: #2f80ed;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: #2463c5;
+    }
+
+    .user-wallet-card {
+      background-color: #eef1f7;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+
+    .user-wallet-card p {
+      margin: 6px 0;
+    }
+
+    #walletInfo {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="admin.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
+        <div class="nav-links">
+          <a href="admin.html">Dashboard</a>
+          <a href="managewallet.html">Manage Wallets</a>
+          <a href="adduser.html">Add User</a>
+          <a href="reports.html">Reports</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>Manage Wallet</h2>
+
+    <!-- Search user -->
+    <label for="userSearch">Search User (Email or Name)</label>
+    <input type="text" id="userSearch" placeholder="Start typing..." />
+    <button id="searchUserBtn" class="btn-primary">Search</button>
+
+    <!-- Wallet info display (populated by JS) -->
+    <div id="walletInfo" class="user-wallet-card">
+      <p><strong>User:</strong> <span id="userFullName">-</span></p>
+      <p><strong>Email:</strong> <span id="userEmail">-</span></p>
+      <p><strong>Wallet ID:</strong> <span id="walletId">Not Assigned</span></p>
+      <p><strong>Balance:</strong> <span id="walletBalance">$0.00</span></p>
+
+      <!-- Assign wallet if none exists -->
+      <button id="assignWalletBtn" class="btn-primary">Assign Wallet</button>
+
+      <!-- Add card to wallet -->
+      <label for="cardType">Issue New Card</label>
+      <select id="cardType">
+        <option value="">-- Select Card Type --</option>
+        <option value="spending">Spending Card</option>
+        <option value="bus">Bus Pass</option>
+        <option value="temporary">Temporary Access Card</option>
+      </select>
+      <button id="addCardBtn" class="btn-primary">Add Card</button>
+    </div>
+  </div>
+
+  <script type="module" src="managewallet.js"></script>
+</body>
+</html>
