@@ -1,4 +1,4 @@
-console.log("🔥 gov-logic.js has loaded!");
+console.log("🔥 admin.js has loaded!");
 
 document.addEventListener("DOMContentLoaded", () => {
   alert("If you see this, JavaScript is running!");
