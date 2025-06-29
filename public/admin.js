@@ -2,39 +2,8 @@ console.log("🔥 admin.js has loaded!");
 
 document.addEventListener("DOMContentLoaded", () => {
   alert("If you see this, JavaScript is running!");
+  loadUsers(); // Load users immediately on page load for now
 });
-
-// gov-logic.js
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  addDoc,
-  deleteDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import {
-  getAuth,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-  authDomain: "boop-becff.firebaseapp.com",
-  projectId: "boop-becff",
-  storageBucket: "boop-becff.appspot.com",
-  messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-  measurementId: "G-79DWYFPZNR"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
 
 // DOM elements
 const usersTableBody = document.getElementById("usersTableBody");
@@ -43,42 +12,52 @@ const addUserBtn = document.getElementById("addUserBtn");
 const addUserFormDiv = document.getElementById("addUserForm");
 const usersTableDiv = document.getElementById("usersTable");
 const userForm = document.getElementById("userForm");
+const logoutBtn = document.getElementById("logoutBtn");
 
-// Switch to user table view
-manageUsersBtn.addEventListener("click", () => {
-  usersTableDiv.style.display = "block";
-  addUserFormDiv.style.display = "none";
-});
-
-// Switch to add user form view
-addUserBtn.addEventListener("click", () => {
-  usersTableDiv.style.display = "none";
+// Show the Add User Form
+function showAddUserForm() {
   addUserFormDiv.style.display = "block";
-});
-
-// Load users and show them in the table
-async function loadUsers() {
-  usersTableBody.innerHTML = "";
-  const querySnapshot = await getDocs(collection(db, "users"));
-  querySnapshot.forEach((docSnap) => {
-    const docData = docSnap.data();
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td>${docData.firstName || ""}</td>
-      <td>${docData.lastName || ""}</td>
-      <td>${docData.email || ""}</td>
-      <td>${docData.role || ""}</td>
-      <td>${docData.walletAddress || ""}</td>
-      <td>${docData.addedBy || "N/A"}</td>
-      <td><button class="actions-button" onclick="deleteUser('${docSnap.id}')">Delete</button></td>
-    `;
-
-    usersTableBody.appendChild(row);
-  });
+  usersTableDiv.style.display = "none";
 }
 
-// Add user to Firestore
+// Show the Users Table
+function showManageUsers() {
+  addUserFormDiv.style.display = "none";
+  usersTableDiv.style.display = "block";
+  loadUsers();
+}
+
+// Event listeners for switching views
+manageUsersBtn.addEventListener("click", showManageUsers);
+addUserBtn.addEventListener("click", showAddUserForm);
+
+// Load users from backend API
+async function loadUsers() {
+  usersTableBody.innerHTML = "";
+
+  try {
+    const response = await fetch("https://boop-api-6moct.ondigitalocean.app/api/users");
+    const users = await response.json();
+
+    users.forEach((user) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${user.firstName || ""}</td>
+        <td>${user.lastName || ""}</td>
+        <td>${user.email || ""}</td>
+        <td>${user.role || ""}</td>
+        <td>${user.walletAddress || ""}</td>
+        <td>${user.addedBy || "N/A"}</td>
+        <td><button class="actions-button" onclick="deleteUser('${user.id}')">Delete</button></td>
+      `;
+      usersTableBody.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Error loading users:", error);
+  }
+}
+
+// Add a new user using the API
 userForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -88,96 +67,81 @@ userForm.addEventListener("submit", async (e) => {
   const role = document.getElementById("role").value;
   const walletAddress = document.getElementById("walletAddress").value.trim();
 
-  const usersCollection = collection(db, "users");
-  const currentUser = auth.currentUser;
-
   try {
-    await addDoc(usersCollection, {
-      firstName,
-      lastName,
-      email,
-      role,
-      walletAddress,
-      addedBy: currentUser ? currentUser.email : "Unknown"
+    const response = await fetch("https://boop-api-6moct.ondigitalocean.app/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+        // Add Authorization header here later if using JWT
+      },
+      body: JSON.stringify({
+        firstName,
+        lastName,
+        email,
+        role,
+        walletAddress,
+        addedBy: "admin@example.com" // Replace this later with real user email from JWT
+      })
     });
 
-    userForm.reset();
-    usersTableDiv.style.display = "block";
-    addUserFormDiv.style.display = "none";
-    loadUsers();
+    if (response.ok) {
+      userForm.reset();
+      showManageUsers();
+    } else {
+      const err = await response.json();
+      console.error("Error adding user:", err);
+      alert("Failed to add user: " + (err.message || "Unknown error"));
+    }
   } catch (error) {
     console.error("Error adding user:", error);
   }
 });
 
-// Delete user function
+// Delete a user
 window.deleteUser = async (userId) => {
   const confirmDelete = confirm("Are you sure you want to delete this user?");
   if (!confirmDelete) return;
 
   try {
-    await deleteDoc(doc(db, "users", userId));
-    loadUsers();
+    const response = await fetch(`https://boop-api-6moct.ondigitalocean.app/api/users/${userId}`, {
+      method: "DELETE"
+    });
+
+    if (response.ok) {
+      loadUsers();
+    } else {
+      const err = await response.text();
+      console.error("Error deleting user:", err);
+    }
   } catch (error) {
     console.error("Error deleting user:", error);
   }
 };
 
-// Run loadUsers only if user is authenticated
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loadUsers();
-  } else {
-    window.location.href = "index.html"; // Redirect to home if not logged in
-  }
+// Logout handler (you can update this when JWT is implemented)
+logoutBtn?.addEventListener("click", () => {
+  window.location.href = "index.html"; // Or clear JWT token when implemented
 });
 
-
-// Show the Add User Form
-function showAddUserForm() {
-  document.getElementById("addUserFormContainer").style.display = "block";
-  document.getElementById("usersTable").style.display = "none";
-}
-
-// Show the Users Table
-function showManageUsers() {
-  document.getElementById("addUserFormContainer").style.display = "none";
-  document.getElementById("usersTable").style.display = "block";
-  fetchUsers(); // Load user data into the table
-}
-
-
-<button onclick="showAddUserForm()">Add User</button>
-<button onclick="showManageUsers()">Manage Users</button>
-
-
-const logoutBtn = document.getElementById("logoutBtn");
-logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
-});
-
-
-
+// Future: Admin action requests (still Firebase-based, will migrate later)
 import { requestAdminAction } from './government-actions.js';
 
-document.getElementById("deleteUserBtn").addEventListener("click", () => {
+document.getElementById("deleteUserBtn")?.addEventListener("click", () => {
   const uid = document.getElementById("targetUid").value;
   requestAdminAction(uid, "delete");
 });
 
-document.getElementById("suspendUserBtn").addEventListener("click", () => {
+document.getElementById("suspendUserBtn")?.addEventListener("click", () => {
   const uid = document.getElementById("targetUid").value;
   requestAdminAction(uid, "suspend");
 });
 
-document.getElementById("unsuspendUserBtn").addEventListener("click", () => {
+document.getElementById("unsuspendUserBtn")?.addEventListener("click", () => {
   const uid = document.getElementById("targetUid").value;
   requestAdminAction(uid, "unsuspend");
 });
 
-document.getElementById("forceSignoutBtn").addEventListener("click", () => {
+document.getElementById("forceSignoutBtn")?.addEventListener("click", () => {
   const uid = document.getElementById("targetUid").value;
   requestAdminAction(uid, "forceSignout");
 });
