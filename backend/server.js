@@ -1,32 +1,30 @@
-// Load environment variables
-require('dotenv').config();
+// backend/server.js
 
-// Import modules
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const loginHandler = require('./login'); // Using login.js from backend
+const dotenv = require('dotenv');
 
-// Initialize app
+dotenv.config();
+
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
-// Serve static files from /public
-app.use(express.static(path.join(__dirname, '../public'))); // ✅ This line serves public HTML/CSS/JS
+// Route: POST /login
+const loginHandler = require('./login');
+app.post('/login', loginHandler);
 
-// API routes
-app.use('/api', loginHandler); // POST /api/login
-
-// Fallback to index.html for any unknown routes (optional)
+// Fallback: serve index.html (optional, remove if not needed)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
