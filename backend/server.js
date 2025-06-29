@@ -4,7 +4,8 @@ require('dotenv').config();
 // Import modules
 const express = require('express');
 const cors = require('cors');
-const loginRoute = require('./login'); // ✅ Corrected path
+const path = require('path');
+const loginRoute = require('./login'); // Backend login route
 
 // Initialize app
 const app = express();
@@ -12,6 +13,9 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// ✅ Serve static files (HTML, CSS, JS) from 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/api', loginRoute);
