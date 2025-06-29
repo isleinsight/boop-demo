@@ -4,7 +4,8 @@ require('dotenv').config();
 // Import modules
 const express = require('express');
 const cors = require('cors');
-const loginRoute = require('./login'); // This is the backend login route
+const path = require('path');
+const loginHandler = require('./login'); // Using login.js from backend
 
 // Initialize app
 const app = express();
@@ -13,18 +14,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-//  Serve static files like HTML, CSS, and frontend JS from the "public" folder
-app.use(express.static('public'));
+// Serve static files from /public
+app.use(express.static(path.join(__dirname, '../public'))); // ✅ This line serves public HTML/CSS/JS
 
-//  API Routes
-app.use('/api', loginRoute);
+// API routes
+app.use('/api', loginHandler); // POST /api/login
 
-// Root endpoint to test if server is live
-app.get('/', (req, res) => {
-  res.send('BOOP API is live!');
+// Fallback to index.html for any unknown routes (optional)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Start the server
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
