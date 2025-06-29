@@ -4,7 +4,7 @@ require('dotenv').config();
 // Import modules
 const express = require('express');
 const cors = require('cors');
-const loginHandler = require('./login'); // ✅ Renamed for clarity
+const loginRoute = require('./login'); // This is the backend login route
 
 // Initialize app
 const app = express();
@@ -13,15 +13,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api', loginHandler); // ✅ Now matches the renamed backend file
+//  Serve static files like HTML, CSS, and frontend JS from the "public" folder
+app.use(express.static('public'));
 
-// Root endpoint
+//  API Routes
+app.use('/api', loginRoute);
+
+// Root endpoint to test if server is live
 app.get('/', (req, res) => {
   res.send('BOOP API is live!');
 });
 
-// Start server
+// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
