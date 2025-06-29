@@ -6,7 +6,7 @@ yarn-error.log*
 package-lock.json
 
 # Environment variables
-.env
+backend/.env
 
 # OS/system files
 .DS_Store
