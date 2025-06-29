@@ -1,27 +1,26 @@
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-
   const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value.trim();
+  const password = document.getElementById('password').value;
 
   try {
-    const response = await fetch('/api/login', {
+    const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
-    if (response.ok) {
-      // ✅ Login successful — redirect or show message
-      window.location.href = 'dashboard.html'; // Change this to your actual destination
+    if (res.ok) {
+      document.getElementById('loginStatus').style.color = 'green';
+      document.getElementById('loginStatus').textContent = 'Login successful!';
+      // ✅ Redirect or store user info here
     } else {
-      document.getElementById('loginStatus').textContent = data.error || 'Login failed.';
+      document.getElementById('loginStatus').style.color = 'red';
+      document.getElementById('loginStatus').textContent = data.message || 'Login failed';
     }
-
   } catch (err) {
-    console.error(err);
-    document.getElementById('loginStatus').textContent = 'An error occurred. Please try again.';
+    document.getElementById('loginStatus').textContent = 'Error: ' + err.message;
   }
 });
