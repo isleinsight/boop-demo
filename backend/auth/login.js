@@ -1,48 +1,40 @@
-// backend/auth/login.js
+// routes/login.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const pool = require('../db'); // Make sure db.js exports the PostgreSQL pool
+const jwt = require('jsonwebtoken');
+const pool = require('../db');
 
-// POST /auth/login
-router.post('/', async (req, res) => {
+router.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Basic validation
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
-    }
-
-    // Query the database for the user
     const result = await pool.query(
-      'SELECT id, email, password_hash, role FROM users WHERE email = $1',
+      'SELECT id, email, role, password_hash FROM users WHERE email = $1',
       [email]
     );
 
-    // If user not found
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     const user = result.rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
 
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+    if (!match) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Return basic user info (never return password or hash!)
-    return res.status(200).json({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' }
+    );
 
+    res.status(200).json({ token });
   } catch (err) {
     console.error('Login error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
