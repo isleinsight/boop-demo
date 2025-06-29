@@ -4,7 +4,7 @@ require('dotenv').config();
 // Import modules
 const express = require('express');
 const cors = require('cors');
-const loginHandler = require('./login-handler'); // ✅ Renamed for clarity
+const loginHandler = require('./login'); // ✅ Renamed for clarity
 
 // Initialize app
 const app = express();
