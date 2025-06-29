@@ -2,7 +2,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const loginRoute = require('./routes/login'); // 👈 Login route file
+const loginRoute = require('./login');
+app.use('/api', loginRoute);
 const app = express();
 
 // Load environment variables
@@ -13,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use(loginRoute); // 👈 Mount the login API route
+app.use(loginRoute); // Mount the login API route
 
 // Test route
 app.get('/', (req, res) => {
