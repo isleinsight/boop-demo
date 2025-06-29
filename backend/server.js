@@ -1,22 +1,22 @@
-// server.js
+// Load environment variables
+require('dotenv').config();
+
+// Import modules
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const loginRoute = require('./login');
-app.use('/api', loginRoute);
-const app = express();
+const loginRoute = require('./login'); // ✅ Corrected path
 
-// Load environment variables
-dotenv.config();
+// Initialize app
+const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use(loginRoute); // Mount the login API route
+app.use('/api', loginRoute);
 
-// Test route
+// Root endpoint
 app.get('/', (req, res) => {
   res.send('BOOP API is live!');
 });
@@ -24,5 +24,5 @@ app.get('/', (req, res) => {
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
