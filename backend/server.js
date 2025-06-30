@@ -8,18 +8,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(express.json());
 
-// ✅ Serve static files from the public folder
+// ✅ SERVE PUBLIC FOLDER
 app.use(express.static(path.join(__dirname, '../public')));
 
-// ✅ Health check route
+// ✅ Optional health check
 app.get('/health', (req, res) => {
   res.send('OK');
 });
 
-// ✅ Fallback to index.html if needed (optional)
+// ✅ Optional catch-all (comment out if unnecessary)
 // app.get('*', (req, res) => {
 //   res.sendFile(path.join(__dirname, '../public/index.html'));
 // });
