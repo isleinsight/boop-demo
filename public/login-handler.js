@@ -4,7 +4,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const password = document.getElementById('password').value;
 
   try {
-    const res = await fetch('https://boop-api-6moct.ondigitalocean.app/login', {
+    const res = await fetch('/login', {  // ✅ RELATIVE PATH — works on any domain
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
@@ -15,7 +15,6 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     if (res.ok) {
       document.getElementById('loginStatus').style.color = 'green';
       document.getElementById('loginStatus').textContent = 'Login successful!';
-      // ✅ Redirect or store user info here
     } else {
       document.getElementById('loginStatus').style.color = 'red';
       document.getElementById('loginStatus').textContent = data.message || 'Login failed';
