@@ -1,9 +1,8 @@
-// backend/server.js
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
+const pool = require('./db'); // <-- import DB connection
 
 dotenv.config();
 
@@ -19,7 +18,17 @@ app.use(express.static(path.join(__dirname, '../public')));
 const loginHandler = require('./login');
 app.post('/login', loginHandler);
 
-// Fallback: serve index.html (optional, remove if not needed)
+// ✅ Health check route
+app.get('/health', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.send({ db: 'connected', time: result.rows[0].now });
+  } catch (err) {
+    res.status(500).send({ db: 'failed', error: err.message });
+  }
+});
+
+// Fallback: serve index.html (optional)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
