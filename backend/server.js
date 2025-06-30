@@ -8,20 +8,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve static files from the correct path (../public)
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Allow POST and JSON
+// Middleware to parse JSON
 app.use(express.json());
 
-// Optional health route
+// ✅ This line serves your public folder correctly
+app.use(express.static(path.resolve(__dirname, '../public')));
+
+// Health check
 app.get('/health', (req, res) => {
   res.send('OK');
 });
 
-// Optional fallback (uncomment if using HTML5 routing)
+// 🧠 Optional fallback route (for SPA routing - leave commented unless needed)
 // app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, '../public/index.html'));
+//   res.sendFile(path.resolve(__dirname, '../public/index.html'));
 // });
 
 app.listen(PORT, () => {
