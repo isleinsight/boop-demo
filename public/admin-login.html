@@ -1,38 +1,34 @@
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    alert("If you see this, JavaScript is running!");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BOOP Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="assets/styles.css" rel="stylesheet" />
+</head>
+<body>
 
-    const token = localStorage.getItem("jwtToken");
+<!-- Navbar with Logo -->
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <a href="index.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
+    </div>
+  </div>
+</nav>
 
-    if (!token) {
-      window.location.href = "admin-login.html";
-      return;
-    }
+<div class="loginContainer" style="margin-top: 30px;">
+  <h1>Admin Login</h1>
+  <form id="loginForm">
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button type="submit">Login</button>
+  </form>
+  <p id="loginStatus" style="color: red;"></p>
+</div>
 
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-
-      if (payload.role !== "admin") {
-        alert("You do not have admin access.");
-        window.location.href = "admin-login.html";
-        return;
-      }
-
-      console.log("✅ Admin verified:", payload.email);
-    } catch (err) {
-      console.error("❌ Invalid or malformed token", err);
-      localStorage.removeItem("jwtToken");
-      window.location.href = "admin-login.html";
-      return;
-    }
-
-    // Logout
-    document.getElementById("logoutBtn")?.addEventListener("click", () => {
-      localStorage.removeItem("jwtToken");
-      window.location.href = "admin-login.html";
-    });
-
-    // Load users when page is ready
-    loadUsers();
-  });
-</script>
+<!-- Fixed script path -->
+<script type="module" src="./login-handler.js"></script>
+<script type="module" src="login-handler.js"></script>
+</body>
+</html>
