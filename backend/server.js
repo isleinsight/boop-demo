@@ -1,6 +1,3 @@
-const webhookRoutes = require('./webhook-handler');
-app.use('/', webhookRoutes);
-
 // backend/server.js
 
 const express = require('express');
@@ -47,3 +44,7 @@ app.use('/', authRoutes);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
+
+const webhookRoutes = require('./webhook-handler');
+app.use('/', webhookRoutes);
