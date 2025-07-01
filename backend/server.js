@@ -36,7 +36,11 @@ app.post('/webhook', (req, res) => {
   });
 });
 
-// Start the server and bind to all interfaces
+// ✅ Import and mount auth routes
+const authRoutes = require('./auth');
+app.use('/', authRoutes);
+
+// Start the server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
