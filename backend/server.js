@@ -37,7 +37,7 @@ app.post('/webhook', (req, res) => {
 });
 
 // ✅ Import and mount auth routes
-const authRoutes = require('./auth');
+const authRoutes = require('./auth/auth');
 app.use('/', authRoutes);
 
 // Start the server
