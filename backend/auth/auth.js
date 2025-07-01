@@ -1,4 +1,6 @@
 // backend/auth.js
+require('dotenv').config(); // 👈 MUST come first!
+
 const express = require('express');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
@@ -10,8 +12,8 @@ const pool = new Pool({
   host: process.env.DB_HOST,
   database: process.env.DB_DATABASE,
   password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-  ssl: false, // set to true if you're using managed DB with SSL
+  port: parseInt(process.env.DB_PORT, 10),
+  ssl: false // set to true if using managed DB with SSL
 });
 
 // POST /login route
