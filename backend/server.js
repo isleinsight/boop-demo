@@ -1,3 +1,6 @@
+const webhookRoutes = require('./webhook-handler');
+app.use('/', webhookRoutes);
+
 // backend/server.js
 
 const express = require('express');
