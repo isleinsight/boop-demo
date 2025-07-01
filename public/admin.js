@@ -1,8 +1,17 @@
 console.log("🔥 admin.js has loaded!");
 
 document.addEventListener("DOMContentLoaded", () => {
-  alert("If you see this, JavaScript is running!");
-  loadUsers(); // Load users immediately on page load for now
+  // ✅ Check if user is logged in and is admin
+  const userData = JSON.parse(localStorage.getItem('boopUser'));
+  
+  if (!userData || userData.role !== 'admin') {
+    alert("Access denied. You must be an admin to access this page.");
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  console.log(`✅ Logged in as: ${userData.email}`);
+  loadUsers(); // Load users immediately
 });
 
 // DOM elements
@@ -36,7 +45,7 @@ async function loadUsers() {
   usersTableBody.innerHTML = "";
 
   try {
-    const response = await fetch("https://boop-api-6moct.ondigitalocean.app/api/users");
+    const response = await fetch("/api/users"); // Adjust this if your backend expects something else
     const users = await response.json();
 
     users.forEach((user) => {
@@ -68,11 +77,13 @@ userForm.addEventListener("submit", async (e) => {
   const walletAddress = document.getElementById("walletAddress").value.trim();
 
   try {
-    const response = await fetch("https://boop-api-6moct.ondigitalocean.app/api/users", {
+    const currentUser = JSON.parse(localStorage.getItem("boopUser"));
+    
+    const response = await fetch("/api/users", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
-        // Add Authorization header here later if using JWT
+        // TODO: Include JWT if using
       },
       body: JSON.stringify({
         firstName,
@@ -80,7 +91,7 @@ userForm.addEventListener("submit", async (e) => {
         email,
         role,
         walletAddress,
-        addedBy: "admin@example.com" // Replace this later with real user email from JWT
+        addedBy: currentUser?.email || "unknown"
       })
     });
 
@@ -103,7 +114,7 @@ window.deleteUser = async (userId) => {
   if (!confirmDelete) return;
 
   try {
-    const response = await fetch(`https://boop-api-6moct.ondigitalocean.app/api/users/${userId}`, {
+    const response = await fetch(`/api/users/${userId}`, {
       method: "DELETE"
     });
 
@@ -118,30 +129,8 @@ window.deleteUser = async (userId) => {
   }
 };
 
-// Logout handler (you can update this when JWT is implemented)
+// Logout
 logoutBtn?.addEventListener("click", () => {
-  window.location.href = "index.html"; // Or clear JWT token when implemented
-});
-
-// Future: Admin action requests (still Firebase-based, will migrate later)
-import { requestAdminAction } from './government-actions.js';
-
-document.getElementById("deleteUserBtn")?.addEventListener("click", () => {
-  const uid = document.getElementById("targetUid").value;
-  requestAdminAction(uid, "delete");
-});
-
-document.getElementById("suspendUserBtn")?.addEventListener("click", () => {
-  const uid = document.getElementById("targetUid").value;
-  requestAdminAction(uid, "suspend");
-});
-
-document.getElementById("unsuspendUserBtn")?.addEventListener("click", () => {
-  const uid = document.getElementById("targetUid").value;
-  requestAdminAction(uid, "unsuspend");
-});
-
-document.getElementById("forceSignoutBtn")?.addEventListener("click", () => {
-  const uid = document.getElementById("targetUid").value;
-  requestAdminAction(uid, "forceSignout");
+  localStorage.removeItem("boopUser");
+  window.location.href = "index.html";
 });
