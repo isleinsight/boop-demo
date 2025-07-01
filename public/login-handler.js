@@ -14,7 +14,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const data = await res.json();
 
     if (res.ok) {
-      // ✅ Login success — redirect to admin.html
+      // ✅ Store JWT and user info for session use
+      localStorage.setItem('boop_jwt', data.token);
+      localStorage.setItem('boopUser', JSON.stringify(data.user));
+
+      // 🔁 Redirect after successful login
       window.location.href = '/admin.html';
     } else {
       document.getElementById('loginStatus').style.color = 'red';
