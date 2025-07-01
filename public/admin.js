@@ -132,5 +132,5 @@ window.deleteUser = async (userId) => {
 // Logout
 logoutBtn?.addEventListener("click", () => {
   localStorage.removeItem("boopUser");
-  window.location.href = "index.html";
+  window.location.href = "admin-login.html";
 });
