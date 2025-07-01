@@ -16,12 +16,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Health Check
+// Health check
 app.get('/health', (req, res) => {
   res.send('OK');
 });
 
-// GitHub Webhook Listener
+// GitHub webhook handler
 app.post('/webhook', (req, res) => {
   console.log('🔔 GitHub Webhook triggered');
 
@@ -30,12 +30,13 @@ app.post('/webhook', (req, res) => {
       console.error('❌ Webhook git pull failed:', stderr);
       return res.status(500).send('Git pull failed');
     }
+
     console.log('✅ Webhook git pull success:\n', stdout);
     res.status(200).send('Git pull and restart complete');
   });
 });
 
-// Start server
+// Start the server and bind to all interfaces
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
