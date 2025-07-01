@@ -96,7 +96,7 @@
   // 🔐 Role-based protection: Only allow admins
   const user = JSON.parse(localStorage.getItem("boopUser"));
   if (!user || user.role !== "admin") {
-    window.location.href = "index.html"; // Redirect non-admins to login
+    window.location.href = "admin-login.html"; // Redirect non-admins to login
   }
 
   // 🧠 DOM loaded logic
