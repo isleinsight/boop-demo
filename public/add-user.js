@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ Single-step add-user.js loaded");
+  console.log("✅ add-user.js loaded");
 
-  const userForm = document.getElementById("step2Form");
+  const form = document.getElementById("userForm");
 
   const emailInput = document.getElementById("newEmail");
   const passwordInput = document.getElementById("newPassword");
@@ -14,17 +14,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const vendorPhoneInput = document.getElementById("vendorPhone");
   const vendorCategoryInput = document.getElementById("vendorCategory");
   const vendorApprovedSelect = document.getElementById("vendorApproved");
+
   const vendorFields = document.getElementById("vendorFields");
+  const statusDiv = document.getElementById("formStatus");
 
-  const step2Status = document.getElementById("step2Status");
+  // Hide vendor fields initially
+  vendorFields.style.display = "none";
 
+  // Show/hide vendor fields based on role
   roleSelect.addEventListener("change", () => {
-    vendorFields.style.display = roleSelect.value === "vendor" ? "block" : "none";
+    if (roleSelect.value === "vendor") {
+      vendorFields.style.display = "block";
+    } else {
+      vendorFields.style.display = "none";
+    }
   });
 
-  userForm.addEventListener("submit", async (e) => {
+  // Form submission
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    step2Status.textContent = "Saving user...";
+    statusDiv.textContent = "Creating user...";
+    statusDiv.style.color = "black";
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -34,52 +44,55 @@ document.addEventListener("DOMContentLoaded", () => {
     const onAssistance = onAssistanceCheckbox.checked;
 
     if (!email || !password || password.length < 6 || !firstName || !lastName || !role) {
-      step2Status.style.color = "red";
-      step2Status.textContent = "❌ Please fill in all required fields. Password must be 6+ characters.";
+      statusDiv.textContent = "❌ Please fill in all required fields (password must be at least 6 characters).";
+      statusDiv.style.color = "red";
       return;
     }
 
-    const userPayload = {
+    const payload = {
       email,
       password,
       first_name: firstName,
       last_name: lastName,
       role,
-      on_assistance: onAssistance
+      on_assistance: onAssistance,
     };
 
     if (role === "vendor") {
-      userPayload.vendor = {
+      payload.vendor = {
         name: businessNameInput.value.trim(),
         phone: vendorPhoneInput.value.trim(),
         category: vendorCategoryInput.value.trim(),
-        approved: vendorApprovedSelect.value === "true"
+        approved: vendorApprovedSelect.value === "true",
       };
     }
 
     try {
-      const res = await fetch("/register-user", {
+      const response = await fetch("/register-and-save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userPayload)
+        body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to save user");
+      const result = await response.json();
 
-      step2Status.style.color = "green";
-      step2Status.textContent = "✅ User created successfully";
+      if (!response.ok) {
+        throw new Error(result.message || "Something went wrong.");
+      }
+
+      statusDiv.textContent = "✅ User created and saved successfully.";
+      statusDiv.style.color = "green";
 
       const resetBtn = document.createElement("button");
       resetBtn.textContent = "Add Another User";
-      resetBtn.style.marginTop = "20px";
+      resetBtn.style.marginTop = "15px";
       resetBtn.addEventListener("click", () => window.location.reload());
-      userForm.appendChild(resetBtn);
+      form.appendChild(resetBtn);
 
     } catch (err) {
-      console.error("❌ Error saving user:", err);
-      step2Status.style.color = "red";
-      step2Status.textContent = "❌ " + err.message;
+      console.error("Error saving user:", err);
+      statusDiv.textContent = "❌ " + err.message;
+      statusDiv.style.color = "red";
     }
   });
 
