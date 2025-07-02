@@ -19,7 +19,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       localStorage.setItem('boopUser', JSON.stringify(data.user));
 
       // 🔁 Redirect after successful login
-      window.location.href = '/admin.html';
+      window.location.href = '/dashboard.html';
     } else {
       document.getElementById('loginStatus').style.color = 'red';
       document.getElementById('loginStatus').textContent = data.message || 'Login failed';
