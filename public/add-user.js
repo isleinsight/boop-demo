@@ -1,36 +1,3 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-  authDomain: "boop-becff.firebaseapp.com",
-  projectId: "boop-becff",
-  storageBucket: "boop-becff.appspot.com",
-  messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed",
-  measurementId: "G-79DWYFPZNR"
-};
-
-// Init main and secondary apps
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-const secondaryApp = initializeApp(firebaseConfig, "Secondary");
-const secondaryAuth = getAuth(secondaryApp);
-
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ add-user.js loaded");
 
@@ -49,20 +16,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const vendorPhoneInput = document.getElementById("vendorPhone");
   const vendorCategoryInput = document.getElementById("vendorCategory");
   const vendorApprovedSelect = document.getElementById("vendorApproved");
+  const onAssistanceCheckbox = document.getElementById("onAssistance");
 
   const step1Status = document.getElementById("step1Status");
   const step2Status = document.getElementById("step2Status");
 
-  let createdUserUID = null;
-  let createdUserEmail = null;
-  let adminEmail = null;
+  let createdEmail = null;
+  let createdPassword = null;
 
-  // Disable Step 2 on load
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  const adminEmail = user?.email || "admin@unknown";
+
   step2Form.querySelectorAll("input, select, button").forEach((el) => {
     el.disabled = true;
   });
 
-  // Show/hide vendor fields based on role
   roleSelect.addEventListener("change", () => {
     if (roleSelect.value === "vendor") {
       vendorFields.style.display = "block";
@@ -71,120 +39,87 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Check admin auth
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      adminEmail = user.email;
-      console.log("✅ Admin logged in:", adminEmail);
-    } else {
-      console.warn("🚫 Not logged in. Redirecting...");
-      window.location.href = "index.html";
-    }
-  });
-
-  // Step 1 - Create Auth user
-  step1Form.addEventListener("submit", async (e) => {
+  step1Form.addEventListener("submit", (e) => {
     e.preventDefault();
-    step1Status.textContent = "Creating user...";
+    step1Status.textContent = "User credentials received...";
 
-    const email = newEmailInput.value.trim();
-    const password = newPasswordInput.value.trim();
+    createdEmail = newEmailInput.value.trim();
+    createdPassword = newPasswordInput.value.trim();
 
-    try {
-      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-      createdUserUID = userCredential.user.uid;
-      createdUserEmail = email;
-
-      step1Status.style.color = "green";
-      step1Status.textContent = "✅ Step 1 complete. Fill in step 2.";
-
-      // Disable step 1, enable step 2
-      newEmailInput.disabled = true;
-      newPasswordInput.disabled = true;
-      step2Form.querySelectorAll("input, select, button").forEach((el) => {
-        el.disabled = false;
-      });
-
-      await secondaryAuth.signOut();
-
-    } catch (error) {
-      console.error("❌ Error creating user:", error);
+    if (!createdEmail || !createdPassword) {
       step1Status.style.color = "red";
-      step1Status.textContent = "❌ " + error.message;
-    }
-  });
-
-  // Step 2 - Write user data
-  step2Form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    step2Status.textContent = "Saving user data...";
-
-    const firstName = firstNameInput.value.trim();
-    const lastName = lastNameInput.value.trim();
-    const role = roleSelect.value;
-
-    if (!createdUserUID || !createdUserEmail) {
-      step2Status.style.color = "red";
-      step2Status.textContent = "❌ Step 1 must be completed first.";
+      step1Status.textContent = "❌ Email and password are required.";
       return;
     }
 
-    const userDocData = {
-      email: createdUserEmail,
-      firstName,
-      lastName,
-      role,
-      status: "active",
+    step1Status.style.color = "green";
+    step1Status.textContent = "✅ Step 1 complete. Fill in step 2.";
+
+    newEmailInput.disabled = true;
+    newPasswordInput.disabled = true;
+    step2Form.querySelectorAll("input, select, button").forEach((el) => {
+      el.disabled = false;
+    });
+  });
+
+  step2Form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    step2Status.textContent = "Submitting data...";
+
+    const payload = {
+      email: createdEmail,
+      password: createdPassword,
+      firstName: firstNameInput.value.trim(),
+      lastName: lastNameInput.value.trim(),
+      role: roleSelect.value,
+      onAssistance: onAssistanceCheckbox.checked,
       addedBy: adminEmail,
-      createdAt: serverTimestamp()
     };
 
+    // Optional vendor data
+    if (payload.role === "vendor") {
+      payload.vendor = {
+        name: businessNameInput.value.trim(),
+        phone: vendorPhoneInput.value.trim(),
+        category: vendorCategoryInput.value.trim(),
+        approved: vendorApprovedSelect.value === "true"
+      };
+    }
+
     try {
-      await setDoc(doc(db, "users", createdUserUID), userDocData);
-
-      // Save vendor details if role is vendor
-      if (role === "vendor") {
-        const vendorDocData = {
-          name: businessNameInput.value.trim(),
-          phone: vendorPhoneInput.value.trim(),
-          category: vendorCategoryInput.value.trim(),
-          approved: vendorApprovedSelect.value === "true",
-          walletAddress: "", // optional or update later
-        };
-
-        await setDoc(doc(db, "vendors", createdUserUID), vendorDocData);
-      }
-
-      step2Status.style.color = "green";
-      step2Status.textContent = "✅ User successfully saved.";
-
-      const resetButton = document.createElement("button");
-      resetButton.textContent = "Add Another User";
-      resetButton.style.marginTop = "20px";
-      resetButton.addEventListener("click", () => {
-        window.location.reload();
+      const res = await fetch('/add-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-      step2Form.appendChild(resetButton);
 
-    } catch (error) {
-      console.error("❌ Error writing user:", error);
+      const data = await res.json();
+
+      if (res.ok) {
+        step2Status.style.color = "green";
+        step2Status.textContent = "✅ User created successfully.";
+
+        const resetButton = document.createElement("button");
+        resetButton.textContent = "Add Another User";
+        resetButton.style.marginTop = "20px";
+        resetButton.addEventListener("click", () => window.location.reload());
+        step2Form.appendChild(resetButton);
+      } else {
+        step2Status.style.color = "red";
+        step2Status.textContent = "❌ " + (data.message || "Unknown error");
+      }
+    } catch (err) {
+      console.error("❌ Error saving user:", err);
       step2Status.style.color = "red";
-      step2Status.textContent = "❌ " + error.message;
+      step2Status.textContent = "❌ " + err.message;
     }
   });
 
-  // Logout button
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      signOut(auth)
-        .then(() => {
-          window.location.href = "index.html";
-        })
-        .catch((error) => {
-          console.error("Logout error:", error);
-          alert("Logout failed.");
-        });
+      localStorage.removeItem("boopUser");
+      window.location.href = "index.html";
     });
   }
 });
