@@ -1,118 +1,124 @@
+// view-users.js ✅
 document.addEventListener("DOMContentLoaded", () => {
   const userTableBody = document.getElementById("userTableBody");
   const searchInput = document.getElementById("searchInput");
   const searchBtn = document.getElementById("searchBtn");
   const clearSearchBtn = document.getElementById("clearSearchBtn");
-  const userCount = document.getElementById("userCount");
   const roleFilter = document.getElementById("roleFilter");
   const statusFilter = document.getElementById("statusFilter");
-  const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+  const selectAll = document.getElementById("selectAllCheckbox");
   const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
-  const paginationInfo = document.getElementById("paginationInfo");
   const prevBtn = document.getElementById("prevBtn");
   const nextBtn = document.getElementById("nextBtn");
+  const paginationInfo = document.getElementById("paginationInfo");
+  const userCount = document.getElementById("userCount");
 
   let allUsers = [];
   let filteredUsers = [];
   let currentPage = 1;
-  const usersPerPage = 10;
+  const perPage = 10;
 
   async function fetchUsers() {
     try {
-      const res = await fetch("/users");
-      const data = await res.json();
-      allUsers = data.users || [];
+      const res = await fetch("/api/users");
+      allUsers = await res.json();
       filteredUsers = [...allUsers];
-      renderTablePage();
-    } catch (err) {
-      console.error("❌ Failed to fetch users:", err);
-      userTableBody.innerHTML = `<tr><td colspan="7">Failed to load users.</td></tr>`;
+      render();
+    } catch (e) {
+      console.error("Error fetching users:", e);
     }
   }
 
-  function renderTablePage() {
-    userTableBody.innerHTML = "";
-    const start = (currentPage - 1) * usersPerPage;
-    const end = start + usersPerPage;
-    const users = filteredUsers.slice(start, end);
-
-    if (users.length === 0) {
-      userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
-      return;
-    }
-
-    users.forEach(user => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td><input type="checkbox" class="user-checkbox" data-id="${user.id}" /></td>
-        <td>${user.first_name || "-"}</td>
-        <td>${user.last_name || "-"}</td>
-        <td>${user.email || "-"}</td>
-        <td>${user.role || "-"}</td>
-        <td><span style="color: ${user.status === 'suspended' ? '#e74c3c' : '#27ae60'};">${user.status || "-"}</span></td>
-        <td><button class="btnView" data-id="${user.id}">View</button></td>
-      `;
-      userTableBody.appendChild(row);
-    });
+  function render() {
+    const start = (currentPage - 1) * perPage;
+    const slice = filteredUsers.slice(start, start + perPage);
+    userTableBody.innerHTML = slice.length
+      ? slice.map(u => `
+        <tr>
+          <td><input type="checkbox" class="user-checkbox" data-id="${u.id}" data-email="${u.email}"/></td>
+          <td>${u.first_name || ""}</td>
+          <td>${u.last_name || ""}</td>
+          <td>${u.email || ""}</td>
+          <td>${u.role || ""}</td>
+          <td><span style="color:${u.status === "suspended" ? "#e74c3c" : "#27ae60"}">${u.status || ""}</span></td>
+          <td><button onclick="deleteUser('${u.id}')">Delete</button></td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="7">No users found.</td></tr>`;
 
     userCount.textContent = `Total Users: ${filteredUsers.length}`;
     paginationInfo.textContent = `Page ${currentPage}`;
     prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled = end >= filteredUsers.length;
+    nextBtn.disabled = currentPage * perPage >= filteredUsers.length;
   }
 
   function applyFilters() {
-    const term = searchInput.value.trim().toLowerCase();
+    const term = searchInput.value.toLowerCase();
     const role = roleFilter.value;
     const status = statusFilter.value;
 
-    filteredUsers = allUsers.filter(user => {
-      const matchesSearch =
-        user.first_name?.toLowerCase().includes(term) ||
-        user.last_name?.toLowerCase().includes(term) ||
-        user.email?.toLowerCase().includes(term);
-      const matchesRole = role === "" || user.role === role;
-      const matchesStatus = status === "" || user.status === status;
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-
+    filteredUsers = allUsers.filter(u =>
+      (u.first_name?.toLowerCase().includes(term)
+       || u.last_name?.toLowerCase().includes(term)
+       || u.email?.toLowerCase().includes(term))
+      && (!role || u.role === role)
+      && (!status || u.status === status)
+    );
     currentPage = 1;
-    renderTablePage();
+    render();
   }
 
-  searchBtn?.addEventListener("click", applyFilters);
-  clearSearchBtn?.addEventListener("click", () => {
+  searchBtn.addEventListener("click", applyFilters);
+  clearSearchBtn.addEventListener("click", () => {
     searchInput.value = "";
     roleFilter.value = "";
     statusFilter.value = "";
     applyFilters();
   });
-  roleFilter?.addEventListener("change", applyFilters);
-  statusFilter?.addEventListener("change", applyFilters);
+  roleFilter.addEventListener("change", applyFilters);
+  statusFilter.addEventListener("change", applyFilters);
 
-  selectAllCheckbox?.addEventListener("change", () => {
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 1) { currentPage--; render(); }
+  });
+  nextBtn.addEventListener("click", () => {
+    if (currentPage * perPage < filteredUsers.length) { currentPage++; render(); }
+  });
+
+  window.deleteUser = async (id) => {
+    if (!confirm("Type DELETE to confirm")) return;
+    try {
+      await fetch(`/api/users/${id}`, { method: "DELETE" });
+      allUsers = allUsers.filter(u => u.id !== id);
+      applyFilters();
+    } catch (e) {
+      console.error("Delete failed:", e);
+      alert("Delete failed.");
+    }
+  };
+
+  selectAll.addEventListener("change", () => {
     document.querySelectorAll(".user-checkbox").forEach(cb => {
-      cb.checked = selectAllCheckbox.checked;
+      cb.checked = selectAll.checked;
     });
+    deleteSelectedBtn.style.display = selectAll.checked ? "block" : "none";
   });
 
-  prevBtn?.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
-      renderTablePage();
+  deleteSelectedBtn.addEventListener("click", async () => {
+    const checked = [...document.querySelectorAll(".user-checkbox:checked")].map(cb => cb.dataset.id);
+    if (!checked.length) return;
+
+    if (!confirm("Type DELETE to confirm deletion of selected users.")) return;
+    try {
+      await Promise.all(checked.map(id =>
+        fetch(`/api/users/${id}`, { method: "DELETE" })
+      ));
+      allUsers = allUsers.filter(u => !checked.includes(u.id));
+      applyFilters();
+    } catch (e) {
+      console.error("Bulk delete failed:", e);
+      alert("Bulk delete failed.");
     }
-  });
-
-  nextBtn?.addEventListener("click", () => {
-    if (currentPage < Math.ceil(filteredUsers.length / usersPerPage)) {
-      currentPage++;
-      renderTablePage();
-    }
-  });
-
-  document.getElementById("logoutBtn")?.addEventListener("click", () => {
-    localStorage.removeItem("boopUser");
-    window.location.href = "index.html";
   });
 
   fetchUsers();
