@@ -50,6 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
     paginationInfo.textContent = `Page ${currentPage}`;
     prevBtn.disabled = currentPage === 1;
     nextBtn.disabled = currentPage * perPage >= filteredUsers.length;
+
+    attachCheckboxListeners();
+    updateDeleteButtonVisibility();
   }
 
   function applyFilters() {
@@ -59,13 +62,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     filteredUsers = allUsers.filter(u =>
       (u.first_name?.toLowerCase().includes(term)
-       || u.last_name?.toLowerCase().includes(term)
-       || u.email?.toLowerCase().includes(term))
+      || u.last_name?.toLowerCase().includes(term)
+      || u.email?.toLowerCase().includes(term))
       && (!role || u.role === role)
       && (!status || u.status === status)
     );
     currentPage = 1;
     render();
+  }
+
+  function attachCheckboxListeners() {
+    document.querySelectorAll(".user-checkbox").forEach(cb => {
+      cb.addEventListener("change", updateDeleteButtonVisibility);
+    });
+  }
+
+  function updateDeleteButtonVisibility() {
+    const checked = document.querySelectorAll(".user-checkbox:checked").length;
+    deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
   }
 
   searchBtn.addEventListener("click", applyFilters);
@@ -86,7 +100,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   window.deleteUser = async (id) => {
-    if (!confirm("Type DELETE to confirm")) return;
+    const confirmDelete = prompt("Type DELETE to confirm");
+    if (confirmDelete !== "DELETE") return;
+
     try {
       await fetch(`/api/users/${id}`, { method: "DELETE" });
       allUsers = allUsers.filter(u => u.id !== id);
@@ -101,14 +117,16 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".user-checkbox").forEach(cb => {
       cb.checked = selectAll.checked;
     });
-    deleteSelectedBtn.style.display = selectAll.checked ? "block" : "none";
+    updateDeleteButtonVisibility();
   });
 
   deleteSelectedBtn.addEventListener("click", async () => {
     const checked = [...document.querySelectorAll(".user-checkbox:checked")].map(cb => cb.dataset.id);
     if (!checked.length) return;
 
-    if (!confirm("Type DELETE to confirm deletion of selected users.")) return;
+    const confirmBulk = prompt("Type DELETE to confirm deletion of selected users.");
+    if (confirmBulk !== "DELETE") return;
+
     try {
       await Promise.all(checked.map(id =>
         fetch(`/api/users/${id}`, { method: "DELETE" })
