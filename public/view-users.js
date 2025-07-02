@@ -1,7 +1,4 @@
-
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("✅ View Users page loaded");
-
+document.addEventListener("DOMContentLoaded", () => {
   const userTableBody = document.getElementById("userTableBody");
   const searchInput = document.getElementById("searchInput");
   const searchBtn = document.getElementById("searchBtn");
@@ -17,70 +14,33 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let allUsers = [];
   let filteredUsers = [];
-  let currentUserEmail = null;
   let currentPage = 1;
   const usersPerPage = 10;
 
-  async function fetchUsers() {
+  const fetchUsers = async () => {
     try {
       const res = await fetch("/users");
       const data = await res.json();
-      if (!Array.isArray(data)) throw new Error("Invalid user data.");
-      allUsers = data;
+      if (!res.ok) throw new Error(data.message || "Failed to fetch users");
+      allUsers = data.users || [];
       filteredUsers = [...allUsers];
       renderTablePage();
     } catch (err) {
-      console.error("Failed to load users:", err);
+      console.error("Fetch error:", err);
+      userTableBody.innerHTML = `<tr><td colspan="7">Error loading users.</td></tr>`;
     }
-  }
+  };
 
-  function renderTablePage() {
-    userTableBody.innerHTML = "";
-    const start = (currentPage - 1) * usersPerPage;
-    const end = start + usersPerPage;
-    const users = filteredUsers.slice(start, end);
-
-    if (users.length === 0) {
-      userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
-      return;
-    }
-
-    users.forEach(user => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td><input type="checkbox" class="user-checkbox" data-id="\${user.id}" data-email="\${user.email}" /></td>
-        <td>\${user.first_name || "-"}</td>
-        <td>\${user.last_name || "-"}</td>
-        <td>\${user.email || "-"}</td>
-        <td>\${user.role || "-"}</td>
-        <td>
-          <span style="color: \${user.status === 'suspended' ? '#e74c3c' : '#27ae60'};">
-            \${user.status || "-"}
-          </span>
-        </td>
-        <td>
-          <button data-id="\${user.id}" class="delete-btn">Delete</button>
-        </td>
-      `;
-      userTableBody.appendChild(row);
-    });
-
-    userCount.textContent = `Total Users: \${filteredUsers.length}`;
-    paginationInfo.textContent = `Page \${currentPage}`;
-    prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled = end >= filteredUsers.length;
-    updateDeleteButton();
-  }
-
-  function applyFilters() {
+  const applyFilters = () => {
     const term = searchInput.value.trim().toLowerCase();
     const role = roleFilter.value;
     const status = statusFilter.value;
 
     filteredUsers = allUsers.filter(user => {
-      const matchesSearch = user.first_name?.toLowerCase().includes(term) ||
-                            user.last_name?.toLowerCase().includes(term) ||
-                            user.email?.toLowerCase().includes(term);
+      const matchesSearch =
+        user.first_name?.toLowerCase().includes(term) ||
+        user.last_name?.toLowerCase().includes(term) ||
+        user.email?.toLowerCase().includes(term);
       const matchesRole = !role || user.role === role;
       const matchesStatus = !status || user.status === status;
       return matchesSearch && matchesRole && matchesStatus;
@@ -88,55 +48,119 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     currentPage = 1;
     renderTablePage();
-  }
+  };
 
-  function updateDeleteButton() {
+  const renderTablePage = () => {
+    userTableBody.innerHTML = "";
+    const start = (currentPage - 1) * usersPerPage;
+    const end = start + usersPerPage;
+    const pageUsers = filteredUsers.slice(start, end);
+
+    if (pageUsers.length === 0) {
+      userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
+      return;
+    }
+
+    pageUsers.forEach(user => {
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td><input type="checkbox" class="user-checkbox" data-id="${user.id}" /></td>
+        <td>${user.first_name || "-"}</td>
+        <td>${user.last_name || "-"}</td>
+        <td>${user.email || "-"}</td>
+        <td>${user.role || "-"}</td>
+        <td><span style="color: ${user.status === 'suspended' ? '#e74c3c' : '#27ae60'}">${user.status || '-'}</span></td>
+        <td><button class="delete-btn" data-id="${user.id}">Delete</button></td>
+      `;
+
+      userTableBody.appendChild(row);
+    });
+
+    userCount.textContent = `Total Users: ${filteredUsers.length}`;
+    paginationInfo.textContent = `Page ${currentPage}`;
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = end >= filteredUsers.length;
+
+    attachDeleteEvents();
+    updateDeleteButton();
+  };
+
+  const attachDeleteEvents = () => {
+    document.querySelectorAll(".delete-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        if (confirm("Delete this user?")) {
+          await deleteUser(id);
+          await fetchUsers();
+        }
+      });
+    });
+  };
+
+  const deleteUser = async (id) => {
+    try {
+      const res = await fetch(`/users/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Delete failed");
+    } catch (err) {
+      alert("Error deleting user.");
+    }
+  };
+
+  const updateDeleteButton = () => {
     const anyChecked = document.querySelectorAll(".user-checkbox:checked").length > 0;
     deleteSelectedBtn.style.display = anyChecked ? "inline-block" : "none";
-  }
+  };
 
-  searchBtn?.addEventListener("click", applyFilters);
-  clearSearchBtn?.addEventListener("click", () => {
+  deleteSelectedBtn.addEventListener("click", async () => {
+    const checked = document.querySelectorAll(".user-checkbox:checked");
+    const ids = Array.from(checked).map(cb => cb.dataset.id);
+
+    if (!ids.length || !confirm(`Delete ${ids.length} selected users?`)) return;
+
+    for (const id of ids) {
+      await deleteUser(id);
+    }
+
+    await fetchUsers();
+  });
+
+  searchBtn.addEventListener("click", applyFilters);
+  clearSearchBtn.addEventListener("click", () => {
     searchInput.value = "";
     roleFilter.value = "";
     statusFilter.value = "";
     applyFilters();
   });
 
-  selectAllCheckbox?.addEventListener("change", () => {
-    document.querySelectorAll(".user-checkbox").forEach(cb => cb.checked = selectAllCheckbox.checked);
-    updateDeleteButton();
-  });
+  roleFilter.addEventListener("change", applyFilters);
+  statusFilter.addEventListener("change", applyFilters);
 
-  deleteSelectedBtn?.addEventListener("click", async () => {
-    const checked = document.querySelectorAll(".user-checkbox:checked");
-    const ids = Array.from(checked).map(cb => cb.dataset.id);
-    if (ids.length === 0) return;
-
-    const confirmDelete = prompt("Type DELETE to confirm deletion of selected users.");
-    if (confirmDelete !== "DELETE") return;
-
-    for (const id of ids) {
-      await fetch(\`/users/\${id}\`, { method: "DELETE" });
-    }
-    allUsers = allUsers.filter(u => !ids.includes(u.id));
-    applyFilters();
-  });
-
-  prevBtn?.addEventListener("click", () => {
+  prevBtn.addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
       renderTablePage();
     }
   });
 
-  nextBtn?.addEventListener("click", () => {
+  nextBtn.addEventListener("click", () => {
     if (currentPage < Math.ceil(filteredUsers.length / usersPerPage)) {
       currentPage++;
       renderTablePage();
     }
   });
 
-  // Initial fetch
+  selectAllCheckbox.addEventListener("change", () => {
+    const checkboxes = document.querySelectorAll(".user-checkbox");
+    checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+    updateDeleteButton();
+  });
+
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    localStorage.removeItem("boopUser");
+    window.location.href = "index.html";
+  });
+
   fetchUsers();
 });
