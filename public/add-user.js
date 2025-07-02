@@ -21,34 +21,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const step1Status = document.getElementById("step1Status");
   const step2Status = document.getElementById("step2Status");
 
-  let createdUserId = null;
   let createdUserEmail = null;
-  let adminEmail = JSON.parse(localStorage.getItem("boopUser"))?.email || "admin@boopcard.com";
 
-  // Hide vendor section initially
+  // Hide vendor fields by default
   vendorFields.style.display = "none";
 
-  // Toggle vendor fields
   roleSelect.addEventListener("change", () => {
     vendorFields.style.display = roleSelect.value === "vendor" ? "block" : "none";
   });
 
-  // Step 1: Create auth user
+  step2Form.querySelectorAll("input, select, button").forEach((el) => el.disabled = true);
+
+  // STEP 1 – Create Auth Account
   step1Form.addEventListener("submit", async (e) => {
     e.preventDefault();
     step1Status.textContent = "Creating user...";
-
     const email = newEmailInput.value.trim();
     const password = newPasswordInput.value.trim();
 
-    if (!email || !password) {
-      step1Status.textContent = "❌ Email and password are required.";
-      step1Status.style.color = "red";
-      return;
-    }
-
     try {
-      const res = await fetch("/auth/register", {
+      const res = await fetch("/api/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
@@ -57,66 +49,57 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Failed to create user.");
+        step1Status.style.color = "red";
+        step1Status.textContent = "❌ " + (data.message || "Unknown error during Step 1");
+        return;
       }
 
-      createdUserId = data.userId;
       createdUserEmail = email;
 
+      step1Status.style.color = "green";
+      step1Status.textContent = "✅ Account created. Continue to Step 2.";
       newEmailInput.disabled = true;
       newPasswordInput.disabled = true;
-      step2Form.querySelectorAll("input, select, button").forEach(el => el.disabled = false);
-
-      step1Status.textContent = "✅ Step 1 complete. Fill in step 2.";
-      step1Status.style.color = "green";
+      step2Form.querySelectorAll("input, select, button").forEach((el) => el.disabled = false);
 
     } catch (err) {
-      step1Status.textContent = "❌ " + err.message;
+      console.error("❌ Error creating user:", err);
       step1Status.style.color = "red";
+      step1Status.textContent = "❌ Network or server error.";
     }
   });
 
-  // Step 2: Submit profile details
+  // STEP 2 – Save User Info
   step2Form.addEventListener("submit", async (e) => {
     e.preventDefault();
     step2Status.textContent = "Saving user data...";
 
     const firstName = firstNameInput.value.trim();
     const lastName = lastNameInput.value.trim();
-    const role = roleSelect.value.toLowerCase();
+    const role = roleSelect.value;
     const onAssistance = onAssistanceCheckbox.checked;
-
-    if (!createdUserId || !createdUserEmail) {
-      step2Status.textContent = "❌ Please complete Step 1 first.";
-      step2Status.style.color = "red";
-      return;
-    }
-
-    if (!firstName || !lastName || !role) {
-      step2Status.textContent = "❌ First name, last name, and role are required.";
-      step2Status.style.color = "red";
-      return;
-    }
-
-    const validRoles = ["admin", "student", "parent", "senior", "vendor", "cardholder"];
-    if (!validRoles.includes(role)) {
-      step2Status.textContent = `❌ Role must be one of: ${validRoles.join(", ")}`;
-      step2Status.style.color = "red";
-      return;
-    }
 
     const userData = {
       email: createdUserEmail,
       firstName,
       lastName,
       role,
-      status: "active",
       onAssistance,
-      addedBy: adminEmail
+      status: "active",
+      addedBy: JSON.parse(localStorage.getItem("boopUser"))?.email || "unknown"
     };
 
+    if (role === "vendor") {
+      userData.vendorDetails = {
+        businessName: businessNameInput.value.trim(),
+        phone: vendorPhoneInput.value.trim(),
+        category: vendorCategoryInput.value.trim(),
+        approved: vendorApprovedSelect.value === "true"
+      };
+    }
+
     try {
-      const res = await fetch("/users", {
+      const res = await fetch("/api/save-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData)
@@ -125,46 +108,23 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Failed to save user.");
-      }
-
-      // If vendor, create vendor profile
-      if (role === "vendor") {
-        const vendorData = {
-          userId: createdUserId,
-          name: businessNameInput.value.trim(),
-          phone: vendorPhoneInput.value.trim(),
-          category: vendorCategoryInput.value.trim(),
-          approved: vendorApprovedSelect.value === "true"
-        };
-
-        const vendorRes = await fetch("/vendors", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(vendorData)
-        });
-
-        const vendorResp = await vendorRes.json();
-
-        if (!vendorRes.ok) {
-          throw new Error(vendorResp.message || "Failed to save vendor info.");
-        }
+        step2Status.style.color = "red";
+        step2Status.textContent = "❌ " + (data.message || "Unknown error during Step 2");
+        return;
       }
 
       step2Status.style.color = "green";
-      step2Status.textContent = "✅ User successfully saved.";
+      step2Status.textContent = "✅ User saved.";
 
       const resetButton = document.createElement("button");
       resetButton.textContent = "Add Another User";
-      resetButton.style.marginTop = "20px";
-      resetButton.addEventListener("click", () => {
-        window.location.reload();
-      });
+      resetButton.addEventListener("click", () => window.location.reload());
       step2Form.appendChild(resetButton);
 
     } catch (err) {
+      console.error("❌ Save error:", err);
       step2Status.style.color = "red";
-      step2Status.textContent = "❌ " + err.message;
+      step2Status.textContent = "❌ Network or server error.";
     }
   });
 
