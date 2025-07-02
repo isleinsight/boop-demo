@@ -225,3 +225,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   fetchUsers();
 });
+
+
+// Handle logout button
+const logoutBtn = document.getElementById("logoutBtn");
+logoutBtn?.addEventListener("click", () => {
+  fetch("/api/logout", { method: "POST" })
+    .then(() => {
+      window.location.href = "login.html";
+    })
+    .catch(() => {
+      alert("Logout failed.");
+    });
+});
