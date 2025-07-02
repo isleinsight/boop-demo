@@ -5,10 +5,8 @@
   <title>Add User - BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="assets/styles.css" />
-
 </head>
 <body>
-  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -24,71 +22,58 @@
     </div>
   </nav>
 
-  <!-- Main Form Container -->
   <div class="form-container">
-    <!-- Step 1: Create Auth User -->
-    <div class="form-section">
-      <h3>Step 1: Create User Account</h3>
-      <form id="step1Form">
-        <label for="newEmail">Email</label>
-        <input type="email" id="newEmail" required />
+    <form id="addUserForm">
+      <h3>Create New User</h3>
 
-        <label for="newPassword">Password</label>
-        <input type="password" id="newPassword" required />
+      <label>Email</label>
+      <input type="email" id="email" required />
 
-        <button type="submit">Create Account</button>
-        <div id="step1Status" class="status-message"></div>
-      </form>
-    </div>
+      <label>Password</label>
+      <input type="password" id="password" required />
 
-    <!-- Step 2: Add User Details -->
-    <div class="form-section">
-      <h3>Step 2: User Details</h3>
-      <form id="step2Form">
-        <label for="firstName">First Name</label>
-        <input type="text" id="firstName" required />
+      <label>First Name</label>
+      <input type="text" id="firstName" required />
 
-        <label for="lastName">Last Name</label>
-        <input type="text" id="lastName" required />
+      <label>Last Name</label>
+      <input type="text" id="lastName" required />
 
-        <label for="role">Role</label>
-        <select id="role" required>
-          <option value="">Select Role</option>
-          <option value="admin">Admin</option>
-          <option value="student">Student</option>
-          <option value="parent">Parent</option>
-          <option value="senior">Senior</option>
-          <option value="vendor">Vendor</option>
-          <option value="cardholder">Cardholder</option>
+      <label>Role</label>
+      <select id="role" required>
+        <option value="">Select Role</option>
+        <option value="admin">Admin</option>
+        <option value="student">Student</option>
+        <option value="parent">Parent</option>
+        <option value="senior">Senior</option>
+        <option value="vendor">Vendor</option>
+        <option value="cardholder">Cardholder</option>
+      </select>
+
+      <label>
+        On Assistance
+        <input type="checkbox" id="onAssistance" />
+      </label>
+
+      <div id="vendorFields" style="display:none">
+        <label>Business Name</label>
+        <input type="text" id="businessName" />
+
+        <label>Phone</label>
+        <input type="tel" id="vendorPhone" />
+
+        <label>Category</label>
+        <input type="text" id="vendorCategory" />
+
+        <label>Approved</label>
+        <select id="vendorApproved">
+          <option value="false">No</option>
+          <option value="true">Yes</option>
         </select>
+      </div>
 
-        <label>
-           On Assistance
-          <input type="checkbox" id="onAssistance" />
-        </label>
-        
-        <!-- Vendor-Specific Fields -->
-        <div id="vendorFields">
-          <label for="businessName">Business Name</label>
-          <input type="text" id="businessName" />
-
-          <label for="vendorPhone">Phone</label>
-          <input type="tel" id="vendorPhone" />
-
-          <label for="vendorCategory">Category</label>
-          <input type="text" id="vendorCategory" />
-
-          <label for="vendorApproved">Approved</label>
-          <select id="vendorApproved">
-            <option value="false">No</option>
-            <option value="true">Yes</option>
-          </select>
-        </div>
-
-        <button type="submit">Save User</button>
-        <div id="step2Status" class="status-message"></div>
-      </form>
-    </div>
+      <button type="submit">Create User</button>
+      <div id="formStatus" class="status-message"></div>
+    </form>
   </div>
 
   <script type="module" src="add-user.js"></script>
