@@ -1,8 +1,50 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
+const bcrypt = require("bcrypt");
 
-// GET /api/users — supports parentId, role search, and default fetch
+// ✅ POST /api/users — Create a new user
+router.post("/", async (req, res) => {
+  const {
+    email,
+    password,
+    first_name,
+    last_name,
+    role,
+    on_assistance,
+    vendor,
+  } = req.body;
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    console.log("🧪 Creating user:", {
+      email, first_name, last_name, role, on_assistance, vendor
+    });
+
+    const result = await pool.query(
+      `INSERT INTO users (email, password, first_name, last_name, role, on_assistance, vendor_info)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        email,
+        hashedPassword,
+        first_name,
+        last_name,
+        role,
+        on_assistance,
+        vendor ? JSON.stringify(vendor) : null,
+      ]
+    );
+
+    res.status(201).json({ message: "User created", user: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Error creating user:", err);
+    res.status(500).json({ message: "Failed to create user" });
+  }
+});
+
+// ✅ GET /api/users — supports parentId, role search, and default fetch
 router.get("/", async (req, res) => {
   const { parentId, role, search, page = 1 } = req.query;
 
@@ -29,12 +71,12 @@ router.get("/", async (req, res) => {
     const result = await pool.query("SELECT * FROM users ORDER BY first_name ASC");
     res.json(result.rows);
   } catch (err) {
-    console.error("❌ Error in /api/users", err);
+    console.error("❌ Error in GET /api/users", err);
     res.status(500).json({ message: "Failed to process request" });
   }
 });
 
-// PATCH /api/users/:id — update user
+// ✅ PATCH /api/users/:id — update user
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
   const fields = ["first_name", "last_name", "email", "role", "status", "parent_id"];
@@ -48,7 +90,9 @@ router.patch("/:id", async (req, res) => {
     }
   });
 
-  if (updates.length === 0) return res.status(400).json({ message: "No fields provided" });
+  if (updates.length === 0) {
+    return res.status(400).json({ message: "No fields provided" });
+  }
 
   try {
     await pool.query(
@@ -62,7 +106,7 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/users/:id — delete user
+// ✅ DELETE /api/users/:id — delete user
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -74,12 +118,14 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// GET /api/users/:id — fetch user by ID (MUST come AFTER the generic GET / route)
+// ✅ GET /api/users/:id — fetch user by ID (MUST be below other GETs)
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
-    if (result.rows.length === 0) return res.status(404).json({ message: "User not found" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
     res.json(result.rows[0]);
   } catch (err) {
     console.error("❌ Error fetching user:", err);
@@ -87,46 +133,10 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// POST /api/users/:id/signout — force signout (stub)
+// ✅ POST /api/users/:id/signout — force signout stub
 router.post("/:id/signout", async (req, res) => {
-  // TODO: Add real session invalidation logic here
+  // TODO: Invalidate token/session here
   res.json({ message: "Force sign-out not implemented yet" });
 });
 
 module.exports = router;
-
-
-// POST /api/users — Create a new user
-router.post("/", async (req, res) => {
-  const {
-    email,
-    password,
-    first_name,
-    last_name,
-    role,
-    on_assistance,
-    vendor,
-  } = req.body;
-
-  try {
-    const result = await pool.query(
-      `INSERT INTO users (email, password, first_name, last_name, role, on_assistance, vendor_info)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [
-        email,
-        password, // ⚠️ REMINDER: In production, hash this.
-        first_name,
-        last_name,
-        role,
-        on_assistance,
-        vendor ? JSON.stringify(vendor) : null,
-      ]
-    );
-
-    res.status(201).json({ message: "User created", user: result.rows[0] });
-  } catch (err) {
-    console.error("❌ Error creating user:", err);
-    res.status(500).json({ message: "Failed to create user" });
-  }
-});
