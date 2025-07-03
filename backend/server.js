@@ -23,7 +23,7 @@ app.use('/', authRoutes);
 
 // Users & Cards APIs
 const usersRoute = require('./auth/routes/users');
-const cardsRoute = require('./routes/cards');
+const cardsRoute = require('./auth/routes/cards');
 app.use('/api/users', usersRoute);
 app.use('/api/cards', cardsRoute);
 
