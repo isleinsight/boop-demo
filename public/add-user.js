@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ add-user.js loaded");
+  console.log("add-user.js loaded");
 
   const form = document.getElementById("addUserForm");
 
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const onAssistance = onAssistanceCheckbox.checked;
 
     if (!email || !password || password.length < 6 || !firstName || !lastName || !role) {
-      statusDiv.textContent = "❌ Please fill in all required fields. (Password must be at least 6 characters)";
+      statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
       statusDiv.style.color = "red";
       return;
     }
@@ -89,16 +89,16 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         result = JSON.parse(resultText);
       } catch (err) {
-        console.error("❌ Could not parse JSON:", resultText);
+        console.error("Could not parse JSON:", resultText);
         throw new Error("Server returned invalid response.");
       }
 
       if (!response.ok) {
-        console.error("❌ Server error:", result);
+        console.error("Server error:", result);
         throw new Error(result.message || "Something went wrong.");
       }
 
-      statusDiv.textContent = "✅ User created successfully!";
+      statusDiv.textContent = "User created successfully!";
       statusDiv.style.color = "green";
 
       form.reset();
@@ -106,8 +106,8 @@ document.addEventListener("DOMContentLoaded", () => {
       assistanceContainer.style.display = "none";
 
     } catch (err) {
-      console.error("❌ Error creating user:", err);
-      statusDiv.textContent = "❌ " + err.message;
+      console.error("Error creating user:", err);
+      statusDiv.textContent = err.message;
       statusDiv.style.color = "red";
     }
   });
