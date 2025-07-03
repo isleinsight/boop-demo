@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const roleSelect = document.getElementById("role");
   const onAssistanceCheckbox = document.getElementById("onAssistance");
 
+  const assistanceContainer = document.getElementById("assistanceContainer");
   const businessNameInput = document.getElementById("businessName");
   const vendorPhoneInput = document.getElementById("vendorPhone");
   const vendorCategoryInput = document.getElementById("vendorCategory");
@@ -17,15 +18,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const vendorFields = document.getElementById("vendorFields");
   const statusDiv = document.getElementById("formStatus");
-
   const logoutBtn = document.getElementById("logoutBtn");
 
-  // Hide vendor fields initially
+  // Hide fields initially
   vendorFields.style.display = "none";
+  assistanceContainer.style.display = "none";
 
-  // Show/hide vendor fields based on role
+  // Show/hide conditional fields based on role
   roleSelect.addEventListener("change", () => {
-    vendorFields.style.display = roleSelect.value === "vendor" ? "block" : "none";
+    const role = roleSelect.value;
+    vendorFields.style.display = role === "vendor" ? "block" : "none";
+    assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
   });
 
   // Handle logout
@@ -61,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
       first_name: firstName,
       last_name: lastName,
       role,
-      on_assistance: onAssistance,
+      on_assistance: role === "cardholder" ? onAssistance : false,
     };
 
     if (role === "vendor") {
@@ -81,28 +84,26 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       let resultText = await response.text();
-let result;
+      let result;
 
-try {
-  result = JSON.parse(resultText);
-} catch (err) {
-  console.error("❌ Could not parse JSON:", resultText);
-  throw new Error("Server returned invalid response.");
-}
+      try {
+        result = JSON.parse(resultText);
+      } catch (err) {
+        console.error("❌ Could not parse JSON:", resultText);
+        throw new Error("Server returned invalid response.");
+      }
 
-if (!response.ok) {
-  console.error("❌ Server error:", result);
-  throw new Error(result.message || "Something went wrong.");
-}
+      if (!response.ok) {
+        console.error("❌ Server error:", result);
+        throw new Error(result.message || "Something went wrong.");
+      }
 
       statusDiv.textContent = "✅ User created successfully!";
       statusDiv.style.color = "green";
 
-      // Reset form
       form.reset();
       vendorFields.style.display = "none";
-
-
+      assistanceContainer.style.display = "none";
 
     } catch (err) {
       console.error("❌ Error creating user:", err);
