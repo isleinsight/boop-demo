@@ -1,177 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Assign NFC Card – BOOP Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="assets/styles.css" />
+  <meta charset="UTF-8" />
+  <title>Assign Card – BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
+      background: #f5f8fc;
       margin: 0;
       padding: 0;
+    }
+
+    nav {
+      background-color: #0b2c47;
+      padding: 12px 20px;
       display: flex;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
-      height: 100vh;
+    }
+
+    nav a {
+      color: white;
+      margin: 0 12px;
+      text-decoration: none;
+      font-weight: 500;
     }
 
     .container {
-      background: #fff;
+      max-width: 500px;
+      background: white;
+      margin: 50px auto;
       padding: 30px 40px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 400px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     h2 {
-      margin-top: 0;
       text-align: center;
       color: #102a43;
+      margin-bottom: 24px;
     }
 
     label {
-      font-weight: 500;
+      margin-top: 16px;
       display: block;
-      margin-top: 20px;
+      font-weight: 600;
+      color: #34495e;
     }
 
     input, select, button {
       width: 100%;
       padding: 10px;
-      margin-top: 8px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
       font-size: 1em;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
 
     button {
-      background: #2f80ed;
+      background-color: #2f80ed;
       color: white;
       font-weight: bold;
+      margin-top: 24px;
       cursor: pointer;
-      margin-top: 20px;
     }
 
     button:hover {
-      background: #1c6fd8;
+      background-color: #1e6fdb;
     }
 
     .status {
-      margin-top: 20px;
-      font-size: 0.95em;
       text-align: center;
-      color: #555;
+      margin-top: 20px;
+      color: #333;
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="admin.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
-      </div>
-      <div class="nav-right">
-        <a href="dashboard.html">Dashboard</a>
-        <a href="add-user.html">Add User</a>
-        <a href="manage-wallet.html">Manage Wallet</a>
-        <a href="assign-card.html">Assign Card</a>
-        <a href="view-users.html">View Users</a>
-        <a href="view-reports.html">View Reports</a>
-        <a href="#" id="logoutBtn">Log Out</a>
-      </div>
-    </div>
-  </nav>
-  
-
-
-  <div class="container">
-    <h2>Assign NFC Card</h2>
-    
-    <label for="cardUID">Card UID</label>
-    <input type="text" id="cardUID" placeholder="Scan or enter NFC UID" />
-
-    <label for="walletSelect">Assign to Wallet</label>
-    <select id="walletSelect">
-      <option value="">Loading wallets...</option>
-    </select>
-
-    <button id="assignBtn">Assign Card</button>
-
-    <div class="status" id="status"></div>
+<nav>
+  <div>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="add-user.html">Add User</a>
+    <a href="assign-card.html">Assign Card</a>
+    <a href="manage-wallet.html">Manage Wallet</a>
+    <a href="view-users.html">View Users</a>
+    <a href="view-reports.html">View Reports</a>
   </div>
+  <a href="#" id="logoutBtn">Log Out</a>
+</nav>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      getDocs,
-      addDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<div class="container">
+  <h2>Assign New Card</h2>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-    };
+  <label for="cardUID">Card UID</label>
+  <input type="text" id="cardUID" placeholder="Scan or enter NFC UID" />
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  <label for="userSelect">Assign to User</label>
+  <select id="userSelect">
+    <option value="">Loading users...</option>
+  </select>
 
-    const walletSelect = document.getElementById("walletSelect");
-    const assignBtn = document.getElementById("assignBtn");
-    const statusEl = document.getElementById("status");
+  <label for="cardType">Card Type</label>
+  <select id="cardType">
+    <option value="bus">Bus</option>
+    <option value="spending">Spending</option>
+  </select>
 
-    async function loadWallets() {
-      try {
-        const snapshot = await getDocs(collection(db, "wallets"));
-        walletSelect.innerHTML = '<option value="">Select a wallet</option>';
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          walletSelect.innerHTML += `<option value="${doc.id}">${data.ownerName || doc.id}</option>`;
-        });
-      } catch (err) {
-        console.error("Failed to load wallets:", err);
-        walletSelect.innerHTML = '<option value="">Error loading wallets</option>';
-      }
+  <button id="assignBtn">Assign Card</button>
+
+  <div class="status" id="status"></div>
+</div>
+
+<script type="module">
+  const cardUID = document.getElementById("cardUID");
+  const userSelect = document.getElementById("userSelect");
+  const assignBtn = document.getElementById("assignBtn");
+  const statusEl = document.getElementById("status");
+  const cardType = document.getElementById("cardType");
+
+  async function loadUsers() {
+    try {
+      const res = await fetch("/api/users?hasWallet=true"); // you can adjust filter here
+      const users = await res.json();
+
+      userSelect.innerHTML = '<option value="">Select a user</option>';
+      users.forEach(user => {
+        userSelect.innerHTML += `
+          <option value="${user.id}" data-wallet="${user.wallet_id || ''}">
+            ${user.first_name} ${user.last_name} (${user.email})
+          </option>`;
+      });
+    } catch (err) {
+      console.error("Failed to load users:", err);
+      userSelect.innerHTML = '<option value="">Error loading users</option>';
+    }
+  }
+
+  assignBtn.addEventListener("click", async () => {
+    const uid = cardUID.value.trim();
+    const userId = userSelect.value;
+    const selectedOption = userSelect.options[userSelect.selectedIndex];
+    const walletId = selectedOption?.dataset?.wallet || null;
+    const type = cardType.value;
+
+    if (!uid || !walletId) {
+      statusEl.textContent = "Please scan a card and select a valid user with a wallet.";
+      return;
     }
 
-    assignBtn.addEventListener("click", async () => {
-      const uid = document.getElementById("cardUID").value.trim();
-      const walletId = walletSelect.value;
-
-      if (!uid || !walletId) {
-        statusEl.textContent = "Please enter a UID and select a wallet.";
-        return;
-      }
-
-      try {
-        await addDoc(collection(db, "cards"), {
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           uid,
-          walletId,
-          type: "bus", // or "spending"
-          status: "active",
-          issuedAt: new Date()
-        });
+          wallet_id: walletId,
+          type,
+          issued_by: "admin@example.com" // later: replace w/ session email or ID
+        }),
+      });
 
-        statusEl.textContent = "✅ Card assigned successfully.";
-        document.getElementById("cardUID").value = "";
-        walletSelect.value = "";
-      } catch (err) {
-        console.error("Error assigning card:", err);
-        statusEl.textContent = "❌ Failed to assign card.";
-      }
+      if (!res.ok) throw new Error("Request failed");
+      statusEl.textContent = "✅ Card assigned successfully!";
+      cardUID.value = "";
+      userSelect.value = "";
+    } catch (e) {
+      console.error("Error assigning card:", e);
+      statusEl.textContent = "❌ Failed to assign card.";
+    }
+  });
+
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      window.location.href = "login.html";
     });
+  });
 
-    loadWallets();
-  </script>
+  loadUsers();
+</script>
 </body>
 </html>
