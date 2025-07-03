@@ -47,7 +47,9 @@ app.listen(PORT, '0.0.0.0', () => {
 
 
 const usersRoute = require("./auth/routes/users");
+const cardsRoute = require("./routes/cards");
 app.use("/api/users", usersRoute);
+app.use("/api/cards", cardsRoute);
 
 const webhookRoutes = require('./webhook-handler');
 app.use('/', webhookRoutes);
