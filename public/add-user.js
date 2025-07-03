@@ -80,9 +80,20 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      let resultText = await response.text();
+let result;
 
-      if (!response.ok) throw new Error(result.message || "Something went wrong.");
+try {
+  result = JSON.parse(resultText);
+} catch (err) {
+  console.error("❌ Could not parse JSON:", resultText);
+  throw new Error("Server returned invalid response.");
+}
+
+if (!response.ok) {
+  console.error("❌ Server error:", result);
+  throw new Error(result.message || "Something went wrong.");
+}
 
       statusDiv.textContent = "✅ User created successfully!";
       statusDiv.style.color = "green";
