@@ -27,6 +27,10 @@
   </nav>
 
   <div class="form-container">
+    <p style="margin: 0 0 20px 0; font-size: 0.95rem; color: #555;">
+  Use this form to create a new user. Select a role to reveal additional options.<br />
+  <strong>Note:</strong> The "On Assistance" toggle only applies to <strong>Cardholder</strong> users.
+</p>
     <form id="addUserForm">
       <h3>Create New User</h3>
 
@@ -53,10 +57,12 @@
         <option value="cardholder">Cardholder</option>
       </select>
 
-      <label>
-        On Assistance
-        <input type="checkbox" id="onAssistance" />
-      </label>
+<div id="assistanceContainer">
+  <label>
+    On Assistance
+    <input type="checkbox" id="onAssistance" />
+  </label>
+</div>
 
       <div id="vendorFields" style="display:none">
         <label>Business Name</label>
