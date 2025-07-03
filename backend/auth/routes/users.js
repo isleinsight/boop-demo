@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require("../../db");
 const bcrypt = require("bcrypt");
 
-// ✅ POST /api/users — Create a new user
+// ✅ POST /api/users — Create a new user (and vendor if applicable)
 router.post("/", async (req, res) => {
   const {
     email,
@@ -12,51 +12,57 @@ router.post("/", async (req, res) => {
     last_name,
     role,
     on_assistance,
-    vendor,
+    vendor, // only sent for vendor users
   } = req.body;
 
   try {
-    console.log("🔐 Creating user:", {
-      email, first_name, last_name, role, on_assistance, vendor
-    });
+    console.log("🧪 Creating user:", { email, role, vendor });
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const result = await pool.query(
+    // Create the user
+    const userResult = await pool.query(
       `INSERT INTO users (
-        email, password_hash, first_name, last_name,
-        role, on_assistance, vendor_info
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *`,
-      [
-        email,
-        hashedPassword,
-        first_name,
-        last_name,
-        role,
-        on_assistance,
-        vendor ? JSON.stringify(vendor) : null,
-      ]
+        email, password, first_name, last_name, role, on_assistance
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id`,
+      [email, hashedPassword, first_name, last_name, role, on_assistance]
     );
 
-    res.status(201).json({ message: "User created", user: result.rows[0] });
+    const userId = userResult.rows[0].id;
+
+    // If user is a vendor, insert vendor profile
+    if (role === "vendor" && vendor) {
+      const { business_name, category, phone, address, approved } = vendor;
+
+      await pool.query(
+        `INSERT INTO vendors (
+          user_id, business_name, category, phone, address, approved
+        ) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, business_name, category, phone, address, approved || false]
+      );
+    }
+
+    res.status(201).json({ message: "User created", user_id: userId });
   } catch (err) {
     console.error("❌ Error creating user:", {
       message: err.message,
       stack: err.stack,
-      detail: err.detail,
     });
     res.status(500).json({ message: "Failed to create user" });
   }
 });
 
-// ✅ GET /api/users — supports parentId, role search, and default fetch
+// ✅ GET /api/users — supports parentId, role filtering, and search
 router.get("/", async (req, res) => {
   const { parentId, role, search, page = 1 } = req.query;
 
   try {
     if (parentId) {
-      const result = await pool.query("SELECT * FROM users WHERE parent_id = $1", [parentId]);
+      const result = await pool.query(
+        "SELECT * FROM users WHERE parent_id = $1",
+        [parentId]
+      );
       return res.json(result.rows);
     }
 
@@ -64,17 +70,21 @@ router.get("/", async (req, res) => {
       const perPage = 5;
       const offset = (parseInt(page) - 1) * perPage;
       const term = `%${search.toLowerCase()}%`;
+
       const result = await pool.query(
         `SELECT * FROM users WHERE role = 'student' AND (
           LOWER(first_name) LIKE $1 OR LOWER(last_name) LIKE $1 OR LOWER(email) LIKE $1
         ) ORDER BY first_name ASC LIMIT $2 OFFSET $3`,
         [term, perPage, offset]
       );
+
       return res.json(result.rows);
     }
 
-    // Default: return all users
-    const result = await pool.query("SELECT * FROM users ORDER BY first_name ASC");
+    // Default: fetch all users
+    const result = await pool.query(
+      "SELECT * FROM users ORDER BY first_name ASC"
+    );
     res.json(result.rows);
   } catch (err) {
     console.error("❌ Error in GET /api/users", err);
@@ -124,7 +134,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// ✅ GET /api/users/:id — fetch user by ID (MUST be below other GETs)
+// ✅ GET /api/users/:id — get user by ID
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -139,9 +149,9 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ POST /api/users/:id/signout — force signout stub
+// ✅ POST /api/users/:id/signout — force signout (stub)
 router.post("/:id/signout", async (req, res) => {
-  // TODO: Invalidate token/session here
+  // TODO: Invalidate user sessions here
   res.json({ message: "Force sign-out not implemented yet" });
 });
 
