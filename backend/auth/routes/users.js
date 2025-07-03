@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require("../../db");
 const bcrypt = require("bcrypt");
 
-// ✅ POST /api/users — Create a new user (and vendor if applicable)
+// ✅ POST /api/users — Create a new user
 router.post("/", async (req, res) => {
   const {
     email,
@@ -12,15 +12,14 @@ router.post("/", async (req, res) => {
     last_name,
     role,
     on_assistance,
-    vendor, // only sent for vendor users
+    vendor,
   } = req.body;
 
   try {
-    console.log("🧪 Creating user:", { email, role, vendor });
+    console.log("🧪 Creating user:", { email, first_name, last_name, role, on_assistance, vendor });
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create the user
     const userResult = await pool.query(
       `INSERT INTO users (
         email, password, first_name, last_name, role, on_assistance
@@ -31,7 +30,7 @@ router.post("/", async (req, res) => {
 
     const userId = userResult.rows[0].id;
 
-    // If user is a vendor, insert vendor profile
+    // Optional vendor insertion
     if (role === "vendor" && vendor) {
       const { business_name, category, phone, address, approved } = vendor;
 
@@ -39,30 +38,28 @@ router.post("/", async (req, res) => {
         `INSERT INTO vendors (
           user_id, business_name, category, phone, address, approved
         ) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, business_name, category, phone, address, approved || false]
+        [userId, business_name, category, phone, address || null, approved || false]
       );
     }
 
-    res.status(201).json({ message: "User created", user_id: userId });
+    res.status(201).json({ message: "User created", userId });
   } catch (err) {
     console.error("❌ Error creating user:", {
       message: err.message,
       stack: err.stack,
+      detail: err.detail,
     });
     res.status(500).json({ message: "Failed to create user" });
   }
 });
 
-// ✅ GET /api/users — supports parentId, role filtering, and search
+// ✅ GET /api/users — supports parentId, role search, and default fetch
 router.get("/", async (req, res) => {
   const { parentId, role, search, page = 1 } = req.query;
 
   try {
     if (parentId) {
-      const result = await pool.query(
-        "SELECT * FROM users WHERE parent_id = $1",
-        [parentId]
-      );
+      const result = await pool.query("SELECT * FROM users WHERE parent_id = $1", [parentId]);
       return res.json(result.rows);
     }
 
@@ -70,21 +67,17 @@ router.get("/", async (req, res) => {
       const perPage = 5;
       const offset = (parseInt(page) - 1) * perPage;
       const term = `%${search.toLowerCase()}%`;
-
       const result = await pool.query(
         `SELECT * FROM users WHERE role = 'student' AND (
           LOWER(first_name) LIKE $1 OR LOWER(last_name) LIKE $1 OR LOWER(email) LIKE $1
         ) ORDER BY first_name ASC LIMIT $2 OFFSET $3`,
         [term, perPage, offset]
       );
-
       return res.json(result.rows);
     }
 
-    // Default: fetch all users
-    const result = await pool.query(
-      "SELECT * FROM users ORDER BY first_name ASC"
-    );
+    // Default fetch all
+    const result = await pool.query("SELECT * FROM users ORDER BY first_name ASC");
     res.json(result.rows);
   } catch (err) {
     console.error("❌ Error in GET /api/users", err);
@@ -134,7 +127,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// ✅ GET /api/users/:id — get user by ID
+// ✅ GET /api/users/:id — fetch single user
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -149,9 +142,9 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ POST /api/users/:id/signout — force signout (stub)
+// ✅ POST /api/users/:id/signout — stub for force signout
 router.post("/:id/signout", async (req, res) => {
-  // TODO: Invalidate user sessions here
+  // TODO: Token invalidation or session handling
   res.json({ message: "Force sign-out not implemented yet" });
 });
 
