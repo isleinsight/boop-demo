@@ -92,17 +92,17 @@
     </div>
   </div>
 
-  <!-- ✅ Custom Auth Script -->
+  <!-- Auth Script -->
 <script>
-  // 🔐 Role-based protection: Only allow admins
+  // Role-based protection: Only allow admins
   const user = JSON.parse(localStorage.getItem("boopUser"));
   if (!user || user.role !== "admin") {
     window.location.href = "login.html"; // Redirect non-admins to login
   }
 
-  // 🧠 DOM loaded logic
+  // DOM loaded logic
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("🔥 admin.js has loaded!");
+    console.log("admin.js has loaded!");
 
 
     // Logout logic
