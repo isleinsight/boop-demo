@@ -94,3 +94,39 @@ router.post("/:id/signout", async (req, res) => {
 });
 
 module.exports = router;
+
+
+// POST /api/users — Create a new user
+router.post("/", async (req, res) => {
+  const {
+    email,
+    password,
+    first_name,
+    last_name,
+    role,
+    on_assistance,
+    vendor,
+  } = req.body;
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO users (email, password, first_name, last_name, role, on_assistance, vendor_info)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        email,
+        password, // ⚠️ REMINDER: In production, hash this.
+        first_name,
+        last_name,
+        role,
+        on_assistance,
+        vendor ? JSON.stringify(vendor) : null,
+      ]
+    );
+
+    res.status(201).json({ message: "User created", user: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Error creating user:", err);
+    res.status(500).json({ message: "Failed to create user" });
+  }
+});
