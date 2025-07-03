@@ -1,4 +1,4 @@
-// view-users.js 🔁 PostgreSQL version with Actions Dropdown
+// view-users.js
 
 document.addEventListener("DOMContentLoaded", async () => {
   const userTableBody = document.getElementById("userTableBody");
