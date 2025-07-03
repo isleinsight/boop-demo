@@ -18,26 +18,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const vendorFields = document.getElementById("vendorFields");
   const statusDiv = document.getElementById("formStatus");
 
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  // Hide vendor fields initially
   vendorFields.style.display = "none";
 
+  // Show/hide vendor fields based on role
   roleSelect.addEventListener("change", () => {
     vendorFields.style.display = roleSelect.value === "vendor" ? "block" : "none";
   });
 
+  // Handle logout
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("boopUser");
+      window.location.href = "login.html";
+    });
+  }
+
+  // Form submission
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     statusDiv.textContent = "Creating user...";
     statusDiv.style.color = "black";
 
     const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
+    const password = passwordInput.value;
     const firstName = firstNameInput.value.trim();
     const lastName = lastNameInput.value.trim();
     const role = roleSelect.value;
     const onAssistance = onAssistanceCheckbox.checked;
 
     if (!email || !password || password.length < 6 || !firstName || !lastName || !role) {
-      statusDiv.textContent = "❌ Please fill in all required fields (password must be at least 6 characters).";
+      statusDiv.textContent = "❌ Please fill in all required fields. (Password must be at least 6 characters)";
       statusDiv.style.color = "red";
       return;
     }
@@ -61,39 +74,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const res = await fetch("/api/users", {
+      const response = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const result = await res.json();
+      const result = await response.json();
 
-      if (!res.ok) {
-        throw new Error(result.message || "Failed to create user");
-      }
+      if (!response.ok) throw new Error(result.message || "Something went wrong.");
 
-      statusDiv.textContent = "✅ User created successfully.";
+      statusDiv.textContent = "✅ User created successfully!";
       statusDiv.style.color = "green";
 
+      // Reset form
+      form.reset();
+      vendorFields.style.display = "none";
+
+      // Add optional reset button
       const resetBtn = document.createElement("button");
       resetBtn.textContent = "Add Another User";
       resetBtn.style.marginTop = "15px";
-      resetBtn.addEventListener("click", () => window.location.reload());
-      form.appendChild(resetBtn);
+      resetBtn.type = "button";
+      resetBtn.addEventListener("click", () => {
+        window.location.reload();
+      });
+
+      if (!document.getElementById("resetButton")) {
+        resetBtn.id = "resetButton";
+        form.appendChild(resetBtn);
+      }
+
     } catch (err) {
-      console.error("❌ Error:", err);
+      console.error("❌ Error creating user:", err);
       statusDiv.textContent = "❌ " + err.message;
       statusDiv.style.color = "red";
     }
   });
-
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      fetch("/api/logout", { method: "POST" }).then(() => {
-        window.location.href = "login.html";
-      });
-    });
-  }
 });
