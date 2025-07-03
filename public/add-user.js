@@ -1,10 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ add-user.js loaded");
 
-  const form = document.getElementById("userForm");
+  const form = document.getElementById("addUserForm");
 
-  const emailInput = document.getElementById("newEmail");
-  const passwordInput = document.getElementById("newPassword");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
   const firstNameInput = document.getElementById("firstName");
   const lastNameInput = document.getElementById("lastName");
   const roleSelect = document.getElementById("role");
@@ -18,26 +18,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const vendorFields = document.getElementById("vendorFields");
   const statusDiv = document.getElementById("formStatus");
 
-  // Hide vendor fields initially
   vendorFields.style.display = "none";
 
-  // Show/hide vendor fields based on role
   roleSelect.addEventListener("change", () => {
-    if (roleSelect.value === "vendor") {
-      vendorFields.style.display = "block";
-    } else {
-      vendorFields.style.display = "none";
-    }
+    vendorFields.style.display = roleSelect.value === "vendor" ? "block" : "none";
   });
 
-  // Form submission
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     statusDiv.textContent = "Creating user...";
     statusDiv.style.color = "black";
 
     const email = emailInput.value.trim();
-    const password = passwordInput.value;
+    const password = passwordInput.value.trim();
     const firstName = firstNameInput.value.trim();
     const lastName = lastNameInput.value.trim();
     const role = roleSelect.value;
@@ -68,19 +61,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch("/register-and-save", {
+      const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      const result = await res.json();
 
-      if (!response.ok) {
-        throw new Error(result.message || "Something went wrong.");
+      if (!res.ok) {
+        throw new Error(result.message || "Failed to create user");
       }
 
-      statusDiv.textContent = "✅ User created and saved successfully.";
+      statusDiv.textContent = "✅ User created successfully.";
       statusDiv.style.color = "green";
 
       const resetBtn = document.createElement("button");
@@ -88,9 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
       resetBtn.style.marginTop = "15px";
       resetBtn.addEventListener("click", () => window.location.reload());
       form.appendChild(resetBtn);
-
     } catch (err) {
-      console.error("Error saving user:", err);
+      console.error("❌ Error:", err);
       statusDiv.textContent = "❌ " + err.message;
       statusDiv.style.color = "red";
     }
@@ -99,8 +91,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("boopUser");
-      window.location.href = "login.html";
+      fetch("/api/logout", { method: "POST" }).then(() => {
+        window.location.href = "login.html";
+      });
     });
   }
 });
