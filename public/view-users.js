@@ -1,5 +1,3 @@
-// view-users.js
-
 document.addEventListener("DOMContentLoaded", async () => {
   const userTableBody = document.getElementById("userTableBody");
   const searchInput = document.getElementById("searchInput");
@@ -20,7 +18,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentPage = 1;
   const perPage = 10;
 
-  // Fetch current user email (needed to prevent self-deletion)
   try {
     const meRes = await fetch("/api/me");
     const meData = await meRes.json();
@@ -56,7 +53,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const action = select.value;
       select.value = "action";
       if (action === "view") {
-        window.location.href = `user-profile.html?uid=${user.id}`;
+        localStorage.setItem("selectedUserId", user.id); // ✅ use localStorage
+        window.location.href = "user-profile.html";      // ✅ no query string
         return;
       }
       if (action === "delete") {
@@ -99,7 +97,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   function render() {
     const start = (currentPage - 1) * perPage;
     const slice = filteredUsers.slice(start, start + perPage);
-
     userTableBody.innerHTML = "";
 
     if (!slice.length) {
@@ -126,7 +123,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const actionsTd = document.createElement("td");
       actionsTd.appendChild(createDropdown(user));
       row.appendChild(actionsTd);
-
       userTableBody.appendChild(row);
     });
 
@@ -226,8 +222,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   fetchUsers();
 });
 
-
-// Handle logout button
 const logoutBtn = document.getElementById("logoutBtn");
 logoutBtn?.addEventListener("click", () => {
   fetch("/api/logout", { method: "POST" })
