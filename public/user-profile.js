@@ -1,4 +1,4 @@
-// user-profile.js – PostgreSQL version ✅
+// user-profile.js
 
 document.addEventListener("DOMContentLoaded", () => {
   const userInfo = document.getElementById("userInfo");
@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const nextPageBtn = document.getElementById("nextStudentPageBtn");
   const prevPageBtn = document.getElementById("prevStudentPageBtn");
 
-  // 🧠 Use localStorage or query fallback
+  // Use localStorage or query fallback
   let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
   if (!currentUserId) {
     alert("User ID not found.");
