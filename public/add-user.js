@@ -102,19 +102,7 @@ if (!response.ok) {
       form.reset();
       vendorFields.style.display = "none";
 
-      // Add optional reset button
-      const resetBtn = document.createElement("button");
-      resetBtn.textContent = "Add Another User";
-      resetBtn.style.marginTop = "15px";
-      resetBtn.type = "button";
-      resetBtn.addEventListener("click", () => {
-        window.location.reload();
-      });
 
-      if (!document.getElementById("resetButton")) {
-        resetBtn.id = "resetButton";
-        form.appendChild(resetBtn);
-      }
 
     } catch (err) {
       console.error("❌ Error creating user:", err);
