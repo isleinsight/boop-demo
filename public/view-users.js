@@ -53,8 +53,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const action = select.value;
       select.value = "action";
       if (action === "view") {
-        localStorage.setItem("selectedUserId", user.id); // ✅ use localStorage
-        window.location.href = "user-profile.html";      // ✅ no query string
+        localStorage.setItem("selectedUserId", user.id); 
+        window.location.href = "user-profile.html";      
         return;
       }
       if (action === "delete") {
