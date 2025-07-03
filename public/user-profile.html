@@ -27,7 +27,6 @@
     </div>
   </nav>
 
-  <!-- 🔒 Scope all styles to this page -->
   <div class="profile-container user-profile-page">
     <a href="view-users.html" class="back-button">← Back to Users</a>
     <h2>User Profile</h2>
@@ -36,9 +35,7 @@
     <div style="margin-top: 20px; margin-bottom: 20px;">
       <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
       <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
-      <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>
-
-      
+      <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>    
     </div>
 
     <!-- Injected profile fields go here -->
@@ -109,12 +106,12 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Rows injected by ✅JS -->
+        <!-- Rows injected by JS -->
       </tbody>
     </table>
   </div>
 
-  <!-- JS logic for loading and saving profile -->
+  <!-- JS logic for loading and saving the profile -->
   <script type="module" src="user-profile.js"></script>
 </body>
 </html>
