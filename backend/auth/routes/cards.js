@@ -1,5 +1,10 @@
-// Updated route with issued_by
+// backend/auth/routes/cards.js
 
+const express = require("express");
+const router = express.Router();
+const db = require("../../db"); // ✅ Adjust path if needed
+
+// POST /api/cards
 router.post("/", async (req, res) => {
   const { uid, wallet_id, type = "bus", status = "active", issued_by } = req.body;
 
@@ -21,7 +26,9 @@ router.post("/", async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error("Error assigning card:", err);
+    console.error("❌ Error assigning card:", err);
     res.status(500).json({ error: "Failed to assign card" });
   }
 });
+
+module.exports = router;
