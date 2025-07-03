@@ -16,16 +16,18 @@ router.post("/", async (req, res) => {
   } = req.body;
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    console.log("🧪 Creating user:", {
+    console.log("🔐 Creating user:", {
       email, first_name, last_name, role, on_assistance, vendor
     });
 
+    const hashedPassword = await bcrypt.hash(password, 12);
+
     const result = await pool.query(
-      `INSERT INTO users (email, password, first_name, last_name, role, on_assistance, vendor_info)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
+      `INSERT INTO users (
+        email, password_hash, first_name, last_name,
+        role, on_assistance, vendor_info
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *`,
       [
         email,
         hashedPassword,
@@ -39,11 +41,11 @@ router.post("/", async (req, res) => {
 
     res.status(201).json({ message: "User created", user: result.rows[0] });
   } catch (err) {
-console.error("❌ Error creating user:", {
-  message: err.message,
-  stack: err.stack,
-  detail: err.detail,
-});
+    console.error("❌ Error creating user:", {
+      message: err.message,
+      stack: err.stack,
+      detail: err.detail,
+    });
     res.status(500).json({ message: "Failed to create user" });
   }
 });
