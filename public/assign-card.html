@@ -128,130 +128,28 @@
     <div class="status" id="status"></div>
   </div>
 
-  <script type="module">
-    const cardUID = document.getElementById("cardUID");
-    const assignBtn = document.getElementById("assignBtn");
-    const statusEl = document.getElementById("status");
-    const cardType = document.getElementById("cardType");
-    const generateBtn = document.getElementById("generateUIDBtn");
-    const scanBtn = document.getElementById("scanUIDBtn");
+<script type="module">
+  const cardUID = document.getElementById("cardUID");
+  const assignBtn = document.getElementById("assignBtn");
+  const statusEl = document.getElementById("status");
+  const cardType = document.getElementById("cardType");
+  const generateBtn = document.getElementById("generateUIDBtn");
+  const scanBtn = document.getElementById("scanUIDBtn");
 
-    // Dummy scan button for now
-    scanBtn.addEventListener("click", () => {
-      alert("NFC Scan not implemented yet.");
-    });
+  // ✅ Generate random UID
+  generateBtn.addEventListener("click", () => {
+    const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    cardUID.value = uid;
+  });
 
-    generateBtn.addEventListener("click", () => {
-      const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-      cardUID.value = uid;
-    });
-
-    // 🔎 Live search for user
-    // Live search for user
-    const userSearch = document.getElementById("userSearch");
-    const userSuggestions = document.getElementById("userSuggestions");
-    let selectedUser = null;
-
-    userSearch.addEventListener("input", async () => {
-      const query = userSearch.value.trim();
-      if (query.length < 2) {
-        userSuggestions.style.display = "none";
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
-        const users = await res.json();
-
-        if (!users.length) {
-          userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
-          userSuggestions.style.display = "block";
-          return;
-        }
-
-        userSuggestions.innerHTML = users.map(u => `
-          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-            ${u.first_name} ${u.last_name} (${u.email})
-          </div>
-        `).join("");
-        userSuggestions.style.display = "block";
-
-      } catch (e) {
-        console.error("Search error", e);
-      }
-    });
-
-    userSuggestions.addEventListener("click", (e) => {
-      const item = e.target.closest(".user-suggestion");
-      if (!item) return;
-      selectedUser = {
-        id: item.dataset.id,
-        wallet_id: item.dataset.wallet
-      };
-      userSearch.value = item.textContent;
-      userSuggestions.style.display = "none";
-    });
-
-    // Main submission
-    assignBtn.addEventListener("click", async () => {
-      const uid = cardUID.value.trim();
-      const type = cardType.value;
-
-      if (!uid || !selectedUser?.wallet_id) {
-        statusEl.textContent = "Please generate a UID and select a user.";
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/cards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid,
-            wallet_id: selectedUser.wallet_id,
-            type,
-            issued_by: "admin@example.com" // Replace with actual session email later
-          }),
-        });
-
-        if (!res.ok) throw new Error("Card assignment failed");
-
-        statusEl.textContent = "✅ Card assigned successfully!";
-        statusEl.textContent = "Card assigned successfully!";
-        cardUID.value = "";
-        userSearch.value = "";
-        selectedUser = null;
-      } catch (e) {
-        console.error(e);
-        statusEl.textContent = "❌ Failed to assign card.";
-        statusEl.textContent = "Failed to assign card.";
-      }
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
-        userSuggestions.style.display = "none";
-      }
-    });
-
-    // Logout
-    document.getElementById("logoutBtn")?.addEventListener("click", () => {
-      fetch("/api/logout", { method: "POST" }).then(() => {
-        window.location.href = "login.html";
-      });
-    });
-
-    
-  const scanBtn = document.getElementById("scanBtn");
-  const uidInput = document.getElementById("cardUID");
-
+  // ✅ Dummy Scan (future NFC connection)
   scanBtn?.addEventListener("click", async () => {
     try {
       const res = await fetch("http://localhost:3001/scan");
       const data = await res.json();
 
       if (data.uid) {
-        uidInput.value = data.uid;
+        cardUID.value = data.uid;
       } else {
         alert("No UID received. Please try again.");
       }
@@ -261,7 +159,96 @@
     }
   });
 
-  
-  </script>
+  // 🔎 Live search for user
+  const userSearch = document.getElementById("userSearch");
+  const userSuggestions = document.getElementById("userSuggestions");
+  let selectedUser = null;
+
+  userSearch.addEventListener("input", async () => {
+    const query = userSearch.value.trim();
+    if (query.length < 2) {
+      userSuggestions.style.display = "none";
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
+      const users = await res.json();
+
+      if (!users.length) {
+        userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
+        userSuggestions.style.display = "block";
+        return;
+      }
+
+      userSuggestions.innerHTML = users.map(u => `
+        <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+          ${u.first_name} ${u.last_name} (${u.email})
+        </div>
+      `).join("");
+      userSuggestions.style.display = "block";
+
+    } catch (e) {
+      console.error("Search error", e);
+    }
+  });
+
+  userSuggestions.addEventListener("click", (e) => {
+    const item = e.target.closest(".user-suggestion");
+    if (!item) return;
+    selectedUser = {
+      id: item.dataset.id,
+      wallet_id: item.dataset.wallet
+    };
+    userSearch.value = item.textContent;
+    userSuggestions.style.display = "none";
+  });
+
+  // Submit assignment
+  assignBtn.addEventListener("click", async () => {
+    const uid = cardUID.value.trim();
+    const type = cardType.value;
+
+    if (!uid || !selectedUser?.wallet_id) {
+      statusEl.textContent = "Please generate a UID and select a user.";
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid,
+          wallet_id: selectedUser.wallet_id,
+          type,
+          issued_by: "admin@example.com"
+        }),
+      });
+
+      if (!res.ok) throw new Error("Card assignment failed");
+
+      statusEl.textContent = "✅ Card assigned successfully!";
+      cardUID.value = "";
+      userSearch.value = "";
+      selectedUser = null;
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = "❌ Failed to assign card.";
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+      userSuggestions.style.display = "none";
+    }
+  });
+
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      window.location.href = "login.html";
+    });
+  });
+</script>
 </body>
 </html>
