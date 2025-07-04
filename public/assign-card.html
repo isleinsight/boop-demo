@@ -4,16 +4,12 @@
   <meta charset="UTF-8" />
   <title>Assign Card – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
-
   <style>
     body {
       font-family: 'Poppins', sans-serif;
       background: #f4f7fa;
-      margin: 0;
-      padding: 0;
     }
 
     .container-small {
@@ -25,25 +21,13 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    h3 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      margin-top: 18px;
-      font-weight: 500;
-    }
-
     input, select, button {
       width: 100%;
       padding: 10px;
-      margin-top: 6px;
+      margin-top: 8px;
       border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 1em;
-      box-sizing: border-box;
     }
 
     button {
@@ -51,7 +35,6 @@
       color: white;
       font-weight: bold;
       cursor: pointer;
-      border: none;
     }
 
     button:hover {
@@ -60,13 +43,13 @@
 
     .uid-controls {
       display: flex;
-      gap: 8px;
-      margin-top: 6px;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
     }
 
-    .uid-controls input {
+    .uid-controls button {
       flex: 1;
-      background: #f0f0f0;
     }
 
     .status {
@@ -84,47 +67,15 @@
     #userSuggestions div:hover {
       background-color: #f0f0f0;
     }
-
-    #userSuggestions {
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      max-height: 200px;
-      overflow-y: auto;
-      display: none;
-      margin-top: 6px;
-    }
-
-    nav .nav-container {
-      display: flex;
-      justify-content: space-between;
-      padding: 15px 40px;
-      background: white;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .nav-left img {
-      height: 40px;
-    }
-
-    .nav-right a {
-      margin-left: 20px;
-      color: #2f80ed;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .nav-right a:hover {
-      text-decoration: underline;
-    }
   </style>
 </head>
 <body>
 
-  <!-- Top Nav -->
+  <!-- Top Nav (your original preferred version) -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
+        <a href="admin.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
         <a href="dashboard.html">Dashboard</a>
@@ -138,19 +89,21 @@
     </div>
   </nav>
 
+  <!-- Card Assignment Form -->
   <div class="container-small">
     <h3>Assign New Card</h3>
 
-    <label>Card UID</label>
+    <label for="cardUID">Card UID</label>
+    <input type="text" id="cardUID" readonly />
+
     <div class="uid-controls">
-      <input type="text" id="cardUID" readonly />
       <button type="button" id="generateUIDBtn">Generate</button>
       <button type="button" id="scanUIDBtn">Scan</button>
     </div>
 
     <label for="userSearch">Assign to User</label>
     <input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
-    <div id="userSuggestions"></div>
+    <div id="userSuggestions" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;"></div>
 
     <label for="cardType">Card Type</label>
     <select id="cardType">
@@ -165,27 +118,26 @@
 
   <script type="module">
     const cardUID = document.getElementById("cardUID");
-    const userSearch = document.getElementById("userSearch");
-    const userSuggestions = document.getElementById("userSuggestions");
-    const generateUIDBtn = document.getElementById("generateUIDBtn");
-    const scanUIDBtn = document.getElementById("scanUIDBtn");
     const assignBtn = document.getElementById("assignBtn");
     const statusEl = document.getElementById("status");
     const cardType = document.getElementById("cardType");
+    const generateBtn = document.getElementById("generateUIDBtn");
+    const scanBtn = document.getElementById("scanUIDBtn");
 
+    // Dummy scan button for now
+    scanBtn.addEventListener("click", () => {
+      alert("NFC Scan not implemented yet.");
+    });
+
+    generateBtn.addEventListener("click", () => {
+      const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+      cardUID.value = uid;
+    });
+
+    // 🔎 Live search for user
+    const userSearch = document.getElementById("userSearch");
+    const userSuggestions = document.getElementById("userSuggestions");
     let selectedUser = null;
-
-    function generateCardUID() {
-      return "CARD_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-    }
-
-    generateUIDBtn.addEventListener("click", () => {
-      cardUID.value = generateCardUID();
-    });
-
-    scanUIDBtn.addEventListener("click", () => {
-      alert("🔧 Scan functionality not implemented yet.");
-    });
 
     userSearch.addEventListener("input", async () => {
       const query = userSearch.value.trim();
@@ -199,7 +151,7 @@
         const users = await res.json();
 
         if (!users.length) {
-          userSuggestions.innerHTML = "<div>No results found</div>";
+          userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
           userSuggestions.style.display = "block";
           return;
         }
@@ -210,8 +162,9 @@
           </div>
         `).join("");
         userSuggestions.style.display = "block";
-      } catch (err) {
-        console.error("Search error:", err);
+
+      } catch (e) {
+        console.error("Search error", e);
       }
     });
 
@@ -226,12 +179,13 @@
       userSuggestions.style.display = "none";
     });
 
+    // Main submission
     assignBtn.addEventListener("click", async () => {
       const uid = cardUID.value.trim();
       const type = cardType.value;
 
       if (!uid || !selectedUser?.wallet_id) {
-        statusEl.textContent = "Please generate or scan a card UID, and select a user.";
+        statusEl.textContent = "Please generate a UID and select a user.";
         return;
       }
 
@@ -243,11 +197,12 @@
             uid,
             wallet_id: selectedUser.wallet_id,
             type,
-            issued_by: "admin@example.com" // Replace with actual session data
+            issued_by: "admin@example.com" // Replace with actual session email later
           }),
         });
 
         if (!res.ok) throw new Error("Card assignment failed");
+
         statusEl.textContent = "✅ Card assigned successfully!";
         cardUID.value = "";
         userSearch.value = "";
@@ -264,6 +219,7 @@
       }
     });
 
+    // Logout
     document.getElementById("logoutBtn")?.addEventListener("click", () => {
       fetch("/api/logout", { method: "POST" }).then(() => {
         window.location.href = "login.html";
