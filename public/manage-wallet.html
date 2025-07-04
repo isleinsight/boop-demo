@@ -2,97 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Manage Wallet – Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manage Wallet – BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <link rel="stylesheet" href="assets/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background-color: #f4f7fa;
-      margin: 0;
-      padding: 0;
+    .container-small {
+      max-width: 600px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    nav {
-      background-color: #102a43;
-      padding: 12px 20px;
-    }
-
-    .nav-container {
-      max-width: 1100px;
-      margin: auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .nav-left img {
-      height: 36px;
-      margin-right: 20px;
-    }
-
-    .nav-links a {
-      color: white;
-      margin-right: 16px;
-      text-decoration: none;
-    }
-
-    .container {
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 30px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 30px;
-      color: #102a43;
-    }
-
-    label {
-      display: block;
-      margin: 12px 0 4px;
-      font-weight: 500;
-    }
-
-    input, select, button {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 16px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 1em;
-      box-sizing: border-box;
-    }
-
-    .btn-primary {
-      background-color: #2f80ed;
-      color: white;
-      border: none;
+    #userSuggestions div {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
       cursor: pointer;
-      transition: 0.3s ease;
     }
 
-    .btn-primary:hover {
-      background-color: #2463c5;
+    #userSuggestions div:hover {
+      background-color: #f0f0f0;
     }
 
-    .user-wallet-card {
-      background-color: #eef1f7;
-      padding: 16px;
-      border-radius: 8px;
+    .wallet-info, .cards-section {
+      margin-top: 25px;
+    }
+
+    .wallet-info div,
+    .card-entry {
+      margin-bottom: 10px;
+    }
+
+    .card-entry {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #f9f9f9;
+    }
+
+    .btnAction {
+      padding: 8px 14px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      background: #2f80ed;
+      color: white;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    .btnAction:hover {
+      background: #1c6fd8;
+    }
+
+    .status {
+      text-align: center;
       margin-top: 20px;
-    }
-
-    .user-wallet-card p {
-      margin: 6px 0;
-    }
-
-    #walletInfo {
-      display: none;
     }
   </style>
 </head>
@@ -102,7 +71,7 @@
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="admin.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
+        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
         <a href="dashboard.html">Dashboard</a>
@@ -116,36 +85,124 @@
     </div>
   </nav>
 
-  <div class="container">
-    <h2>Manage Wallet</h2>
+  <div class="container-small">
+    <h3>Manage Wallet</h3>
 
-    <!-- Search user -->
-    <label for="userSearch">Search User (Email or Name)</label>
-    <input type="text" id="userSearch" placeholder="Start typing..." />
-    <button id="searchUserBtn" class="btn-primary">Search</button>
+    <label for="userSearch">Search User</label>
+    <input type="text" id="userSearch" placeholder="Type name or email" autocomplete="off" />
+    <div id="userSuggestions" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;"></div>
 
-    <!-- Wallet info display (populated by JS) -->
-    <div id="walletInfo" class="user-wallet-card">
-      <p><strong>User:</strong> <span id="userFullName">-</span></p>
-      <p><strong>Email:</strong> <span id="userEmail">-</span></p>
-      <p><strong>Wallet ID:</strong> <span id="walletId">Not Assigned</span></p>
-      <p><strong>Balance:</strong> <span id="walletBalance">$0.00</span></p>
+    <div class="wallet-info" id="walletInfo" style="display: none;"></div>
 
-      <!-- Assign wallet if none exists -->
-      <button id="assignWalletBtn" class="btn-primary">Assign Wallet</button>
-
-      <!-- Add card to wallet -->
-      <label for="cardType">Issue New Card</label>
-      <select id="cardType">
-        <option value="">-- Select Card Type --</option>
-        <option value="spending">Spending Card</option>
-        <option value="bus">Bus Pass</option>
-        <option value="temporary">Temporary Access Card</option>
-      </select>
-      <button id="addCardBtn" class="btn-primary">Add Card</button>
+    <div class="cards-section" id="cardsSection" style="display: none;">
+      <h4>Assigned Cards</h4>
+      <div id="cardsList"></div>
     </div>
+
+    <div class="status" id="status"></div>
   </div>
 
-  <script type="module" src="managewallet.js"></script>
+  <script type="module">
+    const userSearch = document.getElementById("userSearch");
+    const userSuggestions = document.getElementById("userSuggestions");
+    const walletInfo = document.getElementById("walletInfo");
+    const cardsSection = document.getElementById("cardsSection");
+    const cardsList = document.getElementById("cardsList");
+    const statusEl = document.getElementById("status");
+
+    let selectedUser = null;
+
+    async function fetchJSON(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Request failed");
+      return await res.json();
+    }
+
+    userSearch.addEventListener("input", async () => {
+      const q = userSearch.value.trim();
+      if (q.length < 2) return userSuggestions.style.display = "none";
+
+      try {
+        const results = await fetchJSON(`/api/users?search=${encodeURIComponent(q)}`);
+        if (!results.length) {
+          userSuggestions.innerHTML = "<div>No results found</div>";
+          return userSuggestions.style.display = "block";
+        }
+
+        userSuggestions.innerHTML = results.map(u => `
+          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+            ${u.first_name} ${u.last_name} (${u.email})
+          </div>
+        `).join("");
+        userSuggestions.style.display = "block";
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    userSuggestions.addEventListener("click", async (e) => {
+      const item = e.target.closest(".user-suggestion");
+      if (!item) return;
+
+      userSuggestions.style.display = "none";
+      userSearch.value = item.textContent;
+      selectedUser = {
+        id: item.dataset.id,
+        wallet_id: item.dataset.wallet
+      };
+
+      await loadWallet(selectedUser.wallet_id);
+      await loadCards(selectedUser.wallet_id);
+    });
+
+    async function loadWallet(walletId) {
+      try {
+        const wallet = await fetchJSON(`/api/wallets/${walletId}`);
+        walletInfo.innerHTML = `
+          <div><strong>Status:</strong> ${wallet.status}</div>
+          <div><strong>Balance:</strong> $${(wallet.balance_cents / 100).toFixed(2)}</div>
+          <button class="btnAction" onclick="alert('Feature coming soon')">Top Up</button>
+        `;
+        walletInfo.style.display = "block";
+      } catch (e) {
+        walletInfo.innerHTML = "<div>Unable to load wallet.</div>";
+        walletInfo.style.display = "block";
+      }
+    }
+
+    async function loadCards(walletId) {
+      try {
+        const cards = await fetchJSON(`/api/cards?walletId=${walletId}`);
+        if (!cards.length) {
+          cardsList.innerHTML = "<div>No cards assigned</div>";
+        } else {
+          cardsList.innerHTML = cards.map(card => `
+            <div class="card-entry">
+              <div><strong>UID:</strong> ${card.uid}</div>
+              <div><strong>Type:</strong> ${card.type}</div>
+              <div><strong>Status:</strong> ${card.status}</div>
+              <button class="btnAction" onclick="alert('Lock/remove coming soon')">Manage</button>
+            </div>
+          `).join("");
+        }
+        cardsSection.style.display = "block";
+      } catch (e) {
+        cardsList.innerHTML = "<div>Failed to load cards</div>";
+        cardsSection.style.display = "block";
+      }
+    }
+
+    document.addEventListener("click", (e) => {
+      if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+        userSuggestions.style.display = "none";
+      }
+    });
+
+    document.getElementById("logoutBtn")?.addEventListener("click", () => {
+      fetch("/api/logout", { method: "POST" }).then(() => {
+        window.location.href = "login.html";
+      });
+    });
+  </script>
 </body>
 </html>
