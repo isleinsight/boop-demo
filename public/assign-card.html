@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <title>Assign Card – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
+
   <style>
     body {
       font-family: 'Poppins', sans-serif;
@@ -13,58 +15,106 @@
       margin: 0;
       padding: 0;
     }
+
     .container-small {
       max-width: 500px;
       background: white;
-      margin: 60px auto;
+      margin: 50px auto;
       padding: 30px 40px;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
+
+    h3 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      font-weight: 500;
+    }
+
     input, select, button {
       width: 100%;
       padding: 10px;
-      margin-top: 10px;
+      margin-top: 6px;
       border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 1em;
+      box-sizing: border-box;
     }
+
     button {
       background: #2f80ed;
       color: white;
       font-weight: bold;
-      margin-top: 20px;
       cursor: pointer;
+      border: none;
     }
+
     button:hover {
       background: #1c6fd8;
     }
+
+    .uid-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .uid-controls input {
+      flex: 1;
+      background: #f0f0f0;
+    }
+
     .status {
       text-align: center;
       margin-top: 20px;
       color: #333;
     }
-    #userSuggestions {
-      border: 1px solid #ccc;
-      max-height: 200px;
-      overflow-y: auto;
-      display: none;
-      background: white;
-      border-radius: 5px;
-      position: absolute;
-      width: 100%;
-      z-index: 100;
-    }
+
     #userSuggestions div {
       padding: 8px 12px;
       border-bottom: 1px solid #eee;
       cursor: pointer;
     }
+
     #userSuggestions div:hover {
       background-color: #f0f0f0;
     }
-    .relative {
-      position: relative;
+
+    #userSuggestions {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      margin-top: 6px;
+    }
+
+    nav .nav-container {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 40px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .nav-left img {
+      height: 40px;
+    }
+
+    .nav-right a {
+      margin-left: 20px;
+      color: #2f80ed;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .nav-right a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -91,14 +141,16 @@
   <div class="container-small">
     <h3>Assign New Card</h3>
 
-    <label for="cardUID">Card UID</label>
-    <input type="text" id="cardUID" placeholder="Scan or enter NFC UID" />
+    <label>Card UID</label>
+    <div class="uid-controls">
+      <input type="text" id="cardUID" readonly />
+      <button type="button" id="generateUIDBtn">Generate</button>
+      <button type="button" id="scanUIDBtn">Scan</button>
+    </div>
 
     <label for="userSearch">Assign to User</label>
-    <div class="relative">
-      <input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
-      <div id="userSuggestions"></div>
-    </div>
+    <input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
+    <div id="userSuggestions"></div>
 
     <label for="cardType">Card Type</label>
     <select id="cardType">
@@ -107,18 +159,33 @@
     </select>
 
     <button id="assignBtn">Assign Card</button>
+
     <div class="status" id="status"></div>
   </div>
 
   <script type="module">
     const cardUID = document.getElementById("cardUID");
-    const assignBtn = document.getElementById("assignBtn");
-    const cardType = document.getElementById("cardType");
-    const statusEl = document.getElementById("status");
     const userSearch = document.getElementById("userSearch");
     const userSuggestions = document.getElementById("userSuggestions");
+    const generateUIDBtn = document.getElementById("generateUIDBtn");
+    const scanUIDBtn = document.getElementById("scanUIDBtn");
+    const assignBtn = document.getElementById("assignBtn");
+    const statusEl = document.getElementById("status");
+    const cardType = document.getElementById("cardType");
 
     let selectedUser = null;
+
+    function generateCardUID() {
+      return "CARD_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    }
+
+    generateUIDBtn.addEventListener("click", () => {
+      cardUID.value = generateCardUID();
+    });
+
+    scanUIDBtn.addEventListener("click", () => {
+      alert("🔧 Scan functionality not implemented yet.");
+    });
 
     userSearch.addEventListener("input", async () => {
       const query = userSearch.value.trim();
@@ -143,8 +210,8 @@
           </div>
         `).join("");
         userSuggestions.style.display = "block";
-      } catch (e) {
-        console.error("Search error:", e);
+      } catch (err) {
+        console.error("Search error:", err);
       }
     });
 
@@ -159,18 +226,12 @@
       userSuggestions.style.display = "none";
     });
 
-    document.addEventListener("click", (e) => {
-      if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
-        userSuggestions.style.display = "none";
-      }
-    });
-
     assignBtn.addEventListener("click", async () => {
       const uid = cardUID.value.trim();
       const type = cardType.value;
 
       if (!uid || !selectedUser?.wallet_id) {
-        statusEl.textContent = "Please enter a UID and select a user with a wallet.";
+        statusEl.textContent = "Please generate or scan a card UID, and select a user.";
         return;
       }
 
@@ -182,7 +243,7 @@
             uid,
             wallet_id: selectedUser.wallet_id,
             type,
-            issued_by: "admin@example.com" // Replace w/ actual session email later
+            issued_by: "admin@example.com" // Replace with actual session data
           }),
         });
 
@@ -194,6 +255,12 @@
       } catch (e) {
         console.error(e);
         statusEl.textContent = "❌ Failed to assign card.";
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+        userSuggestions.style.display = "none";
       }
     });
 
