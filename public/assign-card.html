@@ -4,36 +4,77 @@
   <meta charset="UTF-8" />
   <title>Assign Card – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
   <style>
-
-        .container-small {
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container-small {
       max-width: 500px;
       background: white;
-      margin: 50px auto;
+      margin: 60px auto;
       padding: 30px 40px;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-
-  
-  
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+    button {
+      background: #2f80ed;
+      color: white;
+      font-weight: bold;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1c6fd8;
+    }
     .status {
       text-align: center;
       margin-top: 20px;
       color: #333;
     }
+    #userSuggestions {
+      border: 1px solid #ccc;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      background: white;
+      border-radius: 5px;
+      position: absolute;
+      width: 100%;
+      z-index: 100;
+    }
+    #userSuggestions div {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    #userSuggestions div:hover {
+      background-color: #f0f0f0;
+    }
+    .relative {
+      position: relative;
+    }
   </style>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
-  
+
   <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-       <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
+        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
         <a href="dashboard.html">Dashboard</a>
@@ -47,189 +88,120 @@
     </div>
   </nav>
 
-<div class="container-small">
-  <h3>Assign New Card</h3>
+  <div class="container-small">
+    <h3>Assign New Card</h3>
 
-  <label for="cardUID">Card UID</label>
-  <input type="text" id="cardUID" placeholder="Scan or enter NFC UID" />
+    <label for="cardUID">Card UID</label>
+    <input type="text" id="cardUID" placeholder="Scan or enter NFC UID" />
 
-  <label for="userSearch">Assign to User</label>
-<input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
-<div id="userSuggestions" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;"></div>
+    <label for="userSearch">Assign to User</label>
+    <div class="relative">
+      <input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
+      <div id="userSuggestions"></div>
+    </div>
 
-  <label for="cardType">Card Type</label>
-  <select id="cardType">
-    <option value="bus">Bus</option>
-    <option value="spending">Spending</option>
-  </select>
+    <label for="cardType">Card Type</label>
+    <select id="cardType">
+      <option value="bus">Bus</option>
+      <option value="spending">Spending</option>
+    </select>
 
-  <button id="assignBtn">Assign Card</button>
+    <button id="assignBtn">Assign Card</button>
+    <div class="status" id="status"></div>
+  </div>
 
-  <div class="status" id="status"></div>
-</div>
+  <script type="module">
+    const cardUID = document.getElementById("cardUID");
+    const assignBtn = document.getElementById("assignBtn");
+    const cardType = document.getElementById("cardType");
+    const statusEl = document.getElementById("status");
+    const userSearch = document.getElementById("userSearch");
+    const userSuggestions = document.getElementById("userSuggestions");
 
-<script type="module">
-  const cardUID = document.getElementById("cardUID");
-  const userSelect = document.getElementById("userSelect");
-  const assignBtn = document.getElementById("assignBtn");
-  const statusEl = document.getElementById("status");
-  const cardType = document.getElementById("cardType");
+    let selectedUser = null;
 
-  async function loadUsers() {
-    try {
-      const res = await fetch("/api/users?hasWallet=true"); // you can adjust filter here
-      const users = await res.json();
-
-      userSelect.innerHTML = '<option value="">Select a user</option>';
-      users.forEach(user => {
-        userSelect.innerHTML += `
-          <option value="${user.id}" data-wallet="${user.wallet_id || ''}">
-            ${user.first_name} ${user.last_name} (${user.email})
-          </option>`;
-      });
-    } catch (err) {
-      console.error("Failed to load users:", err);
-      userSelect.innerHTML = '<option value="">Error loading users</option>';
-    }
-  }
-
-  assignBtn.addEventListener("click", async () => {
-    const uid = cardUID.value.trim();
-    const userId = userSelect.value;
-    const selectedOption = userSelect.options[userSelect.selectedIndex];
-    const walletId = selectedOption?.dataset?.wallet || null;
-    const type = cardType.value;
-
-    if (!uid || !walletId) {
-      statusEl.textContent = "Please scan a card and select a valid user with a wallet.";
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid,
-          wallet_id: walletId,
-          type,
-          issued_by: "admin@example.com" // later: replace w/ session email or ID
-        }),
-      });
-
-      if (!res.ok) throw new Error("Request failed");
-      statusEl.textContent = "✅ Card assigned successfully!";
-      cardUID.value = "";
-      userSelect.value = "";
-    } catch (e) {
-      console.error("Error assigning card:", e);
-      statusEl.textContent = "❌ Failed to assign card.";
-    }
-  });
-
-  document.getElementById("logoutBtn")?.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST" }).then(() => {
-      window.location.href = "login.html";
-    });
-  });
-
-  loadUsers();
-
-  const userSearch = document.getElementById("userSearch");
-  const userSuggestions = document.getElementById("userSuggestions");
-
-  let selectedUser = null;
-
-  userSearch.addEventListener("input", async () => {
-    const query = userSearch.value.trim();
-    if (query.length < 2) {
-      userSuggestions.style.display = "none";
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
-      const users = await res.json();
-
-      if (!users.length) {
-        userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
-        userSuggestions.style.display = "block";
+    userSearch.addEventListener("input", async () => {
+      const query = userSearch.value.trim();
+      if (query.length < 2) {
+        userSuggestions.style.display = "none";
         return;
       }
 
-      userSuggestions.innerHTML = users.map(u => `
-        <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-          ${u.first_name} ${u.last_name} (${u.email})
-        </div>
-      `).join("");
-      userSuggestions.style.display = "block";
+      try {
+        const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
+        const users = await res.json();
 
-    } catch (e) {
-      console.error("Search error", e);
-    }
-  });
+        if (!users.length) {
+          userSuggestions.innerHTML = "<div>No results found</div>";
+          userSuggestions.style.display = "block";
+          return;
+        }
 
-  userSuggestions.addEventListener("click", (e) => {
-    const item = e.target.closest(".user-suggestion");
-    if (!item) return;
-    selectedUser = {
-      id: item.dataset.id,
-      wallet_id: item.dataset.wallet
-    };
-    userSearch.value = item.textContent;
-    userSuggestions.style.display = "none";
-  });
+        userSuggestions.innerHTML = users.map(u => `
+          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+            ${u.first_name} ${u.last_name} (${u.email})
+          </div>
+        `).join("");
+        userSuggestions.style.display = "block";
+      } catch (e) {
+        console.error("Search error:", e);
+      }
+    });
 
-  assignBtn.addEventListener("click", async () => {
-    const uid = cardUID.value.trim();
-    const type = cardType.value;
-
-    if (!uid || !selectedUser?.wallet_id) {
-      statusEl.textContent = "Please scan a card and select a valid user.";
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid,
-          wallet_id: selectedUser.wallet_id,
-          type,
-          issued_by: "admin@example.com"
-        }),
-      });
-
-      if (!res.ok) throw new Error("Card assignment failed");
-      statusEl.textContent = "✅ Card assigned successfully!";
-      cardUID.value = "";
-      userSearch.value = "";
-      selectedUser = null;
-    } catch (e) {
-      console.error(e);
-      statusEl.textContent = "❌ Failed to assign card.";
-    }
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+    userSuggestions.addEventListener("click", (e) => {
+      const item = e.target.closest(".user-suggestion");
+      if (!item) return;
+      selectedUser = {
+        id: item.dataset.id,
+        wallet_id: item.dataset.wallet
+      };
+      userSearch.value = item.textContent;
       userSuggestions.style.display = "none";
-    }
-  });
-</script>
+    });
 
-<style>
-  #userSuggestions div {
-    padding: 8px 12px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-  }
-  #userSuggestions div:hover {
-    background-color: #f0f0f0;
-  }
-</style>
-  
-</script>
+    document.addEventListener("click", (e) => {
+      if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+        userSuggestions.style.display = "none";
+      }
+    });
+
+    assignBtn.addEventListener("click", async () => {
+      const uid = cardUID.value.trim();
+      const type = cardType.value;
+
+      if (!uid || !selectedUser?.wallet_id) {
+        statusEl.textContent = "Please enter a UID and select a user with a wallet.";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid,
+            wallet_id: selectedUser.wallet_id,
+            type,
+            issued_by: "admin@example.com" // Replace w/ actual session email later
+          }),
+        });
+
+        if (!res.ok) throw new Error("Card assignment failed");
+        statusEl.textContent = "✅ Card assigned successfully!";
+        cardUID.value = "";
+        userSearch.value = "";
+        selectedUser = null;
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = "❌ Failed to assign card.";
+      }
+    });
+
+    document.getElementById("logoutBtn")?.addEventListener("click", () => {
+      fetch("/api/logout", { method: "POST" }).then(() => {
+        window.location.href = "login.html";
+      });
+    });
+  </script>
 </body>
 </html>
