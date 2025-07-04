@@ -80,17 +80,18 @@
 </head>
 <body>
 
-  <!-- Top Nav (your original preferred version) -->
+    <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="admin.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
+        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
         <a href="dashboard.html">Dashboard</a>
         <a href="add-user.html">Add User</a>
         <a href="manage-wallet.html">Manage Wallet</a>
         <a href="assign-card.html">Assign Card</a>
+        <a href="assign-transit-card.html">Assign Card</a>
         <a href="view-users.html">View Users</a>
         <a href="view-reports.html">View Reports</a>
         <a href="#" id="logoutBtn">Log Out</a>
@@ -143,7 +144,7 @@
       cardUID.value = uid;
     });
 
-    // 🔎 Live search for user
+    // Live search for user
     const userSearch = document.getElementById("userSearch");
     const userSuggestions = document.getElementById("userSuggestions");
     let selectedUser = null;
@@ -212,13 +213,13 @@
 
         if (!res.ok) throw new Error("Card assignment failed");
 
-        statusEl.textContent = "✅ Card assigned successfully!";
+        statusEl.textContent = "Card assigned successfully!";
         cardUID.value = "";
         userSearch.value = "";
         selectedUser = null;
       } catch (e) {
         console.error(e);
-        statusEl.textContent = "❌ Failed to assign card.";
+        statusEl.textContent = "Failed to assign card.";
       }
     });
 
