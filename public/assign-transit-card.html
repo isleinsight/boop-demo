@@ -224,12 +224,12 @@
       });
 
       if (res.ok) {
-        statusEl.textContent = "✅ Transit card assigned.";
+        statusEl.textContent = "Transit card assigned.";
         uidEl.value = "";
         userSearch.value = "";
         selectedUser = null;
       } else {
-        statusEl.textContent = "❌ Failed to assign card.";
+        statusEl.textContent = "Failed to assign card.";
       }
     });
 
@@ -238,6 +238,29 @@
         suggestions.style.display = "none";
       }
     });
+
+
+  const scanBtn = document.getElementById("scanBtn");
+  const uidInput = document.getElementById("cardUID");
+
+  scanBtn?.addEventListener("click", async () => {
+    try {
+      const res = await fetch("http://localhost:3001/scan");
+      const data = await res.json();
+
+      if (data.uid) {
+        uidInput.value = data.uid;
+      } else {
+        alert("No UID received. Please try again.");
+      }
+    } catch (err) {
+      console.error("Failed to contact NFC scanner app:", err);
+      alert("NFC scanner is not available. Make sure it's running on your computer.");
+    }
+  });
+
+
+    
   </script>
 </body>
 </html>
