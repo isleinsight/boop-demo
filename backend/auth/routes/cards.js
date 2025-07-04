@@ -12,11 +12,15 @@ const exclusiveGroup = ["spending", "assistance"];
 router.post("/", async (req, res) => {
   const { uid, wallet_id, type = "bus", status = "active", issued_by } = req.body;
 
+  console.log("🔔 Incoming card assignment:", { uid, wallet_id, type, status, issued_by });
+
   if (!uid || !wallet_id || !issued_by) {
+    console.warn("⚠️ Missing required fields:", { uid, wallet_id, issued_by });
     return res.status(400).json({ error: "UID, wallet_id, and issued_by are required" });
   }
 
   if (!validTypes.includes(type)) {
+    console.warn("⚠️ Invalid card type:", type);
     return res.status(400).json({ error: "Invalid card type" });
   }
 
@@ -29,11 +33,13 @@ router.post("/", async (req, res) => {
 
     for (const card of existing.rows) {
       if (card.type === type) {
+        console.warn(`⚠️ Wallet already has a ${type} card`);
         return res.status(409).json({ error: `This wallet already has a ${type} card.` });
       }
 
       // If adding a spending or assistance card, block the other
       if (exclusiveGroup.includes(card.type) && exclusiveGroup.includes(type)) {
+        console.warn("⚠️ Conflict between spending and assistance cards");
         return res.status(409).json({ error: `Cannot assign both spending and assistance cards.` });
       }
     }
@@ -46,9 +52,11 @@ router.post("/", async (req, res) => {
       [uid, wallet_id, type, status, issued_by]
     );
 
+    console.log("✅ Card successfully inserted:", result.rows[0]);
     res.status(201).json(result.rows[0]);
+
   } catch (err) {
-    console.error("❌ Error assigning card:", err);
+    console.error("❌ DB insert error:", err);
     res.status(500).json({ error: "Failed to assign card" });
   }
 });
@@ -101,7 +109,7 @@ router.get('/:uid', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error fetching card info:', err);
+    console.error('❌ Error fetching card info:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
