@@ -132,18 +132,17 @@
   const cardUID = document.getElementById("cardUID");
   const assignBtn = document.getElementById("assignBtn");
   const statusEl = document.getElementById("status");
-  const cardType = document.getElementById("cardType");
   const generateBtn = document.getElementById("generateUIDBtn");
   const scanBtn = document.getElementById("scanUIDBtn");
 
-  // ✅ Generate random UID
+  // UID Generator
   generateBtn.addEventListener("click", () => {
     const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     cardUID.value = uid;
   });
 
-  // ✅ Dummy Scan (future NFC connection)
-  scanBtn?.addEventListener("click", async () => {
+  // Dummy Scan Button — will trigger local scan app later
+  scanBtn.addEventListener("click", async () => {
     try {
       const res = await fetch("http://localhost:3001/scan");
       const data = await res.json();
@@ -154,12 +153,12 @@
         alert("No UID received. Please try again.");
       }
     } catch (err) {
-      console.error("Failed to contact NFC scanner app:", err);
-      alert("NFC scanner is not available. Make sure it's running on your computer.");
+      console.error("Scan failed:", err);
+      alert("NFC scanner not available. Make sure it's running on your computer.");
     }
   });
 
-  // 🔎 Live search for user
+  // User Search — (not used in POST for now but kept for reference)
   const userSearch = document.getElementById("userSearch");
   const userSuggestions = document.getElementById("userSuggestions");
   let selectedUser = null;
@@ -187,9 +186,8 @@
         </div>
       `).join("");
       userSuggestions.style.display = "block";
-
     } catch (e) {
-      console.error("Search error", e);
+      console.error("User search failed:", e);
     }
   });
 
@@ -204,13 +202,18 @@
     userSuggestions.style.display = "none";
   });
 
-  // Submit assignment
+  document.addEventListener("click", (e) => {
+    if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+      userSuggestions.style.display = "none";
+    }
+  });
+
+  // Submit — Send ONLY the UID
   assignBtn.addEventListener("click", async () => {
     const uid = cardUID.value.trim();
-    const type = cardType.value;
 
-    if (!uid || !selectedUser?.wallet_id) {
-      statusEl.textContent = "Please generate a UID and select a user.";
+    if (!uid) {
+      statusEl.textContent = "Please generate or scan a UID.";
       return;
     }
 
@@ -218,32 +221,22 @@
       const res = await fetch("/api/cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid,
-          wallet_id: selectedUser.wallet_id,
-          type,
-          issued_by: "admin@example.com"
-        }),
+        body: JSON.stringify({ uid })
       });
 
-      if (!res.ok) throw new Error("Card assignment failed");
+      if (!res.ok) throw new Error("Failed to assign");
 
       statusEl.textContent = "✅ Card assigned successfully!";
       cardUID.value = "";
       userSearch.value = "";
       selectedUser = null;
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
       statusEl.textContent = "❌ Failed to assign card.";
     }
   });
 
-  document.addEventListener("click", (e) => {
-    if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
-      userSuggestions.style.display = "none";
-    }
-  });
-
+  // Logout
   document.getElementById("logoutBtn")?.addEventListener("click", () => {
     fetch("/api/logout", { method: "POST" }).then(() => {
       window.location.href = "login.html";
