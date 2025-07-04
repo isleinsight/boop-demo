@@ -24,19 +24,20 @@
     }
 
     .input-group {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
     }
 
     input, select, button {
       width: 100%;
       padding: 10px;
       font-size: 1rem;
+      box-sizing: border-box;
     }
 
-    .input-actions {
+    .uid-buttons {
       display: flex;
       gap: 10px;
-      margin-bottom: 12px;
+      margin-top: 10px;
     }
 
     #userSuggestions div {
@@ -52,7 +53,6 @@
 </head>
 <body>
 
-  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -60,7 +60,7 @@
       </div>
       <div class="nav-right">
         <a href="dashboard.html">Dashboard</a>
-        <a href="assign-card.html">Assign Card</a>
+        <a href="assign-card.html">Assign Spending Card</a>
         <a href="assign-transit-card.html" class="active">Transit Cards</a>
         <a href="view-users.html">View Users</a>
         <a href="view-reports.html">View Reports</a>
@@ -72,20 +72,33 @@
   <div class="container-small">
     <h3>Assign Transit Card</h3>
 
+    <!-- Card UID -->
     <div class="input-group">
       <label>Card UID</label>
-      <div class="input-actions">
-        <input type="text" id="cardUID" placeholder="Auto-generated or scanned" readonly />
+      <input type="text" id="cardUID" placeholder="Auto-generated or scanned" readonly />
+      <div class="uid-buttons">
         <button type="button" id="generateUIDBtn">Generate</button>
+        <button type="button" id="scanUIDBtn">Scan</button>
       </div>
     </div>
 
+    <!-- Optional user -->
     <div class="input-group">
       <label for="userSearch">Assign to User (optional)</label>
       <input type="text" id="userSearch" placeholder="Search name or email..." autocomplete="off" />
       <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
     </div>
 
+    <!-- Transport Type -->
+    <div class="input-group">
+      <label for="modeSelect">Mode of Transport</label>
+      <select id="modeSelect">
+        <option value="bus">Bus</option>
+        <option value="ferry">Ferry</option>
+      </select>
+    </div>
+
+    <!-- Pass Type -->
     <div class="input-group">
       <label for="passType">Pass Type</label>
       <select id="passType">
@@ -94,6 +107,7 @@
       </select>
     </div>
 
+    <!-- Ride Count -->
     <div class="input-group" id="ridesInputGroup">
       <label for="rideCount">Number of Rides</label>
       <select id="rideCount">
@@ -103,6 +117,7 @@
       </select>
     </div>
 
+    <!-- Time Duration -->
     <div class="input-group" id="timeInputGroup" style="display:none;">
       <label for="daysValid">Valid For</label>
       <select id="daysValid">
@@ -120,15 +135,17 @@
 
   <script type="module">
     const uidEl = document.getElementById("cardUID");
-    const userSearch = document.getElementById("userSearch");
-    const suggestions = document.getElementById("userSuggestions");
+    const generateBtn = document.getElementById("generateUIDBtn");
+    const scanBtn = document.getElementById("scanUIDBtn");
     const passType = document.getElementById("passType");
     const rideGroup = document.getElementById("ridesInputGroup");
     const timeGroup = document.getElementById("timeInputGroup");
     const rideCount = document.getElementById("rideCount");
     const daysValid = document.getElementById("daysValid");
     const assignBtn = document.getElementById("assignBtn");
-    const generateBtn = document.getElementById("generateUIDBtn");
+    const userSearch = document.getElementById("userSearch");
+    const suggestions = document.getElementById("userSuggestions");
+    const modeSelect = document.getElementById("modeSelect");
     const statusEl = document.getElementById("status");
 
     let selectedUser = null;
@@ -136,6 +153,10 @@
     generateBtn.addEventListener("click", () => {
       const uid = crypto.randomUUID().slice(0, 12).replace(/-/g, "").toUpperCase();
       uidEl.value = uid;
+    });
+
+    scanBtn.addEventListener("click", () => {
+      alert("NFC scan not implemented yet.");
     });
 
     passType.addEventListener("change", () => {
@@ -154,8 +175,10 @@
         suggestions.style.display = "none";
         return;
       }
+
       const res = await fetch(`/api/users?search=${encodeURIComponent(query)}`);
       const users = await res.json();
+
       if (!users.length) {
         suggestions.innerHTML = "<div>No users found</div>";
       } else {
@@ -164,6 +187,7 @@
             ${u.first_name} ${u.last_name} (${u.email})
           </div>`).join("");
       }
+
       suggestions.style.display = "block";
     });
 
@@ -177,15 +201,20 @@
 
     assignBtn.addEventListener("click", async () => {
       const uid = uidEl.value.trim();
-      if (!uid) return alert("UID required. Click 'Generate' or scan a card.");
+      const mode = modeSelect.value;
+      const type = passType.value;
+      const value = type === "rides" ? rideCount.value : daysValid.value;
+
+      if (!uid) return alert("UID required. Click 'Generate' or scan.");
 
       const body = {
         uid,
         card_type: "transit",
-        pass_type: passType.value,
-        pass_value: passType.value === "rides" ? rideCount.value : daysValid.value,
+        transport_mode: mode,
+        pass_type: type,
+        pass_value: value,
         user_id: selectedUser?.id || null,
-        issued_by: "admin@example.com"  // Replace with actual session later
+        issued_by: "admin@example.com"
       };
 
       const res = await fetch("/api/cards", {
