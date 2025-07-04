@@ -134,6 +134,102 @@
   });
 
   loadUsers();
+
+  const userSearch = document.getElementById("userSearch");
+  const userSuggestions = document.getElementById("userSuggestions");
+
+  let selectedUser = null;
+
+  userSearch.addEventListener("input", async () => {
+    const query = userSearch.value.trim();
+    if (query.length < 2) {
+      userSuggestions.style.display = "none";
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
+      const users = await res.json();
+
+      if (!users.length) {
+        userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
+        userSuggestions.style.display = "block";
+        return;
+      }
+
+      userSuggestions.innerHTML = users.map(u => `
+        <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+          ${u.first_name} ${u.last_name} (${u.email})
+        </div>
+      `).join("");
+      userSuggestions.style.display = "block";
+
+    } catch (e) {
+      console.error("Search error", e);
+    }
+  });
+
+  userSuggestions.addEventListener("click", (e) => {
+    const item = e.target.closest(".user-suggestion");
+    if (!item) return;
+    selectedUser = {
+      id: item.dataset.id,
+      wallet_id: item.dataset.wallet
+    };
+    userSearch.value = item.textContent;
+    userSuggestions.style.display = "none";
+  });
+
+  assignBtn.addEventListener("click", async () => {
+    const uid = cardUID.value.trim();
+    const type = cardType.value;
+
+    if (!uid || !selectedUser?.wallet_id) {
+      statusEl.textContent = "Please scan a card and select a valid user.";
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid,
+          wallet_id: selectedUser.wallet_id,
+          type,
+          issued_by: "admin@example.com"
+        }),
+      });
+
+      if (!res.ok) throw new Error("Card assignment failed");
+      statusEl.textContent = "✅ Card assigned successfully!";
+      cardUID.value = "";
+      userSearch.value = "";
+      selectedUser = null;
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = "❌ Failed to assign card.";
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+      userSuggestions.style.display = "none";
+    }
+  });
+</script>
+
+<style>
+  #userSuggestions div {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+  }
+  #userSuggestions div:hover {
+    background-color: #f0f0f0;
+  }
+</style>
+  
 </script>
 </body>
 </html>
