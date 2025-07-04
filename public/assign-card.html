@@ -2,12 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Assign Transit Card – BOOP Admin</title>
+  <title>Assign Card – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
-
   <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+    }
+
     .container-small {
       max-width: 500px;
       background: white;
@@ -17,27 +21,50 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    .status {
-      text-align: center;
-      margin-top: 20px;
-      color: #333;
-    }
-
-    .input-group {
-      margin-bottom: 20px;
-    }
+    .container-small input,
+.container-small select,
+.container-small button,
+.uid-controls {
+  width: 100%;
+  box-sizing: border-box;
+}
 
     input, select, button {
       width: 100%;
       padding: 10px;
-      font-size: 1rem;
-      box-sizing: border-box;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1em;
     }
 
-    .uid-buttons {
+    button {
+      background: #2f80ed;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1c6fd8;
+    }
+
+    .uid-controls {
       display: flex;
+      justify-content: space-between;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 5px;
+      margin-bottom: 20px;
+    }
+
+    .uid-controls button {
+      flex: 1;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      color: #333;
     }
 
     #userSuggestions div {
@@ -53,15 +80,20 @@
 </head>
 <body>
 
+  <!-- Top Nav (your original preferred version) -->
+    <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
+        <a href="admin.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
         <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
         <a href="dashboard.html">Dashboard</a>
-        <a href="assign-card.html">Assign Spending Card</a>
-        <a href="assign-transit-card.html" class="active">Transit Cards</a>
+        <a href="add-user.html">Add User</a>
+        <a href="manage-wallet.html">Manage Wallet</a>
+        <a href="assign-card.html">Assign Card</a>
+        <a href="assign-transit-card.html">Assign Card</a>
         <a href="view-users.html">View Users</a>
         <a href="view-reports.html">View Reports</a>
         <a href="#" id="logoutBtn">Log Out</a>
@@ -69,174 +101,144 @@
     </div>
   </nav>
 
+  <!-- Card Assignment Form -->
   <div class="container-small">
-    <h3>Assign Transit Card</h3>
+    <h3>Assign New Card</h3>
 
-    <!-- Card UID -->
-    <div class="input-group">
-      <label>Card UID</label>
-      <input type="text" id="cardUID" placeholder="Auto-generated or scanned" readonly />
-      <div class="uid-buttons">
-        <button type="button" id="generateUIDBtn">Generate</button>
-        <button type="button" id="scanUIDBtn">Scan</button>
-      </div>
+    <label for="cardUID">Card UID</label>
+    <input type="text" id="cardUID" readonly />
+
+    <div class="uid-controls">
+      <button type="button" id="generateUIDBtn">Generate</button>
+      <button type="button" id="scanUIDBtn">Scan</button>
     </div>
+  </br>
+    <label for="userSearch">Assign to User</label>
+    <input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
+    <div id="userSuggestions" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;"></div>
 
-    <!-- Optional user -->
-    <div class="input-group">
-      <label for="userSearch">Assign to User (optional)</label>
-      <input type="text" id="userSearch" placeholder="Search name or email..." autocomplete="off" />
-      <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
-    </div>
+    <label for="cardType">Card Type</label>
+    <select id="cardType">
+      <option value="bus">Assistance</option>
+      <option value="spending">Spending</option>
+    </select>
 
-    <!-- Transport Type -->
-    <div class="input-group">
-      <label for="modeSelect">Mode of Transport</label>
-      <select id="modeSelect">
-        <option value="bus">Bus</option>
-        <option value="ferry">Ferry</option>
-      </select>
-    </div>
-
-    <!-- Pass Type -->
-    <div class="input-group">
-      <label for="passType">Pass Type</label>
-      <select id="passType">
-        <option value="rides">By Rides</option>
-        <option value="time">By Time</option>
-      </select>
-    </div>
-
-    <!-- Ride Count -->
-    <div class="input-group" id="ridesInputGroup">
-      <label for="rideCount">Number of Rides</label>
-      <select id="rideCount">
-        <option value="14">14 Rides</option>
-        <option value="20">20 Rides</option>
-        <option value="30">30 Rides</option>
-      </select>
-    </div>
-
-    <!-- Time Duration -->
-    <div class="input-group" id="timeInputGroup" style="display:none;">
-      <label for="daysValid">Valid For</label>
-      <select id="daysValid">
-        <option value="7">7 Days</option>
-        <option value="14">14 Days</option>
-        <option value="30">30 Days</option>
-        <option value="60">60 Days</option>
-      </select>
-    </div>
-
-    <button id="assignBtn">Assign Transit Card</button>
+    <button id="assignBtn">Assign Card</button>
 
     <div class="status" id="status"></div>
   </div>
 
   <script type="module">
-    const uidEl = document.getElementById("cardUID");
+    const cardUID = document.getElementById("cardUID");
+    const assignBtn = document.getElementById("assignBtn");
+    const statusEl = document.getElementById("status");
+    const cardType = document.getElementById("cardType");
     const generateBtn = document.getElementById("generateUIDBtn");
     const scanBtn = document.getElementById("scanUIDBtn");
-    const passType = document.getElementById("passType");
-    const rideGroup = document.getElementById("ridesInputGroup");
-    const timeGroup = document.getElementById("timeInputGroup");
-    const rideCount = document.getElementById("rideCount");
-    const daysValid = document.getElementById("daysValid");
-    const assignBtn = document.getElementById("assignBtn");
-    const userSearch = document.getElementById("userSearch");
-    const suggestions = document.getElementById("userSuggestions");
-    const modeSelect = document.getElementById("modeSelect");
-    const statusEl = document.getElementById("status");
 
-    let selectedUser = null;
+    // Dummy scan button for now
+    scanBtn.addEventListener("click", () => {
+      alert("NFC Scan not implemented yet.");
+    });
 
     generateBtn.addEventListener("click", () => {
-      const uid = crypto.randomUUID().slice(0, 12).replace(/-/g, "").toUpperCase();
-      uidEl.value = uid;
+      const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+      cardUID.value = uid;
     });
 
-    scanBtn.addEventListener("click", () => {
-      alert("NFC scan not implemented yet.");
-    });
-
-    passType.addEventListener("change", () => {
-      if (passType.value === "rides") {
-        rideGroup.style.display = "block";
-        timeGroup.style.display = "none";
-      } else {
-        rideGroup.style.display = "none";
-        timeGroup.style.display = "block";
-      }
-    });
+    // 🔎 Live search for user
+    // Live search for user
+    const userSearch = document.getElementById("userSearch");
+    const userSuggestions = document.getElementById("userSuggestions");
+    let selectedUser = null;
 
     userSearch.addEventListener("input", async () => {
       const query = userSearch.value.trim();
       if (query.length < 2) {
-        suggestions.style.display = "none";
+        userSuggestions.style.display = "none";
         return;
       }
 
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}`);
-      const users = await res.json();
+      try {
+        const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
+        const users = await res.json();
 
-      if (!users.length) {
-        suggestions.innerHTML = "<div>No users found</div>";
-      } else {
-        suggestions.innerHTML = users.map(u => `
-          <div class="user-suggestion" data-id="${u.id}">
+        if (!users.length) {
+          userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
+          userSuggestions.style.display = "block";
+          return;
+        }
+
+        userSuggestions.innerHTML = users.map(u => `
+          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
             ${u.first_name} ${u.last_name} (${u.email})
-          </div>`).join("");
-      }
+          </div>
+        `).join("");
+        userSuggestions.style.display = "block";
 
-      suggestions.style.display = "block";
+      } catch (e) {
+        console.error("Search error", e);
+      }
     });
 
-    suggestions.addEventListener("click", (e) => {
+    userSuggestions.addEventListener("click", (e) => {
       const item = e.target.closest(".user-suggestion");
       if (!item) return;
-      selectedUser = { id: item.dataset.id };
+      selectedUser = {
+        id: item.dataset.id,
+        wallet_id: item.dataset.wallet
+      };
       userSearch.value = item.textContent;
-      suggestions.style.display = "none";
+      userSuggestions.style.display = "none";
     });
 
+    // Main submission
     assignBtn.addEventListener("click", async () => {
-      const uid = uidEl.value.trim();
-      const mode = modeSelect.value;
-      const type = passType.value;
-      const value = type === "rides" ? rideCount.value : daysValid.value;
+      const uid = cardUID.value.trim();
+      const type = cardType.value;
 
-      if (!uid) return alert("UID required. Click 'Generate' or scan.");
+      if (!uid || !selectedUser?.wallet_id) {
+        statusEl.textContent = "Please generate a UID and select a user.";
+        return;
+      }
 
-      const body = {
-        uid,
-        card_type: "transit",
-        transport_mode: mode,
-        pass_type: type,
-        pass_value: value,
-        user_id: selectedUser?.id || null,
-        issued_by: "admin@example.com"
-      };
+      try {
+        const res = await fetch("/api/cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid,
+            wallet_id: selectedUser.wallet_id,
+            type,
+            issued_by: "admin@example.com" // Replace with actual session email later
+          }),
+        });
 
-      const res = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
+        if (!res.ok) throw new Error("Card assignment failed");
 
-      if (res.ok) {
-        statusEl.textContent = "✅ Transit card assigned.";
-        uidEl.value = "";
+        statusEl.textContent = "✅ Card assigned successfully!";
+        statusEl.textContent = "Card assigned successfully!";
+        cardUID.value = "";
         userSearch.value = "";
         selectedUser = null;
-      } else {
+      } catch (e) {
+        console.error(e);
         statusEl.textContent = "❌ Failed to assign card.";
+        statusEl.textContent = "Failed to assign card.";
       }
     });
 
     document.addEventListener("click", (e) => {
-      if (!suggestions.contains(e.target) && e.target !== userSearch) {
-        suggestions.style.display = "none";
+      if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+        userSuggestions.style.display = "none";
       }
+    });
+
+    // Logout
+    document.getElementById("logoutBtn")?.addEventListener("click", () => {
+      fetch("/api/logout", { method: "POST" }).then(() => {
+        window.location.href = "login.html";
+      });
     });
   </script>
 </body>
