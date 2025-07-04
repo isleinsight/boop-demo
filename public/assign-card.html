@@ -53,10 +53,9 @@
   <label for="cardUID">Card UID</label>
   <input type="text" id="cardUID" placeholder="Scan or enter NFC UID" />
 
-  <label for="userSelect">Assign to User</label>
-  <select id="userSelect">
-    <option value="">Loading users...</option>
-  </select>
+  <label for="userSearch">Assign to User</label>
+<input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
+<div id="userSuggestions" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;"></div>
 
   <label for="cardType">Card Type</label>
   <select id="cardType">
