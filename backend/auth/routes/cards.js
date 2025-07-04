@@ -2,9 +2,13 @@
 
 const express = require("express");
 const router = express.Router();
-const db = require("../../db"); // ✅ Adjust path if needed
+const db = require("../../db");
 
-// POST /api/cards
+// 🚨 Card Type Rules
+const validTypes = ["bus", "spending", "assistance"];
+const exclusiveGroup = ["spending", "assistance"];
+
+// Create a new card
 router.post("/", async (req, res) => {
   const { uid, wallet_id, type = "bus", status = "active", issued_by } = req.body;
 
@@ -12,18 +16,36 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "UID, wallet_id, and issued_by are required" });
   }
 
-  const validTypes = ["bus", "spending"];
   if (!validTypes.includes(type)) {
     return res.status(400).json({ error: "Invalid card type" });
   }
 
   try {
+    // 🔍 Check for existing cards of the same or conflicting type
+    const existing = await db.query(
+      `SELECT * FROM cards WHERE wallet_id = $1`,
+      [wallet_id]
+    );
+
+    for (const card of existing.rows) {
+      if (card.type === type) {
+        return res.status(409).json({ error: `This wallet already has a ${type} card.` });
+      }
+
+      // If adding a spending or assistance card, block the other
+      if (exclusiveGroup.includes(card.type) && exclusiveGroup.includes(type)) {
+        return res.status(409).json({ error: `Cannot assign both spending and assistance cards.` });
+      }
+    }
+
+    // ✅ Insert new card
     const result = await db.query(
       `INSERT INTO cards (uid, wallet_id, type, status, issued_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [uid, wallet_id, type, status, issued_by]
     );
+
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error("❌ Error assigning card:", err);
@@ -31,9 +53,8 @@ router.post("/", async (req, res) => {
   }
 });
 
-module.exports = router;
 
-// GET /api/cards/:uid
+// Fetch card info by UID
 router.get('/:uid', async (req, res) => {
   const { uid } = req.params;
 
@@ -84,3 +105,5 @@ router.get('/:uid', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+module.exports = router;
