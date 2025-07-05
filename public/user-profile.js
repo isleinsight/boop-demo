@@ -34,7 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
         if (wallet?.id) {
           walletHTML += `<div><span class="label">Wallet ID</span><span class="value">${wallet.id}</span></div>`;
-
           const cards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
           if (Array.isArray(cards) && cards.length > 0) {
             walletHTML += `<div><span class="label">Card Number</span><span class="value">${cards[0].uid}</span></div>`;
@@ -54,12 +53,57 @@ document.addEventListener("DOMContentLoaded", () => {
         <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
         <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
 
-        <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
+        <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green'}">${user.status}</span></div>
 
         <div><span class="label">Role</span><span class="value">${user.role}</span></div>
 
         ${walletHTML}
       `;
+
+      // ✅ Re-add the Actions dropdown
+      const dropdown = document.createElement("select");
+      dropdown.innerHTML = `
+        <option value="">Actions</option>
+        <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">
+          ${user.status === "suspended" ? "Unsuspend" : "Suspend"}
+        </option>
+        <option value="signout">Force Sign-out</option>
+        <option value="delete">Delete</option>
+      `;
+      dropdown.addEventListener("change", async () => {
+        const action = dropdown.value;
+        dropdown.value = "";
+        if (action === "delete") {
+          const confirmDelete = prompt("Type DELETE to confirm.");
+          if (confirmDelete !== "DELETE") return;
+        }
+
+        try {
+          if (action === "suspend" || action === "unsuspend") {
+            const newStatus = action === "suspend" ? "suspended" : "active";
+            await fetch(`/api/users/${currentUserId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: newStatus })
+            });
+            alert(`User ${newStatus}.`);
+          } else if (action === "signout") {
+            await fetch(`/api/users/${currentUserId}/signout`, { method: "POST" });
+            alert("Sign-out requested.");
+          } else if (action === "delete") {
+            await fetch(`/api/users/${currentUserId}`, { method: "DELETE" });
+            alert("User deleted.");
+            window.location.href = "view-users.html";
+            return;
+          }
+          await loadUserProfile();
+        } catch (err) {
+          console.error("❌ Failed to perform action:", err);
+          alert("Failed to perform user action.");
+        }
+      });
+
+      userInfo.appendChild(dropdown);
 
       if (user.role === "parent") {
         addStudentBtn.style.display = "inline-block";
@@ -74,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
         parentEmailEl.textContent = parent.email;
       }
 
-      document.getElementById("editProfileBtn").onclick = () => {
+      editBtn.onclick = () => {
         document.getElementById("viewFirstName").style.display = "none";
         document.getElementById("viewLastName").style.display = "none";
         document.getElementById("viewEmail").style.display = "none";
@@ -86,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
         saveBtn.style.display = "inline-block";
       };
 
-      document.getElementById("saveProfileBtn").onclick = async () => {
+      saveBtn.onclick = async () => {
         await fetch(`/api/users/${currentUserId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
