@@ -31,10 +31,10 @@ router.post("/", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const result = await pool.query(
-      `INSERT INTO users (
+      \`INSERT INTO users (
         email, password_hash, first_name, last_name, role, on_assistance
       ) VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *`,
+      RETURNING *\`,
       [email, hashedPassword, first_name, last_name, role, on_assistance]
     );
 
@@ -42,22 +42,25 @@ router.post("/", async (req, res) => {
 
     // ✅ Assign wallet if eligible
     if (rolesWithWallet.includes(role)) {
-      await pool.query(
-        `INSERT INTO wallets (user_id, id)
-         VALUES ($1, gen_random_uuid())`,
-        [user.id]
-      );
-      console.log(`🎒 Wallet created for user ${user.id}`);
+      try {
+        await pool.query(
+          \`INSERT INTO wallets (user_id) VALUES ($1)\`,
+          [user.id]
+        );
+        console.log(\`🎒 Wallet created for user \${user.id}\`);
+      } catch (walletErr) {
+        console.error("❌ Wallet creation failed:", walletErr);
+      }
     }
 
     // ✅ Insert vendor if role is vendor
     if (role === "vendor" && vendor) {
       await pool.query(
-        `INSERT INTO vendors (
+        \`INSERT INTO vendors (
           id, business_name, phone, category, approved, wallet_id
         ) VALUES (
           $1, $2, $3, $4, $5, gen_random_uuid()
-        )`,
+        )\`,
         [
           user.id,
           vendor.name,
@@ -78,3 +81,5 @@ router.post("/", async (req, res) => {
     res.status(500).json({ message: "Failed to create user" });
   }
 });
+
+module.exports = router;
