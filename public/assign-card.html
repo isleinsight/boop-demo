@@ -212,11 +212,12 @@ const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWalle
       const res = await fetch("/api/cards", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    uid,
-    wallet_id: selectedUser?.wallet_id,
-    issued_by: localStorage.getItem("admin_id")
-  })
+body: JSON.stringify({
+  uid,
+  wallet_id: selectedUser?.wallet_id,
+  issued_by: localStorage.getItem("admin_id"),
+  type: "spending"
+})
 });
 
       if (!res.ok) throw new Error("Failed to assign");
