@@ -20,11 +20,14 @@ app.use(express.static(path.join(__dirname, '../public')));
 const authRoutes = require('./auth/auth');
 app.use('/auth', authRoutes); // routes like /auth/login, /auth/signup
 
-// ✅ Users & Cards API routes
+// ✅ API routes
 const usersRoute = require('./auth/routes/users');
 const cardsRoute = require('./auth/routes/cards');
+const walletRoutes = require('./auth/routes/wallets'); // ✅ NEW: Wallet routes
+
 app.use('/api/users', usersRoute);
 app.use('/api/cards', cardsRoute);
+app.use('/api/wallets', walletRoutes); // ✅ NEW: Mount wallet route
 
 // ✅ Health check
 app.get('/health', (req, res) => {
