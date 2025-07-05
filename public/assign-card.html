@@ -215,7 +215,7 @@ const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWalle
   body: JSON.stringify({
     uid,
     wallet_id: selectedUser?.wallet_id,
-    issued_by: currentUserId  // You may need to get this from session or hidden input
+    issued_by: localStorage.getItem("admin_id")
   })
 });
 
