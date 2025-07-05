@@ -49,30 +49,45 @@ router.post("/", async (req, res) => {
 
 // ✅ GET /api/users
 router.get("/", async (req, res) => {
-  const { parentId, role, search, page = 1 } = req.query;
+  const { parentId, role, search, page = 1, eligibleOnly, hasWallet } = req.query;
 
   try {
+    // 🧸 Load children by parent
     if (parentId) {
       const result = await pool.query("SELECT * FROM users WHERE parent_id = $1", [parentId]);
       return res.json(result.rows);
     }
 
-    if (role === "student" && search !== undefined) {
-      const perPage = 5;
+    // 🔎 Filtered search
+    if (search !== undefined) {
+      const perPage = 10;
       const offset = (parseInt(page) - 1) * perPage;
       const term = `%${search.toLowerCase()}%`;
 
-      const result = await pool.query(
-        `SELECT * FROM users
-         WHERE role = 'student'
-         AND (LOWER(first_name) LIKE $1 OR LOWER(last_name) LIKE $1 OR LOWER(email) LIKE $1)
-         ORDER BY first_name ASC
-         LIMIT $2 OFFSET $3`,
-        [term, perPage, offset]
-      );
+      let baseQuery = `SELECT * FROM users WHERE (
+        LOWER(first_name) LIKE $1 OR
+        LOWER(last_name) LIKE $1 OR
+        LOWER(email) LIKE $1
+      )`;
+
+      const params = [term];
+
+      if (eligibleOnly === "true") {
+        baseQuery += ` AND role IN ('cardholder', 'student', 'senior')`;
+      }
+
+      if (hasWallet === "true") {
+        baseQuery += ` AND id IN (SELECT user_id FROM wallets)`;
+      }
+
+      baseQuery += ` ORDER BY first_name ASC LIMIT $2 OFFSET $3`;
+      params.push(perPage, offset);
+
+      const result = await pool.query(baseQuery, params);
       return res.json(result.rows);
     }
 
+    // 🧺 Default: return all users
     const result = await pool.query("SELECT * FROM users ORDER BY first_name ASC");
     res.json(result.rows);
 
@@ -101,13 +116,12 @@ router.patch("/:id", async (req, res) => {
   }
 
   try {
-    // ✅ Update user
     await pool.query(
       `UPDATE users SET ${updates.join(", ")} WHERE id = $${values.length + 1}`,
       [...values, id]
     );
 
-    // ✅ Sync wallet status if user status changed
+    // 🔁 Sync wallet status if needed
     if (req.body.status === "suspended" || req.body.status === "active") {
       await pool.query(
         `UPDATE wallets SET status = $1 WHERE user_id = $2`,
@@ -127,11 +141,8 @@ router.patch("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    // ✅ Archive wallet before deleting user
     await pool.query(`UPDATE wallets SET status = 'archived' WHERE user_id = $1`, [id]);
-
     await pool.query("DELETE FROM users WHERE id = $1", [id]);
-
     res.json({ message: "User deleted" });
 
   } catch (err) {
