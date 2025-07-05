@@ -10,11 +10,7 @@ router.post("/", async (req, res) => {
   const { email, password, first_name, last_name, role, on_assistance, vendor } = req.body;
 
   try {
-    // 🔒 Email uniqueness check
-    const existing = await pool.query(`SELECT id FROM users WHERE email = $1`, [email]);
-    if (existing.rows.length > 0) {
-      return res.status(409).json({ message: "A user with that email already exists." });
-    }
+  
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
