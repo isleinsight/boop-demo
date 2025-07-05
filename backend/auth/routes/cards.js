@@ -114,4 +114,34 @@ router.get('/:uid', async (req, res) => {
   }
 });
 
+
+// ... your existing routes ...
+
+// ✅ NEW: Get card by wallet ID
+router.get("/", async (req, res) => {
+  const { wallet_id } = req.query;
+
+  if (!wallet_id) {
+    return res.status(400).json({ error: "Missing wallet_id" });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT * FROM cards WHERE wallet_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [wallet_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "No card found for this wallet" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("❌ Error fetching card by wallet_id:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
 module.exports = router;
