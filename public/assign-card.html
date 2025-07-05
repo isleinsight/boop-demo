@@ -201,6 +201,37 @@ const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWalle
 
   // Submit — Send ONLY the UID
   assignBtn.addEventListener("click", async () => {
+  const uid = cardUID.value.trim();
+  const admin = JSON.parse(localStorage.getItem("boopUser")); // ✅ Pull admin from localStorage
+
+  if (!uid) {
+    statusEl.textContent = "Please generate or scan a UID.";
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid,
+        wallet_id: selectedUser?.wallet_id,
+        issued_by: admin?.id,              // ✅ Set issued_by properly
+        type: "spending"                   // ✅ Explicit type for this page
+      })
+    });
+
+    if (!res.ok) throw new Error("Failed to assign");
+
+    statusEl.textContent = "✅ Card assigned successfully!";
+    cardUID.value = "";
+    userSearch.value = "";
+    selectedUser = null;
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "❌ Failed to assign card.";
+  }
+});
     const uid = cardUID.value.trim();
 
     if (!uid) {
