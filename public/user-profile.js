@@ -53,26 +53,24 @@ document.addEventListener("DOMContentLoaded", () => {
         <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
         <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
 
-        <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green'}">${user.status}</span></div>
+        <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
 
         <div><span class="label">Role</span><span class="value">${user.role}</span></div>
 
         ${walletHTML}
       `;
 
-      // ✅ Re-add the Actions dropdown
       const dropdown = document.createElement("select");
       dropdown.innerHTML = `
         <option value="">Actions</option>
-        <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">
-          ${user.status === "suspended" ? "Unsuspend" : "Suspend"}
-        </option>
+        <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">${user.status === "suspended" ? "Unsuspend" : "Suspend"}</option>
         <option value="signout">Force Sign-out</option>
         <option value="delete">Delete</option>
       `;
       dropdown.addEventListener("change", async () => {
         const action = dropdown.value;
         dropdown.value = "";
+
         if (action === "delete") {
           const confirmDelete = prompt("Type DELETE to confirm.");
           if (confirmDelete !== "DELETE") return;
@@ -80,13 +78,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
           if (action === "suspend" || action === "unsuspend") {
-            const newStatus = action === "suspend" ? "suspended" : "active";
+            const status = action === "suspend" ? "suspended" : "active";
             await fetch(`/api/users/${currentUserId}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: newStatus })
+              body: JSON.stringify({ status })
             });
-            alert(`User ${newStatus}.`);
+            alert(`User ${status}.`);
           } else if (action === "signout") {
             await fetch(`/api/users/${currentUserId}/signout`, { method: "POST" });
             alert("Sign-out requested.");
@@ -96,13 +94,13 @@ document.addEventListener("DOMContentLoaded", () => {
             window.location.href = "view-users.html";
             return;
           }
+
           await loadUserProfile();
         } catch (err) {
-          console.error("❌ Failed to perform action:", err);
-          alert("Failed to perform user action.");
+          console.error("❌ Action failed:", err);
+          alert("Action failed.");
         }
       });
-
       userInfo.appendChild(dropdown);
 
       if (user.role === "parent") {
