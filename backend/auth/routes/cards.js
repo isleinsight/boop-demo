@@ -4,7 +4,6 @@ const express = require("express");
 const router = express.Router();
 const db = require("../../db");
 
-// 🚨 Card Type Rules
 const validTypes = ["bus", "spending", "assistance"];
 const exclusiveGroup = ["spending", "assistance"];
 
@@ -25,7 +24,6 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    // 🔍 Check for existing cards of the same or conflicting type
     const existing = await db.query(
       `SELECT * FROM cards WHERE wallet_id = $1`,
       [wallet_id]
@@ -37,14 +35,12 @@ router.post("/", async (req, res) => {
         return res.status(409).json({ error: `This wallet already has a ${type} card.` });
       }
 
-      // If adding a spending or assistance card, block the other
       if (exclusiveGroup.includes(card.type) && exclusiveGroup.includes(type)) {
         console.warn("⚠️ Conflict between spending and assistance cards");
         return res.status(409).json({ error: `Cannot assign both spending and assistance cards.` });
       }
     }
 
-    // ✅ Insert new card
     const result = await db.query(
       `INSERT INTO cards (uid, wallet_id, type, status, issued_by)
        VALUES ($1, $2, $3, $4, $5)
@@ -61,8 +57,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-
-// Fetch card info by UID
+// Get full card info by UID
 router.get('/:uid', async (req, res) => {
   const { uid } = req.params;
 
@@ -79,23 +74,18 @@ router.get('/:uid', async (req, res) => {
     const card = result.rows[0];
     const now = new Date();
     const expiresAt = new Date(card.expires_at);
-
     const msDiff = expiresAt - now;
     const daysRemaining = Math.ceil(msDiff / (1000 * 60 * 60 * 24));
     const expired = msDiff <= 0;
 
-    let expiresInText = '';
-    if (expired) {
-      const daysAgo = Math.abs(daysRemaining);
-      expiresInText = daysAgo === 0 ? 'Expired today' :
-                      daysAgo === 1 ? 'Expired 1 day ago' :
-                      `Expired ${daysAgo} days ago`;
-    } else {
-      expiresInText = daysRemaining === 0 ? 'Last day' :
-                      daysRemaining === 1 ? '1 day left' :
-                      daysRemaining < 7 ? `${daysRemaining} days left` :
-                      `${Math.ceil(daysRemaining / 7)} weeks left`;
-    }
+    let expiresInText = expired
+      ? (Math.abs(daysRemaining) === 0 ? 'Expired today' :
+         Math.abs(daysRemaining) === 1 ? 'Expired 1 day ago' :
+         `Expired ${Math.abs(daysRemaining)} days ago`)
+      : (daysRemaining === 0 ? 'Last day' :
+         daysRemaining === 1 ? '1 day left' :
+         daysRemaining < 7 ? `${daysRemaining} days left` :
+         `${Math.ceil(daysRemaining / 7)} weeks left`);
 
     res.json({
       uid: card.uid,
@@ -114,10 +104,7 @@ router.get('/:uid', async (req, res) => {
   }
 });
 
-
-// ... your existing routes ...
-
-// ✅ NEW: Get card by wallet ID
+// ✅ Get all cards by wallet_id
 router.get("/", async (req, res) => {
   const { wallet_id } = req.query;
 
@@ -127,21 +114,15 @@ router.get("/", async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT * FROM cards WHERE wallet_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      `SELECT * FROM cards WHERE wallet_id = $1 ORDER BY issued_at DESC`,
       [wallet_id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "No card found for this wallet" });
-    }
-
-    res.json(result.rows[0]);
+    res.json(result.rows);
   } catch (err) {
     console.error("❌ Error fetching card by wallet_id:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
 
 module.exports = router;
