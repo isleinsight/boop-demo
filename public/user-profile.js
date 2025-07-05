@@ -9,13 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const parentNameEl = document.getElementById("parentName");
   const parentEmailEl = document.getElementById("parentEmail");
   const assignedStudentsList = document.getElementById("assignedStudentsList");
-  const assignStudentForm = document.getElementById("assignStudentForm");
-  const studentSearchInput = document.getElementById("studentSearchInput");
-  const studentSearchBtn = document.getElementById("studentSearchBtn");
-  const studentSearchResults = document.getElementById("studentSearchResults");
-  const assignSelectedBtn = document.getElementById("assignSelectedStudentsBtn");
-  const nextPageBtn = document.getElementById("nextStudentPageBtn");
-  const prevPageBtn = document.getElementById("prevStudentPageBtn");
 
   let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
   if (!currentUserId) {
@@ -24,8 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   let currentUserData = null;
-  let editFirstName, editLastName, editEmail, editRole;
-  let currentPage = 1;
 
   async function fetchJSON(url, options = {}) {
     const res = await fetch(url, options);
@@ -38,19 +29,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
       currentUserData = user;
 
-      let walletInfo = "";
+      let walletHTML = "";
       try {
-        const walletRes = await fetchJSON(`/api/wallets/user/${user.id}`);
-        if (walletRes && walletRes.id) {
-          walletInfo += `<div><span class="label">Wallet ID</span><span class="value">${walletRes.id}</span></div>`;
+        const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
+        if (wallet?.id) {
+          walletHTML += `<div><span class="label">Wallet ID</span><span class="value">${wallet.id}</span></div>`;
 
-          const cardsRes = await fetchJSON(`/api/cards?wallet_id=${walletRes.id}`);
-          if (cardsRes.length > 0) {
-            walletInfo += `<div><span class="label">Card Number</span><span class="value">${cardsRes[0].uid}</span></div>`;
+          const cards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
+          if (Array.isArray(cards) && cards.length > 0) {
+            walletHTML += `<div><span class="label">Card Number</span><span class="value">${cards[0].uid}</span></div>`;
           }
         }
       } catch (err) {
-        console.warn("No wallet or card found:", err.message);
+        console.warn("No wallet/card info:", err.message);
       }
 
       userInfo.innerHTML = `
@@ -63,36 +54,12 @@ document.addEventListener("DOMContentLoaded", () => {
         <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
         <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
 
-        <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:${user.status === 'suspended' ? 'red' : 'green'}">${user.status}</span></div>
+        <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
 
-        <div><span class="label">Role</span><span class="value" id="viewRole">${user.role}</span></div>
+        <div><span class="label">Role</span><span class="value">${user.role}</span></div>
 
-        ${walletInfo}
+        ${walletHTML}
       `;
-
-      const dropdown = document.createElement("select");
-      dropdown.innerHTML = `
-        <option value="">Actions</option>
-        <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">${user.status === "suspended" ? "Unsuspend" : "Suspend"}</option>
-        <option value="signout">Force Sign-out</option>
-        <option value="delete">Delete</option>
-      `;
-      dropdown.addEventListener("change", async () => {
-        const action = dropdown.value;
-        dropdown.value = "";
-        if (action === "delete") {
-          const confirmDelete = prompt("Type DELETE to confirm.");
-          if (confirmDelete !== "DELETE") return;
-        }
-        await performAction(action);
-      });
-      userInfo.appendChild(dropdown);
-
-      editFirstName = document.getElementById("editFirstName");
-      editLastName = document.getElementById("editLastName");
-      editEmail = document.getElementById("editEmail");
-      editRole = document.getElementById("editRole");
-      editRole.value = user.role;
 
       if (user.role === "parent") {
         addStudentBtn.style.display = "inline-block";
@@ -103,68 +70,62 @@ document.addEventListener("DOMContentLoaded", () => {
       if (user.role === "student" && user.parent_id) {
         parentSection.style.display = "block";
         const parent = await fetchJSON(`/api/users/${user.parent_id}`);
-        parentNameEl.innerHTML = `<a href="user-profile.html">${parent.first_name} ${parent.last_name}</a>`;
+        parentNameEl.innerHTML = `<a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">${parent.first_name} ${parent.last_name}</a>`;
         parentEmailEl.textContent = parent.email;
       }
-    } catch (e) {
+
+      document.getElementById("editProfileBtn").onclick = () => {
+        document.getElementById("viewFirstName").style.display = "none";
+        document.getElementById("viewLastName").style.display = "none";
+        document.getElementById("viewEmail").style.display = "none";
+
+        document.getElementById("editFirstName").style.display = "block";
+        document.getElementById("editLastName").style.display = "block";
+        document.getElementById("editEmail").style.display = "block";
+
+        saveBtn.style.display = "inline-block";
+      };
+
+      document.getElementById("saveProfileBtn").onclick = async () => {
+        await fetch(`/api/users/${currentUserId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            first_name: document.getElementById("editFirstName").value,
+            last_name: document.getElementById("editLastName").value,
+            email: document.getElementById("editEmail").value
+          })
+        });
+        alert("Profile updated.");
+        loadUserProfile();
+      };
+
+    } catch (err) {
+      console.error("❌ Failed to load user:", err);
       alert("Failed to load user.");
-      console.error(e);
       window.location.href = "view-users.html";
     }
   }
 
-  async function performAction(action) {
-    const endpoint = `/api/users/${currentUserId}`;
-    if (action === "delete") {
-      await fetch(endpoint, { method: "DELETE" });
-      alert("User deleted.");
-      window.location.href = "view-users.html";
-    } else if (action === "suspend" || action === "unsuspend") {
-      const status = action === "suspend" ? "suspended" : "active";
-      await fetch(endpoint, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
-      });
-      alert(`User ${status}.`);
-      await loadUserProfile();
-    } else if (action === "signout") {
-      await fetch(`/api/users/${currentUserId}/signout`, { method: "POST" });
-      alert("Sign-out request sent.");
-    }
+  async function loadAssignedStudents(parentId) {
+    const students = await fetchJSON(`/api/users?parentId=${parentId}`);
+    assignedStudentsList.innerHTML = students.map(s => `
+      <div>
+        <span class="label">Name</span>
+        <span class="value"><a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${s.id}')">${s.first_name} ${s.last_name}</a></span>
+        <button onclick="removeStudent('${s.id}')">Remove</button>
+      </div>
+    `).join('');
   }
 
-  editBtn.addEventListener("click", () => {
-    document.getElementById("viewFirstName").style.display = "none";
-    document.getElementById("viewLastName").style.display = "none";
-    document.getElementById("viewEmail").style.display = "none";
-    document.getElementById("viewRole").style.display = "none";
-
-    editFirstName.style.display = "block";
-    editLastName.style.display = "block";
-    editEmail.style.display = "block";
-    editRole.style.display = "block";
-    saveBtn.style.display = "inline-block";
-  });
-
-  saveBtn.addEventListener("click", async () => {
-    try {
-      await fetch(`/api/users/${currentUserId}`, {
-  method: "PATCH",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    first_name: editFirstName.value,
-    last_name: editLastName.value,
-    email: editEmail.value
-  })
-});
-      alert("Profile updated.");
-      await loadUserProfile(); // Re-fetch user to reflect changes
-    } catch (e) {
-      alert("Failed to update user.");
-      console.error(e);
-    }
-  });
+  window.removeStudent = async function (id) {
+    await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parent_id: null })
+    });
+    loadAssignedStudents(currentUserId);
+  };
 
   logoutBtn?.addEventListener("click", () => {
     fetch("/api/logout", { method: "POST" }).then(() => {
