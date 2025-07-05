@@ -65,15 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <div><span class="label">Status</span><span class="value" id="viewStatus" style="color:${user.status === 'suspended' ? 'red' : 'green'}">${user.status}</span></div>
 
-        <div><span class="label">Role</span><span class="value" id="viewRole">${user.role}</span>
-        <select id="editRole" style="display:none; width: 100%;">
-          <option value="cardholder">Cardholder</option>
-          <option value="parent">Parent</option>
-          <option value="vendor">Vendor</option>
-          <option value="senior">Senior</option>
-          <option value="admin">Admin</option>
-          <option value="student">Student</option>
-        </select></div>
+        <div><span class="label">Role</span><span class="value" id="viewRole">${user.role}</span></div>
 
         ${walletInfo}
       `;
@@ -158,15 +150,14 @@ document.addEventListener("DOMContentLoaded", () => {
   saveBtn.addEventListener("click", async () => {
     try {
       await fetch(`/api/users/${currentUserId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          first_name: editFirstName.value,
-          last_name: editLastName.value,
-          email: editEmail.value,
-          role: editRole.value
-        })
-      });
+  method: "PATCH",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    first_name: editFirstName.value,
+    last_name: editLastName.value,
+    email: editEmail.value
+  })
+});
       alert("Profile updated.");
       await loadUserProfile(); // Re-fetch user to reflect changes
     } catch (e) {
