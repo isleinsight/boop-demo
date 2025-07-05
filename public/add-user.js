@@ -20,19 +20,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusDiv = document.getElementById("formStatus");
   const logoutBtn = document.getElementById("logoutBtn");
 
-  // 🔧 Helper: update visibility based on role
   const updateConditionalFields = () => {
     const role = roleSelect.value;
-
     vendorFields.style.display = role === "vendor" ? "block" : "none";
     assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
   };
 
-  // 🔁 Attach logic to dropdown changes and call on load
   roleSelect.addEventListener("change", updateConditionalFields);
   updateConditionalFields();
 
-  // 🧼 Clear session and logout
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("boopUser");
@@ -41,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 🚀 Handle form submit
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     statusDiv.textContent = "Creating user...";
@@ -60,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const payload = {
+    const userPayload = {
       email,
       password,
       first_name: firstName,
@@ -69,43 +64,51 @@ document.addEventListener("DOMContentLoaded", () => {
       on_assistance: role === "cardholder" ? onAssistance : false,
     };
 
-    if (role === "vendor") {
-      payload.vendor = {
-        name: businessNameInput.value.trim(),
-        phone: vendorPhoneInput.value.trim(),
-        category: vendorCategoryInput.value.trim(),
-        approved: vendorApprovedSelect.value === "true",
-      };
-    }
-
     try {
-      const response = await fetch("/api/users", {
+      const resUser = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(userPayload),
       });
 
-      const resultText = await response.text();
-      let result;
-      try {
-        result = JSON.parse(resultText);
-      } catch (err) {
-        console.error("Could not parse JSON:", resultText);
-        throw new Error("Server returned invalid response.");
+      const userResult = await resUser.json();
+
+      if (!resUser.ok) {
+        throw new Error(userResult.message || "Failed to create user");
       }
 
-      if (!response.ok) {
-        console.error("Server error:", result);
-        throw new Error(result.message || "Something went wrong.");
+      const newUserId = userResult.id;
+
+      // 🧩 Optional: Handle vendor info separately
+      if (role === "vendor") {
+        const vendorPayload = {
+          user_id: newUserId,
+          business_name: businessNameInput.value.trim(),
+          phone: vendorPhoneInput.value.trim(),
+          category: vendorCategoryInput.value.trim(),
+          approved: vendorApprovedSelect.value === "true"
+        };
+
+        const resVendor = await fetch("/api/vendors", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(vendorPayload)
+        });
+
+        const vendorResult = await resVendor.json();
+
+        if (!resVendor.ok) {
+          throw new Error(vendorResult.message || "Vendor info failed to save");
+        }
       }
 
-      statusDiv.textContent = "User created successfully!";
+      statusDiv.textContent = "✅ User created successfully!";
       statusDiv.style.color = "green";
-
       form.reset();
-      updateConditionalFields(); // hide any visible dynamic fields
+      updateConditionalFields();
+
     } catch (err) {
-      console.error("Error creating user:", err);
+      console.error("❌ Error creating user or vendor:", err);
       statusDiv.textContent = err.message;
       statusDiv.style.color = "red";
     }
