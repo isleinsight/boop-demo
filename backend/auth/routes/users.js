@@ -5,32 +5,42 @@ const bcrypt = require("bcrypt");
 
 const rolesWithWallet = ["cardholder", "student", "senior"];
 
-// ✅ POST /api/users
+// ✅ POST /api/users — updated to store wallet_id in users table
 router.post("/", async (req, res) => {
   const { email, password, first_name, last_name, role, on_assistance, vendor } = req.body;
 
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const result = await pool.query(
+    const userResult = await pool.query(
       `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [email, hashedPassword, first_name, last_name, role, on_assistance]
     );
 
-    const user = result.rows[0];
+    const user = userResult.rows[0];
 
-    // 🎒 Create wallet (if eligible)
+    // 🎒 Create wallet and update user's wallet_id if eligible
     if (rolesWithWallet.includes(role)) {
-      await pool.query(
+      const walletResult = await pool.query(
         `INSERT INTO wallets (user_id, id, status)
-         VALUES ($1, gen_random_uuid(), 'active')`,
+         VALUES ($1, gen_random_uuid(), 'active')
+         RETURNING id`,
         [user.id]
       );
+
+      const walletId = walletResult.rows[0].id;
+
+      await pool.query(
+        `UPDATE users SET wallet_id = $1 WHERE id = $2`,
+        [walletId, user.id]
+      );
+
+      user.wallet_id = walletId;
     }
 
-    // 🏪 Vendor-specific setup
+    // 🏪 Vendor setup (wallet separate)
     if (role === "vendor" && vendor) {
       await pool.query(
         `INSERT INTO vendors (id, business_name, phone, category, approved, wallet_id)
@@ -52,13 +62,11 @@ router.get("/", async (req, res) => {
   const { parentId, role, search, page = 1, eligibleOnly, hasWallet } = req.query;
 
   try {
-    // 🧸 Load children by parent
     if (parentId) {
       const result = await pool.query("SELECT * FROM users WHERE parent_id = $1", [parentId]);
       return res.json(result.rows);
     }
 
-    // 🔎 Filtered search
     if (search !== undefined) {
       const perPage = 10;
       const offset = (parseInt(page) - 1) * perPage;
@@ -87,7 +95,6 @@ router.get("/", async (req, res) => {
       return res.json(result.rows);
     }
 
-    // 🧺 Default: return all users
     const result = await pool.query("SELECT * FROM users ORDER BY first_name ASC");
     res.json(result.rows);
 
@@ -121,7 +128,6 @@ router.patch("/:id", async (req, res) => {
       [...values, id]
     );
 
-    // 🔁 Sync wallet status if needed
     if (req.body.status === "suspended" || req.body.status === "active") {
       await pool.query(
         `UPDATE wallets SET status = $1 WHERE user_id = $2`,
