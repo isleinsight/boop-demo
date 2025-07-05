@@ -65,6 +65,15 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
+      // 🛡 Check if user already exists
+      const checkRes = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
+      if (checkRes.ok) {
+        statusDiv.textContent = "⚠️ A user with this email already exists.";
+        statusDiv.style.color = "red";
+        return;
+      }
+
+      // 👤 Create user
       const resUser = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,14 +81,13 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const userResult = await resUser.json();
-
       if (!resUser.ok) {
         throw new Error(userResult.message || "Failed to create user");
       }
 
       const newUserId = userResult.id;
 
-      // 🧩 Optional: Handle vendor info separately
+      // 🧩 Save vendor info if applicable
       if (role === "vendor") {
         const vendorPayload = {
           user_id: newUserId,
@@ -96,9 +104,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         const vendorResult = await resVendor.json();
-
         if (!resVendor.ok) {
-          throw new Error(vendorResult.message || "Vendor info failed to save");
+          throw new Error(vendorResult.message || "Vendor info failed to save.");
         }
       }
 
