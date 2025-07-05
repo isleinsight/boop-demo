@@ -114,12 +114,6 @@
     <input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
     <div id="userSuggestions" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;"></div>
 
-    <label for="cardType">Card Type</label>
-    <select id="cardType">
-      <option value="bus">Assistance</option>
-      <option value="spending">Spending</option>
-    </select>
-
     <button id="assignBtn">Assign Card</button>
 
     <div class="status" id="status"></div>
@@ -168,7 +162,7 @@
     }
 
     try {
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
+const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&eligibleOnly=true`);
       const users = await res.json();
 
       if (!users.length) {
