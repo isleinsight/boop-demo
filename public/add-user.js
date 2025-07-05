@@ -1,60 +1,113 @@
-// backend/auth/routes/users.js
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("add-user.js loaded");
 
-const express = require("express");
-const router = express.Router();
-const db = require("../../db");
-const bcrypt = require("bcrypt");
+  const form = document.getElementById("addUserForm");
 
-// Helper to check if wallet is needed
-const shouldHaveWallet = (role) => {
-  return ["cardholder", "student"].includes(role);
-};
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+  const firstNameInput = document.getElementById("firstName");
+  const lastNameInput = document.getElementById("lastName");
+  const roleSelect = document.getElementById("role");
+  const onAssistanceCheckbox = document.getElementById("onAssistance");
 
-// POST /api/users
-router.post("/", async (req, res) => {
-  const { email, password, first_name, last_name, role, on_assistance = false, vendor } = req.body;
+  const assistanceContainer = document.getElementById("assistanceContainer");
+  const businessNameInput = document.getElementById("businessName");
+  const vendorPhoneInput = document.getElementById("vendorPhone");
+  const vendorCategoryInput = document.getElementById("vendorCategory");
+  const vendorApprovedSelect = document.getElementById("vendorApproved");
 
-  if (!email || !password || !first_name || !last_name || !role) {
-    return res.status(400).json({ error: "Missing required user fields" });
+  const vendorFields = document.getElementById("vendorFields");
+  const statusDiv = document.getElementById("formStatus");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  // 🔧 Helper: update visibility based on role
+  const updateConditionalFields = () => {
+    const role = roleSelect.value;
+
+    vendorFields.style.display = role === "vendor" ? "block" : "none";
+    assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
+  };
+
+  // 🔁 Attach logic to dropdown changes and call on load
+  roleSelect.addEventListener("change", updateConditionalFields);
+  updateConditionalFields();
+
+  // 🧼 Clear session and logout
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("boopUser");
+      localStorage.removeItem("boop_jwt");
+      window.location.href = "login.html";
+    });
   }
 
-  try {
-    // ✅ 1. Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+  // 🚀 Handle form submit
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    statusDiv.textContent = "Creating user...";
+    statusDiv.style.color = "black";
 
-    // ✅ 2. Create user
-    const userResult = await db.query(
-      `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id`,
-      [email, hashedPassword, first_name, last_name, role, on_assistance]
-    );
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const role = roleSelect.value;
+    const onAssistance = onAssistanceCheckbox.checked;
 
-    const userId = userResult.rows[0].id;
-
-    // ✅ 3. If role is vendor, insert vendor record
-    if (role === "vendor" && vendor) {
-      await db.query(
-        `INSERT INTO vendors (user_id, name, phone, category, approved)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [userId, vendor.name, vendor.phone, vendor.category, vendor.approved]
-      );
+    if (!email || !password || password.length < 6 || !firstName || !lastName || !role) {
+      statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
+      statusDiv.style.color = "red";
+      return;
     }
 
-    // ✅ 4. If role should have wallet, create one
-    if (shouldHaveWallet(role)) {
-      await db.query(
-        `INSERT INTO wallets (user_id) VALUES ($1)`,
-        [userId]
-      );
+    const payload = {
+      email,
+      password,
+      first_name: firstName,
+      last_name: lastName,
+      role,
+      on_assistance: role === "cardholder" ? onAssistance : false,
+    };
+
+    if (role === "vendor") {
+      payload.vendor = {
+        name: businessNameInput.value.trim(),
+        phone: vendorPhoneInput.value.trim(),
+        category: vendorCategoryInput.value.trim(),
+        approved: vendorApprovedSelect.value === "true",
+      };
     }
 
-    res.status(201).json({ message: "User (and wallet if applicable) created successfully" });
+    try {
+      const response = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-  } catch (err) {
-    console.error("❌ Error creating user:", err);
-    res.status(500).json({ error: "Failed to create user" });
-  }
+      const resultText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(resultText);
+      } catch (err) {
+        console.error("Could not parse JSON:", resultText);
+        throw new Error("Server returned invalid response.");
+      }
+
+      if (!response.ok) {
+        console.error("Server error:", result);
+        throw new Error(result.message || "Something went wrong.");
+      }
+
+      statusDiv.textContent = "User created successfully!";
+      statusDiv.style.color = "green";
+
+      form.reset();
+      updateConditionalFields(); // hide any visible dynamic fields
+    } catch (err) {
+      console.error("Error creating user:", err);
+      statusDiv.textContent = err.message;
+      statusDiv.style.color = "red";
+    }
+  });
 });
-
-module.exports = router;
