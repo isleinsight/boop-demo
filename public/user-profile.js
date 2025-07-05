@@ -44,10 +44,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const walletRes = await fetchJSON(`/api/wallets/user/${user.id}`);
         if (walletRes && walletRes.id) {
           walletInfo += `<div><span class="label">Wallet ID</span><span class="value">${walletRes.id}</span></div>`;
-
           const cardsRes = await fetchJSON(`/api/cards?wallet_id=${walletRes.id}`);
-          if (cardsRes && cardsRes.uid) {
-            walletInfo += `<div><span class="label">Card Number</span><span class="value">${cardsRes.uid}</span></div>`;
+          if (cardsRes.length > 0) {
+            walletInfo += `<div><span class="label">Card Number</span><span class="value">${cardsRes[0].uid}</span></div>`;
           }
         }
       } catch (err) {
@@ -97,11 +96,40 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       userInfo.appendChild(dropdown);
 
+      // 🔁 Re-bind editable input refs after innerHTML overwrite
       editFirstName = document.getElementById("editFirstName");
       editLastName = document.getElementById("editLastName");
       editEmail = document.getElementById("editEmail");
       editRole = document.getElementById("editRole");
       editRole.value = user.role;
+
+      editBtn.onclick = () => {
+        document.getElementById("viewFirstName").style.display = "none";
+        document.getElementById("viewLastName").style.display = "none";
+        document.getElementById("viewEmail").style.display = "none";
+        document.getElementById("viewRole").style.display = "none";
+
+        editFirstName.style.display = "block";
+        editLastName.style.display = "block";
+        editEmail.style.display = "block";
+        editRole.style.display = "block";
+        saveBtn.style.display = "inline-block";
+      };
+
+      saveBtn.onclick = async () => {
+        await fetch(`/api/users/${currentUserId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            first_name: editFirstName.value,
+            last_name: editLastName.value,
+            email: editEmail.value,
+            role: editRole.value
+          })
+        });
+        alert("Profile updated.");
+        location.reload();
+      };
 
       if (user.role === "parent") {
         addStudentBtn.style.display = "inline-block";
@@ -121,6 +149,88 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location.href = "view-users.html";
     }
   }
+
+  async function performAction(action) {
+    const endpoint = `/api/users/${currentUserId}`;
+    if (action === "delete") {
+      await fetch(endpoint, { method: "DELETE" });
+      alert("User deleted.");
+      window.location.href = "view-users.html";
+    } else if (action === "suspend" || action === "unsuspend") {
+      const status = action === "suspend" ? "suspended" : "active";
+      await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      alert(`User ${status}.`);
+      await loadUserProfile();
+    } else if (action === "signout") {
+      await fetch(`/api/users/${currentUserId}/signout`, { method: "POST" });
+      alert("Sign-out request sent.");
+    }
+  }
+
+  async function loadAssignedStudents(parentId) {
+    const students = await fetchJSON(`/api/users?parentId=${parentId}`);
+    assignedStudentsList.innerHTML = students.length === 0
+      ? "<div>No assigned students found.</div>"
+      : "";
+
+    students.forEach(s => {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div><span class="label">Name</span>
+        <span class="value"><a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${s.id}')">${s.first_name} ${s.last_name}</a></span></div>
+        <button class="student-remove-btn" data-id="${s.id}">Remove</button>
+      `;
+      assignedStudentsList.appendChild(div);
+    });
+
+    document.querySelectorAll(".student-remove-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const sid = btn.dataset.id;
+        await fetch(`/api/users/${sid}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ parent_id: null })
+        });
+        loadAssignedStudents(parentId);
+      });
+    });
+  }
+
+  assignSelectedBtn.addEventListener("click", async () => {
+    const selected = studentSearchResults.querySelectorAll("input:checked");
+    if (!selected.length) return alert("No students selected.");
+    for (const cb of selected) {
+      await fetch(`/api/users/${cb.value}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parent_id: currentUserId })
+      });
+    }
+    alert("Students assigned.");
+    loadAssignedStudents(currentUserId);
+    searchStudents();
+  });
+
+  addStudentBtn.addEventListener("click", () => {
+    assignStudentForm.style.display = "block";
+    assignStudentForm.scrollIntoView({ behavior: "smooth" });
+    searchStudents();
+  });
+
+  studentSearchBtn.addEventListener("click", () => {
+    currentPage = 1;
+    searchStudents();
+  });
+
+  logoutBtn?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      window.location.href = "index.html";
+    });
+  });
 
   loadUserProfile();
 });
