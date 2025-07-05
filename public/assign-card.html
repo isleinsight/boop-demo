@@ -217,6 +217,7 @@
         if (!res.ok) throw new Error("Failed to assign");
 
         statusEl.textContent = "✅ Card assigned successfully!";
+        statusEl.style.color = "green";
         cardUID.value = "";
         userSearch.value = "";
         selectedUser = null;
