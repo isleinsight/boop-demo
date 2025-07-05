@@ -1,99 +1,64 @@
-// backend/auth/routes/vendors.js
+// backend/auth/routes/vendor.js
 
 const express = require("express");
 const router = express.Router();
 const db = require("../../db");
 
-// ✅ GET all vendors
+// 🧠 Assumes the user already exists and has role 'vendor'
+router.post("/", async (req, res) => {
+  const {
+    user_id,        // 👈 ID of the user that this vendor metadata belongs to
+    business_name,
+    category,
+    phone,
+    approved = false
+  } = req.body;
+
+  // 🔐 Validate required fields
+  if (!user_id || !business_name || !category) {
+    return res.status(400).json({ error: "Missing required fields: user_id, business_name, or category" });
+  }
+
+  try {
+    // 🔎 Confirm the user exists and is a vendor
+    const userCheck = await db.query(
+      `SELECT * FROM users WHERE id = $1 AND role = 'vendor'`,
+      [user_id]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Vendor user not found or not a vendor role" });
+    }
+
+    // ✅ Insert vendor profile metadata
+    const result = await db.query(
+      `INSERT INTO vendors (user_id, business_name, category, phone, approved)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [user_id, business_name, category, phone, approved]
+    );
+
+    res.status(201).json(result.rows[0]);
+
+  } catch (err) {
+    console.error("❌ Vendor creation failed:", err);
+    res.status(500).json({ error: "Failed to create vendor profile" });
+  }
+});
+
+
+// GET: All vendors
 router.get("/", async (req, res) => {
   try {
-    const result = await db.query("SELECT * FROM vendors ORDER BY business_name ASC");
+    const result = await db.query(
+      `SELECT v.*, u.email, u.first_name, u.last_name
+       FROM vendors v
+       JOIN users u ON v.user_id = u.id`
+    );
     res.json(result.rows);
   } catch (err) {
-    console.error("❌ Error fetching vendors:", err);
-    res.status(500).json({ error: "Failed to fetch vendors" });
-  }
-});
-
-// ✅ GET specific vendor by user/vendor ID
-router.get("/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await db.query("SELECT * FROM vendors WHERE id = $1", [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Vendor not found" });
-    }
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("❌ Error fetching vendor:", err);
-    res.status(500).json({ error: "Failed to fetch vendor" });
-  }
-});
-
-// ✅ CREATE a new vendor
-router.post("/", async (req, res) => {
-  const { id, business_name, phone, category, approved = false } = req.body;
-
-  if (!id || !business_name || !phone || !category) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  try {
-    const walletId = crypto.randomUUID();
-
-    await db.query(
-      `INSERT INTO vendors (id, business_name, phone, category, approved, wallet_id)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [id, business_name, phone, category, approved, walletId]
-    );
-
-    res.status(201).json({ message: "Vendor created", wallet_id: walletId });
-
-  } catch (err) {
-    console.error("❌ Error creating vendor:", err);
-    res.status(500).json({ error: "Failed to create vendor" });
-  }
-});
-
-// ✅ UPDATE vendor
-router.patch("/:id", async (req, res) => {
-  const { id } = req.params;
-  const fields = ["business_name", "phone", "category", "approved"];
-  const updates = [];
-  const values = [];
-
-  fields.forEach(field => {
-    if (req.body[field] !== undefined) {
-      updates.push(`${field} = $${updates.length + 1}`);
-      values.push(req.body[field]);
-    }
-  });
-
-  if (updates.length === 0) {
-    return res.status(400).json({ error: "No fields to update" });
-  }
-
-  try {
-    await db.query(
-      `UPDATE vendors SET ${updates.join(", ")} WHERE id = $${values.length + 1}`,
-      [...values, id]
-    );
-    res.json({ message: "Vendor updated" });
-  } catch (err) {
-    console.error("❌ Error updating vendor:", err);
-    res.status(500).json({ error: "Update failed" });
-  }
-});
-
-// ✅ DELETE (soft-delete or archive logic optional)
-router.delete("/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    await db.query("DELETE FROM vendors WHERE id = $1", [id]);
-    res.json({ message: "Vendor deleted" });
-  } catch (err) {
-    console.error("❌ Error deleting vendor:", err);
-    res.status(500).json({ error: "Delete failed" });
+    console.error("❌ Failed to fetch vendors:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
