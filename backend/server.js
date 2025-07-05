@@ -23,11 +23,14 @@ app.use('/auth', authRoutes); // routes like /auth/login, /auth/signup
 // ✅ API routes
 const usersRoute = require('./auth/routes/users');
 const cardsRoute = require('./auth/routes/cards');
-const walletRoutes = require('./auth/routes/wallets'); // ✅ NEW: Wallet routes
+const walletRoutes = require('./auth/routes/wallets'); 
+const vendorsRoute = require('./auth/routes/vendors');
+
 
 app.use('/api/users', usersRoute);
 app.use('/api/cards', cardsRoute);
-app.use('/api/wallets', walletRoutes); // ✅ NEW: Mount wallet route
+app.use('/api/wallets', walletRoutes); 
+app.use('/api/vendors', vendorsRoute);
 
 // ✅ Health check
 app.get('/health', (req, res) => {
