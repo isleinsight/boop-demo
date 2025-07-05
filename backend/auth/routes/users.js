@@ -5,32 +5,38 @@ const bcrypt = require("bcrypt");
 
 const rolesWithWallet = ["cardholder", "student", "senior"];
 
-// ✅ POST /api/users — updated to store wallet_id in users table
+// ✅ POST /api/users — with email uniqueness check and wallet_id set
 router.post("/", async (req, res) => {
   const { email, password, first_name, last_name, role, on_assistance, vendor } = req.body;
 
   try {
+    // 🔒 Email uniqueness check
+    const existing = await pool.query(`SELECT id FROM users WHERE email = $1`, [email]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ message: "A user with that email already exists." });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const userResult = await pool.query(
+    const result = await pool.query(
       `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [email, hashedPassword, first_name, last_name, role, on_assistance]
     );
 
-    const user = userResult.rows[0];
+    const user = result.rows[0];
 
-    // 🎒 Create wallet and update user's wallet_id if eligible
+    // 🎒 Create wallet if applicable and store wallet_id in user
     if (rolesWithWallet.includes(role)) {
-      const walletResult = await pool.query(
+      const walletRes = await pool.query(
         `INSERT INTO wallets (user_id, id, status)
          VALUES ($1, gen_random_uuid(), 'active')
          RETURNING id`,
         [user.id]
       );
 
-      const walletId = walletResult.rows[0].id;
+      const walletId = walletRes.rows[0].id;
 
       await pool.query(
         `UPDATE users SET wallet_id = $1 WHERE id = $2`,
@@ -40,7 +46,7 @@ router.post("/", async (req, res) => {
       user.wallet_id = walletId;
     }
 
-    // 🏪 Vendor setup (wallet separate)
+    // 🏪 Vendor setup
     if (role === "vendor" && vendor) {
       await pool.query(
         `INSERT INTO vendors (id, business_name, phone, category, approved, wallet_id)
@@ -128,6 +134,7 @@ router.patch("/:id", async (req, res) => {
       [...values, id]
     );
 
+    // 🔁 Sync wallet status if needed
     if (req.body.status === "suspended" || req.body.status === "active") {
       await pool.query(
         `UPDATE wallets SET status = $1 WHERE user_id = $2`,
