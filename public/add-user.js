@@ -24,7 +24,7 @@ router.post("/", async (req, res) => {
 
     // ✅ 2. Create user
     const userResult = await db.query(
-      `INSERT INTO users (email, password, first_name, last_name, role, on_assistance)
+      `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
       [email, hashedPassword, first_name, last_name, role, on_assistance]
