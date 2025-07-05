@@ -1,119 +1,137 @@
-<script type="module" src="/path/to/auth-watch.js"></script>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>User Profile - BOOP Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="assets/styles.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
-</head>
-<body>
+document.addEventListener("DOMContentLoaded", () => {
+  const userInfo = document.getElementById("userInfo");
+  const editBtn = document.getElementById("editProfileBtn");
+  const saveBtn = document.getElementById("saveProfileBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const addStudentBtn = document.getElementById("addStudentBtn");
+  const parentSection = document.getElementById("parentSection");
+  const studentSection = document.getElementById("studentSection");
+  const parentNameEl = document.getElementById("parentName");
+  const parentEmailEl = document.getElementById("parentEmail");
+  const assignedStudentsList = document.getElementById("assignedStudentsList");
 
-   <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
+  let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
+  if (!currentUserId) {
+    alert("User ID not found.");
+    window.location.href = "view-users.html";
+  }
+
+  let currentUserData = null;
+
+  async function fetchJSON(url, options = {}) {
+    const res = await fetch(url, options);
+    if (!res.ok) throw new Error("Network error");
+    return await res.json();
+  }
+
+  async function loadUserProfile() {
+    try {
+      const user = await fetchJSON(`/api/users/${currentUserId}`);
+      currentUserData = user;
+
+      let walletHTML = "";
+      try {
+        const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
+        if (wallet?.id) {
+          walletHTML += `<div><span class="label">Wallet ID</span><span class="value">${wallet.id}</span></div>`;
+
+          const cards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
+          if (Array.isArray(cards) && cards.length > 0) {
+            walletHTML += `<div><span class="label">Card Number</span><span class="value">${cards[0].uid}</span></div>`;
+          }
+        }
+      } catch (err) {
+        console.warn("No wallet/card info:", err.message);
+      }
+
+      userInfo.innerHTML = `
+        <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
+        <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
+
+        <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
+        <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
+
+        <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
+        <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
+
+        <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
+
+        <div><span class="label">Role</span><span class="value">${user.role}</span></div>
+
+        ${walletHTML}
+      `;
+
+      if (user.role === "parent") {
+        addStudentBtn.style.display = "inline-block";
+        studentSection.style.display = "block";
+        loadAssignedStudents(user.id);
+      }
+
+      if (user.role === "student" && user.parent_id) {
+        parentSection.style.display = "block";
+        const parent = await fetchJSON(`/api/users/${user.parent_id}`);
+        parentNameEl.innerHTML = `<a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">${parent.first_name} ${parent.last_name}</a>`;
+        parentEmailEl.textContent = parent.email;
+      }
+
+      document.getElementById("editProfileBtn").onclick = () => {
+        document.getElementById("viewFirstName").style.display = "none";
+        document.getElementById("viewLastName").style.display = "none";
+        document.getElementById("viewEmail").style.display = "none";
+
+        document.getElementById("editFirstName").style.display = "block";
+        document.getElementById("editLastName").style.display = "block";
+        document.getElementById("editEmail").style.display = "block";
+
+        saveBtn.style.display = "inline-block";
+      };
+
+      document.getElementById("saveProfileBtn").onclick = async () => {
+        await fetch(`/api/users/${currentUserId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            first_name: document.getElementById("editFirstName").value,
+            last_name: document.getElementById("editLastName").value,
+            email: document.getElementById("editEmail").value
+          })
+        });
+        alert("Profile updated.");
+        loadUserProfile();
+      };
+
+    } catch (err) {
+      console.error("❌ Failed to load user:", err);
+      alert("Failed to load user.");
+      window.location.href = "view-users.html";
+    }
+  }
+
+  async function loadAssignedStudents(parentId) {
+    const students = await fetchJSON(`/api/users?parentId=${parentId}`);
+    assignedStudentsList.innerHTML = students.map(s => `
+      <div>
+        <span class="label">Name</span>
+        <span class="value"><a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${s.id}')">${s.first_name} ${s.last_name}</a></span>
+        <button onclick="removeStudent('${s.id}')">Remove</button>
       </div>
-      <div class="nav-right">
-        <a href="dashboard.html">Dashboard</a>
-        <a href="add-user.html">Add User</a>
-        <a href="manage-wallet.html">Manage Wallet</a>
-        <a href="assign-card.html">Assign Card</a>
-        <a href="assign-transit-card.html">Assign Card</a>
-        <a href="view-users.html">View Users</a>
-        <a href="view-reports.html">View Reports</a>
-        <a href="#" id="logoutBtn">Log Out</a>
-      </div>
-    </div>
-  </nav>
+    `).join('');
+  }
 
-  <div class="profile-container user-profile-page">
-    <a href="view-users.html" class="back-button">← Back to Users</a>
-    <h2>User Profile</h2>
+  window.removeStudent = async function (id) {
+    await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parent_id: null })
+    });
+    loadAssignedStudents(currentUserId);
+  };
 
-    <!-- Action buttons -->
-    <div style="margin-top: 20px; margin-bottom: 20px;">
-      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
-      <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
-      <button id="addStudentBtn" style="display:none; margin-left: 10px;" class="btnEdit">Add Student</button>    
-    </div>
+  logoutBtn?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      window.location.href = "index.html";
+    });
+  });
 
-    <!-- Injected profile fields go here -->
-    <div class="user-details-grid" id="userInfo"></div>
-
-    <!-- Parent info section -->
-    <div id="parentSection" style="display: none; margin-top: 40px;">
-      <div class="section-title">Parent</div>
-      <div class="user-details-grid">
-        <div>
-          <span class="label">Name</span>
-          <span class="value" id="parentName">-</span>
-        </div>
-        <div>
-          <span class="label">Email</span>
-          <span class="value" id="parentEmail">-</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Student section -->
-    <div id="studentSection" style="display: none;">
-      <div class="section-title">Assigned Students</div>
-      <div id="assignedStudentsList" class="user-details-grid" style="margin-bottom: 20px;"></div>
-
-      <!-- Student assignment form -->
-      <div id="assignStudentForm" style="display: none; margin-top: 20px;">
-        <div class="search-bar">
-          <input type="text" id="studentSearchInput" placeholder="Search students by name or email..." />
-          <button id="studentSearchBtn">Search</button>
-        </div>
-
-        <table style="width: 100%; margin-top: 15px;" id="studentResultsTable">
-          <thead>
-            <tr>
-              <th>First Name</th>
-              <th>Last Name</th>
-              <th>Email</th>
-              <th>Select</th>
-            </tr>
-          </thead>
-          <tbody id="studentSearchResults"></tbody>
-        </table>
-
-        <div id="paginationContainer" style="margin-top: 15px;">
-          <button id="prevStudentPageBtn" style="display: none;">Previous</button>
-          <button id="nextStudentPageBtn" style="display: none;">Next</button>
-        </div>
-
-        <div id="studentPaginationInfo" style="margin-top: 10px; font-weight: bold;"></div>
-
-        <button id="assignSelectedStudentsBtn" class="btnEdit" style="margin-top: 15px;">Save Selection</button>
-      </div>
-    </div>
-
-    <!-- Transaction History -->
-    <div class="section-title">Transaction History</div>
-    <table class="transaction-table" id="transactionTable">
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Amount</th>
-          <th>From</th>
-          <th>To</th>
-          <th>Category</th>
-          <th>Transaction ID</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Rows injected by JS -->
-      </tbody>
-    </table>
-  </div>
-
-  <!-- JS logic for loading and saving the profile -->
-  <script type="module" src="user-profile.js"></script>
-</body>
-</html>
+  loadUserProfile();
+});
