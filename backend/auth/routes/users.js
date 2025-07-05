@@ -1,12 +1,11 @@
+// backend/auth/routes/users.js
 const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
 const bcrypt = require("bcrypt");
 
-// 🔐 Roles that get wallets automatically
 const rolesWithWallet = ["cardholder", "student", "senior"];
 
-// ✅ POST /api/users — Create a new user
 router.post("/", async (req, res) => {
   const {
     email,
@@ -30,37 +29,44 @@ router.post("/", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const result = await pool.query(
-      \`INSERT INTO users (
-        email, password_hash, first_name, last_name, role, on_assistance
+    const userInsert = await pool.query(
+      `INSERT INTO users (
+        email,
+        password_hash,
+        first_name,
+        last_name,
+        role,
+        on_assistance
       ) VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *\`,
+      RETURNING *`,
       [email, hashedPassword, first_name, last_name, role, on_assistance]
     );
 
-    const user = result.rows[0];
+    const user = userInsert.rows[0];
 
-    // ✅ Assign wallet if eligible
+    // Auto-create wallet for eligible roles
     if (rolesWithWallet.includes(role)) {
-      try {
-        await pool.query(
-          \`INSERT INTO wallets (user_id) VALUES ($1)\`,
-          [user.id]
-        );
-        console.log(\`🎒 Wallet created for user \${user.id}\`);
-      } catch (walletErr) {
-        console.error("❌ Wallet creation failed:", walletErr);
-      }
+      await pool.query(
+        `INSERT INTO wallets (user_id, id)
+         VALUES ($1, gen_random_uuid())`,
+        [user.id]
+      );
+      console.log(`🎒 Wallet created for user ${user.id}`);
     }
 
-    // ✅ Insert vendor if role is vendor
+    // Vendors also get wallets
     if (role === "vendor" && vendor) {
       await pool.query(
-        \`INSERT INTO vendors (
-          id, business_name, phone, category, approved, wallet_id
+        `INSERT INTO vendors (
+          id,
+          business_name,
+          phone,
+          category,
+          approved,
+          wallet_id
         ) VALUES (
           $1, $2, $3, $4, $5, gen_random_uuid()
-        )\`,
+        )`,
         [
           user.id,
           vendor.name,
@@ -69,6 +75,7 @@ router.post("/", async (req, res) => {
           vendor.approved === true,
         ]
       );
+      console.log(`🏪 Vendor created with wallet: ${user.id}`);
     }
 
     res.status(201).json({ message: "User created", user });
