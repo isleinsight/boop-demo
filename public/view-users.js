@@ -18,6 +18,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentPage = 1;
   const perPage = 10;
 
+  let sortKey = null;
+  let sortOrder = 'asc';
+
   try {
     const meRes = await fetch("/api/me");
     const meData = await meRes.json();
@@ -31,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetch("/api/users");
       allUsers = await res.json();
       filteredUsers = [...allUsers];
-      render();
+      applyFilters();
     } catch (e) {
       console.error("Error fetching users:", e);
     }
@@ -53,8 +56,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const action = select.value;
       select.value = "action";
       if (action === "view") {
-        localStorage.setItem("selectedUserId", user.id); 
-        window.location.href = "user-profile.html";      
+        localStorage.setItem("selectedUserId", user.id);
+        window.location.href = "user-profile.html";
         return;
       }
       if (action === "delete") {
@@ -148,6 +151,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       && (!status || u.status === status)
     );
 
+    if (sortKey) {
+      filteredUsers.sort((a, b) => {
+        const aVal = (a[sortKey] || "").toLowerCase();
+        const bVal = (b[sortKey] || "").toLowerCase();
+        return sortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+    }
+
     currentPage = 1;
     render();
   }
@@ -162,6 +173,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     const checked = document.querySelectorAll(".user-checkbox:checked").length;
     deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
   }
+
+  // Column sorting
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.addEventListener("click", () => {
+      const map = {
+        firstName: "first_name",
+        lastName: "last_name",
+        email: "email"
+      };
+      const key = map[th.dataset.sort];
+      if (sortKey === key) {
+        sortOrder = sortOrder === "asc" ? "desc" : "asc";
+      } else {
+        sortKey = key;
+        sortOrder = "asc";
+      }
+
+      document.querySelectorAll("th.sortable .arrow").forEach(span => span.textContent = "");
+      const arrow = th.querySelector(".arrow");
+      arrow.textContent = sortOrder === "asc" ? "▲" : "▼";
+
+      applyFilters();
+    });
+  });
 
   searchBtn.addEventListener("click", applyFilters);
   clearSearchBtn.addEventListener("click", () => {
