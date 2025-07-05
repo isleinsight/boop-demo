@@ -15,7 +15,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     if (res.ok) {
       // ✅ Store JWT and user info for session use
-      localStorage.setItem("admin_id", user.id);
+      localStorage.setItem("admin_id", data.user.id);
       localStorage.setItem('boop_jwt', data.token);
       localStorage.setItem('boopUser', JSON.stringify(data.user));
 
