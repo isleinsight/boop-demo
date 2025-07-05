@@ -46,8 +46,8 @@ document.addEventListener("DOMContentLoaded", () => {
           walletInfo += `<div><span class="label">Wallet ID</span><span class="value">${walletRes.id}</span></div>`;
 
           const cardsRes = await fetchJSON(`/api/cards?wallet_id=${walletRes.id}`);
-          if (cardsRes.length > 0) {
-            walletInfo += `<div><span class="label">Card Number</span><span class="value">${cardsRes[0].uid}</span></div>`;
+          if (cardsRes && cardsRes.uid) {
+            walletInfo += `<div><span class="label">Card Number</span><span class="value">${cardsRes.uid}</span></div>`;
           }
         }
       } catch (err) {
@@ -121,8 +121,6 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location.href = "view-users.html";
     }
   }
-
-  // ... existing event listeners and utility functions remain unchanged
 
   loadUserProfile();
 });
