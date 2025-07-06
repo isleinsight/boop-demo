@@ -80,9 +80,9 @@
 
     <!-- Pagination -->
 <div class="pagination">
-  <button id="prevBtn" style="color: black !important;" disabled>Previous</button>
+  <button id="prevBtn">Previous</button>
   <span id="paginationInfo">Page 1</span>
-  <button id="nextBtn" style="color: black !important;" disabled>Next</button>
+  <button id="nextBtn">Next</button>
 </div>
 
     <!-- Delete Selected -->
@@ -106,15 +106,7 @@
   </div>
 </div>
   <script type="module" src="view-users.js"></script>
-    <script>
- function updatePaginationStyles() {
-  const prevBtn = document.getElementById("prevBtn");
-  const nextBtn = document.getElementById("nextBtn");
 
-  prevBtn.style.color = prevBtn.disabled ? "#ccc" : "black";
-  nextBtn.style.color = nextBtn.disabled ? "#ccc" : "black";
-}
-  </script>
   
 </body>
 </html>
