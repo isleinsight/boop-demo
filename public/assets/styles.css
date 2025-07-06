@@ -247,12 +247,6 @@
       cursor: not-allowed;
     }
 
-.pagination .pagination-btn:enabled:hover,
-.pagination .pagination-btn:enabled:focus {
-  background-color: #007BFF; /* Internet Blue */
-  color: white;
-  border-color: #007BFF;
-}
 
     /* Delete button */
     #deleteSelectedBtn {
