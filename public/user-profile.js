@@ -116,12 +116,12 @@ document.addEventListener("DOMContentLoaded", () => {
         parentEmailEl.textContent = parent.email;
       }
 
-      // ✅ Load vendor info if role is vendor
+      // ✅ Load vendor info
       if (user.role === "vendor") {
         try {
           const vendorSection = document.getElementById("vendorSection");
           const vendorData = await fetchJSON(`/api/vendors`);
-          const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id); // handle either key
+          const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id);
 
           if (vendor) {
             document.getElementById("vendorBusiness").textContent = vendor.business_name || "-";
@@ -130,14 +130,13 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("vendorApproved").textContent = vendor.approved ? "Yes" : "No";
 
             vendorSection.style.display = "block";
-          } else {
-            console.warn("Vendor record not found for user ID:", user.id);
           }
         } catch (err) {
           console.error("❌ Failed to fetch vendor info:", err);
         }
       }
 
+      // ✅ EDIT MODE
       editBtn.onclick = () => {
         document.getElementById("viewFirstName").style.display = "none";
         document.getElementById("viewLastName").style.display = "none";
@@ -147,21 +146,59 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("editLastName").style.display = "block";
         document.getElementById("editEmail").style.display = "block";
 
+        if (currentUserData?.role === "vendor") {
+          document.getElementById("editVendorBusiness").value = document.getElementById("vendorBusiness").textContent;
+          document.getElementById("editVendorCategory").value = document.getElementById("vendorCategory").textContent;
+          document.getElementById("editVendorPhone").value = document.getElementById("vendorPhone").textContent;
+          document.getElementById("editVendorApproved").value = document.getElementById("vendorApproved").textContent === "Yes" ? "true" : "false";
+
+          document.getElementById("vendorBusiness").style.display = "none";
+          document.getElementById("vendorCategory").style.display = "none";
+          document.getElementById("vendorPhone").style.display = "none";
+          document.getElementById("vendorApproved").style.display = "none";
+
+          document.getElementById("editVendorBusiness").style.display = "block";
+          document.getElementById("editVendorCategory").style.display = "block";
+          document.getElementById("editVendorPhone").style.display = "block";
+          document.getElementById("editVendorApproved").style.display = "block";
+        }
+
         saveBtn.style.display = "inline-block";
       };
 
+      // ✅ SAVE MODE
       saveBtn.onclick = async () => {
-        await fetch(`/api/users/${currentUserId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            first_name: document.getElementById("editFirstName").value,
-            last_name: document.getElementById("editLastName").value,
-            email: document.getElementById("editEmail").value
-          })
-        });
-        alert("Profile updated.");
-        loadUserProfile();
+        try {
+          await fetch(`/api/users/${currentUserId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              first_name: document.getElementById("editFirstName").value,
+              last_name: document.getElementById("editLastName").value,
+              email: document.getElementById("editEmail").value
+            })
+          });
+
+          if (currentUserData?.role === "vendor") {
+            await fetch(`/api/vendors/${currentUserId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                business_name: document.getElementById("editVendorBusiness").value,
+                category: document.getElementById("editVendorCategory").value,
+                phone: document.getElementById("editVendorPhone").value,
+                approved: document.getElementById("editVendorApproved").value === "true"
+              })
+            });
+          }
+
+          alert("Profile updated.");
+          loadUserProfile();
+
+        } catch (err) {
+          console.error("❌ Failed to save profile:", err);
+          alert("Error saving changes.");
+        }
       };
 
     } catch (err) {
