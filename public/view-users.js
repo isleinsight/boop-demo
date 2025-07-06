@@ -131,8 +131,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     userCount.textContent = `Total Users: ${filteredUsers.length}`;
     paginationInfo.textContent = `Page ${currentPage}`;
-    prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled = currentPage * perPage >= filteredUsers.length;
+    prevBtn.style.display = currentPage === 1 ? "none" : "inline-block";
+nextBtn.style.display = currentPage * perPage >= filteredUsers.length ? "none" : "inline-block";
 
     attachCheckboxListeners();
     updateDeleteButtonVisibility();
