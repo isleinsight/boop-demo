@@ -116,6 +116,28 @@ document.addEventListener("DOMContentLoaded", () => {
         parentEmailEl.textContent = parent.email;
       }
 
+      // ✅ Load vendor info if role is vendor
+      if (user.role === "vendor") {
+        try {
+          const vendorSection = document.getElementById("vendorSection");
+          const vendorData = await fetchJSON(`/api/vendors`);
+          const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id); // handle either key
+
+          if (vendor) {
+            document.getElementById("vendorBusiness").textContent = vendor.business_name || "-";
+            document.getElementById("vendorCategory").textContent = vendor.category || "-";
+            document.getElementById("vendorPhone").textContent = vendor.phone || "-";
+            document.getElementById("vendorApproved").textContent = vendor.approved ? "Yes" : "No";
+
+            vendorSection.style.display = "block";
+          } else {
+            console.warn("Vendor record not found for user ID:", user.id);
+          }
+        } catch (err) {
+          console.error("❌ Failed to fetch vendor info:", err);
+        }
+      }
+
       editBtn.onclick = () => {
         document.getElementById("viewFirstName").style.display = "none";
         document.getElementById("viewLastName").style.display = "none";
