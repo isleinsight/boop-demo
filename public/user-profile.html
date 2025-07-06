@@ -41,25 +41,32 @@
     <!-- Injected profile fields go here -->
     <div class="user-details-grid" id="userInfo"></div>
 
-    <!-- Vendor Info Section -->
+<!-- Vendor Info Section -->
 <div id="vendorSection" style="display: none; margin-top: 40px;">
   <div class="section-title">Vendor Information</div>
   <div class="user-details-grid">
     <div>
       <span class="label">Business Name</span>
       <span class="value" id="vendorBusiness">-</span>
+      <input type="text" id="editVendorBusiness" style="display: none; width: 100%;" />
     </div>
     <div>
       <span class="label">Category</span>
       <span class="value" id="vendorCategory">-</span>
+      <input type="text" id="editVendorCategory" style="display: none; width: 100%;" />
     </div>
     <div>
       <span class="label">Phone</span>
       <span class="value" id="vendorPhone">-</span>
+      <input type="text" id="editVendorPhone" style="display: none; width: 100%;" />
     </div>
     <div>
       <span class="label">Approved</span>
       <span class="value" id="vendorApproved">-</span>
+      <select id="editVendorApproved" style="display: none; width: 100%;">
+        <option value="true">Yes</option>
+        <option value="false">No</option>
+      </select>
     </div>
   </div>
 </div>
