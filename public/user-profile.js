@@ -204,34 +204,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function loadAssignedStudents(parentId) {
-    const students = await fetchJSON(`/api/users?parentId=${parentId}`);
-    assignedStudentsList.innerHTML = "";
+async function loadAssignedStudents(parentId) {
+  const students = await fetchJSON(`/api/users?parentId=${parentId}`);
+  assignedStudentsList.innerHTML = "";
 
-    for (const s of students) {
-      let school = "-";
-      let expiry = "-";
-      try {
-        const studentDetail = await fetchJSON(`/api/students/${s.id}`);
-        if (studentDetail) {
-          school = studentDetail.school || "-";
-          expiry = studentDetail.expiry_date || "-";
-        }
-      } catch (err) {
-        console.warn("No student record:", err.message);
-      }
-
-      assignedStudentsList.innerHTML += `
-        <div>
-          <span class="label">Name</span>
-          <span class="value"><a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${s.id}')">${s.first_name} ${s.middle_name || ""} ${s.last_name}</a></span>
-          <div><span class="label">School</span><span class="value">${school}</span></div>
-          <div><span class="label">Expiry</span><span class="value">${expiry}</span></div>
-          <button onclick="removeStudent('${s.id}')">Remove</button>
-        </div>
-      `;
-    }
+  if (!students.length) {
+    assignedStudentsList.innerHTML = `<p style="padding: 1rem; font-style: italic;">No students assigned.</p>`;
+    return;
   }
+
+  for (const s of students) {
+    let school = "-";
+    let expiry = "-";
+    try {
+      const studentDetail = await fetchJSON(`/api/students/${s.id}`);
+      if (studentDetail) {
+        school = studentDetail.school || "-";
+        expiry = studentDetail.expiry_date || "-";
+      }
+    } catch (err) {
+      console.warn("No student record:", err.message);
+    }
+
+    assignedStudentsList.innerHTML += `
+      <div>
+        <span class="label">Name</span>
+        <span class="value"><a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${s.id}')">${s.first_name} ${s.middle_name || ""} ${s.last_name}</a></span>
+        <div><span class="label">School</span><span class="value">${school}</span></div>
+        <div><span class="label">Expiry</span><span class="value">${expiry}</span></div>
+        <button onclick="removeStudent('${s.id}')">Remove</button>
+      </div>
+    `;
+  }
+}
 
   window.removeStudent = async function (id) {
     await fetch(`/api/users/${id}`, {
