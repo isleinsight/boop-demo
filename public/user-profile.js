@@ -69,7 +69,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ${walletHTML}
       `;
 
-      // ✅ Set select value AFTER rendering
       document.getElementById("editAssistance").value = user.on_assistance ? "true" : "false";
 
       const dropdown = document.createElement("select");
@@ -238,6 +237,52 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     loadAssignedStudents(currentUserId);
   };
+
+  window.assignStudent = async function (studentId) {
+    try {
+      await fetch(`/api/users/${studentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parent_id: currentUserId })
+      });
+
+      alert("Student assigned.");
+      loadAssignedStudents(currentUserId);
+      document.getElementById("studentSearchResults").innerHTML = "";
+    } catch (err) {
+      console.error("❌ Failed to assign student:", err);
+      alert("Error assigning student.");
+    }
+  };
+
+  addStudentBtn.addEventListener("click", () => {
+    const container = document.getElementById("studentSearchContainer");
+    container.style.display = container.style.display === "none" ? "block" : "none";
+  });
+
+  document.getElementById("studentSearchBtn").addEventListener("click", async () => {
+    const searchTerm = document.getElementById("studentSearchInput").value;
+    const resultsDiv = document.getElementById("studentSearchResults");
+    resultsDiv.innerHTML = "Searching...";
+
+    try {
+      const students = await fetchJSON(`/api/users?search=${encodeURIComponent(searchTerm)}&role=student`);
+      if (students.length === 0) {
+        resultsDiv.innerHTML = "No students found.";
+        return;
+      }
+
+      resultsDiv.innerHTML = students.map(s => `
+        <div>
+          <span>${s.first_name} ${s.last_name} (${s.email})</span>
+          <button onclick="assignStudent('${s.id}')">Assign</button>
+        </div>
+      `).join('');
+    } catch (err) {
+      console.error("❌ Search failed:", err);
+      resultsDiv.innerHTML = "Error searching.";
+    }
+  });
 
   logoutBtn?.addEventListener("click", () => {
     fetch("/api/logout", { method: "POST" }).then(() => {
