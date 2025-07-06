@@ -247,6 +247,12 @@
       cursor: not-allowed;
     }
 
+.pagination button:not(:disabled):hover,
+.pagination button:not(:disabled):focus {
+  background-color: #007BFF; /* Bootstrap "Internet blue" */
+  color: white;
+  border-color: #007BFF;
+
     /* Delete button */
     #deleteSelectedBtn {
       margin-top: 20px;
