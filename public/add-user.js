@@ -64,49 +64,27 @@ document.addEventListener("DOMContentLoaded", () => {
       on_assistance: role === "cardholder" ? onAssistance : false,
     };
 
-    try {
-      // 🛡 Check if user already exists
-      const checkRes = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
-      if (checkRes.ok) {
-        statusDiv.textContent = "⚠️ A user with this email already exists.";
-        statusDiv.style.color = "red";
-        return;
-      }
+    // Attach vendor info if needed
+    if (role === "vendor") {
+      userPayload.vendor = {
+        name: businessNameInput.value.trim(),
+        phone: vendorPhoneInput.value.trim(),
+        category: vendorCategoryInput.value.trim(),
+        approved: vendorApprovedSelect.value === "true"
+      };
+    }
 
-      // 👤 Create user
+    try {
       const resUser = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userPayload),
       });
 
-      const userResult = await resUser.json();
+      const result = await resUser.json();
+
       if (!resUser.ok) {
-        throw new Error(userResult.message || "Failed to create user");
-      }
-
-      const newUserId = userResult.id;
-
-      // 🧩 Save vendor info if applicable
-      if (role === "vendor") {
-        const vendorPayload = {
-          user_id: newUserId,
-          business_name: businessNameInput.value.trim(),
-          phone: vendorPhoneInput.value.trim(),
-          category: vendorCategoryInput.value.trim(),
-          approved: vendorApprovedSelect.value === "true"
-        };
-
-        const resVendor = await fetch("/api/vendors", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(vendorPayload)
-        });
-
-        const vendorResult = await resVendor.json();
-        if (!resVendor.ok) {
-          throw new Error(vendorResult.message || "Vendor info failed to save.");
-        }
+        throw new Error(result.message || "Failed to create user");
       }
 
       statusDiv.textContent = "✅ User created successfully!";
@@ -115,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
       updateConditionalFields();
 
     } catch (err) {
-      console.error("❌ Error creating user or vendor:", err);
+      console.error("❌ Error:", err);
       statusDiv.textContent = err.message;
       statusDiv.style.color = "red";
     }
