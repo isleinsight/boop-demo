@@ -61,13 +61,16 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="label">On Assistance</span>
           <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
           <select id="editAssistance" style="display:none; width: 100%;">
-            <option value="true" ${user.on_assistance ? "selected" : ""}>Yes</option>
-            <option value="false" ${!user.on_assistance ? "selected" : ""}>No</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
           </select>
         </div>
 
         ${walletHTML}
       `;
+
+      // ✅ Set select value AFTER rendering
+      document.getElementById("editAssistance").value = user.on_assistance ? "true" : "false";
 
       const dropdown = document.createElement("select");
       dropdown.innerHTML = `
