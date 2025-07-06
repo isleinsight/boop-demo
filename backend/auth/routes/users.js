@@ -3,17 +3,24 @@ const router = express.Router();
 const pool = require("../../db");
 const bcrypt = require("bcrypt");
 
-const rolesWithWallet = ["cardholder", "student", "senior"];
+const rolesWithWallet = ["cardholder", "student", "senior", "vendor"];
 
-// ✅ POST /api/users — with email uniqueness check and wallet_id set
+// ✅ POST /api/users — create user (+ wallet/vendor if needed)
 router.post("/", async (req, res) => {
-  const { email, password, first_name, last_name, role, on_assistance, vendor } = req.body;
+  const {
+    email,
+    password,
+    first_name,
+    last_name,
+    role,
+    on_assistance,
+    vendor // Optional vendor payload for vendor users
+  } = req.body;
 
   try {
-  
-
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // 1️⃣ Insert new user
     const result = await pool.query(
       `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -23,7 +30,7 @@ router.post("/", async (req, res) => {
 
     const user = result.rows[0];
 
-    // 🎒 Create wallet if applicable and store wallet_id in user
+    // 2️⃣ Create wallet if role qualifies
     if (rolesWithWallet.includes(role)) {
       const walletRes = await pool.query(
         `INSERT INTO wallets (user_id, id, status)
@@ -34,27 +41,31 @@ router.post("/", async (req, res) => {
 
       const walletId = walletRes.rows[0].id;
 
+      // Attach wallet ID to user
       await pool.query(
         `UPDATE users SET wallet_id = $1 WHERE id = $2`,
         [walletId, user.id]
       );
 
       user.wallet_id = walletId;
+
+      // 3️⃣ If vendor, also create vendor record using valid wallet ID
+      if (role === "vendor" && vendor) {
+        await pool.query(
+          `INSERT INTO vendors (id, business_name, phone, category, approved, wallet_id)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [user.id, vendor.name, vendor.phone, vendor.category, vendor.approved === true, walletId]
+        );
+      }
     }
 
-    // 🏪 Vendor setup
-    if (role === "vendor" && vendor) {
-      await pool.query(
-        `INSERT INTO vendors (id, business_name, phone, category, approved, wallet_id)
-         VALUES ($1, $2, $3, $4, $5, gen_random_uuid())`,
-        [user.id, vendor.name, vendor.phone, vendor.category, vendor.approved === true]
-      );
-    }
-
-    res.status(201).json({ message: "User created", user });
+    res.status(201).json({ message: "User created", id: user.id, role: user.role });
 
   } catch (err) {
     console.error("❌ Error creating user:", err);
+    if (err.code === "23505") {
+      return res.status(400).json({ message: "Email already exists" });
+    }
     res.status(500).json({ message: "Failed to create user" });
   }
 });
@@ -106,7 +117,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ PATCH /api/users/:id
+// ✅ PATCH /api/users/:id — update user fields
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
   const fields = ["first_name", "last_name", "email", "role", "status", "parent_id"];
@@ -130,7 +141,7 @@ router.patch("/:id", async (req, res) => {
       [...values, id]
     );
 
-    // 🔁 Sync wallet status if needed
+    // 🔁 Sync wallet status if applicable
     if (req.body.status === "suspended" || req.body.status === "active") {
       await pool.query(
         `UPDATE wallets SET status = $1 WHERE user_id = $2`,
@@ -175,7 +186,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ POST /api/users/:id/signout
+// 🔌 Placeholder — Force logout route (optional)
 router.post("/:id/signout", async (req, res) => {
   res.json({ message: "Force sign-out not implemented yet" });
 });
