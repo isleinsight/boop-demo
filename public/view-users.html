@@ -106,5 +106,15 @@
   </div>
 </div>
   <script type="module" src="view-users.js"></script>
+    <script>
+  function updatePaginationStyles() {
+  const prevBtn = document.getElementById("prevBtn");
+  const nextBtn = document.getElementById("nextBtn");
+
+  prevBtn.style.color = prevBtn.disabled ? "#ccc" : "black";
+  nextBtn.style.color = nextBtn.disabled ? "#ccc" : "black";
+}
+  </script>
+  
 </body>
 </html>
