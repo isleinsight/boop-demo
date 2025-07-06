@@ -14,7 +14,7 @@ router.post("/", async (req, res) => {
     last_name,
     role,
     on_assistance,
-    vendor // Optional vendor payload for vendor users
+    vendor
   } = req.body;
 
   try {
@@ -120,7 +120,7 @@ router.get("/", async (req, res) => {
 // ✅ PATCH /api/users/:id — update user fields
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const fields = ["first_name", "last_name", "email", "role", "status", "parent_id"];
+  const fields = ["first_name", "last_name", "email", "role", "status", "parent_id", "on_assistance"];
   const updates = [];
   const values = [];
 
