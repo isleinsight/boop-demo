@@ -57,6 +57,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <div><span class="label">Role</span><span class="value">${user.role}</span></div>
 
+        <div>
+          <span class="label">On Assistance</span>
+          <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
+          <select id="editAssistance" style="display:none; width: 100%;">
+            <option value="true" ${user.on_assistance ? "selected" : ""}>Yes</option>
+            <option value="false" ${!user.on_assistance ? "selected" : ""}>No</option>
+          </select>
+        </div>
+
         ${walletHTML}
       `;
 
@@ -116,7 +125,6 @@ document.addEventListener("DOMContentLoaded", () => {
         parentEmailEl.textContent = parent.email;
       }
 
-      // ✅ Load vendor info
       if (user.role === "vendor") {
         try {
           const vendorSection = document.getElementById("vendorSection");
@@ -136,15 +144,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // ✅ EDIT MODE
       editBtn.onclick = () => {
         document.getElementById("viewFirstName").style.display = "none";
         document.getElementById("viewLastName").style.display = "none";
         document.getElementById("viewEmail").style.display = "none";
+        document.getElementById("viewAssistance").style.display = "none";
 
         document.getElementById("editFirstName").style.display = "block";
         document.getElementById("editLastName").style.display = "block";
         document.getElementById("editEmail").style.display = "block";
+        document.getElementById("editAssistance").style.display = "block";
 
         if (currentUserData?.role === "vendor") {
           document.getElementById("editVendorBusiness").value = document.getElementById("vendorBusiness").textContent;
@@ -166,7 +175,6 @@ document.addEventListener("DOMContentLoaded", () => {
         saveBtn.style.display = "inline-block";
       };
 
-      // ✅ SAVE MODE
       saveBtn.onclick = async () => {
         try {
           await fetch(`/api/users/${currentUserId}`, {
@@ -175,7 +183,8 @@ document.addEventListener("DOMContentLoaded", () => {
             body: JSON.stringify({
               first_name: document.getElementById("editFirstName").value,
               last_name: document.getElementById("editLastName").value,
-              email: document.getElementById("editEmail").value
+              email: document.getElementById("editEmail").value,
+              on_assistance: document.getElementById("editAssistance").value === "true"
             })
           });
 
@@ -194,7 +203,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
           alert("Profile updated.");
           loadUserProfile();
-
         } catch (err) {
           console.error("❌ Failed to save profile:", err);
           alert("Error saving changes.");
