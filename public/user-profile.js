@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
         <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
 
-        <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || ""}</span>
+        <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
         <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
 
         <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
@@ -141,6 +141,40 @@ document.addEventListener("DOMContentLoaded", () => {
         parentEmailEl.textContent = parent.email;
       }
 
+      if (user.role === "vendor") {
+        try {
+          const vendorSection = document.getElementById("vendorSection");
+          const vendorData = await fetchJSON(`/api/vendors`);
+          const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id);
+
+          if (vendor) {
+            document.getElementById("vendorBusiness").textContent = vendor.business_name || "-";
+            document.getElementById("vendorCategory").textContent = vendor.category || "-";
+            document.getElementById("vendorPhone").textContent = vendor.phone || "-";
+            document.getElementById("vendorApproved").textContent = vendor.approved ? "Yes" : "No";
+            vendorSection.style.display = "block";
+          }
+        } catch (err) {
+          console.error("❌ Failed to fetch vendor info:", err);
+        }
+      }
+
+      editBtn.onclick = () => {
+        document.getElementById("viewFirstName").style.display = "none";
+        document.getElementById("viewMiddleName").style.display = "none";
+        document.getElementById("viewLastName").style.display = "none";
+        document.getElementById("viewEmail").style.display = "none";
+        document.getElementById("viewAssistance").style.display = "none";
+
+        document.getElementById("editFirstName").style.display = "block";
+        document.getElementById("editMiddleName").style.display = "block";
+        document.getElementById("editLastName").style.display = "block";
+        document.getElementById("editEmail").style.display = "block";
+        document.getElementById("editAssistance").style.display = "block";
+
+        saveBtn.style.display = "inline-block";
+      };
+
       saveBtn.onclick = async () => {
         try {
           await fetch(`/api/users/${currentUserId}`, {
@@ -163,26 +197,105 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       };
 
-      editBtn.onclick = () => {
-        document.getElementById("viewFirstName").style.display = "none";
-        document.getElementById("viewMiddleName").style.display = "none";
-        document.getElementById("viewLastName").style.display = "none";
-        document.getElementById("viewEmail").style.display = "none";
-        document.getElementById("viewAssistance").style.display = "none";
-
-        document.getElementById("editFirstName").style.display = "block";
-        document.getElementById("editMiddleName").style.display = "block";
-        document.getElementById("editLastName").style.display = "block";
-        document.getElementById("editEmail").style.display = "block";
-        document.getElementById("editAssistance").style.display = "block";
-
-        saveBtn.style.display = "inline-block";
-      };
     } catch (err) {
       console.error("❌ Failed to load user:", err);
       alert("Failed to load user.");
       window.location.href = "view-users.html";
     }
+  }
+
+  async function loadAssignedStudents(parentId) {
+    const students = await fetchJSON(`/api/users?parentId=${parentId}`);
+    assignedStudentsList.innerHTML = "";
+
+    for (const s of students) {
+      let school = "-";
+      let expiry = "-";
+      try {
+        const studentDetail = await fetchJSON(`/api/students/${s.id}`);
+        if (studentDetail) {
+          school = studentDetail.school || "-";
+          expiry = studentDetail.expiry_date || "-";
+        }
+      } catch (err) {
+        console.warn("No student record:", err.message);
+      }
+
+      assignedStudentsList.innerHTML += `
+        <div>
+          <span class="label">Name</span>
+          <span class="value"><a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${s.id}')">${s.first_name} ${s.middle_name || ""} ${s.last_name}</a></span>
+          <div><span class="label">School</span><span class="value">${school}</span></div>
+          <div><span class="label">Expiry</span><span class="value">${expiry}</span></div>
+          <button onclick="removeStudent('${s.id}')">Remove</button>
+        </div>
+      `;
+    }
+  }
+
+  window.removeStudent = async function (id) {
+    await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parent_id: null })
+    });
+    loadAssignedStudents(currentUserId);
+  };
+
+  addStudentBtn?.addEventListener("click", () => {
+    assignStudentForm.style.display = assignStudentForm.style.display === "none" ? "block" : "none";
+  });
+
+  studentSearchBtn?.addEventListener("click", () => {
+    currentPage = 1;
+    loadStudentSearchResults();
+  });
+
+  prevStudentPageBtn?.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadStudentSearchResults();
+    }
+  });
+
+  nextStudentPageBtn?.addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+      loadStudentSearchResults();
+    }
+  });
+
+  assignSelectedStudentsBtn?.addEventListener("click", async () => {
+    const selected = document.querySelectorAll('input[name="studentSelect"]:checked');
+    for (const checkbox of selected) {
+      await fetch(`/api/users/${checkbox.value}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parent_id: currentUserId })
+      });
+    }
+    assignStudentForm.style.display = "none";
+    loadAssignedStudents(currentUserId);
+  });
+
+  async function loadStudentSearchResults() {
+    const query = studentSearchInput.value.trim();
+    const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}&role=cardholder&page=${currentPage}`);
+    const { users, totalPages: tp } = await res.json();
+    totalPages = tp;
+
+    studentSearchResults.innerHTML = users.map(user => `
+      <tr>
+        <td>${user.first_name}</td>
+        <td>${user.last_name}</td>
+        <td>${user.email}</td>
+        <td><input type="checkbox" name="studentSelect" value="${user.id}"></td>
+      </tr>
+    `).join('');
+
+    studentPaginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevStudentPageBtn.style.display = currentPage > 1 ? "inline-block" : "none";
+    nextStudentPageBtn.style.display = currentPage < totalPages ? "inline-block" : "none";
   }
 
   logoutBtn?.addEventListener("click", () => {
