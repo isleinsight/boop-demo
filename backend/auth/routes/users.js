@@ -11,6 +11,7 @@ router.post("/", async (req, res) => {
     email,
     password,
     first_name,
+    middle_name, // ✅ ADDED
     last_name,
     role,
     on_assistance,
@@ -22,10 +23,10 @@ router.post("/", async (req, res) => {
 
     // 1️⃣ Insert new user
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO users (email, password_hash, first_name, middle_name, last_name, role, on_assistance)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [email, hashedPassword, first_name, last_name, role, on_assistance]
+      [email, hashedPassword, first_name, middle_name, last_name, role, on_assistance] // ✅ middle_name included
     );
 
     const user = result.rows[0];
@@ -126,7 +127,16 @@ router.get("/", async (req, res) => {
 // ✅ PATCH /api/users/:id — update user fields
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const fields = ["first_name", "last_name", "email", "role", "status", "parent_id", "on_assistance"];
+  const fields = [
+    "first_name",
+    "middle_name", // ✅ ADDED
+    "last_name",
+    "email",
+    "role",
+    "status",
+    "parent_id",
+    "on_assistance"
+  ];
   const updates = [];
   const values = [];
 
