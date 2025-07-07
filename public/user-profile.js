@@ -134,11 +134,14 @@ document.addEventListener("DOMContentLoaded", () => {
         loadAssignedStudents(user.id);
       }
 
-      if (user.role === "student" && user.parent_id) {
-        parentSection.style.display = "block";
-        const parent = await fetchJSON(`/api/users/${user.parent_id}`);
-        parentNameEl.innerHTML = `<a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">${parent.first_name} ${parent.last_name}</a>`;
-        parentEmailEl.textContent = parent.email;
+      if (user.role === "student") {
+        const result = await fetchJSON(`/api/students/${user.id}`);
+        if (result?.parent_ids?.length > 0) {
+          parentSection.style.display = "block";
+          const parent = await fetchJSON(`/api/users/${result.parent_ids[0]}`);
+          parentNameEl.innerHTML = `<a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">${parent.first_name} ${parent.last_name}</a>`;
+          parentEmailEl.textContent = parent.email;
+        }
       }
 
       if (user.role === "vendor") {
@@ -204,45 +207,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-async function loadAssignedStudents(parentId) {
-  const students = await fetchJSON(`/api/users?parentId=${parentId}`);
-  assignedStudentsList.innerHTML = "";
+  async function loadAssignedStudents(parentId) {
+    const studentList = await fetchJSON(`/api/students/for-parent/${parentId}`);
+    assignedStudentsList.innerHTML = "";
 
-  if (!students.length) {
-    assignedStudentsList.innerHTML = `<p style="padding: 1rem; font-style: italic;">No students assigned.</p>`;
-    return;
-  }
-
-  for (const s of students) {
-    let school = "-";
-    let expiry = "-";
-    try {
-      const studentDetail = await fetchJSON(`/api/students/${s.id}`);
-      if (studentDetail) {
-        school = studentDetail.school || "-";
-        expiry = studentDetail.expiry_date || "-";
-      }
-    } catch (err) {
-      console.warn("No student record:", err.message);
+    if (!studentList.length) {
+      assignedStudentsList.innerHTML = `<p style="padding: 1rem; font-style: italic;">No students assigned.</p>`;
+      return;
     }
 
-    assignedStudentsList.innerHTML += `
-      <div>
-        <span class="label">Name</span>
-        <span class="value"><a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${s.id}')">${s.first_name} ${s.middle_name || ""} ${s.last_name}</a></span>
-        <div><span class="label">School</span><span class="value">${school}</span></div>
-        <div><span class="label">Expiry</span><span class="value">${expiry}</span></div>
-        <button onclick="removeStudent('${s.id}')">Remove</button>
-      </div>
-    `;
+    for (const student of studentList) {
+      assignedStudentsList.innerHTML += `
+        <div>
+          <span class="label">Name</span>
+          <span class="value"><a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${student.user.id}')">${student.user.first_name} ${student.user.middle_name || ""} ${student.user.last_name}</a></span>
+          <div><span class="label">School</span><span class="value">${student.school_name || "-"}</span></div>
+          <div><span class="label">Expiry</span><span class="value">${student.expiry_date || "-"}</span></div>
+          <button onclick="removeStudent('${student.user.id}')">Remove</button>
+        </div>
+      `;
+    }
   }
-}
 
-  window.removeStudent = async function (id) {
-    await fetch(`/api/users/${id}`, {
-      method: "PATCH",
+  window.removeStudent = async function (studentId) {
+    await fetch(`/api/students/remove-parent`, {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parent_id: null })
+      body: JSON.stringify({ student_id: studentId, parent_id: currentUserId })
     });
     loadAssignedStudents(currentUserId);
   };
@@ -273,10 +264,10 @@ async function loadAssignedStudents(parentId) {
   assignSelectedStudentsBtn?.addEventListener("click", async () => {
     const selected = document.querySelectorAll('input[name="studentSelect"]:checked');
     for (const checkbox of selected) {
-      await fetch(`/api/users/${checkbox.value}`, {
-        method: "PATCH",
+      await fetch(`/api/students/assign-parent`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parent_id: currentUserId })
+        body: JSON.stringify({ student_id: checkbox.value, parent_id: currentUserId })
       });
     }
     assignStudentForm.style.display = "none";
