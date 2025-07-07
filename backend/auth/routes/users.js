@@ -55,41 +55,52 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Fetch users
+// ✅ Search & fetch users with pagination and role filter
 router.get("/", async (req, res) => {
-  const { role, search, page = 1, eligibleOnly, hasWallet } = req.query;
+  const { role, search = "", page = 1, eligibleOnly, hasWallet } = req.query;
 
   try {
-    if (search !== undefined) {
-      const perPage = 10;
-      const offset = (parseInt(page) - 1) * perPage;
-      const term = `%${search.toLowerCase()}%`;
+    const perPage = 5;
+    const offset = (parseInt(page) - 1) * perPage;
+    const term = `%${search.toLowerCase()}%`;
 
-      let baseQuery = `SELECT * FROM users WHERE (
-        LOWER(first_name) LIKE $1 OR
-        LOWER(last_name) LIKE $1 OR
-        LOWER(email) LIKE $1
-      )`;
+    let baseQuery = `SELECT * FROM users WHERE (
+      LOWER(first_name) LIKE $1 OR
+      LOWER(last_name) LIKE $1 OR
+      LOWER(email) LIKE $1
+    )`;
+    const countQuery = `SELECT COUNT(*) FROM users WHERE (
+      LOWER(first_name) LIKE $1 OR
+      LOWER(last_name) LIKE $1 OR
+      LOWER(email) LIKE $1
+    )`;
 
-      const params = [term];
+    const params = [term];
+    let extraConditions = "";
 
-      if (eligibleOnly === "true") {
-        baseQuery += ` AND role IN ('cardholder', 'student', 'senior')`;
-      }
-
-      if (hasWallet === "true") {
-        baseQuery += ` AND id IN (SELECT user_id FROM wallets)`;
-      }
-
-      baseQuery += ` ORDER BY first_name ASC LIMIT $2 OFFSET $3`;
-      params.push(perPage, offset);
-
-      const result = await pool.query(baseQuery, params);
-      return res.json(result.rows);
+    if (role) {
+      params.push(role);
+      extraConditions += ` AND role = $${params.length}`;
     }
 
-    const result = await pool.query("SELECT * FROM users ORDER BY first_name ASC");
-    res.json(result.rows);
+    if (eligibleOnly === "true") {
+      extraConditions += ` AND role IN ('cardholder', 'student', 'senior')`;
+    }
+
+    if (hasWallet === "true") {
+      extraConditions += ` AND id IN (SELECT user_id FROM wallets)`;
+    }
+
+    const finalQuery = `${baseQuery}${extraConditions} ORDER BY first_name ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    const finalCountQuery = `${countQuery}${extraConditions}`;
+
+    const result = await pool.query(finalQuery, [...params, perPage, offset]);
+    const countRes = await pool.query(finalCountQuery, params);
+
+    const totalUsers = parseInt(countRes.rows[0].count, 10);
+    const totalPages = Math.ceil(totalUsers / perPage);
+
+    res.json({ users: result.rows, totalPages });
   } catch (err) {
     console.error("❌ Error fetching users:", err);
     res.status(500).json({ message: "Failed to process request" });
@@ -171,7 +182,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// 🔌 Placeholder
+// Placeholder for signout
 router.post("/:id/signout", async (req, res) => {
   res.json({ message: "Force sign-out not implemented yet" });
 });
