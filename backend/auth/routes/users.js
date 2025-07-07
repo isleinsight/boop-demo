@@ -5,13 +5,16 @@ const bcrypt = require("bcrypt");
 
 const rolesWithWallet = ["cardholder", "student", "senior", "vendor"];
 
+// UUID validation helper
+const isValidUUID = (str) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+
 // ✅ POST /api/users — create user (+ wallet/vendor if needed)
 router.post("/", async (req, res) => {
   const {
     email,
     password,
     first_name,
-    middle_name, // ✅ ADDED
     last_name,
     role,
     on_assistance,
@@ -21,17 +24,15 @@ router.post("/", async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // 1️⃣ Insert new user
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, first_name, middle_name, last_name, role, on_assistance)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [email, hashedPassword, first_name, middle_name, last_name, role, on_assistance] // ✅ middle_name included
+      [email, hashedPassword, first_name, last_name, role, on_assistance]
     );
 
     const user = result.rows[0];
 
-    // 2️⃣ Create wallet if role qualifies
     if (rolesWithWallet.includes(role)) {
       const walletRes = await pool.query(
         `INSERT INTO wallets (user_id, id, status)
@@ -42,7 +43,6 @@ router.post("/", async (req, res) => {
 
       const walletId = walletRes.rows[0].id;
 
-      // Attach wallet ID to user
       await pool.query(
         `UPDATE users SET wallet_id = $1 WHERE id = $2`,
         [walletId, user.id]
@@ -50,7 +50,6 @@ router.post("/", async (req, res) => {
 
       user.wallet_id = walletId;
 
-      // 3️⃣ If vendor, also create vendor record using valid wallet ID
       if (role === "vendor" && vendor) {
         await pool.query(
           `INSERT INTO vendors (id, business_name, phone, category, approved, wallet_id)
@@ -74,9 +73,6 @@ router.post("/", async (req, res) => {
 // ✅ GET /api/users
 router.get("/", async (req, res) => {
   const { parentId, role, search, page = 1, eligibleOnly, hasWallet } = req.query;
-
-  const isValidUUID = (str) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 
   try {
     if (parentId) {
@@ -127,16 +123,11 @@ router.get("/", async (req, res) => {
 // ✅ PATCH /api/users/:id — update user fields
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const fields = [
-    "first_name",
-    "middle_name", // ✅ ADDED
-    "last_name",
-    "email",
-    "role",
-    "status",
-    "parent_id",
-    "on_assistance"
-  ];
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  const fields = ["first_name", "last_name", "email", "role", "status", "parent_id", "on_assistance"];
   const updates = [];
   const values = [];
 
@@ -157,7 +148,6 @@ router.patch("/:id", async (req, res) => {
       [...values, id]
     );
 
-    // 🔁 Sync wallet status if applicable
     if (req.body.status === "suspended" || req.body.status === "active") {
       await pool.query(
         `UPDATE wallets SET status = $1 WHERE user_id = $2`,
@@ -176,6 +166,10 @@ router.patch("/:id", async (req, res) => {
 // ✅ DELETE /api/users/:id
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
   try {
     await pool.query(`UPDATE wallets SET status = 'archived' WHERE user_id = $1`, [id]);
     await pool.query("DELETE FROM users WHERE id = $1", [id]);
@@ -190,6 +184,10 @@ router.delete("/:id", async (req, res) => {
 // ✅ GET /api/users/:id
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
   try {
     const result = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
     if (result.rows.length === 0) {
