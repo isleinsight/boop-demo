@@ -13,10 +13,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userCount = document.getElementById("userCount");
 
   let allUsers = [];
-  let filteredUsers = [];
   let currentUserEmail = null;
   let currentPage = 1;
   const perPage = 10;
+  let totalPages = 1;
 
   let sortKey = null;
   let sortOrder = 'asc';
@@ -31,11 +31,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function fetchUsers() {
     try {
-      const res = await fetch("/api/users");
-const data = await res.json();
-allUsers = data.users || [];
-filteredUsers = [...allUsers];
-      applyFilters();
+      const search = encodeURIComponent(searchInput.value);
+      const role = encodeURIComponent(roleFilter.value);
+      const status = encodeURIComponent(statusFilter.value);
+      const query = `?page=${currentPage}&perPage=${perPage}&search=${search}&role=${role}&status=${status}`;
+
+      const res = await fetch(`/api/users${query}`);
+      const data = await res.json();
+      allUsers = data.users || [];
+      totalPages = data.totalPages || 1;
+      render();
     } catch (e) {
       console.error("Error fetching users:", e);
     }
@@ -78,7 +83,6 @@ filteredUsers = [...allUsers];
     try {
       if (action === "delete") {
         await fetch(`/api/users/${user.id}`, { method: "DELETE" });
-        allUsers = allUsers.filter(u => u.id !== user.id);
       } else if (action === "suspend" || action === "unsuspend") {
         const newStatus = action === "suspend" ? "suspended" : "active";
         await fetch(`/api/users/${user.id}`, {
@@ -86,12 +90,10 @@ filteredUsers = [...allUsers];
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
         });
-        const updated = allUsers.find(u => u.id === user.id);
-        if (updated) updated.status = newStatus;
       } else if (action === "signout") {
         await fetch(`/api/users/${user.id}/signout`, { method: "POST" });
       }
-      applyFilters();
+      fetchUsers(); // Refresh table
     } catch (err) {
       console.error("❌ Action failed:", err);
       alert("Action failed.");
@@ -99,18 +101,15 @@ filteredUsers = [...allUsers];
   }
 
   function render() {
-    const start = (currentPage - 1) * perPage;
-    const slice = filteredUsers.slice(start, start + perPage);
     userTableBody.innerHTML = "";
 
-    if (!slice.length) {
+    if (!allUsers.length) {
       userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
       return;
     }
 
-    slice.forEach(user => {
+    allUsers.forEach(user => {
       const row = document.createElement("tr");
-
       row.innerHTML = `
         <td><input type="checkbox" class="user-checkbox" data-id="${user.id}" data-email="${user.email}" /></td>
         <td>${user.first_name || ""}</td>
@@ -123,45 +122,19 @@ filteredUsers = [...allUsers];
           </span>
         </td>
       `;
-
       const actionsTd = document.createElement("td");
       actionsTd.appendChild(createDropdown(user));
       row.appendChild(actionsTd);
       userTableBody.appendChild(row);
     });
 
-    userCount.textContent = `Total Users: ${filteredUsers.length}`;
-    paginationInfo.textContent = `Page ${currentPage}`;
-    prevBtn.style.display = currentPage === 1 ? "none" : "inline-block";
-nextBtn.style.display = currentPage * perPage >= filteredUsers.length ? "none" : "inline-block";
+    userCount.textContent = `Total Users: ${allUsers.length}`;
+    paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevBtn.style.display = currentPage > 1 ? "inline-block" : "none";
+    nextBtn.style.display = currentPage < totalPages ? "inline-block" : "none";
 
     attachCheckboxListeners();
     updateDeleteButtonVisibility();
-  }
-
-  function applyFilters() {
-    const term = searchInput.value.toLowerCase();
-    const role = roleFilter.value;
-    const status = statusFilter.value;
-
-    filteredUsers = allUsers.filter(u =>
-      (u.first_name?.toLowerCase().includes(term)
-        || u.last_name?.toLowerCase().includes(term)
-        || u.email?.toLowerCase().includes(term))
-      && (!role || u.role === role)
-      && (!status || u.status === status)
-    );
-
-    if (sortKey) {
-      filteredUsers.sort((a, b) => {
-        const aVal = (a[sortKey] || "").toLowerCase();
-        const bVal = (b[sortKey] || "").toLowerCase();
-        return sortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      });
-    }
-
-    currentPage = 1;
-    render();
   }
 
   function attachCheckboxListeners() {
@@ -175,51 +148,40 @@ nextBtn.style.display = currentPage * perPage >= filteredUsers.length ? "none" :
     deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
   }
 
-  // Column sorting
-  document.querySelectorAll("th.sortable").forEach(th => {
-    th.addEventListener("click", () => {
-      const map = {
-        firstName: "first_name",
-        lastName: "last_name",
-        email: "email"
-      };
-      const key = map[th.dataset.sort];
-      if (sortKey === key) {
-        sortOrder = sortOrder === "asc" ? "desc" : "asc";
-      } else {
-        sortKey = key;
-        sortOrder = "asc";
-      }
-
-      document.querySelectorAll("th.sortable .arrow").forEach(span => span.textContent = "");
-      const arrow = th.querySelector(".arrow");
-      arrow.textContent = sortOrder === "asc" ? "▲" : "▼";
-
-      applyFilters();
-    });
+  searchBtn.addEventListener("click", () => {
+    currentPage = 1;
+    fetchUsers();
   });
 
-  searchBtn.addEventListener("click", applyFilters);
   clearSearchBtn.addEventListener("click", () => {
     searchInput.value = "";
     roleFilter.value = "";
     statusFilter.value = "";
-    applyFilters();
+    currentPage = 1;
+    fetchUsers();
   });
-  roleFilter.addEventListener("change", applyFilters);
-  statusFilter.addEventListener("change", applyFilters);
+
+  roleFilter.addEventListener("change", () => {
+    currentPage = 1;
+    fetchUsers();
+  });
+
+  statusFilter.addEventListener("change", () => {
+    currentPage = 1;
+    fetchUsers();
+  });
 
   prevBtn.addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
-      render();
+      fetchUsers();
     }
   });
 
   nextBtn.addEventListener("click", () => {
-    if (currentPage * perPage < filteredUsers.length) {
+    if (currentPage < totalPages) {
       currentPage++;
-      render();
+      fetchUsers();
     }
   });
 
@@ -247,8 +209,7 @@ nextBtn.style.display = currentPage * perPage >= filteredUsers.length ? "none" :
       await Promise.all(ids.map(id =>
         fetch(`/api/users/${id}`, { method: "DELETE" })
       ));
-      allUsers = allUsers.filter(u => !ids.includes(u.id));
-      applyFilters();
+      fetchUsers(); // Refresh after delete
     } catch (e) {
       console.error("Bulk delete failed:", e);
       alert("Bulk delete failed.");
