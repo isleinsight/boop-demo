@@ -1,5 +1,15 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // === DOM Elements
+  const userInfo = document.getElementById("userInfo");
+  const editBtn = document.getElementById("editProfileBtn");
+  const saveBtn = document.getElementById("saveProfileBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const addStudentBtn = document.getElementById("addStudentBtn");
+  const parentSection = document.getElementById("parentSection");
+  const studentSection = document.getElementById("studentSection");
+  const parentNameEl = document.getElementById("parentName");
+  const parentEmailEl = document.getElementById("parentEmail");
+  const assignedStudentsList = document.getElementById("assignedStudentsList");
+
   const assignStudentForm = document.getElementById("assignStudentForm");
   const studentSearchInput = document.getElementById("studentSearchInput");
   const studentSearchBtn = document.getElementById("studentSearchBtn");
@@ -8,23 +18,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const nextStudentPageBtn = document.getElementById("nextStudentPageBtn");
   const studentPaginationInfo = document.getElementById("studentPaginationInfo");
   const assignSelectedStudentsBtn = document.getElementById("assignSelectedStudentsBtn");
-  const addStudentBtn = document.getElementById("addStudentBtn");
 
-  const userInfo = document.getElementById("userInfo");
-  const editBtn = document.getElementById("editProfileBtn");
-  const saveBtn = document.getElementById("saveProfileBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const parentSection = document.getElementById("parentSection");
-  const studentSection = document.getElementById("studentSection");
-  const parentNameEl = document.getElementById("parentName");
-  const parentEmailEl = document.getElementById("parentEmail");
-  const assignedStudentsList = document.getElementById("assignedStudentsList");
-
-  // === Vars
+  let currentPage = 1;
+  let totalPages = 1;
   let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
   let currentUserData = null;
-  let studentSearchPage = 1;
-  let studentSearchTotalPages = 1;
 
   if (!currentUserId) {
     alert("User ID not found.");
@@ -42,7 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
       currentUserData = user;
 
-      // Wallet and card info
       let walletHTML = "";
       try {
         const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
@@ -53,7 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
             walletHTML += `<div><span class="label">Card Number</span><span class="value">${cards[0].uid}</span></div>`;
           }
         }
-      } catch {}
+      } catch (err) {
+        console.warn("No wallet/card info:", err.message);
+      }
 
       userInfo.innerHTML = `
         <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
@@ -83,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         ${walletHTML}
       `;
+
       document.getElementById("editAssistance").value = user.on_assistance ? "true" : "false";
 
       const dropdown = document.createElement("select");
@@ -95,7 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
       dropdown.addEventListener("change", async () => {
         const action = dropdown.value;
         dropdown.value = "";
-        if (!action) return;
 
         if (action === "delete") {
           const confirmDelete = prompt("Type DELETE to confirm.");
@@ -110,15 +109,20 @@ document.addEventListener("DOMContentLoaded", () => {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ status })
             });
+            alert(`User ${status}.`);
           } else if (action === "signout") {
             await fetch(`/api/users/${currentUserId}/signout`, { method: "POST" });
+            alert("Sign-out requested.");
           } else if (action === "delete") {
             await fetch(`/api/users/${currentUserId}`, { method: "DELETE" });
+            alert("User deleted.");
             window.location.href = "view-users.html";
             return;
           }
+
           await loadUserProfile();
-        } catch {
+        } catch (err) {
+          console.error("❌ Action failed:", err);
           alert("Action failed.");
         }
       });
@@ -140,17 +144,37 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      if (user.role === "vendor") {
+        try {
+          const vendorSection = document.getElementById("vendorSection");
+          const vendorData = await fetchJSON(`/api/vendors`);
+          const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id);
+
+          if (vendor) {
+            document.getElementById("vendorBusiness").textContent = vendor.business_name || "-";
+            document.getElementById("vendorCategory").textContent = vendor.category || "-";
+            document.getElementById("vendorPhone").textContent = vendor.phone || "-";
+            document.getElementById("vendorApproved").textContent = vendor.approved ? "Yes" : "No";
+            vendorSection.style.display = "block";
+          }
+        } catch (err) {
+          console.error("❌ Failed to fetch vendor info:", err);
+        }
+      }
+
       editBtn.onclick = () => {
         document.getElementById("viewFirstName").style.display = "none";
         document.getElementById("viewMiddleName").style.display = "none";
         document.getElementById("viewLastName").style.display = "none";
         document.getElementById("viewEmail").style.display = "none";
         document.getElementById("viewAssistance").style.display = "none";
+
         document.getElementById("editFirstName").style.display = "block";
         document.getElementById("editMiddleName").style.display = "block";
         document.getElementById("editLastName").style.display = "block";
         document.getElementById("editEmail").style.display = "block";
         document.getElementById("editAssistance").style.display = "block";
+
         saveBtn.style.display = "inline-block";
       };
 
@@ -167,21 +191,31 @@ document.addEventListener("DOMContentLoaded", () => {
               on_assistance: document.getElementById("editAssistance").value === "true"
             })
           });
+
           alert("Profile updated.");
           loadUserProfile();
-        } catch {
+        } catch (err) {
+          console.error("❌ Failed to save profile:", err);
           alert("Error saving changes.");
         }
       };
-    } catch {
+
+    } catch (err) {
+      console.error("❌ Failed to load user:", err);
       alert("Failed to load user.");
       window.location.href = "view-users.html";
     }
   }
 
   async function loadAssignedStudents(parentId) {
-    const studentList = await fetchJSON(`/api/students/for-parent/${parentId}`);
     assignedStudentsList.innerHTML = "";
+    let studentList = [];
+
+    try {
+      studentList = await fetchJSON(`/api/students/for-parent/${parentId}`);
+    } catch (err) {
+      console.error("❌ Failed to load assigned students:", err);
+    }
 
     if (!studentList.length) {
       assignedStudentsList.innerHTML = `<p style="padding: 1rem; font-style: italic;">No students assigned.</p>`;
@@ -210,34 +244,32 @@ document.addEventListener("DOMContentLoaded", () => {
     loadAssignedStudents(currentUserId);
   };
 
-  // === Add Student Logic with Pagination
   addStudentBtn?.addEventListener("click", () => {
     assignStudentForm.style.display = assignStudentForm.style.display === "none" ? "block" : "none";
-    studentSearchPage = 1;
-    loadStudentSearchResults();
   });
 
   studentSearchBtn?.addEventListener("click", () => {
-    studentSearchPage = 1;
+    currentPage = 1;
     loadStudentSearchResults();
   });
 
   prevStudentPageBtn?.addEventListener("click", () => {
-    if (studentSearchPage > 1) {
-      studentSearchPage--;
+    if (currentPage > 1) {
+      currentPage--;
       loadStudentSearchResults();
     }
   });
 
   nextStudentPageBtn?.addEventListener("click", () => {
-    if (studentSearchPage < studentSearchTotalPages) {
-      studentSearchPage++;
+    if (currentPage < totalPages) {
+      currentPage++;
       loadStudentSearchResults();
     }
   });
 
   assignSelectedStudentsBtn?.addEventListener("click", async () => {
     const selected = document.querySelectorAll('input[name="studentSelect"]:checked');
+
     for (const checkbox of selected) {
       await fetch(`/api/students/${checkbox.value}/parents`, {
         method: "POST",
@@ -245,16 +277,18 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ parent_id: currentUserId })
       });
     }
+
     assignStudentForm.style.display = "none";
-    loadAssignedStudents(currentUserId);
+    studentSearchResults.innerHTML = "";
+    studentSearchInput.value = "";
+    await loadAssignedStudents(currentUserId);
   });
 
   async function loadStudentSearchResults() {
     const query = studentSearchInput.value.trim();
-    const res = await fetch(`/api/users?role=student&page=${studentSearchPage}&search=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    const users = data.users || [];
-    studentSearchTotalPages = data.totalPages || 1;
+    const res = await fetch(`/api/users?search=${query}&role=student&page=${currentPage}`);
+    const { users, totalPages: tp } = await res.json();
+    totalPages = tp;
 
     studentSearchResults.innerHTML = users.map(user => `
       <tr>
@@ -265,9 +299,9 @@ document.addEventListener("DOMContentLoaded", () => {
       </tr>
     `).join('');
 
-    studentPaginationInfo.textContent = `Page ${studentSearchPage} of ${studentSearchTotalPages}`;
-    prevStudentPageBtn.style.display = studentSearchPage > 1 ? "inline-block" : "none";
-    nextStudentPageBtn.style.display = studentSearchPage < studentSearchTotalPages ? "inline-block" : "none";
+    studentPaginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevStudentPageBtn.style.display = currentPage > 1 ? "inline-block" : "none";
+    nextStudentPageBtn.style.display = currentPage < totalPages ? "inline-block" : "none";
   }
 
   logoutBtn?.addEventListener("click", () => {
