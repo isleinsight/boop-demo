@@ -276,7 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadStudentSearchResults() {
     const query = studentSearchInput.value.trim();
-    const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}&role=cardholder&page=${currentPage}`);
+    const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}&role=student&page=${currentPage}`);
     const { users, totalPages: tp } = await res.json();
     totalPages = tp;
 
