@@ -157,6 +157,27 @@ router.get("/:id/parents", async (req, res) => {
   }
 });
 
+// ✅ GET /api/students/for-parent/:parentId — Get students assigned to a specific parent
+router.get("/for-parent/:parentId", async (req, res) => {
+  const { parentId } = req.params;
+
+  try {
+    const result = await pool.query(`
+      SELECT s.*, u.first_name, u.last_name, u.email
+      FROM student_parents sp
+      JOIN students s ON sp.student_id = s.user_id
+      JOIN users u ON s.user_id = u.id
+      WHERE sp.parent_id = $1
+    `, [parentId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching assigned students:", err);
+    res.status(500).json({ message: "Fetch failed" });
+  }
+});
+
+
 // ✅ DELETE /api/students/:id/parents/:parentId — Remove a parent
 router.delete("/:id/parents/:parentId", async (req, res) => {
   const { id, parentId } = req.params;
