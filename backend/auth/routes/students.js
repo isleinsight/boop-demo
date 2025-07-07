@@ -4,7 +4,7 @@ const pool = require("../../db");
 
 // ✅ POST /api/students — Create a student entry
 router.post("/", async (req, res) => {
-  const { user_id, parent_id, school_name, grade_level, expiry_date } = req.body;
+  const { user_id, school_name, grade_level, expiry_date } = req.body;
 
   if (!user_id || !school_name || !expiry_date) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -12,10 +12,10 @@ router.post("/", async (req, res) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO students (user_id, parent_id, school_name, grade_level, expiry_date)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [user_id, parent_id || null, school_name, grade_level || null, expiry_date]
+      [user_id, school_name, grade_level || null, expiry_date]
     );
 
     res.status(201).json({ message: "Student added", student: result.rows[0] });
@@ -25,22 +25,17 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ GET /api/students — Get all students (optionally filtered)
+// ✅ GET /api/students — Optionally filter/search
 router.get("/", async (req, res) => {
-  const { unassignedOnly, search } = req.query;
+  const { search } = req.query;
 
   try {
     let baseQuery = `SELECT * FROM students`;
     const params = [];
 
-    if (unassignedOnly === "true") {
-      baseQuery += ` WHERE parent_id IS NULL`;
-    }
-
     if (search) {
       const term = `%${search.toLowerCase()}%`;
-      baseQuery += params.length === 0 ? " WHERE" : " AND";
-      baseQuery += ` LOWER(school_name) LIKE $${params.length + 1}`;
+      baseQuery += ` WHERE LOWER(school_name) LIKE $1`;
       params.push(term);
     }
 
@@ -52,7 +47,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ GET /api/students/:id — Get one student
+// ✅ GET /api/students/:id — Get one student by user_id
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -70,10 +65,10 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ PATCH /api/students/:id — Update student info
+// ✅ PATCH /api/students/:id — Update school or expiry info
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const fields = ["parent_id", "school_name", "grade_level", "expiry_date"];
+  const fields = ["school_name", "grade_level", "expiry_date"];
   const updates = [];
   const values = [];
 
@@ -101,7 +96,7 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// ✅ DELETE /api/students/:id — Remove student entry
+// ✅ DELETE /api/students/:id — Delete the student row
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -111,6 +106,71 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error("❌ Error deleting student:", err);
     res.status(500).json({ message: "Delete failed" });
+  }
+});
+
+
+// =========================
+// 👨‍👩‍👧 PARENT RELATIONSHIP ROUTES
+// =========================
+
+// ✅ POST /api/students/:id/parents — Add a parent
+router.post("/:id/parents", async (req, res) => {
+  const { id } = req.params;
+  const { parent_id } = req.body;
+
+  if (!parent_id) {
+    return res.status(400).json({ message: "Missing parent_id" });
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO student_parents (student_id, parent_id)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [id, parent_id]
+    );
+
+    res.json({ message: "Parent linked to student" });
+  } catch (err) {
+    console.error("❌ Error linking parent:", err);
+    res.status(500).json({ message: "Linking failed" });
+  }
+});
+
+// ✅ GET /api/students/:id/parents — List all parents
+router.get("/:id/parents", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.first_name, u.last_name, u.email
+      FROM student_parents sp
+      JOIN users u ON sp.parent_id = u.id
+      WHERE sp.student_id = $1
+    `, [id]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching parents:", err);
+    res.status(500).json({ message: "Fetch failed" });
+  }
+});
+
+// ✅ DELETE /api/students/:id/parents/:parentId — Remove a parent
+router.delete("/:id/parents/:parentId", async (req, res) => {
+  const { id, parentId } = req.params;
+
+  try {
+    await pool.query(
+      `DELETE FROM student_parents WHERE student_id = $1 AND parent_id = $2`,
+      [id, parentId]
+    );
+
+    res.json({ message: "Parent unlinked from student" });
+  } catch (err) {
+    console.error("❌ Error unlinking parent:", err);
+    res.status(500).json({ message: "Unlink failed" });
   }
 });
 
