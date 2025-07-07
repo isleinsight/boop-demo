@@ -32,8 +32,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function fetchUsers() {
     try {
       const res = await fetch("/api/users");
-      allUsers = await res.json();
-      filteredUsers = [...allUsers];
+const data = await res.json();
+allUsers = data.users || [];
+filteredUsers = [...allUsers];
       applyFilters();
     } catch (e) {
       console.error("Error fetching users:", e);
