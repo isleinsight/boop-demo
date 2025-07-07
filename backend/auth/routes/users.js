@@ -4,26 +4,17 @@ const pool = require("../../db");
 const bcrypt = require("bcrypt");
 
 const rolesWithWallet = ["cardholder", "student", "senior", "vendor"];
-
-// UUID validation helper
 const isValidUUID = (str) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 
-// ✅ POST /api/users — create user (+ wallet/vendor if needed)
+// ✅ Create user
 router.post("/", async (req, res) => {
   const {
-    email,
-    password,
-    first_name,
-    last_name,
-    role,
-    on_assistance,
-    vendor
+    email, password, first_name, last_name, role, on_assistance, vendor
   } = req.body;
 
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
-
     const result = await pool.query(
       `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -42,12 +33,7 @@ router.post("/", async (req, res) => {
       );
 
       const walletId = walletRes.rows[0].id;
-
-      await pool.query(
-        `UPDATE users SET wallet_id = $1 WHERE id = $2`,
-        [walletId, user.id]
-      );
-
+      await pool.query(`UPDATE users SET wallet_id = $1 WHERE id = $2`, [walletId, user.id]);
       user.wallet_id = walletId;
 
       if (role === "vendor" && vendor) {
@@ -60,7 +46,6 @@ router.post("/", async (req, res) => {
     }
 
     res.status(201).json({ message: "User created", id: user.id, role: user.role });
-
   } catch (err) {
     console.error("❌ Error creating user:", err);
     if (err.code === "23505") {
@@ -70,19 +55,11 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ GET /api/users
+// ✅ Fetch users
 router.get("/", async (req, res) => {
-  const { parentId, role, search, page = 1, eligibleOnly, hasWallet } = req.query;
+  const { role, search, page = 1, eligibleOnly, hasWallet } = req.query;
 
   try {
-    if (parentId) {
-      if (!isValidUUID(parentId)) {
-        return res.status(400).json({ message: "Invalid parentId" });
-      }
-      const result = await pool.query("SELECT * FROM users WHERE parent_id = $1", [parentId]);
-      return res.json(result.rows);
-    }
-
     if (search !== undefined) {
       const perPage = 10;
       const offset = (parseInt(page) - 1) * perPage;
@@ -113,21 +90,20 @@ router.get("/", async (req, res) => {
 
     const result = await pool.query("SELECT * FROM users ORDER BY first_name ASC");
     res.json(result.rows);
-
   } catch (err) {
     console.error("❌ Error fetching users:", err);
     res.status(500).json({ message: "Failed to process request" });
   }
 });
 
-// ✅ PATCH /api/users/:id — update user fields
+// ✅ Update user
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
   }
 
-  const fields = ["first_name", "last_name", "email", "role", "status", "parent_id", "on_assistance"];
+  const fields = ["first_name", "last_name", "email", "role", "status", "on_assistance"];
   const updates = [];
   const values = [];
 
@@ -149,21 +125,17 @@ router.patch("/:id", async (req, res) => {
     );
 
     if (req.body.status === "suspended" || req.body.status === "active") {
-      await pool.query(
-        `UPDATE wallets SET status = $1 WHERE user_id = $2`,
-        [req.body.status, id]
-      );
+      await pool.query(`UPDATE wallets SET status = $1 WHERE user_id = $2`, [req.body.status, id]);
     }
 
     res.json({ message: "User updated" });
-
   } catch (err) {
     console.error("❌ Error updating user:", err);
     res.status(500).json({ message: "Update failed" });
   }
 });
 
-// ✅ DELETE /api/users/:id
+// ✅ Delete user
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
@@ -174,14 +146,13 @@ router.delete("/:id", async (req, res) => {
     await pool.query(`UPDATE wallets SET status = 'archived' WHERE user_id = $1`, [id]);
     await pool.query("DELETE FROM users WHERE id = $1", [id]);
     res.json({ message: "User deleted" });
-
   } catch (err) {
     console.error("❌ Error deleting user:", err);
     res.status(500).json({ message: "Delete failed" });
   }
 });
 
-// ✅ GET /api/users/:id
+// ✅ Get user by ID
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
@@ -200,7 +171,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// 🔌 Placeholder — Force logout route (optional)
+// 🔌 Placeholder
 router.post("/:id/signout", async (req, res) => {
   res.json({ message: "Force sign-out not implemented yet" });
 });
