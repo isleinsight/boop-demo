@@ -792,3 +792,49 @@ select {
   border-radius: 4px;
   cursor: pointer;
 }
+
+
+.nav-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.nav-dropdown .dropbtn {
+  cursor: pointer;
+  padding: 8px 12px;
+  color: #333;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-dropdown .dropdown-content {
+  display: none;
+  position: absolute;
+  top: 38px;
+  left: 0;
+  background-color: white;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  min-width: 160px;
+}
+
+.nav-dropdown .dropdown-content a {
+  display: block;
+  padding: 10px 16px;
+  color: #333;
+  text-decoration: none;
+  background-color: white;
+  transition: background 0.2s ease;
+}
+
+.nav-dropdown .dropdown-content a:hover {
+  background-color: #f4f4f4;
+}
+
+/* Show dropdown on hover or focus-within for touch devices */
+.nav-dropdown:hover .dropdown-content,
+.nav-dropdown:focus-within .dropdown-content {
+  display: block;
+}
