@@ -1,10 +1,9 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Assign Student – BOOP Admin</title>
+  <title>Assign Card – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
   <style>
     body {
@@ -21,31 +20,42 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    label, input, button, .status, .section {
-      display: block;
+    .container-small input,
+    .container-small button,
+    .uid-controls {
       width: 100%;
-      margin-top: 1rem;
+      box-sizing: border-box;
     }
 
-    input {
+    input, button {
       padding: 10px;
+      margin-top: 8px;
       border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 1em;
     }
 
     button {
-      padding: 10px;
-      border: none;
       background: #2f80ed;
       color: white;
       font-weight: bold;
-      border-radius: 6px;
       cursor: pointer;
     }
 
     button:hover {
       background: #1c6fd8;
+    }
+
+    .uid-controls {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 5px;
+      margin-bottom: 20px;
+    }
+
+    .uid-controls button {
+      flex: 1;
     }
 
     .status {
@@ -54,13 +64,13 @@
       color: #333;
     }
 
-    .search-results div {
+    #userSuggestions div {
       padding: 8px 12px;
       border-bottom: 1px solid #eee;
       cursor: pointer;
     }
 
-    .search-results div:hover {
+    #userSuggestions div:hover {
       background-color: #f0f0f0;
     }
   </style>
@@ -84,115 +94,144 @@
   </nav>
 
   <div class="container-small">
-    <h3>Assign Student to Parent</h3>
+    <h3>Assign New Card</h3>
 
-    <!-- Parent search -->
-    <label for="parentSearch">Search Parent</label>
-    <input type="text" id="parentSearch" placeholder="Type parent name or email" autocomplete="off" />
-    <div id="parentSuggestions" class="search-results" style="display: none;"></div>
+    <label for="cardUID">Card UID</label>
+    <input type="text" id="cardUID" readonly />
 
-    <!-- Student search -->
-    <label for="studentSearch">Search Student</label>
-    <input type="text" id="studentSearch" placeholder="Type student name or email" autocomplete="off" />
-    <div id="studentSuggestions" class="search-results" style="display: none;"></div>
+    <div class="uid-controls">
+      <button type="button" id="generateUIDBtn">Generate</button>
+      <button type="button" id="scanUIDBtn">Scan</button>
+    </div>
 
-    <!-- Assign -->
-    <button id="assignBtn">Assign Student</button>
-    <div class="status" id="statusMessage"></div>
+    <label for="userSearch">Assign to User</label>
+    <input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
+    <div id="userSuggestions" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;"></div>
+
+    <button id="assignBtn">Assign Card</button>
+    <div class="status" id="status"></div>
   </div>
 
   <script type="module">
-    const parentSearch = document.getElementById("parentSearch");
-    const studentSearch = document.getElementById("studentSearch");
-    const parentSuggestions = document.getElementById("parentSuggestions");
-    const studentSuggestions = document.getElementById("studentSuggestions");
+    const cardUID = document.getElementById("cardUID");
     const assignBtn = document.getElementById("assignBtn");
-    const statusMessage = document.getElementById("statusMessage");
+    const statusEl = document.getElementById("status");
+    const generateBtn = document.getElementById("generateUIDBtn");
+    const scanBtn = document.getElementById("scanUIDBtn");
+    const userSearch = document.getElementById("userSearch");
+    const userSuggestions = document.getElementById("userSuggestions");
 
-    let selectedParentId = null;
-    let selectedStudentId = null;
+    let selectedUser = null;
 
-    async function fetchUsers(query, role) {
-      const res = await fetch(\`/api/users?search=\${encodeURIComponent(query)}&role=\${role}\`);
-      return res.ok ? await res.json() : [];
-    }
+    // 🔧 Generate UID
+    generateBtn.addEventListener("click", () => {
+      const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+      cardUID.value = uid;
+    });
 
-    function setupSearch(inputEl, suggestionsEl, role, onSelect) {
-      inputEl.addEventListener("input", async () => {
-        const query = inputEl.value.trim();
-        if (query.length < 2) {
-          suggestionsEl.style.display = "none";
-          return;
+    // 🔍 Scan (dummy)
+    scanBtn.addEventListener("click", async () => {
+      try {
+        const res = await fetch("http://localhost:3001/scan");
+        const data = await res.json();
+        if (data.uid) {
+          cardUID.value = data.uid;
+        } else {
+          alert("No UID received. Please try again.");
         }
+      } catch (err) {
+        console.error("Scan failed:", err);
+        alert("NFC scanner not available. Make sure it's running on your computer.");
+      }
+    });
 
-        try {
-          const data = await fetchUsers(query, role);
-          const users = data.users || [];
-          if (!users.length) {
-            suggestionsEl.innerHTML = "<div>No results found</div>";
-            suggestionsEl.style.display = "block";
-            return;
-          }
-
-          suggestionsEl.innerHTML = users.map(user => \`
-            <div data-id="\${user.id}">\${user.first_name} \${user.last_name} (\${user.email})</div>
-          \`).join("");
-          suggestionsEl.style.display = "block";
-
-          suggestionsEl.querySelectorAll("div").forEach(div => {
-            div.addEventListener("click", () => {
-              inputEl.value = div.textContent;
-              suggestionsEl.style.display = "none";
-              onSelect(div.dataset.id);
-            });
-          });
-        } catch (err) {
-          console.error(err);
-          suggestionsEl.innerHTML = "<div>Error fetching users</div>";
-          suggestionsEl.style.display = "block";
-        }
-      });
-    }
-
-    setupSearch(parentSearch, parentSuggestions, "parent", id => selectedParentId = id);
-    setupSearch(studentSearch, studentSuggestions, "student", id => selectedStudentId = id);
-
-    assignBtn.addEventListener("click", async () => {
-      if (!selectedParentId || !selectedStudentId) {
-        statusMessage.textContent = "Please select both a parent and a student.";
+    // 👤 User autocomplete
+    userSearch.addEventListener("input", async () => {
+      const query = userSearch.value.trim();
+      if (query.length < 2) {
+        userSuggestions.style.display = "none";
         return;
       }
 
       try {
-        const res = await fetch("/api/students/assign-parent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            parent_id: selectedParentId,
-            student_id: selectedStudentId
-          })
-        });
+        const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&eligibleOnly=true`);
+        const users = await res.json();
 
-        if (!res.ok) throw new Error("Failed");
+        if (!users.length) {
+          userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
+          userSuggestions.style.display = "block";
+          return;
+        }
 
-        statusMessage.textContent = "✅ Student assigned successfully.";
-        statusMessage.style.color = "green";
-        selectedParentId = null;
-        selectedStudentId = null;
-        parentSearch.value = "";
-        studentSearch.value = "";
-      } catch (err) {
-        statusMessage.textContent = "❌ Failed to assign student.";
-        statusMessage.style.color = "red";
+        userSuggestions.innerHTML = users.map(u => `
+          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+            ${u.first_name} ${u.last_name} (${u.email})
+          </div>
+        `).join("");
+        userSuggestions.style.display = "block";
+      } catch (e) {
+        console.error("User search failed:", e);
       }
     });
 
+    userSuggestions.addEventListener("click", (e) => {
+      const item = e.target.closest(".user-suggestion");
+      if (!item) return;
+      selectedUser = {
+        id: item.dataset.id,
+        wallet_id: item.dataset.wallet
+      };
+      userSearch.value = item.textContent;
+      userSuggestions.style.display = "none";
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+        userSuggestions.style.display = "none";
+      }
+    });
+
+    // 📤 Submit card assignment
+    assignBtn.addEventListener("click", async () => {
+      const uid = cardUID.value.trim();
+      const admin = JSON.parse(localStorage.getItem("boopUser"));
+
+      if (!uid) {
+        statusEl.textContent = "Please generate or scan a UID.";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid,
+            wallet_id: selectedUser?.wallet_id,
+            issued_by: admin?.id,
+            type: "spending"
+          })
+        });
+
+        if (!res.ok) throw new Error("Failed to assign");
+
+        statusEl.textContent = "✅ Card assigned successfully!";
+        statusEl.style.color = "green";
+        cardUID.value = "";
+        userSearch.value = "";
+        selectedUser = null;
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "❌ Failed to assign card.";
+      }
+    });
+
+    // 🚪 Logout
     document.getElementById("logoutBtn")?.addEventListener("click", () => {
       fetch("/api/logout", { method: "POST" }).then(() => {
         window.location.href = "login.html";
       });
     });
   </script>
-
 </body>
 </html>
