@@ -20,9 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const vendorCategoryInput = document.getElementById("vendorCategory");
   const vendorApprovedSelect = document.getElementById("vendorApproved");
 
-  const studentSchoolInput = document.getElementById("studentSchoolName");
-  const studentGradeInput = document.getElementById("studentGradeLevel");
-  const studentExpiryInput = document.getElementById("studentExpiryDate");
+  const gradeLevelInput = document.getElementById("gradeLevel");
+  const schoolNameInput = document.getElementById("schoolName");
 
   const statusDiv = document.getElementById("formStatus");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -35,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   roleSelect.addEventListener("change", updateConditionalFields);
-  updateConditionalFields();
+  updateConditionalFields(); // Run once on load
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
@@ -96,32 +95,27 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(result.message || "Failed to create user");
       }
 
-// After successful user creation
-if (role === "student") {
-  const school_name = document.getElementById("studentSchoolName")?.value.trim();
-  const grade_level = document.getElementById("studentGradeLevel")?.value.trim();
-  const expiry_date = document.getElementById("studentExpiryDate")?.value;
+      // If student, also create student profile
+      if (role === "student") {
+        const school_name = schoolNameInput.value.trim();
+        const grade_level = gradeLevelInput.value.trim();
+        const expiry_date = new Date();
+        expiry_date.setFullYear(expiry_date.getFullYear() + 1); // Default to 1 year from now
 
-  if (!school_name || !expiry_date) {
-    throw new Error("Missing required student fields.");
-  }
-
-  await fetch("/api/students", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: result.id,
-      school_name,
-      grade_level,
-      expiry_date
-    })
-  });
-}
-
-        if (!resStudent.ok) {
-          const studentErr = await resStudent.json();
-          throw new Error(studentErr.message || "Student record creation failed.");
+        if (!school_name) {
+          throw new Error("School name is required for student.");
         }
+
+        await fetch("/api/students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: result.id,
+            school_name,
+            grade_level,
+            expiry_date: expiry_date.toISOString().split("T")[0] // Format as YYYY-MM-DD
+          })
+        });
       }
 
       statusDiv.textContent = "✅ User created successfully!";
