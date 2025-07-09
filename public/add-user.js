@@ -6,17 +6,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const emailInput = document.getElementById("email");
   const passwordInput = document.getElementById("password");
   const firstNameInput = document.getElementById("firstName");
+  const middleNameInput = document.getElementById("middleName"); // NEW
   const lastNameInput = document.getElementById("lastName");
   const roleSelect = document.getElementById("role");
   const onAssistanceCheckbox = document.getElementById("onAssistance");
 
   const assistanceContainer = document.getElementById("assistanceContainer");
+  const vendorFields = document.getElementById("vendorFields");
+  const studentFields = document.getElementById("studentFields"); // NEW
+
   const businessNameInput = document.getElementById("businessName");
   const vendorPhoneInput = document.getElementById("vendorPhone");
   const vendorCategoryInput = document.getElementById("vendorCategory");
   const vendorApprovedSelect = document.getElementById("vendorApproved");
 
-  const vendorFields = document.getElementById("vendorFields");
+  const gradeLevelInput = document.getElementById("gradeLevel"); // NEW
+  const schoolNameInput = document.getElementById("schoolName"); // NEW
+
   const statusDiv = document.getElementById("formStatus");
   const logoutBtn = document.getElementById("logoutBtn");
 
@@ -24,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const role = roleSelect.value;
     vendorFields.style.display = role === "vendor" ? "block" : "none";
     assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
+    studentFields.style.display = role === "student" ? "block" : "none"; // NEW
   };
 
   roleSelect.addEventListener("change", updateConditionalFields);
@@ -45,6 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     const firstName = firstNameInput.value.trim();
+    const middleName = middleNameInput.value.trim(); // NEW
     const lastName = lastNameInput.value.trim();
     const role = roleSelect.value;
     const onAssistance = onAssistanceCheckbox.checked;
@@ -59,18 +67,25 @@ document.addEventListener("DOMContentLoaded", () => {
       email,
       password,
       first_name: firstName,
+      middle_name: middleName || null, // NEW
       last_name: lastName,
       role,
       on_assistance: role === "cardholder" ? onAssistance : false,
     };
 
-    // Attach vendor info if needed
     if (role === "vendor") {
       userPayload.vendor = {
         name: businessNameInput.value.trim(),
         phone: vendorPhoneInput.value.trim(),
         category: vendorCategoryInput.value.trim(),
         approved: vendorApprovedSelect.value === "true"
+      };
+    }
+
+    if (role === "student") {
+      userPayload.student = {
+        grade_level: gradeLevelInput.value.trim(),
+        school_name: schoolNameInput.value.trim()
       };
     }
 
@@ -91,7 +106,6 @@ document.addEventListener("DOMContentLoaded", () => {
       statusDiv.style.color = "green";
       form.reset();
       updateConditionalFields();
-
     } catch (err) {
       console.error("❌ Error:", err);
       statusDiv.textContent = err.message;
