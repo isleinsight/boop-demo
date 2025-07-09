@@ -14,6 +14,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const assistanceContainer = document.getElementById("assistanceContainer");
   const vendorFields = document.getElementById("vendorFields");
   const studentFields = document.getElementById("studentFields");
+  const statusDiv = document.getElementById("formStatus");
+  const logoutBtn = document.getElementById("logoutBtn");
 
   const businessNameInput = document.getElementById("businessName");
   const vendorPhoneInput = document.getElementById("vendorPhone");
@@ -23,9 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const studentSchoolName = document.getElementById("studentSchoolName");
   const studentGradeLevel = document.getElementById("studentGradeLevel");
   const expiryDateInput = document.getElementById("expiryDate");
-
-  const statusDiv = document.getElementById("formStatus");
-  const logoutBtn = document.getElementById("logoutBtn");
 
   const updateConditionalFields = () => {
     const role = roleSelect.value;
@@ -52,13 +51,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const first_name = firstNameInput.value.trim();
-    const middle_name = middleNameInput.value.trim();
-    const last_name = lastNameInput.value.trim();
+    const firstName = firstNameInput.value.trim();
+    const middleName = middleNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
     const role = roleSelect.value;
-    const on_assistance = onAssistanceCheckbox.checked;
+    const onAssistance = onAssistanceCheckbox.checked;
 
-    if (!email || !password || password.length < 6 || !first_name || !last_name || !role) {
+    if (!email || !password || password.length < 6 || !firstName || !lastName || !role) {
       statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
       statusDiv.style.color = "red";
       return;
@@ -67,11 +66,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const userPayload = {
       email,
       password,
-      first_name,
-      middle_name: middle_name || null,
-      last_name,
+      first_name: firstName,
+      middle_name: middleName || null,
+      last_name: lastName,
       role,
-      on_assistance: role === "cardholder" ? on_assistance : false
+      on_assistance: role === "cardholder" ? onAssistance : false,
     };
 
     if (role === "vendor") {
@@ -83,6 +82,24 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
+    if (role === "student") {
+      const school_name = studentSchoolName.value.trim();
+      const grade_level = studentGradeLevel.value.trim();
+      const expiry_date = expiryDateInput.value;
+
+      if (!school_name || !expiry_date) {
+        statusDiv.textContent = "Missing school name or expiry date for student.";
+        statusDiv.style.color = "red";
+        return;
+      }
+
+      userPayload.student = {
+        school_name,
+        grade_level,
+        expiry_date
+      };
+    }
+
     try {
       const resUser = await fetch("/api/users", {
         method: "POST",
@@ -91,36 +108,16 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const result = await resUser.json();
-      if (!resUser.ok) throw new Error(result.message || "Failed to create user");
 
-      if (role === "student") {
-        const school_name = studentSchoolName.value.trim();
-        const grade_level = studentGradeLevel.value.trim();
-        const expiry_date = expiryDateInput.value;
-
-        if (!school_name || !expiry_date) {
-          throw new Error("Missing school name or expiry date for student.");
-        }
-
-        const resStudent = await fetch("/api/students", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: result.id,
-            school_name,
-            grade_level,
-            expiry_date
-          }),
-        });
-
-        const studentResult = await resStudent.json();
-        if (!resStudent.ok) throw new Error(studentResult.message || "Failed to create student record");
+      if (!resUser.ok) {
+        throw new Error(result.message || "Failed to create user");
       }
 
       statusDiv.textContent = "✅ User created successfully!";
       statusDiv.style.color = "green";
       form.reset();
       updateConditionalFields();
+
     } catch (err) {
       console.error("❌ Error:", err);
       statusDiv.textContent = err.message;
