@@ -4,11 +4,10 @@
   <meta charset="UTF-8" />
   <title>Assign Student – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
-
   <!-- ✅ Navbar -->
   <nav>
     <div class="nav-container">
@@ -18,7 +17,7 @@
       <div class="nav-right">
         <a href="dashboard.html">Dashboard</a>
         <div class="nav-dropdown">
-          <a href="#" class="dropbtn">Add</a>
+          <a href="#" class="dropbtn" style="color: white;">Add</a>
           <div class="dropdown-content">
             <a href="add-user.html">Add User</a>
             <a href="assign-card.html">Assign Card</a>
@@ -32,24 +31,22 @@
   </nav>
 
   <!-- ✅ Page Content -->
-  <div class="container">
-    <h1>Assign Student to Parent</h1>
+  <div class="container-small">
+    <h3>Assign Student to Parent</h3>
 
-    <div class="form-section">
-      <label for="parentSearch">Search Parent</label>
-      <input type="text" id="parentSearch" placeholder="Type parent name or email" autocomplete="off" />
-      <div id="parentSuggestions" class="suggestion-box" style="display:none;"></div>
+    <label for="parentSearch">Search Parent</label>
+    <input type="text" id="parentSearch" placeholder="Type parent name or email" autocomplete="off" />
+    <div id="parentSuggestions" class="suggestion-box" style="display:none;"></div>
 
-      <label for="studentSearch">Search Student</label>
-      <input type="text" id="studentSearch" placeholder="Type student name" autocomplete="off" />
-      <div id="studentSuggestions" class="suggestion-box" style="display:none;"></div>
+    <label for="studentSearch">Search Student</label>
+    <input type="text" id="studentSearch" placeholder="Type student name" autocomplete="off" />
+    <div id="studentSuggestions" class="suggestion-box" style="display:none;"></div>
 
-      <button id="assignBtn">Assign Student</button>
-      <div id="statusMessage" class="status-message"></div>
-    </div>
+    <button id="assignBtn">Assign Student</button>
+    <div id="statusMessage" class="status-message"></div>
   </div>
 
-  <!-- ✅ JavaScript at Bottom -->
+  <!-- ✅ Inline JavaScript -->
   <script type="module">
     const parentSearch = document.getElementById("parentSearch");
     const parentSuggestions = document.getElementById("parentSuggestions");
@@ -70,18 +67,16 @@
         }
 
         try {
-          const res = await fetch(\`/api/users?search=\${encodeURIComponent(query)}&role=\${role}\`);
+          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&role=${role}`);
           const users = await res.json();
 
-          if (!users.length) {
-            suggestionBox.innerHTML = "<div style='padding: 8px;'>No results found</div>";
-          } else {
-            suggestionBox.innerHTML = users.map(u => \`
-              <div class="suggestion-item" data-id="\${u.id}">
-                \${u.first_name} \${u.last_name} (\${u.email})
-              </div>
-            \`).join("");
-          }
+          suggestionBox.innerHTML = users.length
+            ? users.map(u => `
+                <div class="suggestion-item" data-id="${u.id}">
+                  ${u.first_name} ${u.last_name} (${u.email})
+                </div>
+              `).join("")
+            : "<div class='suggestion-item'>No results found</div>";
 
           suggestionBox.style.display = "block";
         } catch (e) {
@@ -93,8 +88,7 @@
         const item = e.target.closest(".suggestion-item");
         if (!item) return;
         const id = item.dataset.id;
-        const name = item.textContent;
-        inputEl.value = name;
+        inputEl.value = item.textContent;
         suggestionBox.style.display = "none";
         onSelect(id);
       });
@@ -138,7 +132,6 @@
       }
     });
 
-    // Logout
     document.getElementById("logoutBtn")?.addEventListener("click", () => {
       fetch("/api/logout", { method: "POST" }).then(() => {
         window.location.href = "login.html";
@@ -146,7 +139,7 @@
     });
   </script>
 
-  <!-- ✅ Optional inline suggestion-box styles -->
+  <!-- ✅ Suggestion Box Styling -->
   <style>
     .suggestion-box {
       border: 1px solid #ccc;
