@@ -20,21 +20,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const vendorCategoryInput = document.getElementById("vendorCategory");
   const vendorApprovedSelect = document.getElementById("vendorApproved");
 
-  const gradeLevelInput = document.getElementById("gradeLevel");
-  const schoolNameInput = document.getElementById("schoolName");
-
   const statusDiv = document.getElementById("formStatus");
   const logoutBtn = document.getElementById("logoutBtn");
 
+  // Display conditional fields based on selected role
   const updateConditionalFields = () => {
     const role = roleSelect.value;
+
     vendorFields.style.display = role === "vendor" ? "block" : "none";
     assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
     studentFields.style.display = role === "student" ? "block" : "none";
   };
 
   roleSelect.addEventListener("change", updateConditionalFields);
-  updateConditionalFields(); // Run once on load
+  updateConditionalFields(); // Initial run
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
@@ -48,6 +47,11 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     statusDiv.textContent = "Creating user...";
     statusDiv.style.color = "black";
+
+    // These must be fetched *inside* the handler to ensure DOM availability
+    const schoolNameInput = document.getElementById("schoolName");
+    const gradeLevelInput = document.getElementById("gradeLevel");
+    const expiryDateInput = document.getElementById("expiryDate");
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -73,12 +77,13 @@ document.addEventListener("DOMContentLoaded", () => {
       on_assistance: role === "cardholder" ? on_assistance : false,
     };
 
+    // Add vendor details if applicable
     if (role === "vendor") {
       userPayload.vendor = {
         name: businessNameInput.value.trim(),
         phone: vendorPhoneInput.value.trim(),
         category: vendorCategoryInput.value.trim(),
-        approved: vendorApprovedSelect.value === "true"
+        approved: vendorApprovedSelect.value === "true",
       };
     }
 
@@ -89,32 +94,33 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(userPayload),
       });
 
-      const result = await resUser.json();
+      const userResult = await resUser.json();
 
       if (!resUser.ok) {
-        throw new Error(result.message || "Failed to create user");
+        throw new Error(userResult.message || "Failed to create user");
       }
 
-      // If student, also create student profile
-      if (role === "student") {
-        const school_name = schoolNameInput.value.trim();
-        const grade_level = gradeLevelInput.value.trim();
-        const expiry_date = new Date();
-        expiry_date.setFullYear(expiry_date.getFullYear() + 1); // Default to 1 year from now
+      const userId = userResult.id;
 
-        if (!school_name) {
-          throw new Error("School name is required for student.");
+      // Add student entry if role is student
+      if (role === "student") {
+        const school_name = schoolNameInput?.value?.trim();
+        const grade_level = gradeLevelInput?.value?.trim();
+        const expiry_date = expiryDateInput?.value;
+
+        if (!school_name || !expiry_date) {
+          throw new Error("Please provide a school name and expiry date for the student.");
         }
 
         await fetch("/api/students", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            user_id: result.id,
+            user_id: userId,
             school_name,
-            grade_level,
-            expiry_date: expiry_date.toISOString().split("T")[0] // Format as YYYY-MM-DD
-          })
+            grade_level: grade_level || null,
+            expiry_date,
+          }),
         });
       }
 
