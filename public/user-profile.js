@@ -185,9 +185,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const student = await fetchJSON(`/api/students/${studentId}`);
       document.getElementById("studentSchoolName").textContent = student.school_name || "-";
-      document.getElementById("studentGradeLevel").textContent = student.grade || "-";
+      document.getElementById("studentGradeLevel").textContent = student.grade_level || "-";
       document.getElementById("studentEnrolled").textContent = student.enrolled ? "Yes" : "No";
-      document.getElementById("studentExpiryDate").textContent = student.school_expiry_date || "-";
+      document.getElementById("studentExpiryDate").textContent = student.expiry_date || "-";
     } catch (err) {
       console.warn("❌ Could not load student info:", err);
     }
@@ -222,9 +222,9 @@ document.addEventListener("DOMContentLoaded", () => {
         block.classList.add("user-details-grid");
         block.innerHTML = `
           <div><span class="label">School Name</span><span class="value">${student.school_name || "-"}</span></div>
-          <div><span class="label">Grade Level</span><span class="value">${student.grade || "-"}</span></div>
+          <div><span class="label">Grade Level</span><span class="value">${student.grade_level || "-"}</span></div>
           <div><span class="label">Enrolled</span><span class="value">${student.enrolled ? "Yes" : "No"}</span></div>
-          <div><span class="label">Expiry Date</span><span class="value">${student.school_expiry_date || "-"}</span></div>
+          <div><span class="label">Expiry Date</span><span class="value">${student.expiry_date || "-"}</span></div>
         `;
         assignedStudentsList.appendChild(block);
       });
