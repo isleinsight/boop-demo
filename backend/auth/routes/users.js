@@ -18,7 +18,7 @@ router.post("/", async (req, res) => {
     role,
     on_assistance,
     vendor,
-    student // 🎯 expect { school_name, grade_level, expiry_date }
+    student // { school_name, grade_level, expiry_date }
   } = req.body;
 
   const client = await pool.connect();
@@ -63,12 +63,10 @@ router.post("/", async (req, res) => {
       );
     }
 
-    // ✅ Add student record if role is student
     if (role === "student" && student) {
       const { school_name, grade_level, expiry_date } = student;
-
       if (!school_name || !expiry_date) {
-        throw new Error("Missing required student fields (school_name, expiry_date)");
+        throw new Error("Missing required student fields");
       }
 
       await client.query(
@@ -93,4 +91,142 @@ router.post("/", async (req, res) => {
   }
 });
 
-// The rest of your GET, PATCH, DELETE routes are unchanged and can remain as-is.
+// ✅ Get users with optional filters
+router.get("/", async (req, res) => {
+  const { role, search, page = 1, eligibleOnly, hasWallet } = req.query;
+
+  try {
+    const perPage = 10;
+    const offset = (parseInt(page) - 1) * perPage;
+
+    const whereClauses = [];
+    const values = [];
+
+    if (search) {
+      whereClauses.push(`(
+        LOWER(first_name) LIKE $${values.length + 1} OR
+        LOWER(last_name) LIKE $${values.length + 1} OR
+        LOWER(email) LIKE $${values.length + 1}
+      )`);
+      values.push(`%${search.toLowerCase()}%`);
+    }
+
+    if (role) {
+      whereClauses.push(`role = $${values.length + 1}`);
+      values.push(role);
+    }
+
+    if (eligibleOnly === "true") {
+      whereClauses.push(`role IN ('cardholder', 'student', 'senior')`);
+    }
+
+    if (hasWallet === "true") {
+      whereClauses.push(`id IN (SELECT user_id FROM wallets)`);
+    }
+
+    const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+    const query = `
+      SELECT * FROM users
+      ${whereSQL}
+      ORDER BY first_name ASC
+      LIMIT $${values.length + 1}
+      OFFSET $${values.length + 2}
+    `;
+
+    const countQuery = `SELECT COUNT(*) FROM users ${whereSQL}`;
+
+    const result = await pool.query(query, [...values, perPage, offset]);
+    const count = await pool.query(countQuery, values);
+
+    const totalUsers = parseInt(count.rows[0].count, 10);
+    const totalPages = Math.ceil(totalUsers / perPage);
+
+    res.json({ users: result.rows, totalPages });
+  } catch (err) {
+    console.error("❌ Error fetching users:", err);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
+// ✅ Update user
+router.patch("/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  const fields = ["first_name", "middle_name", "last_name", "email", "role", "status", "on_assistance"];
+  const updates = [];
+  const values = [];
+
+  fields.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      updates.push(`${field} = $${updates.length + 1}`);
+      values.push(req.body[field]);
+    }
+  });
+
+  if (updates.length === 0) {
+    return res.status(400).json({ message: "No fields provided" });
+  }
+
+  try {
+    await pool.query(
+      `UPDATE users SET ${updates.join(", ")} WHERE id = $${values.length + 1}`,
+      [...values, id]
+    );
+
+    if (req.body.status === "suspended" || req.body.status === "active") {
+      await pool.query(`UPDATE wallets SET status = $1 WHERE user_id = $2`, [req.body.status, id]);
+    }
+
+    res.json({ message: "User updated" });
+  } catch (err) {
+    console.error("❌ Error updating user:", err);
+    res.status(500).json({ message: "Update failed" });
+  }
+});
+
+// ✅ Delete user
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  try {
+    await pool.query(`UPDATE wallets SET status = 'archived' WHERE user_id = $1`, [id]);
+    await pool.query("DELETE FROM users WHERE id = $1", [id]);
+    res.json({ message: "User deleted" });
+  } catch (err) {
+    console.error("❌ Error deleting user:", err);
+    res.status(500).json({ message: "Delete failed" });
+  }
+});
+
+// ✅ Get user by ID
+router.get("/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  try {
+    const result = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("❌ Error fetching user:", err);
+    res.status(500).json({ message: "Failed to fetch user" });
+  }
+});
+
+// ✅ Placeholder for force sign-out
+router.post("/:id/signout", async (req, res) => {
+  res.json({ message: "Force sign-out not implemented yet" });
+});
+
+module.exports = router;
