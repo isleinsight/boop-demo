@@ -4,8 +4,78 @@
   <meta charset="UTF-8" />
   <title>Assign Student – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+    }
+
+    .container-small {
+      max-width: 500px;
+      background: white;
+      margin: 50px auto;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .container-small input,
+    .container-small button,
+    .uid-controls {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    input, button {
+      padding: 10px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+
+    button {
+      background: #2f80ed;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1c6fd8;
+    }
+
+    .uid-controls {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 5px;
+      margin-bottom: 20px;
+    }
+
+    .uid-controls button {
+      flex: 1;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      color: #333;
+    }
+
+    #userSuggestions div {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    #userSuggestions div:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
 </head>
 <body>
   <!-- ✅ Navbar -->
