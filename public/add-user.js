@@ -6,22 +6,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const emailInput = document.getElementById("email");
   const passwordInput = document.getElementById("password");
   const firstNameInput = document.getElementById("firstName");
-  const middleNameInput = document.getElementById("middleName"); // NEW
+  const middleNameInput = document.getElementById("middleName");
   const lastNameInput = document.getElementById("lastName");
   const roleSelect = document.getElementById("role");
   const onAssistanceCheckbox = document.getElementById("onAssistance");
 
   const assistanceContainer = document.getElementById("assistanceContainer");
   const vendorFields = document.getElementById("vendorFields");
-  const studentFields = document.getElementById("studentFields"); // NEW
+  const studentFields = document.getElementById("studentFields");
 
   const businessNameInput = document.getElementById("businessName");
   const vendorPhoneInput = document.getElementById("vendorPhone");
   const vendorCategoryInput = document.getElementById("vendorCategory");
   const vendorApprovedSelect = document.getElementById("vendorApproved");
-
-  const gradeLevelInput = document.getElementById("gradeLevel"); // NEW
-  const schoolNameInput = document.getElementById("schoolName"); // NEW
 
   const statusDiv = document.getElementById("formStatus");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -30,7 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const role = roleSelect.value;
     vendorFields.style.display = role === "vendor" ? "block" : "none";
     assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
-    studentFields.style.display = role === "student" ? "block" : "none"; // NEW
+    if (studentFields) {
+      studentFields.style.display = role === "student" ? "block" : "none";
+    }
   };
 
   roleSelect.addEventListener("change", updateConditionalFields);
@@ -51,13 +50,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const firstName = firstNameInput.value.trim();
-    const middleName = middleNameInput.value.trim(); // NEW
-    const lastName = lastNameInput.value.trim();
+    const first_name = firstNameInput.value.trim();
+    const middle_name = middleNameInput.value.trim();
+    const last_name = lastNameInput.value.trim();
     const role = roleSelect.value;
-    const onAssistance = onAssistanceCheckbox.checked;
+    const on_assistance = onAssistanceCheckbox.checked;
 
-    if (!email || !password || password.length < 6 || !firstName || !lastName || !role) {
+    if (!email || !password || password.length < 6 || !first_name || !last_name || !role) {
       statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
       statusDiv.style.color = "red";
       return;
@@ -66,11 +65,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const userPayload = {
       email,
       password,
-      first_name: firstName,
-      middle_name: middleName || null, // NEW
-      last_name: lastName,
+      first_name,
+      middle_name: middle_name || null,
+      last_name,
       role,
-      on_assistance: role === "cardholder" ? onAssistance : false,
+      on_assistance: role === "cardholder" ? on_assistance : false,
     };
 
     if (role === "vendor") {
@@ -79,13 +78,6 @@ document.addEventListener("DOMContentLoaded", () => {
         phone: vendorPhoneInput.value.trim(),
         category: vendorCategoryInput.value.trim(),
         approved: vendorApprovedSelect.value === "true"
-      };
-    }
-
-    if (role === "student") {
-      userPayload.student = {
-        grade_level: gradeLevelInput.value.trim(),
-        school_name: schoolNameInput.value.trim()
       };
     }
 
@@ -106,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
       statusDiv.style.color = "green";
       form.reset();
       updateConditionalFields();
+
     } catch (err) {
       console.error("❌ Error:", err);
       statusDiv.textContent = err.message;
