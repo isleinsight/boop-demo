@@ -10,7 +10,7 @@ const isValidUUID = (str) =>
 // ✅ Create user
 router.post("/", async (req, res) => {
   const {
-    email, password, first_name, last_name, role, on_assistance, vendor
+    email, password, first_name, middle_name, last_name, role, on_assistance, vendor
   } = req.body;
 
   try {
@@ -19,7 +19,7 @@ router.post("/", async (req, res) => {
       `INSERT INTO users (email, password_hash, first_name, last_name, role, on_assistance)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [email, hashedPassword, first_name, last_name, role, on_assistance]
+      [email, hashedPassword, first_name, middle_name, last_name, role, on_assistance]
     );
 
     const user = result.rows[0];
@@ -123,7 +123,7 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ message: "Invalid user ID" });
   }
 
-  const fields = ["first_name", "last_name", "email", "role", "status", "on_assistance"];
+  const fields = ["first_name", "middle_name", "last_name", "email", "role", "status", "on_assistance"];
   const updates = [];
   const values = [];
 
