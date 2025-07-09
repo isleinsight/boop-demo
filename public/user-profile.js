@@ -4,12 +4,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveBtn = document.getElementById("saveProfileBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const parentSection = document.getElementById("parentSection");
-  const studentSection = document.getElementById("studentSection");
   const studentInfoSection = document.getElementById("studentInfoSection");
 
-  const schoolDisplay = document.getElementById("studentSchool");
-  const gradeDisplay = document.getElementById("studentGrade");
-  const expiryDisplay = document.getElementById("studentExpiry");
+  const schoolDisplay = document.getElementById("studentSchoolName");
+  const gradeDisplay = document.getElementById("studentGradeLevel");
+  const expiryDisplay = document.getElementById("studentExpiryDate");
+  const enrolledDisplay = document.getElementById("studentEnrolled");
 
   const schoolInput = document.getElementById("editStudentSchool");
   const gradeInput = document.getElementById("editStudentGrade");
@@ -53,8 +53,11 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
 
       if (user.role === "student") {
-        await loadStudentInfo();
-        studentSection.style.display = "block";
+        await loadStudentInfo(user.id);
+        await loadParentInfo(user.id);
+        studentInfoSection.style.display = "block";
+      } else if (user.role === "parent") {
+        await loadAssignedStudents(user.id);
         studentInfoSection.style.display = "block";
       }
 
@@ -85,29 +88,75 @@ document.addEventListener("DOMContentLoaded", () => {
       schoolDisplay.style.display = enable ? "none" : "inline";
       gradeDisplay.style.display = enable ? "none" : "inline";
       expiryDisplay.style.display = enable ? "none" : "inline";
+      enrolledDisplay.style.display = enable ? "none" : "inline";
 
-      schoolInput.style.display = enable ? "inline-block" : "none";
-      gradeInput.style.display = enable ? "inline-block" : "none";
-      expiryInput.style.display = enable ? "inline-block" : "none";
+      if (schoolInput && gradeInput && expiryInput) {
+        schoolInput.style.display = enable ? "inline-block" : "none";
+        gradeInput.style.display = enable ? "inline-block" : "none";
+        expiryInput.style.display = enable ? "inline-block" : "none";
+      }
     }
 
     saveBtn.style.display = enable ? "inline-block" : "none";
     editBtn.style.display = enable ? "none" : "inline-block";
   }
 
-  async function loadStudentInfo() {
-    const student = await fetchJSON(`/api/students/${currentUserId}`);
-    schoolDisplay.textContent = student.school_name || "-";
-    gradeDisplay.textContent = student.grade || "-";
-    expiryDisplay.textContent = student.school_expiry_date || "-";
+  async function loadStudentInfo(studentId) {
+    try {
+      const student = await fetchJSON(`/api/students/${studentId}`);
+      schoolDisplay.textContent = student.school_name || "-";
+      gradeDisplay.textContent = student.grade || "-";
+      enrolledDisplay.textContent = student.enrolled ? "Yes" : "No";
+      expiryDisplay.textContent = student.school_expiry_date || "-";
 
-    schoolInput.value = student.school_name || "";
-    gradeInput.value = student.grade || "";
-    expiryInput.value = student.school_expiry_date || "";
+      if (schoolInput && gradeInput && expiryInput) {
+        schoolInput.value = student.school_name || "";
+        gradeInput.value = student.grade || "";
+        expiryInput.value = student.school_expiry_date || "";
+      }
+    } catch (err) {
+      console.warn("Student info not found.");
+    }
+  }
+
+  async function loadParentInfo(studentId) {
+    try {
+      const parent = await fetchJSON(`/api/students/parent-of/${studentId}`);
+      if (parent && parent.first_name) {
+        parentSection.style.display = "block";
+        document.getElementById("parentName").textContent = `${parent.first_name} ${parent.last_name}`;
+        document.getElementById("parentEmail").textContent = parent.email;
+      }
+    } catch (err) {
+      console.warn("No parent found for student.");
+    }
+  }
+
+  async function loadAssignedStudents(parentId) {
+    try {
+      const students = await fetchJSON(`/api/students/parent/${parentId}`);
+      if (students.length > 0) {
+        const container = document.getElementById("studentInfoSection");
+        container.innerHTML = `<div class="section-title">Student Info</div>`; // clear and add title
+
+        students.forEach(student => {
+          const block = document.createElement("div");
+          block.classList.add("user-details-grid");
+          block.innerHTML = `
+            <div><span class="label">School Name</span><span class="value">${student.school_name || "-"}</span></div>
+            <div><span class="label">Grade Level</span><span class="value">${student.grade || "-"}</span></div>
+            <div><span class="label">Enrolled</span><span class="value">${student.enrolled ? "Yes" : "No"}</span></div>
+            <div><span class="label">Expiry Date</span><span class="value">${student.school_expiry_date || "-"}</span></div>
+          `;
+          container.appendChild(block);
+        });
+      }
+    } catch (err) {
+      console.warn("No assigned students found for parent.");
+    }
   }
 
   async function saveProfileChanges() {
-    // Update user info
     await fetch(`/api/users/${currentUserId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -119,7 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     });
 
-    // Update student info
     if (currentUser.role === "student") {
       await fetch(`/api/students/${currentUserId}`, {
         method: "PUT",
