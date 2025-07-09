@@ -96,26 +96,27 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(result.message || "Failed to create user");
       }
 
-      // ✅ Add student profile data if role === student
-      if (role === "student") {
-        const school_name = studentSchoolInput?.value.trim();
-        const grade_level = studentGradeInput?.value.trim();
-        const expiry_date = studentExpiryInput?.value.trim();
+// After successful user creation
+if (role === "student") {
+  const school_name = document.getElementById("studentSchoolName")?.value.trim();
+  const grade_level = document.getElementById("studentGradeLevel")?.value.trim();
+  const expiry_date = document.getElementById("studentExpiryDate")?.value;
 
-        if (!school_name || !expiry_date) {
-          throw new Error("Missing student school or expiry date.");
-        }
+  if (!school_name || !expiry_date) {
+    throw new Error("Missing required student fields.");
+  }
 
-        const resStudent = await fetch("/api/students", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: result.id,
-            school_name,
-            grade_level: grade_level || null,
-            expiry_date
-          })
-        });
+  await fetch("/api/students", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: result.id,
+      school_name,
+      grade_level,
+      expiry_date
+    })
+  });
+}
 
         if (!resStudent.ok) {
           const studentErr = await resStudent.json();
