@@ -20,6 +20,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const vendorCategoryInput = document.getElementById("vendorCategory");
   const vendorApprovedSelect = document.getElementById("vendorApproved");
 
+  const studentSchoolInput = document.getElementById("studentSchoolName");
+  const studentGradeInput = document.getElementById("studentGradeLevel");
+  const studentExpiryInput = document.getElementById("studentExpiryDate");
+
   const statusDiv = document.getElementById("formStatus");
   const logoutBtn = document.getElementById("logoutBtn");
 
@@ -27,9 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const role = roleSelect.value;
     vendorFields.style.display = role === "vendor" ? "block" : "none";
     assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
-    if (studentFields) {
-      studentFields.style.display = role === "student" ? "block" : "none";
-    }
+    studentFields.style.display = role === "student" ? "block" : "none";
   };
 
   roleSelect.addEventListener("change", updateConditionalFields);
@@ -92,6 +94,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!resUser.ok) {
         throw new Error(result.message || "Failed to create user");
+      }
+
+      // ✅ Add student profile data if role === student
+      if (role === "student") {
+        const school_name = studentSchoolInput?.value.trim();
+        const grade_level = studentGradeInput?.value.trim();
+        const expiry_date = studentExpiryInput?.value.trim();
+
+        if (!school_name || !expiry_date) {
+          throw new Error("Missing student school or expiry date.");
+        }
+
+        const resStudent = await fetch("/api/students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: result.id,
+            school_name,
+            grade_level: grade_level || null,
+            expiry_date
+          })
+        });
+
+        if (!resStudent.ok) {
+          const studentErr = await resStudent.json();
+          throw new Error(studentErr.message || "Student record creation failed.");
+        }
       }
 
       statusDiv.textContent = "✅ User created successfully!";
