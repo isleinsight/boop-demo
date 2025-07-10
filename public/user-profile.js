@@ -115,17 +115,45 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       userInfo.appendChild(dropdown);
 
-      if (user.role === "student") {
-        await loadStudentInfo(user.id);
-        await loadParentInfo(user.id);
+      // === Student View ===
+      if (user.role === "student" && user.student_profile) {
+        const s = user.student_profile;
+        document.getElementById("studentSchoolName").textContent = s.school_name || "-";
+        document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
+        document.getElementById("studentEnrolled").textContent = s.enrolled ? "Yes" : "No";
+        document.getElementById("studentExpiryDate").textContent = s.expiry_date || "-";
+
+        if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
+          parentSection.style.display = "block";
+          parentNameEl.innerHTML = user.assigned_parents.map(parent => {
+            return `<a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">${parent.first_name} ${parent.last_name}</a>`;
+          }).join(", ");
+          parentEmailEl.textContent = user.assigned_parents.map(p => p.email).join(", ");
+        }
+
         studentInfoSection.style.display = "block";
       }
 
-      if (user.role === "parent") {
-        await loadAssignedStudents(user.id);
+      // === Parent View ===
+      if (user.role === "parent" && Array.isArray(user.assigned_students)) {
+        studentInfoSection.innerHTML = '<div class="section-title">Assigned Students</div>';
+        user.assigned_students.forEach(student => {
+          const block = document.createElement("div");
+          block.classList.add("user-details-grid");
+          block.innerHTML = `
+            <div><span class="label">Name</span><span class="value">
+              <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${student.id}')">
+                ${student.first_name} ${student.last_name}
+              </a></span></div>
+            <div><span class="label">Email</span><span class="value">${student.email}</span></div>
+          `;
+          studentInfoSection.appendChild(block);
+        });
+
         studentInfoSection.style.display = "block";
       }
 
+      // === Vendor View ===
       if (user.role === "vendor") {
         try {
           const vendorSection = document.getElementById("vendorSection");
@@ -144,6 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // === Edit Profile Setup ===
       editBtn.onclick = () => {
         ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
           document.getElementById(`view${field}`).style.display = "none";
@@ -178,58 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("❌ Failed to load user:", err);
       alert("Error loading user");
       window.location.href = "view-users.html";
-    }
-  }
-
-  async function loadStudentInfo(studentId) {
-    try {
-      const student = await fetchJSON(`/api/students/${studentId}`);
-      document.getElementById("studentSchoolName").textContent = student.school_name || "-";
-      document.getElementById("studentGradeLevel").textContent = student.grade_level || "-";
-      document.getElementById("studentEnrolled").textContent = student.enrolled ? "Yes" : "No";
-      document.getElementById("studentExpiryDate").textContent = student.expiry_date || "-";
-    } catch (err) {
-      console.warn("❌ Could not load student info:", err);
-    }
-  }
-
-  async function loadParentInfo(studentId) {
-    try {
-      const student = await fetchJSON(`/api/students/${studentId}`);
-      if (student?.parent_ids?.length > 0) {
-        const parent = await fetchJSON(`/api/users/${student.parent_ids[0]}`);
-        parentSection.style.display = "block";
-        parentNameEl.innerHTML = `<a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">${parent.first_name} ${parent.last_name}</a>`;
-        parentEmailEl.textContent = parent.email;
-      }
-    } catch (err) {
-      console.warn("❌ Could not load parent info:", err);
-    }
-  }
-
-  async function loadAssignedStudents(parentId) {
-    try {
-      const assignedStudentsList = document.getElementById("studentInfoSection");
-      const students = await fetchJSON(`/api/students/for-parent/${parentId}`);
-
-      if (!students.length) {
-        assignedStudentsList.innerHTML += `<p style="padding: 1rem; font-style: italic;">No students assigned.</p>`;
-        return;
-      }
-
-      students.forEach(student => {
-        const block = document.createElement("div");
-        block.classList.add("user-details-grid");
-        block.innerHTML = `
-          <div><span class="label">School Name</span><span class="value">${student.school_name || "-"}</span></div>
-          <div><span class="label">Grade Level</span><span class="value">${student.grade_level || "-"}</span></div>
-          <div><span class="label">Enrolled</span><span class="value">${student.enrolled ? "Yes" : "No"}</span></div>
-          <div><span class="label">Expiry Date</span><span class="value">${student.expiry_date || "-"}</span></div>
-        `;
-        assignedStudentsList.appendChild(block);
-      });
-    } catch (err) {
-      console.warn("❌ Could not load assigned students:", err);
     }
   }
 
