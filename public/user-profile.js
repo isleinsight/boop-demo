@@ -120,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const s = user.student_profile;
         document.getElementById("studentSchoolName").textContent = s.school_name || "-";
         document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
-        document.getElementById("studentEnrolled").textContent = s.enrolled ? "Yes" : "No";
         document.getElementById("studentExpiryDate").textContent = s.expiry_date || "-";
 
         if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
