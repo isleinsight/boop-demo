@@ -18,7 +18,7 @@ router.post("/", async (req, res) => {
     role,
     on_assistance,
     vendor,
-    student // { school_name, grade_level, expiry_date }
+    student
   } = req.body;
 
   const client = await pool.connect();
@@ -48,7 +48,7 @@ router.post("/", async (req, res) => {
       user.wallet_id = walletId;
     }
 
-    if (role === "vendor" && vendor) {
+      if (role === "vendor" && vendor) {
       await client.query(
         `INSERT INTO vendors (id, business_name, phone, category, approved, wallet_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -264,3 +264,5 @@ router.post("/:id/signout", async (req, res) => {
 });
 
 module.exports = router;
+
+
