@@ -121,24 +121,40 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       userInfo.appendChild(dropdown);
 
-      // === Student View ===
-      if (user.role === "student" && user.student_profile) {
-        const s = user.student_profile;
-        document.getElementById("studentSchoolName").textContent = s.school_name || "-";
-        document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
-        document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
+// === Student View ===
+if (user.role === "student" && user.student_profile) {
+  const s = user.student_profile;
 
-        if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
-          parentSection.style.display = "block";
-          parentNameEl.innerHTML = user.assigned_parents.map(parent => {
-            return `<a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">${parent.first_name} ${parent.last_name}</a>`;
-          }).join(", ");
-          parentEmailEl.textContent = user.assigned_parents.map(p => p.email).join(", ");
-        }
+  document.getElementById("studentSchoolName").textContent = s.school_name || "-";
+  document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
+  document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
 
-        studentInfoSection.style.display = "block";
-      }
+  // Render assigned parents
+  if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
+    parentSection.innerHTML = `
+      <div class="section-title">Parent Information</div>
+      <div class="user-details-grid">
+        ${user.assigned_parents.map(parent => `
+          <div>
+            <span class="label">Name</span>
+            <span class="value">
+              <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">
+                ${parent.first_name} ${parent.last_name}
+              </a>
+            </span>
+          </div>
+          <div>
+            <span class="label">Email</span>
+            <span class="value">${parent.email}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    parentSection.style.display = "block";
+  }
 
+  studentInfoSection.style.display = "block";
+}
       // === Parent View ===
       if (user.role === "parent" && Array.isArray(user.assigned_students)) {
         studentInfoSection.innerHTML = '<div class="section-title">Assigned Students</div>';
