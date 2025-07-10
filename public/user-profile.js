@@ -22,6 +22,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return await res.json();
   }
 
+  function formatDatePretty(dateStr) {
+    const date = new Date(dateStr);
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return date.toLocaleDateString("en-US", options);
+  }
+
   async function loadUserProfile() {
     try {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
@@ -120,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const s = user.student_profile;
         document.getElementById("studentSchoolName").textContent = s.school_name || "-";
         document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
-        document.getElementById("studentExpiryDate").textContent = s.expiry_date || "-";
+        document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
 
         if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
           parentSection.style.display = "block";
