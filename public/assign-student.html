@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Assign Student – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
   <style>
@@ -22,16 +21,11 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    .container-small input,
-    .container-small button,
-    .uid-controls {
-      width: 100%;
-      box-sizing: border-box;
-    }
-
     input, button {
       padding: 10px;
       margin-top: 8px;
+      width: 100%;
+      box-sizing: border-box;
       border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 1em;
@@ -48,169 +42,12 @@
       background: #1c6fd8;
     }
 
-    .uid-controls {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 5px;
-      margin-bottom: 20px;
-    }
-
-    .uid-controls button {
-      flex: 1;
-    }
-
-    .status {
+    .status-message {
       text-align: center;
       margin-top: 20px;
-      color: #333;
+      font-weight: bold;
     }
 
-    #userSuggestions div {
-      padding: 8px 12px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-    }
-
-    #userSuggestions div:hover {
-      background-color: #f0f0f0;
-    }
-  </style>
-</head>
-<body>
-  <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      <div class="nav-right">
-        <a href="dashboard.html">Dashboard</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Add</a>
-          <div class="dropdown-content">
-            <a href="add-user.html">Add User</a>
-            <a href="assign-card.html">Assign Card</a>
-            <a href="assign-student.html">Assign Student</a>
-          </div>
-        </div>
-        <a href="view-users.html">View Users</a>
-        <a href="#" id="logoutBtn">Log Out</a>
-      </div>
-    </div>
-  </nav>
-
-  <!-- ✅ Page Content -->
-  <div class="container-small">
-    <h3>Assign Student to Parent</h3>
-
-    <label for="parentSearch">Search Parent</label>
-    <input type="text" id="parentSearch" placeholder="Type parent name or email" autocomplete="off" />
-    <div id="parentSuggestions" class="suggestion-box" style="display:none;"></div>
-
-    <label for="studentSearch">Search Student</label>
-    <input type="text" id="studentSearch" placeholder="Type student name" autocomplete="off" />
-    <div id="studentSuggestions" class="suggestion-box" style="display:none;"></div>
-
-    <button id="assignBtn">Assign Student</button>
-    <div id="statusMessage" class="status-message"></div>
-  </div>
-
-  <!-- ✅ Inline JavaScript -->
-  <script type="module">
-    const parentSearch = document.getElementById("parentSearch");
-    const parentSuggestions = document.getElementById("parentSuggestions");
-    const studentSearch = document.getElementById("studentSearch");
-    const studentSuggestions = document.getElementById("studentSuggestions");
-    const assignBtn = document.getElementById("assignBtn");
-    const statusMessage = document.getElementById("statusMessage");
-
-    let selectedParent = null;
-    let selectedStudent = null;
-
-    function setupSearch(inputEl, suggestionBox, role, onSelect) {
-      inputEl.addEventListener("input", async () => {
-        const query = inputEl.value.trim();
-        if (query.length < 2) {
-          suggestionBox.style.display = "none";
-          return;
-        }
-
-        try {
-          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&role=${role}`);
-          const users = await res.json();
-
-          suggestionBox.innerHTML = users.length
-            ? users.map(u => `
-                <div class="suggestion-item" data-id="${u.id}">
-                  ${u.first_name} ${u.last_name} (${u.email})
-                </div>
-              `).join("")
-            : "<div class='suggestion-item'>No results found</div>";
-
-          suggestionBox.style.display = "block";
-        } catch (e) {
-          console.error("Search failed:", e);
-        }
-      });
-
-      suggestionBox.addEventListener("click", (e) => {
-        const item = e.target.closest(".suggestion-item");
-        if (!item) return;
-        const id = item.dataset.id;
-        inputEl.value = item.textContent;
-        suggestionBox.style.display = "none";
-        onSelect(id);
-      });
-
-      document.addEventListener("click", (e) => {
-        if (!suggestionBox.contains(e.target) && e.target !== inputEl) {
-          suggestionBox.style.display = "none";
-        }
-      });
-    }
-
-    setupSearch(parentSearch, parentSuggestions, "parent", id => selectedParent = id);
-    setupSearch(studentSearch, studentSuggestions, "student", id => selectedStudent = id);
-
-    assignBtn.addEventListener("click", async () => {
-      if (!selectedParent || !selectedStudent) {
-        statusMessage.textContent = "Please select both a parent and a student.";
-        statusMessage.style.color = "red";
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/user-students", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: selectedParent, student_id: selectedStudent })
-        });
-
-        if (!res.ok) throw new Error("Failed to assign");
-
-        statusMessage.textContent = "✅ Student assigned successfully!";
-        statusMessage.style.color = "green";
-        parentSearch.value = "";
-        studentSearch.value = "";
-        selectedParent = null;
-        selectedStudent = null;
-      } catch (err) {
-        console.error(err);
-        statusMessage.textContent = "❌ Failed to assign student.";
-        statusMessage.style.color = "red";
-      }
-    });
-
-    document.getElementById("logoutBtn")?.addEventListener("click", () => {
-      fetch("/api/logout", { method: "POST" }).then(() => {
-        window.location.href = "login.html";
-      });
-    });
-  </script>
-
-  <!-- ✅ Suggestion Box Styling -->
-  <style>
     .suggestion-box {
       border: 1px solid #ccc;
       border-radius: 6px;
@@ -229,8 +66,143 @@
     }
 
     .suggestion-item:hover {
-      background-color: #f2f2f2;
+      background-color: #f0f0f0;
     }
   </style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
+    </div>
+    <div class="nav-right">
+      <a href="dashboard.html">Dashboard</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn" style="color: white;">Add</a>
+        <div class="dropdown-content">
+          <a href="add-user.html">Add User</a>
+          <a href="assign-card.html">Assign Card</a>
+          <a href="assign-student.html">Assign Student</a>
+        </div>
+      </div>
+      <a href="view-users.html">View Users</a>
+      <a href="#" id="logoutBtn">Log Out</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Page Content -->
+<div class="container-small">
+  <h3>Assign Student to Parent</h3>
+
+  <label for="parentSearch">Search Parent</label>
+  <input type="text" id="parentSearch" placeholder="Type parent name or email" autocomplete="off" />
+  <div id="parentSuggestions" class="suggestion-box" style="display:none;"></div>
+
+  <label for="studentSearch">Search Student</label>
+  <input type="text" id="studentSearch" placeholder="Type student name or email" autocomplete="off" />
+  <div id="studentSuggestions" class="suggestion-box" style="display:none;"></div>
+
+  <button id="assignBtn">Assign Student</button>
+  <div id="statusMessage" class="status-message"></div>
+</div>
+
+<script type="module">
+  const parentSearch = document.getElementById("parentSearch");
+  const studentSearch = document.getElementById("studentSearch");
+  const parentSuggestions = document.getElementById("parentSuggestions");
+  const studentSuggestions = document.getElementById("studentSuggestions");
+  const assignBtn = document.getElementById("assignBtn");
+  const statusMessage = document.getElementById("statusMessage");
+
+  let selectedParent = null;
+  let selectedStudent = null;
+
+  function setupSearch(inputEl, suggestionBox, role, onSelect) {
+    inputEl.addEventListener("input", async () => {
+      const query = inputEl.value.trim();
+      if (query.length < 2) {
+        suggestionBox.style.display = "none";
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&role=${role}`);
+        const users = await res.json();
+
+        if (!Array.isArray(users) || users.length === 0) {
+          suggestionBox.innerHTML = `<div class="suggestion-item">No results found</div>`;
+        } else {
+          suggestionBox.innerHTML = users.map(u => `
+            <div class="suggestion-item" data-id="${u.id}">
+              ${u.first_name} ${u.last_name} (${u.email})
+            </div>
+          `).join("");
+        }
+
+        suggestionBox.style.display = "block";
+      } catch (err) {
+        console.error("❌ Error fetching suggestions:", err);
+      }
+    });
+
+    suggestionBox.addEventListener("click", e => {
+      const item = e.target.closest(".suggestion-item");
+      if (!item || !item.dataset.id) return;
+      const id = item.dataset.id;
+      inputEl.value = item.textContent;
+      suggestionBox.style.display = "none";
+      onSelect(id);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!suggestionBox.contains(e.target) && e.target !== inputEl) {
+        suggestionBox.style.display = "none";
+      }
+    });
+  }
+
+  setupSearch(parentSearch, parentSuggestions, "parent", id => selectedParent = id);
+  setupSearch(studentSearch, studentSuggestions, "student", id => selectedStudent = id);
+
+  assignBtn.addEventListener("click", async () => {
+    if (!selectedParent || !selectedStudent) {
+      statusMessage.textContent = "Please select both a parent and a student.";
+      statusMessage.style.color = "red";
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/user-students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: selectedParent, student_id: selectedStudent })
+      });
+
+      if (!res.ok) throw new Error("Failed to assign student");
+
+      statusMessage.textContent = "✅ Student assigned successfully!";
+      statusMessage.style.color = "green";
+      parentSearch.value = "";
+      studentSearch.value = "";
+      selectedParent = null;
+      selectedStudent = null;
+    } catch (err) {
+      console.error("❌ Assignment failed:", err);
+      statusMessage.textContent = "❌ Failed to assign student.";
+      statusMessage.style.color = "red";
+    }
+  });
+
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      window.location.href = "login.html";
+    });
+  });
+</script>
+
 </body>
 </html>
