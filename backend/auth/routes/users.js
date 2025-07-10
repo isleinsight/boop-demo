@@ -81,16 +81,16 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Get users (with filters like role, search, wallet)
+// ✅ Get users with optional filters and dual-mode (autocomplete vs paginated)
 router.get("/", async (req, res) => {
-  const { role, search, page = 1, eligibleOnly, hasWallet } = req.query;
+  const { search, role, status, page, perPage } = req.query;
+
+  // Detect if we're in autocomplete mode (no pagination)
+  const isAutocomplete = !page && !perPage;
 
   try {
-    const perPage = 10;
-    const offset = (parseInt(page) - 1) * perPage;
-
-    const whereClauses = [];
     const values = [];
+    const whereClauses = [];
 
     if (search) {
       whereClauses.push(`(
@@ -106,35 +106,45 @@ router.get("/", async (req, res) => {
       values.push(role);
     }
 
-    if (eligibleOnly === "true") {
-      whereClauses.push(`role IN ('cardholder', 'student', 'senior')`);
-    }
-
-    if (hasWallet === "true") {
-      whereClauses.push(`id IN (SELECT user_id FROM wallets)`);
+    if (status) {
+      whereClauses.push(`status = $${values.length + 1}`);
+      values.push(status);
     }
 
     const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-    const query = `
-      SELECT * FROM users
-      ${whereSQL}
-      ORDER BY first_name ASC
-      LIMIT $${values.length + 1}
-      OFFSET $${values.length + 2}
-    `;
+    if (isAutocomplete) {
+      // Return a short list of users (autocomplete mode)
+      const result = await pool.query(
+        `SELECT id, first_name, last_name, email FROM users
+         ${whereSQL}
+         ORDER BY first_name ASC
+         LIMIT 10`,
+        values
+      );
+      return res.json(result.rows);
+    }
 
-    const countQuery = `SELECT COUNT(*) FROM users ${whereSQL}`;
+    // Otherwise: full paginated mode
+    const limit = parseInt(perPage) || 10;
+    const offset = ((parseInt(page) || 1) - 1) * limit;
 
-    const result = await pool.query(query, [...values, perPage, offset]);
-    const count = await pool.query(countQuery, values);
+    const result = await pool.query(
+      `SELECT * FROM users
+       ${whereSQL}
+       ORDER BY first_name ASC
+       LIMIT $${values.length + 1}
+       OFFSET $${values.length + 2}`,
+      [...values, limit, offset]
+    );
 
-    const totalUsers = parseInt(count.rows[0].count, 10);
-    const totalPages = Math.ceil(totalUsers / perPage);
+    const countRes = await pool.query(`SELECT COUNT(*) FROM users ${whereSQL}`, values);
+    const totalUsers = parseInt(countRes.rows[0].count, 10);
+    const totalPages = Math.ceil(totalUsers / limit);
 
     res.json({ users: result.rows, totalPages });
   } catch (err) {
-    console.error("❌ Error fetching users:", err);
+    console.error("❌ Error in GET /api/users:", err);
     res.status(500).json({ message: "Failed to fetch users" });
   }
 });
