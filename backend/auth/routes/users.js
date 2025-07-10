@@ -205,22 +205,56 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// ✅ Get user by ID
+// ✅ Get user by ID + relationships
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
   }
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
-    if (result.rows.length === 0) {
+    const userRes = await client.query("SELECT * FROM users WHERE id = $1", [id]);
+    if (userRes.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.json(result.rows[0]);
+
+    const user = userRes.rows[0];
+
+    if (user.role === "student") {
+      const studentRes = await client.query(
+        "SELECT * FROM students WHERE user_id = $1",
+        [user.id]
+      );
+      user.student_profile = studentRes.rows[0] || null;
+
+      const parentRes = await client.query(
+        `SELECT u.id, u.first_name, u.last_name, u.email
+         FROM student_parents sp
+         JOIN users u ON sp.parent_id = u.id
+         WHERE sp.student_id = $1`,
+        [user.id]
+      );
+      user.assigned_parents = parentRes.rows;
+    }
+
+    if (user.role === "parent") {
+      const studentRes = await client.query(
+        `SELECT u.id, u.first_name, u.last_name, u.email
+         FROM student_parents sp
+         JOIN users u ON sp.student_id = u.id
+         WHERE sp.parent_id = $1`,
+        [user.id]
+      );
+      user.assigned_students = studentRes.rows;
+    }
+
+    res.json(user);
   } catch (err) {
-    console.error("❌ Error fetching user:", err);
+    console.error("❌ Error fetching enriched user:", err);
     res.status(500).json({ message: "Failed to fetch user" });
+  } finally {
+    client.release();
   }
 });
 
