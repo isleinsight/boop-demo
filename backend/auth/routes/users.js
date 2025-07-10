@@ -18,7 +18,7 @@ router.post("/", async (req, res) => {
     role,
     on_assistance,
     vendor,
-    student // { school_name, grade_level, expiry_date }
+    student
   } = req.body;
 
   const client = await pool.connect();
@@ -42,7 +42,6 @@ router.post("/", async (req, res) => {
          RETURNING id`,
         [user.id]
       );
-
       const walletId = walletRes.rows[0].id;
       await client.query(`UPDATE users SET wallet_id = $1 WHERE id = $2`, [walletId, user.id]);
       user.wallet_id = walletId;
@@ -50,16 +49,9 @@ router.post("/", async (req, res) => {
 
     if (role === "vendor" && vendor) {
       await client.query(
-        `INSERT INTO vendors (id, business_name, phone, category, approved, wallet_id)
+        `INSERT INTO vendors (user_id, business_name, phone, category, approved, wallet_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          user.id,
-          vendor.name,
-          vendor.phone,
-          vendor.category,
-          vendor.approved === true,
-          user.wallet_id,
-        ]
+        [user.id, vendor.name, vendor.phone, vendor.category, vendor.approved === true, user.wallet_id]
       );
     }
 
@@ -68,7 +60,6 @@ router.post("/", async (req, res) => {
       if (!school_name || !expiry_date) {
         throw new Error("Missing required student fields");
       }
-
       await client.query(
         `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
          VALUES ($1, $2, $3, $4)`,
@@ -77,7 +68,6 @@ router.post("/", async (req, res) => {
     }
 
     await client.query("COMMIT");
-
     res.status(201).json({ message: "User created", id: user.id, role: user.role });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -91,7 +81,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Get users with optional filters
+// ✅ Get users (with filters like role, search, wallet)
 router.get("/", async (req, res) => {
   const { role, search, page = 1, eligibleOnly, hasWallet } = req.query;
 
@@ -205,8 +195,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// ✅ Get user by ID
-// ✅ Get user by ID + relationships
+// ✅ Get user by ID with relationships (student, parent, vendor)
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
@@ -215,47 +204,38 @@ router.get("/:id", async (req, res) => {
 
   const client = await pool.connect();
   try {
-    const result = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
-    if (result.rows.length === 0) {
     const userRes = await client.query("SELECT * FROM users WHERE id = $1", [id]);
     if (userRes.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.json(result.rows[0]);
 
     const user = userRes.rows[0];
 
     if (user.role === "student") {
-      const studentRes = await client.query(
-        "SELECT * FROM students WHERE user_id = $1",
-        [user.id]
-      );
+      const studentRes = await client.query("SELECT * FROM students WHERE user_id = $1", [user.id]);
       user.student_profile = studentRes.rows[0] || null;
 
-      const parentRes = await client.query(
-        `SELECT u.id, u.first_name, u.last_name, u.email
-         FROM student_parents sp
-         JOIN users u ON sp.parent_id = u.id
-         WHERE sp.student_id = $1`,
-        [user.id]
-      );
+      const parentRes = await client.query(`
+        SELECT u.id, u.first_name, u.last_name, u.email
+        FROM student_parents sp
+        JOIN users u ON sp.parent_id = u.id
+        WHERE sp.student_id = $1
+      `, [user.id]);
       user.assigned_parents = parentRes.rows;
     }
 
     if (user.role === "parent") {
-      const studentRes = await client.query(
-        `SELECT u.id, u.first_name, u.last_name, u.email
-         FROM student_parents sp
-         JOIN users u ON sp.student_id = u.id
-         WHERE sp.parent_id = $1`,
-        [user.id]
-      );
-      user.assigned_students = studentRes.rows;
+      const studentsRes = await client.query(`
+        SELECT u.id, u.first_name, u.last_name, u.email
+        FROM student_parents sp
+        JOIN users u ON sp.student_id = u.id
+        WHERE sp.parent_id = $1
+      `, [user.id]);
+      user.assigned_students = studentsRes.rows;
     }
 
     res.json(user);
   } catch (err) {
-    console.error("❌ Error fetching user:", err);
     console.error("❌ Error fetching enriched user:", err);
     res.status(500).json({ message: "Failed to fetch user" });
   } finally {
@@ -263,7 +243,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ Placeholder for force sign-out
+// ✅ Force sign-out placeholder
 router.post("/:id/signout", async (req, res) => {
   res.json({ message: "Force sign-out not implemented yet" });
 });
