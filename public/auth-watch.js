@@ -1,33 +1,20 @@
-import {
-  getAuth,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+export function authWatch(requiredRoles = []) {
+  const user = JSON.parse(localStorage.getItem("boopUser"));
 
-import {
-  getFirestore,
-  doc,
-  onSnapshot,
-  updateDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const auth = getAuth();
-const db = getFirestore();
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    const userRef = doc(db, "users", user.uid);
-
-    onSnapshot(userRef, async (docSnap) => {
-      const data = docSnap.data();
-      console.log("📡 Snapshot data for forceSignout:", data);
-
-      if (data?.forceSignout) {
-        alert("⚠️ You have been signed out by an admin.");
-        await updateDoc(userRef, { forceSignout: false });
-        await signOut(auth);
-        window.location.href = "index.html";
-      }
-    });
+  // 🚫 Not logged in
+  if (!user) {
+    alert("Please log in to access this page.");
+    window.location.href = "login.html";
+    return;
   }
-});
+
+  // ❌ Role mismatch
+  if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
+    alert("You don’t have permission to access this page.");
+    window.location.href = "unauthorized.html"; // or dashboard.html
+    return;
+  }
+
+  // ✅ All good
+  return user;
+}
