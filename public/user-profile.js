@@ -1,6 +1,3 @@
-console.log("📦 Script loaded");
-console.log("🔑 User ID to load:", currentUserId);
-
 document.addEventListener("DOMContentLoaded", () => {
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
@@ -128,22 +125,22 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
       userInfo.appendChild(dropdown);
 
 // === Student View ===
+// === Student View ===
 if (user.role === "student" && user.student_profile) {
   const s = user.student_profile;
 
-  const user = await fetchJSON(`/api/users/${currentUserId}`);
-console.log("🔥 FULL USER DATA:", user);
-
-  document.getElementById("studentSchoolName").textContent = s.school_name || "-";
-  document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
-  document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
-
-  // Debug output
+  // ✅ Log the full user object for debug
+  console.log("🔥 FULL USER DATA:", user);
   console.log("✅ Raw assigned_parents check:", user.assigned_parents);
   console.log("✅ Type:", typeof user.assigned_parents);
   console.log("✅ Length:", user.assigned_parents?.length);
 
-  // TEMP DEBUG VIEW: Render raw JSON of parents
+  // ✅ Set student info fields
+  document.getElementById("studentSchoolName").textContent = s.school_name || "-";
+  document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
+  document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
+
+  // ✅ TEMP DEBUG: Render raw JSON of assigned_parents
   if (user.assigned_parents) {
     parentSection.innerHTML = `
       <div class="section-title">Parent Debug Info</div>
