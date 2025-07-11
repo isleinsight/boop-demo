@@ -1,3 +1,6 @@
+console.log("📦 Script loaded");
+console.log("🔑 User ID to load:", currentUserId);
+
 document.addEventListener("DOMContentLoaded", () => {
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
