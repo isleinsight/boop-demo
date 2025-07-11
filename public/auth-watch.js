@@ -1,30 +1,36 @@
 document.addEventListener("DOMContentLoaded", () => {
   firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) {
-      // User not logged in – redirect to homepage
+      console.log("Not signed in – redirecting");
       window.location.href = "index.html";
       return;
     }
 
     try {
-      const token = await user.getIdToken();
       const uid = user.uid;
-
-      // Get user role from your backend
       const response = await fetch(`/api/users/${uid}`);
-      if (!response.ok) throw new Error("Failed to fetch user");
+      if (!response.ok) throw new Error("Failed to fetch user info");
 
       const userData = await response.json();
 
-      // Check if user is an admin
+      // ✅ Save to localStorage for pages that expect it
+      localStorage.setItem("boopUser", JSON.stringify({
+        id: userData.id,
+        email: user.email,
+        role: userData.role
+      }));
+
+      // ✅ Redirect if not an admin
       if (userData.role !== "admin") {
-        // Not an admin – redirect
+        console.log("User is not admin – redirecting");
         window.location.href = "index.html";
+      } else {
+        console.log("Admin verified – access granted");
       }
 
     } catch (error) {
-      console.error("AuthWatch Error:", error);
-      window.location.href = "index.html"; // Fail-safe redirect
+      console.error("authWatch error:", error);
+      window.location.href = "index.html";
     }
   });
 });
