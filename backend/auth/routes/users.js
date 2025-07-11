@@ -81,11 +81,9 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Get users with optional filters and dual-mode (autocomplete vs paginated)
+// ✅ Get users (with autocomplete or pagination)
 router.get("/", async (req, res) => {
   const { search, role, status, page, perPage } = req.query;
-
-  // Detect if we're in autocomplete mode (no pagination)
   const isAutocomplete = !page && !perPage;
 
   try {
@@ -114,9 +112,8 @@ router.get("/", async (req, res) => {
     const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     if (isAutocomplete) {
-      // Return a short list of users (autocomplete mode)
       const result = await pool.query(
-        `SELECT id, first_name, last_name, email FROM users
+        `SELECT id, first_name, last_name, email, wallet_id FROM users
          ${whereSQL}
          ORDER BY first_name ASC
          LIMIT 10`,
@@ -125,7 +122,6 @@ router.get("/", async (req, res) => {
       return res.json(result.rows);
     }
 
-    // Otherwise: full paginated mode
     const limit = parseInt(perPage) || 10;
     const offset = ((parseInt(page) || 1) - 1) * limit;
 
@@ -205,7 +201,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// ✅ Get user by ID with relationships (student, parent, vendor)
+// ✅ Get user by ID
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
@@ -221,23 +217,19 @@ router.get("/:id", async (req, res) => {
 
     const user = userRes.rows[0];
 
-if (user.role === "student") {
-  const studentRes = await client.query(
-    "SELECT * FROM students WHERE user_id = $1",
-    [user.id]
-  );
-  user.student_profile = studentRes.rows[0] || null;
+    if (user.role === "student") {
+      const studentRes = await client.query("SELECT * FROM students WHERE user_id = $1", [user.id]);
+      user.student_profile = studentRes.rows[0] || null;
 
-  const parentRes = await client.query(`
-    SELECT u.id, u.first_name, u.last_name, u.email
-    FROM student_parents sp
-    JOIN users u ON sp.parent_id = u.id
-    WHERE sp.student_id = $1
-  `, [user.id]);
+      const parentRes = await client.query(`
+        SELECT u.id, u.first_name, u.last_name, u.email
+        FROM student_parents sp
+        JOIN users u ON sp.parent_id = u.id
+        WHERE sp.student_id = $1
+      `, [user.id]);
 
-  console.log("Parents:", parentRes.rows);
-  user.assigned_parents = parentRes.rows;
-}
+      user.assigned_parents = parentRes.rows;
+    }
 
     if (user.role === "parent") {
       const studentsRes = await client.query(`
@@ -251,14 +243,13 @@ if (user.role === "student") {
 
     res.json(user);
   } catch (err) {
-    console.error("❌ Error fetching enriched user:", err);
+    console.error("❌ Error fetching user:", err);
     res.status(500).json({ message: "Failed to fetch user" });
   } finally {
     client.release();
   }
 });
 
-// ✅ Force sign-out placeholder
 router.post("/:id/signout", async (req, res) => {
   res.json({ message: "Force sign-out not implemented yet" });
 });
