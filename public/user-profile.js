@@ -1,4 +1,3 @@
-console.log("📦 user-profile.js is running...");
 document.addEventListener("DOMContentLoaded", () => {
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
@@ -126,23 +125,28 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
       userInfo.appendChild(dropdown);
 
 // === Student View ===
-// === Student View ===
 if (user.role === "student" && user.student_profile) {
   const s = user.student_profile;
 
-  // ✅ Log the full user object for debug
-  console.log("🔥 FULL USER DATA:", user);
-  console.log("✅ Raw assigned_parents check:", user.assigned_parents);
-  console.log("✅ Type:", typeof user.assigned_parents);
-  console.log("✅ Length:", user.assigned_parents?.length);
+  // Create a debug area to show logs on-screen
+  const debugBox = document.createElement("div");
+  debugBox.style.backgroundColor = "#eee";
+  debugBox.style.padding = "10px";
+  debugBox.style.marginTop = "20px";
+  debugBox.innerHTML = `
+    <h4>Debug Output (iPad Mode)</h4>
+    <strong>Full User:</strong><br><pre>${JSON.stringify(user, null, 2)}</pre>
+    <strong>Assigned Parents:</strong><br><pre>${JSON.stringify(user.assigned_parents, null, 2)}</pre>
+  `;
+  document.body.appendChild(debugBox);
 
-  // ✅ Set student info fields
+  // Set student info
   document.getElementById("studentSchoolName").textContent = s.school_name || "-";
   document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
   document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
 
-  // ✅ TEMP DEBUG: Render raw JSON of assigned_parents
-  if (user.assigned_parents) {
+  // Show parent info if exists
+  if (user.assigned_parents?.length > 0) {
     parentSection.innerHTML = `
       <div class="section-title">Parent Debug Info</div>
       <pre>${JSON.stringify(user.assigned_parents, null, 2)}</pre>
