@@ -132,26 +132,16 @@ if (user.role === "student" && user.student_profile) {
   document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
   document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
 
-  // Render assigned parents
-  if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
+  // Debug output
+  console.log("✅ Raw assigned_parents check:", user.assigned_parents);
+  console.log("✅ Type:", typeof user.assigned_parents);
+  console.log("✅ Length:", user.assigned_parents?.length);
+
+  // TEMP DEBUG VIEW: Render raw JSON of parents
+  if (user.assigned_parents) {
     parentSection.innerHTML = `
-      <div class="section-title">Parent Information</div>
-      <div class="user-details-grid">
-        ${user.assigned_parents.map(parent => `
-          <div>
-            <span class="label">Name</span>
-            <span class="value">
-              <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">
-                ${parent.first_name} ${parent.last_name}
-              </a>
-            </span>
-          </div>
-          <div>
-            <span class="label">Email</span>
-            <span class="value">${parent.email}</span>
-          </div>
-        `).join("")}
-      </div>
+      <div class="section-title">Parent Debug Info</div>
+      <pre>${JSON.stringify(user.assigned_parents, null, 2)}</pre>
     `;
     parentSection.style.display = "block";
   }
