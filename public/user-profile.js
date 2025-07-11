@@ -8,7 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const parentNameEl = document.getElementById("parentName");
   const parentEmailEl = document.getElementById("parentEmail");
 
-  let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
+let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
+
+// 🚫 Remove any accidental whitespace or malformed characters from UUID
+currentUserId = currentUserId?.replace(/\s+/g, ''); 
   let currentUserData = null;
 
   if (!currentUserId) {
