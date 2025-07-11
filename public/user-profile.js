@@ -125,36 +125,39 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
       userInfo.appendChild(dropdown);
 
 // === Student View ===
-if (user.role === "student" && user.student_profile) {
+if (user.role === "student") {
   const s = user.student_profile;
 
-  // Create a debug area to show logs on-screen
-  const debugBox = document.createElement("div");
-  debugBox.style.backgroundColor = "#eee";
-  debugBox.style.padding = "10px";
-  debugBox.style.marginTop = "20px";
-  debugBox.innerHTML = `
-    <h4>Debug Output (iPad Mode)</h4>
-    <strong>Full User:</strong><br><pre>${JSON.stringify(user, null, 2)}</pre>
-    <strong>Assigned Parents:</strong><br><pre>${JSON.stringify(user.assigned_parents, null, 2)}</pre>
-  `;
-  document.body.appendChild(debugBox);
+  if (s) {
+    document.getElementById("studentSchoolName").textContent = s.school_name || "-";
+    document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
+    document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
+    studentInfoSection.style.display = "block";
+  }
 
-  // Set student info
-  document.getElementById("studentSchoolName").textContent = s.school_name || "-";
-  document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
-  document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
-
-  // Show parent info if exists
-  if (user.assigned_parents?.length > 0) {
+  // Show parent info
+  if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
     parentSection.innerHTML = `
-      <div class="section-title">Parent Debug Info</div>
-      <pre>${JSON.stringify(user.assigned_parents, null, 2)}</pre>
+      <div class="section-title">Parent Info</div>
+      <div class="user-details-grid">
+        ${user.assigned_parents.map(p => `
+          <div>
+            <span class="label">Name</span>
+            <span class="value">
+              <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${p.id}')">
+                ${p.first_name} ${p.last_name}
+              </a>
+            </span>
+          </div>
+          <div>
+            <span class="label">Email</span>
+            <span class="value">${p.email}</span>
+          </div>
+        `).join("")}
+      </div>
     `;
     parentSection.style.display = "block";
   }
-
-  studentInfoSection.style.display = "block";
 }
       // === Parent View ===
       if (user.role === "parent" && Array.isArray(user.assigned_students)) {
