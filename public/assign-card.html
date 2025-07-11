@@ -200,38 +200,43 @@
 
     // 📤 Submit card assignment
     assignBtn.addEventListener("click", async () => {
-      const uid = cardUID.value.trim();
-      const admin = JSON.parse(localStorage.getItem("boopUser"));
+  const uid = cardUID.value.trim();
+  const admin = JSON.parse(localStorage.getItem("boopUser"));
 
-      if (!uid) {
-        statusEl.textContent = "Please generate or scan a UID.";
-        return;
-      }
+  if (!uid) {
+    statusEl.textContent = "Please generate or scan a UID.";
+    return;
+  }
 
-      try {
-        const res = await fetch("/api/cards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid,
-            wallet_id: selectedUser?.wallet_id,
-            issued_by: admin?.id,
-            type: "spending"
-          })
-        });
+  if (!selectedUser || !selectedUser.wallet_id) {
+    statusEl.textContent = "Please select a valid user with a wallet.";
+    return;
+  }
 
-        if (!res.ok) throw new Error("Failed to assign");
-
-        statusEl.textContent = "✅ Card assigned successfully!";
-        statusEl.style.color = "green";
-        cardUID.value = "";
-        userSearch.value = "";
-        selectedUser = null;
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "❌ Failed to assign card.";
-      }
+  try {
+    const res = await fetch("/api/cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid,
+        wallet_id: selectedUser.wallet_id,
+        issued_by: admin?.id,
+        type: "spending"
+      })
     });
+
+    if (!res.ok) throw new Error("Failed to assign");
+
+    statusEl.textContent = "✅ Card assigned successfully!";
+    statusEl.style.color = "green";
+    cardUID.value = "";
+    userSearch.value = "";
+    selectedUser = null;
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "❌ Failed to assign card.";
+  }
+});
 
     // 🚪 Logout
     document.getElementById("logoutBtn")?.addEventListener("click", () => {
