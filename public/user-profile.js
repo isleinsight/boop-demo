@@ -1,3 +1,4 @@
+console.log("📦 user-profile.js is running...");
 document.addEventListener("DOMContentLoaded", () => {
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
