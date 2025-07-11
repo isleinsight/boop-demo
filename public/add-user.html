@@ -1,36 +1,3 @@
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) {
-      // User not logged in – redirect to homepage
-      window.location.href = "index.html";
-      return;
-    }
-
-    try {
-      const token = await user.getIdToken();
-      const uid = user.uid;
-
-      // Get user role from your backend
-      const response = await fetch(`/api/users/${uid}`);
-      if (!response.ok) throw new Error("Failed to fetch user");
-
-      const userData = await response.json();
-
-      // Check if user is an admin
-      if (userData.role !== "admin") {
-        // Not an admin – redirect
-        window.location.href = "index.html";
-      }
-
-    } catch (error) {
-      console.error("AuthWatch Error:", error);
-      window.location.href = "index.html"; // Fail-safe redirect
-    }
-  });
-});
-</script>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -140,5 +107,62 @@
   </div>
 
   <script type="module" src="add-user.js"></script>
+    <!-- Auth Script -->
+<script>
+  // Role-based protection: Only allow admins
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  if (!user || user.role !== "admin") {
+    window.location.href = "login.html"; // Redirect non-admins to login
+  }
+
+  // DOM loaded logic
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("admin.js has loaded!");
+
+
+    // Logout logic
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+  });
+
+
+  // Add user Auth
+    document.addEventListener("DOMContentLoaded", () => {
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (!user) {
+      // User not logged in – redirect to homepage
+      window.location.href = "index.html";
+      return;
+    }
+
+    try {
+      const token = await user.getIdToken();
+      const uid = user.uid;
+
+      // Get user role from your backend
+      const response = await fetch(`/api/users/${uid}`);
+      if (!response.ok) throw new Error("Failed to fetch user");
+
+      const userData = await response.json();
+
+      // Check if user is an admin
+      if (userData.role !== "admin") {
+        // Not an admin – redirect
+        window.location.href = "index.html";
+      }
+
+    } catch (error) {
+      console.error("AuthWatch Error:", error);
+      window.location.href = "index.html"; // Fail-safe redirect
+    }
+  });
+});
+</script>
 </body>
 </html>
