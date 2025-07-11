@@ -221,18 +221,23 @@ router.get("/:id", async (req, res) => {
 
     const user = userRes.rows[0];
 
-    if (user.role === "student") {
-      const studentRes = await client.query("SELECT * FROM students WHERE user_id = $1", [user.id]);
-      user.student_profile = studentRes.rows[0] || null;
+if (user.role === "student") {
+  const studentRes = await client.query(
+    "SELECT * FROM students WHERE user_id = $1",
+    [user.id]
+  );
+  user.student_profile = studentRes.rows[0] || null;
 
-      const parentRes = await client.query(`
-        SELECT u.id, u.first_name, u.last_name, u.email
-        FROM student_parents sp
-        JOIN users u ON sp.parent_id = u.id
-        WHERE sp.student_id = $1
-      `, [user.id]);
-      user.assigned_parents = parentRes.rows;
-    }
+  const parentRes = await client.query(`
+    SELECT u.id, u.first_name, u.last_name, u.email
+    FROM student_parents sp
+    JOIN users u ON sp.parent_id = u.id
+    WHERE sp.student_id = $1
+  `, [user.id]);
+
+  console.log("Parents:", parentRes.rows);
+  user.assigned_parents = parentRes.rows;
+}
 
     if (user.role === "parent") {
       const studentsRes = await client.query(`
