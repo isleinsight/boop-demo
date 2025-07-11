@@ -128,6 +128,9 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 if (user.role === "student" && user.student_profile) {
   const s = user.student_profile;
 
+  const user = await fetchJSON(`/api/users/${currentUserId}`);
+console.log("🔥 FULL USER DATA:", user);
+
   document.getElementById("studentSchoolName").textContent = s.school_name || "-";
   document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
   document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
