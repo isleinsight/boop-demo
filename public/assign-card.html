@@ -120,152 +120,142 @@
   </div>
 
   <script type="module">
-const cardUID = document.getElementById("cardUID");
-const assignBtn = document.getElementById("assignBtn");
-const statusEl = document.getElementById("status");
-const generateBtn = document.getElementById("generateUIDBtn");
-const scanBtn = document.getElementById("scanUIDBtn");
-const userSearch = document.getElementById("userSearch");
-const userSuggestions = document.getElementById("userSuggestions");
+  const cardUID = document.getElementById("cardUID");
+  const assignBtn = document.getElementById("assignBtn");
+  const statusEl = document.getElementById("status");
+  const generateBtn = document.getElementById("generateUIDBtn");
+  const scanBtn = document.getElementById("scanUIDBtn");
+  const userSearch = document.getElementById("userSearch");
+  const userSuggestions = document.getElementById("userSuggestions");
 
-let selectedUser = null;
+  let selectedUser = null;
 
-// Disable button initially
-assignBtn.disabled = true;
-assignBtn.style.opacity = 0.6;
+  // 🔧 Generate UID
+  generateBtn.addEventListener("click", () => {
+    const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    cardUID.value = uid;
+  });
 
-const updateButton = (enabled, message = "") => {
-  assignBtn.disabled = !enabled;
-  assignBtn.style.opacity = enabled ? 1 : 0.6;
-  statusEl.textContent = message;
-  statusEl.style.color = enabled ? "green" : "darkred";
-};
+  // 🔍 Simulated scan
+  scanBtn.addEventListener("click", async () => {
+    try {
+      const res = await fetch("http://localhost:3001/scan");
+      const data = await res.json();
+      if (data.uid) {
+        cardUID.value = data.uid;
+      } else {
+        alert("No UID received. Please try again.");
+      }
+    } catch (err) {
+      console.error("Scan failed:", err);
+      alert("NFC scanner not available. Make sure it's running.");
+    }
+  });
 
-// 🔧 Generate UID
-generateBtn.addEventListener("click", () => {
-  const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-  cardUID.value = uid;
-});
+  // 👤 Autocomplete
+  userSearch.addEventListener("input", async () => {
+    const query = userSearch.value.trim();
+    if (query.length < 2) {
+      userSuggestions.style.display = "none";
+      return;
+    }
 
-// 🔍 Dummy Scan
-scanBtn.addEventListener("click", async () => {
-  try {
-    const res = await fetch("http://localhost:3001/scan");
-    const data = await res.json();
-    cardUID.value = data.uid || "";
-  } catch {
-    alert("Scanner not available.");
-  }
-});
+    try {
+      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&eligibleOnly=true`);
+      const users = await res.json();
 
-// Autocomplete
-userSearch.addEventListener("input", async () => {
-  const query = userSearch.value.trim();
-  if (query.length < 2) {
-    userSuggestions.style.display = "none";
-    return;
-  }
+      if (!users.length) {
+        userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
+        userSuggestions.style.display = "block";
+        return;
+      }
 
-  try {
-    const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&eligibleOnly=true`);
-    const users = await res.json();
-
-    if (!users.length) {
-      userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
-    } else {
       userSuggestions.innerHTML = users.map(u => `
         <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-          ${u.first_name} ${u.last_name} (${u.email})
+          ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
         </div>
       `).join("");
+      userSuggestions.style.display = "block";
+    } catch (e) {
+      console.error("User search failed:", e);
     }
+  });
 
-    userSuggestions.style.display = "block";
-  } catch (e) {
-    console.error("User search failed:", e);
-  }
-});
-
-userSuggestions.addEventListener("click", async (e) => {
-  const item = e.target.closest(".user-suggestion");
-  if (!item) return;
-
-  selectedUser = {
-    id: item.dataset.id,
-    wallet_id: item.dataset.wallet
-  };
-
-  userSearch.value = item.textContent;
-  userSuggestions.style.display = "none";
-
-  try {
-    const res = await fetch(`/api/cards?wallet_id=${selectedUser.wallet_id}`);
-    const cards = await res.json();
-
-    const hasSpendingCard = cards.some(c => c.type === "spending");
-
-    if (hasSpendingCard) {
-      updateButton(false, "⚠️ User already has a spending card.");
-    } else {
-      updateButton(true, "");
-    }
-  } catch (err) {
-    console.error("Error checking cards:", err);
-    updateButton(false, "❌ Could not verify user card status.");
-  }
-});
-
-document.addEventListener("click", (e) => {
-  if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+  userSuggestions.addEventListener("click", (e) => {
+    const item = e.target.closest(".user-suggestion");
+    if (!item) return;
+    selectedUser = {
+      id: item.dataset.id,
+      wallet_id: item.dataset.wallet
+    };
+    userSearch.value = item.textContent;
     userSuggestions.style.display = "none";
-  }
-});
+  });
 
-// 🚀 Assign card
-assignBtn.addEventListener("click", async () => {
-  const uid = cardUID.value.trim();
-  const admin = JSON.parse(localStorage.getItem("boopUser"));
+  document.addEventListener("click", (e) => {
+    if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+      userSuggestions.style.display = "none";
+    }
+  });
 
-  if (!uid) {
-    updateButton(false, "Please generate or scan a UID.");
-    return;
-  }
+  // 📨 Assign card
+  assignBtn.addEventListener("click", async () => {
+    const uid = cardUID.value.trim();
+    const admin = JSON.parse(localStorage.getItem("boopUser"));
 
-  if (!selectedUser || !selectedUser.wallet_id) {
-    updateButton(false, "Please select a valid user.");
-    return;
-  }
+    if (!uid) {
+      statusEl.textContent = "Please generate or scan a UID.";
+      statusEl.style.color = "red";
+      return;
+    }
 
-  try {
-    const res = await fetch("/api/cards", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        uid,
-        wallet_id: selectedUser.wallet_id,
-        issued_by: admin?.id,
-        type: "spending"
-      })
+    if (!selectedUser || !selectedUser.wallet_id) {
+      statusEl.textContent = "Please select a valid user with a wallet.";
+      statusEl.style.color = "red";
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid,
+          wallet_id: selectedUser.wallet_id,
+          issued_by: admin?.id,
+          type: "spending"
+        })
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (result.message?.toLowerCase().includes("already has")) {
+          throw new Error("⚠️ This user already has a spending card.");
+        }
+        throw new Error(result.message || "Card assignment failed.");
+      }
+
+      statusEl.textContent = "✅ Card assigned successfully!";
+      statusEl.style.color = "green";
+
+      cardUID.value = "";
+      userSearch.value = "";
+      selectedUser = null;
+    } catch (err) {
+      console.error("❌ Error:", err);
+      statusEl.textContent = err.message || "Unknown error occurred.";
+      statusEl.style.color = "red";
+    }
+  });
+
+  // 🚪 Logout
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      window.location.href = "login.html";
     });
-
-    const result = await res.json();
-
-    if (!res.ok) throw new Error(result.message || "Card assign failed");
-
-    statusEl.textContent = "✅ Card assigned successfully!";
-    statusEl.style.color = "green";
-
-    cardUID.value = "";
-    userSearch.value = "";
-    selectedUser = null;
-    updateButton(false); // disable until new user selected
-  } catch (err) {
-    console.error("❌ Error:", err);
-    statusEl.textContent = `❌ ${err.message}`;
-    statusEl.style.color = "red";
-  }
-});
-      </script>
+  });
+</script>
 
 
 
