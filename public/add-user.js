@@ -106,27 +106,33 @@ const updateConditionalFields = () => {
     }
 
     try {
-      const resUser = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userPayload),
-      });
+  const res = await fetch("/api/cards", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      uid,
+      wallet_id: selectedUser.wallet_id,
+      issued_by: admin?.id,
+      type: "spending"
+    })
+  });
 
-      const result = await resUser.json();
+  const result = await res.json();
 
-      if (!resUser.ok) {
-        throw new Error(result.message || "Failed to create user");
-      }
+  if (!res.ok) {
+    const backendMessage = result?.message || "Failed to assign card";
+    throw new Error(backendMessage);
+  }
 
-      statusDiv.textContent = "✅ User created successfully!";
-      statusDiv.style.color = "green";
-      form.reset();
-      updateConditionalFields();
-
-    } catch (err) {
-      console.error("❌ Error:", err);
-      statusDiv.textContent = err.message;
-      statusDiv.style.color = "red";
-    }
+  statusEl.textContent = "✅ Card assigned successfully!";
+  statusEl.style.color = "green";
+  cardUID.value = "";
+  userSearch.value = "";
+  selectedUser = null;
+} catch (err) {
+  console.error("❌ Error:", err);
+  statusEl.textContent = `❌ ${err.message}`;
+  statusEl.style.color = "red";
+}
   });
 });
