@@ -155,6 +155,181 @@
     <div class="status" id="status"></div>
   </div>
 
-  <!-- Scripts come next, I’ll give you full JS in the next reply -->
+<script type="module">
+  const uidEl = document.getElementById("cardUID");
+  const generateBtn = document.getElementById("generateUIDBtn");
+  const scanBtn = document.getElementById("scanUIDBtn");
+  const passType = document.getElementById("passType");
+  const rideGroup = document.getElementById("ridesInputGroup");
+  const timeGroup = document.getElementById("timeInputGroup");
+  const rideCount = document.getElementById("rideCount");
+  const daysValid = document.getElementById("daysValid");
+  const assignBtn = document.getElementById("assignBtn");
+  const modeSelect = document.getElementById("modeSelect");
+  const statusEl = document.getElementById("status");
+
+  const userTypeSelect = document.getElementById("userTypeSelect");
+  const userSearchGroup = document.getElementById("userSearchGroup");
+  const userSearch = document.getElementById("userSearch");
+  const suggestions = document.getElementById("userSuggestions");
+
+  let selectedUser = null;
+
+  // 🧠 UID Generator
+  generateBtn.addEventListener("click", () => {
+    const uid = crypto.randomUUID().slice(0, 12).replace(/-/g, "").toUpperCase();
+    uidEl.value = uid;
+  });
+
+  // 🧪 NFC scan fallback
+  scanBtn.addEventListener("click", async () => {
+    try {
+      const res = await fetch("http://localhost:3001/scan");
+      const data = await res.json();
+      if (data.uid) {
+        uidEl.value = data.uid;
+      } else {
+        alert("No UID received. Please try again.");
+      }
+    } catch (err) {
+      console.error("Scan failed:", err);
+      alert("NFC scanner not available. Make sure it's running on your computer.");
+    }
+  });
+
+  // 🎛️ Pass type toggle
+  passType.addEventListener("change", () => {
+    if (passType.value === "rides") {
+      rideGroup.style.display = "block";
+      timeGroup.style.display = "none";
+    } else {
+      rideGroup.style.display = "none";
+      timeGroup.style.display = "block";
+    }
+  });
+
+  // 🔀 User Type Dropdown logic
+  userTypeSelect.addEventListener("change", () => {
+    selectedUser = null;
+    userSearch.value = "";
+    suggestions.innerHTML = "";
+    if (userTypeSelect.value === "existing") {
+      userSearchGroup.style.display = "block";
+    } else {
+      userSearchGroup.style.display = "none";
+    }
+  });
+
+  // 🔎 Live user search
+  userSearch.addEventListener("input", async () => {
+    const query = userSearch.value.trim();
+    if (query.length < 2) {
+      suggestions.style.display = "none";
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}`);
+      const users = await res.json();
+
+      if (!users.length) {
+        suggestions.innerHTML = "<div>No users found</div>";
+      } else {
+        suggestions.innerHTML = users.map(u => `
+          <div class="user-suggestion" data-id="${u.id}">
+            ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
+          </div>`).join("");
+      }
+
+      suggestions.style.display = "block";
+    } catch (err) {
+      console.error("Search error:", err);
+    }
+  });
+
+  suggestions.addEventListener("click", (e) => {
+    const item = e.target.closest(".user-suggestion");
+    if (!item) return;
+    selectedUser = { id: item.dataset.id };
+    userSearch.value = item.textContent;
+    suggestions.style.display = "none";
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!suggestions.contains(e.target) && e.target !== userSearch) {
+      suggestions.style.display = "none";
+    }
+  });
+
+  // 🚀 Assign card
+  assignBtn.addEventListener("click", async () => {
+    const uid = uidEl.value.trim();
+    const mode = modeSelect.value;
+    const type = passType.value;
+    const value = type === "rides" ? rideCount.value : daysValid.value;
+
+    if (!uid) {
+      return alert("UID required. Click 'Generate' or scan.");
+    }
+
+    let user_id = null;
+
+    if (userTypeSelect.value === "existing") {
+      if (!selectedUser?.id) {
+        return alert("Please select a user.");
+      }
+      user_id = selectedUser.id;
+    }
+
+    const body = {
+      uid,
+      card_type: "transit",
+      transport_mode: mode,
+      pass_type: type,
+      pass_value: value,
+      user_id,
+      issued_by: JSON.parse(localStorage.getItem("boopUser"))?.id || null
+    };
+
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.message || "Failed to assign card");
+
+      statusEl.textContent = "✅ Transit card assigned!";
+      statusEl.style.color = "green";
+
+      // Reset
+      uidEl.value = "";
+      userSearch.value = "";
+      selectedUser = null;
+      userTypeSelect.value = "";
+      userSearchGroup.style.display = "none";
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = `❌ ${err.message}`;
+      statusEl.style.color = "red";
+    }
+  });
+
+  // 🔒 Auth check
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  if (!user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
+
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      localStorage.removeItem("boopUser");
+      window.location.href = "login.html";
+    });
+  });
+</script>
 </body>
 </html>
