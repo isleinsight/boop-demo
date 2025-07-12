@@ -1,6 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ add-user.js loaded");
-
   const form = document.getElementById("addUserForm");
 
   const emailInput = document.getElementById("email");
@@ -11,12 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const roleSelect = document.getElementById("role");
   const onAssistanceCheckbox = document.getElementById("onAssistance");
 
-  const assistanceContainer = document.getElementById("assistanceContainer");
-  const vendorFields = document.getElementById("vendorFields");
-  const studentFields = document.getElementById("studentFields");
-  const statusDiv = document.getElementById("formStatus");
-  const logoutBtn = document.getElementById("logoutBtn");
-
   const businessNameInput = document.getElementById("businessName");
   const vendorPhoneInput = document.getElementById("vendorPhone");
   const vendorCategoryInput = document.getElementById("vendorCategory");
@@ -26,55 +18,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const studentGradeLevel = document.getElementById("studentGradeLevel");
   const expiryDateInput = document.getElementById("expiryDate");
 
-  const updateConditionalFields = () => {
-    const role = roleSelect.value;
-    vendorFields.style.display = role === "vendor" ? "block" : "none";
-    studentFields.style.display = role === "student" ? "block" : "none";
-    assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
-  };
-
-  roleSelect.addEventListener("change", updateConditionalFields);
-  updateConditionalFields();
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("boopUser");
-      localStorage.removeItem("boop_jwt");
-      window.location.href = "login.html";
-    });
-  }
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    statusDiv.textContent = "Creating user...";
-    statusDiv.style.color = "black";
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const firstName = firstNameInput.value.trim();
-    const middleName = middleNameInput.value.trim();
-    const lastName = lastNameInput.value.trim();
+    const first_name = firstNameInput.value.trim();
+    const middle_name = middleNameInput.value.trim() || null;
+    const last_name = lastNameInput.value.trim();
     const role = roleSelect.value;
-    const onAssistance = onAssistanceCheckbox.checked;
+    const on_assistance = onAssistanceCheckbox.checked;
 
-    if (!email || !password || password.length < 6 || !firstName || !lastName || !role) {
-      statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
-      statusDiv.style.color = "red";
+    if (!email || !password || password.length < 6 || !first_name || !last_name || !role) {
+      alert("⚠️ Please fill in all required fields.");
       return;
     }
 
-    const userPayload = {
+    const user = {
       email,
       password,
-      first_name: firstName,
-      middle_name: middleName || null,
-      last_name: lastName,
+      first_name,
+      middle_name,
+      last_name,
       role,
-      on_assistance: role === "cardholder" ? onAssistance : false,
+      on_assistance: role === "cardholder" ? on_assistance : false,
     };
 
     if (role === "vendor") {
-      userPayload.vendor = {
+      user.vendor = {
         name: businessNameInput.value.trim(),
         phone: vendorPhoneInput.value.trim(),
         category: vendorCategoryInput.value.trim(),
@@ -88,12 +59,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const expiry_date = expiryDateInput.value;
 
       if (!school_name || !expiry_date) {
-        statusDiv.textContent = "Missing school name or expiry date for student.";
-        statusDiv.style.color = "red";
+        alert("⚠️ Missing required student fields.");
         return;
       }
 
-      userPayload.student = {
+      user.student = {
         school_name,
         grade_level,
         expiry_date
@@ -101,27 +71,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const resUser = await fetch("/api/users", {
+      const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userPayload),
+        body: JSON.stringify(user)
       });
 
-      const result = await resUser.json();
+      const data = await res.json();
 
-      if (!resUser.ok) {
-        throw new Error(result.message || "Failed to create user");
+      if (!res.ok) {
+        throw new Error(data.message || "Unknown error");
       }
 
-      statusDiv.textContent = "✅ User created successfully!";
-      statusDiv.style.color = "green";
+      alert("✅ User created: " + data.id);
       form.reset();
-      updateConditionalFields();
-
     } catch (err) {
-      console.error("❌ Error:", err);
-      statusDiv.textContent = err.message;
-      statusDiv.style.color = "red";
+      alert("❌ Error: " + err.message);
     }
   });
 });
