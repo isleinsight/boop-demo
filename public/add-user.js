@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("✅ add-user.js loaded");
+
   const form = document.getElementById("addUserForm");
 
   const emailInput = document.getElementById("email");
@@ -9,6 +11,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const roleSelect = document.getElementById("role");
   const onAssistanceCheckbox = document.getElementById("onAssistance");
 
+  const assistanceContainer = document.getElementById("assistanceContainer");
+  const vendorFields = document.getElementById("vendorFields");
+  const studentFields = document.getElementById("studentFields");
+  const statusDiv = document.getElementById("formStatus");
+  const logoutBtn = document.getElementById("logoutBtn");
+
   const businessNameInput = document.getElementById("businessName");
   const vendorPhoneInput = document.getElementById("vendorPhone");
   const vendorCategoryInput = document.getElementById("vendorCategory");
@@ -18,8 +26,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const studentGradeLevel = document.getElementById("studentGradeLevel");
   const expiryDateInput = document.getElementById("expiryDate");
 
+  const updateConditionalFields = () => {
+    const role = roleSelect.value;
+    vendorFields.style.display = role === "vendor" ? "block" : "none";
+    studentFields.style.display = role === "student" ? "block" : "none";
+    assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
+  };
+
+  roleSelect.addEventListener("change", updateConditionalFields);
+  updateConditionalFields();
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("boopUser");
+      localStorage.removeItem("boop_jwt");
+      window.location.href = "login.html";
+    });
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    statusDiv.textContent = "Creating user...";
+    statusDiv.style.color = "black";
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -30,11 +58,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const on_assistance = onAssistanceCheckbox.checked;
 
     if (!email || !password || password.length < 6 || !first_name || !last_name || !role) {
-      alert("⚠️ Please fill in all required fields.");
+      statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
+      statusDiv.style.color = "red";
       return;
     }
 
-    const user = {
+    const userPayload = {
       email,
       password,
       first_name,
@@ -45,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     if (role === "vendor") {
-      user.vendor = {
+      userPayload.vendor = {
         name: businessNameInput.value.trim(),
         phone: vendorPhoneInput.value.trim(),
         category: vendorCategoryInput.value.trim(),
@@ -59,11 +88,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const expiry_date = expiryDateInput.value;
 
       if (!school_name || !expiry_date) {
-        alert("⚠️ Missing required student fields.");
+        statusDiv.textContent = "Missing school name or expiry date for student.";
+        statusDiv.style.color = "red";
         return;
       }
 
-      user.student = {
+      userPayload.student = {
         school_name,
         grade_level,
         expiry_date
@@ -71,22 +101,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const res = await fetch("/api/users", {
+      const resUser = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user)
+        body: JSON.stringify(userPayload),
       });
 
-      const data = await res.json();
+      const result = await resUser.json();
 
-      if (!res.ok) {
-        throw new Error(data.message || "Unknown error");
+      if (!resUser.ok) {
+        throw new Error(result.message || "Failed to create user");
       }
 
-      alert("✅ User created: " + data.id);
+      statusDiv.textContent = "✅ User created successfully!";
+      statusDiv.style.color = "green";
       form.reset();
+      updateConditionalFields();
+
     } catch (err) {
-      alert("❌ Error: " + err.message);
+      console.error("❌ Error:", err);
+      statusDiv.textContent = err.message;
+      statusDiv.style.color = "red";
     }
   });
 });
