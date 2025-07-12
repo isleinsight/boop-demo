@@ -1,21 +1,3 @@
-<script>
-  // 🔒 Auth check at top
-  let user;
-  try {
-    user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || typeof user !== "object" || user.role !== "admin") {
-      throw new Error("Not authorized");
-    }
-  } catch (err) {
-    localStorage.removeItem("boopUser");
-    window.location.href = "login.html";
-  }
-
-  // ✅ DOM logic after authorization confirmed
-  document.addEventListener("DOMContentLoaded", () => {
-    // your logic below...
-  });
-</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,8 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css" />
-
   <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+    }
     .container-small {
       max-width: 500px;
       background: white;
@@ -34,36 +19,30 @@
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-
-    .status {
-      text-align: center;
-      margin-top: 20px;
-      color: #333;
-    }
-
     .input-group {
       margin-bottom: 20px;
     }
-
     input, select, button {
       width: 100%;
       padding: 10px;
       font-size: 1rem;
       box-sizing: border-box;
     }
-
     .uid-buttons {
       display: flex;
       gap: 10px;
       margin-top: 10px;
     }
-
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      color: #333;
+    }
     #userSuggestions div {
       padding: 8px 12px;
       border-bottom: 1px solid #eee;
       cursor: pointer;
     }
-
     #userSuggestions div:hover {
       background-color: #f0f0f0;
     }
@@ -71,220 +50,260 @@
 </head>
 <body>
 
-  <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      <div class="nav-right">
-        <a href="dashboard.html">Dashboard</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Add</a>
-          <div class="dropdown-content">
-            <a href="add-user.html">Add User</a>
-            <a href="assign-card.html">Assign Card</a>
-            <a href="assign-transit-card.html">Transit Card</a>
-            <a href="assign-student.html">Assign Student</a>
-          </div>
+<!-- Top Nav -->
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
+    </div>
+    <div class="nav-right">
+      <a href="dashboard.html">Dashboard</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn" style="color: white;">Add</a>
+        <div class="dropdown-content">
+          <a href="add-user.html">Add User</a>
+          <a href="assign-card.html">Assign Card</a>
+          <a href="assign-transit-card.html">Transit Card</a>
+          <a href="assign-student.html">Assign Student</a>
         </div>
-        <a href="view-users.html">View Users</a>
-        <a href="#" id="logoutBtn">Log Out</a>
       </div>
+      <a href="view-users.html">View Users</a>
+      <a href="#" id="logoutBtn">Log Out</a>
     </div>
-  </nav>
+  </div>
+</nav>
 
-  <div class="container-small">
-    <h3>Assign Transit Card</h3>
+<div class="container-small">
+  <h3>Assign Transit Card</h3>
 
-    <!-- Card UID -->
-    <div class="input-group">
-      <label>Card UID</label>
-      <input type="text" id="cardUID" placeholder="Auto-generated or scanned" readonly />
-      <div class="uid-buttons">
-        <button type="button" id="generateUIDBtn">Generate</button>
-        <button type="button" id="scanUIDBtn">Scan</button>
-      </div>
+  <div class="input-group">
+    <label>Card UID</label>
+    <input type="text" id="cardUID" placeholder="Auto-generated or scanned" readonly />
+    <div class="uid-buttons">
+      <button type="button" id="generateUIDBtn">Generate</button>
+      <button type="button" id="scanUIDBtn">Scan</button>
     </div>
-
-    <!-- Optional user -->
-    <div class="input-group">
-      <label for="userSearch">Assign to User (optional)</label>
-      <input type="text" id="userSearch" placeholder="Search name or email..." autocomplete="off" />
-      <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
-    </div>
-
-    <!-- Transport Type -->
-    <div class="input-group">
-      <label for="modeSelect">Mode of Transport</label>
-      <select id="modeSelect">
-        <option value="bus">Bus</option>
-        <option value="ferry">Ferry</option>
-      </select>
-    </div>
-
-    <!-- Pass Type -->
-    <div class="input-group">
-      <label for="passType">Pass Type</label>
-      <select id="passType">
-        <option value="rides">By Rides</option>
-        <option value="time">By Time</option>
-      </select>
-    </div>
-
-    <!-- Ride Count -->
-    <div class="input-group" id="ridesInputGroup">
-      <label for="rideCount">Number of Rides</label>
-      <select id="rideCount">
-        <option value="14">14 Rides</option>
-        <option value="20">20 Rides</option>
-        <option value="30">30 Rides</option>
-      </select>
-    </div>
-
-    <!-- Time Duration -->
-    <div class="input-group" id="timeInputGroup" style="display:none;">
-      <label for="daysValid">Valid For</label>
-      <select id="daysValid">
-        <option value="7">7 Days</option>
-        <option value="14">14 Days</option>
-        <option value="30">30 Days</option>
-        <option value="60">60 Days</option>
-      </select>
-    </div>
-
-    <button id="assignBtn">Assign Transit Card</button>
-
-    <div class="status" id="status"></div>
   </div>
 
-  <script type="module">
-    const uidEl = document.getElementById("cardUID");
-    const generateBtn = document.getElementById("generateUIDBtn");
-    const scanBtn = document.getElementById("scanUIDBtn");
-    const passType = document.getElementById("passType");
-    const rideGroup = document.getElementById("ridesInputGroup");
-    const timeGroup = document.getElementById("timeInputGroup");
-    const rideCount = document.getElementById("rideCount");
-    const daysValid = document.getElementById("daysValid");
-    const assignBtn = document.getElementById("assignBtn");
-    const userSearch = document.getElementById("userSearch");
-    const suggestions = document.getElementById("userSuggestions");
-    const modeSelect = document.getElementById("modeSelect");
-    const statusEl = document.getElementById("status");
+  <div class="input-group">
+    <label for="userSearch">Assign to User (optional)</label>
+    <input type="text" id="userSearch" placeholder="Search name or email..." autocomplete="off" />
+    <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+    <label>
+      <input type="checkbox" id="temporaryUserCheckbox" />
+      Assign to temporary user
+    </label>
+  </div>
 
-    let selectedUser = null;
+  <div class="input-group">
+    <label for="modeSelect">Mode of Transport</label>
+    <select id="modeSelect">
+      <option value="bus">Bus</option>
+      <option value="ferry">Ferry</option>
+    </select>
+  </div>
 
-    generateBtn.addEventListener("click", () => {
-      const uid = crypto.randomUUID().slice(0, 12).replace(/-/g, "").toUpperCase();
-      uidEl.value = uid;
-    });
+  <div class="input-group">
+    <label for="passType">Pass Type</label>
+    <select id="passType">
+      <option value="rides">By Rides</option>
+      <option value="time">By Time</option>
+    </select>
+  </div>
 
-    scanBtn.addEventListener("click", () => {
-      alert("NFC scan not implemented yet.");
-    });
+  <div class="input-group" id="ridesInputGroup">
+    <label for="rideCount">Number of Rides</label>
+    <select id="rideCount">
+      <option value="14">14 Rides</option>
+      <option value="20">20 Rides</option>
+      <option value="30">30 Rides</option>
+    </select>
+  </div>
 
-    passType.addEventListener("change", () => {
-      if (passType.value === "rides") {
-        rideGroup.style.display = "block";
-        timeGroup.style.display = "none";
-      } else {
-        rideGroup.style.display = "none";
-        timeGroup.style.display = "block";
-      }
-    });
+  <div class="input-group" id="timeInputGroup" style="display:none;">
+    <label for="daysValid">Valid For</label>
+    <select id="daysValid">
+      <option value="7">7 Days</option>
+      <option value="14">14 Days</option>
+      <option value="30">30 Days</option>
+      <option value="60">60 Days</option>
+    </select>
+  </div>
 
-    userSearch.addEventListener("input", async () => {
-      const query = userSearch.value.trim();
-      if (query.length < 2) {
-        suggestions.style.display = "none";
+  <button id="assignBtn">Assign Transit Card</button>
+  <div class="status" id="status"></div>
+</div>
+
+<script type="module">
+  // 🔒 Auth check
+  const currentUser = JSON.parse(localStorage.getItem("boopUser"));
+  if (!currentUser || currentUser.role !== "admin") {
+    localStorage.removeItem("boopUser");
+    window.location.href = "login.html";
+  }
+
+  const uidEl = document.getElementById("cardUID");
+  const generateBtn = document.getElementById("generateUIDBtn");
+  const scanBtn = document.getElementById("scanUIDBtn");
+  const passType = document.getElementById("passType");
+  const rideGroup = document.getElementById("ridesInputGroup");
+  const timeGroup = document.getElementById("timeInputGroup");
+  const rideCount = document.getElementById("rideCount");
+  const daysValid = document.getElementById("daysValid");
+  const assignBtn = document.getElementById("assignBtn");
+  const userSearch = document.getElementById("userSearch");
+  const suggestions = document.getElementById("userSuggestions");
+  const modeSelect = document.getElementById("modeSelect");
+  const tempCheckbox = document.getElementById("temporaryUserCheckbox");
+  const statusEl = document.getElementById("status");
+
+  let selectedUser = null;
+
+  generateBtn.addEventListener("click", () => {
+    const uid = crypto.randomUUID().slice(0, 12).replace(/-/g, "").toUpperCase();
+    uidEl.value = uid;
+  });
+
+  passType.addEventListener("change", () => {
+    rideGroup.style.display = passType.value === "rides" ? "block" : "none";
+    timeGroup.style.display = passType.value === "time" ? "block" : "none";
+  });
+
+  userSearch.addEventListener("input", async () => {
+    const query = userSearch.value.trim();
+    if (query.length < 2) {
+      suggestions.style.display = "none";
+      return;
+    }
+
+    const res = await fetch(`/api/users?search=${encodeURIComponent(query)}`);
+    const users = await res.json();
+
+    if (!users.length) {
+      suggestions.innerHTML = "<div>No users found</div>";
+    } else {
+      suggestions.innerHTML = users.map(u => `
+        <div class="user-suggestion" data-id="${u.id}">
+          ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
+        </div>`).join("");
+    }
+
+    suggestions.style.display = "block";
+  });
+
+  suggestions.addEventListener("click", (e) => {
+    const item = e.target.closest(".user-suggestion");
+    if (!item) return;
+    selectedUser = { id: item.dataset.id };
+    userSearch.value = item.textContent;
+    suggestions.style.display = "none";
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!suggestions.contains(e.target) && e.target !== userSearch) {
+      suggestions.style.display = "none";
+    }
+  });
+
+  assignBtn.addEventListener("click", async () => {
+    const uid = uidEl.value.trim();
+    const mode = modeSelect.value;
+    const type = passType.value;
+    const value = type === "rides" ? rideCount.value : daysValid.value;
+
+    if (!uid) {
+      statusEl.textContent = "❌ UID required.";
+      statusEl.style.color = "red";
+      return;
+    }
+
+    let userId = selectedUser?.id || null;
+
+    if (!userId && tempCheckbox.checked) {
+      try {
+        const tempEmail = `temp_${crypto.randomUUID().slice(0, 8)}@guest.local`;
+        const tempName = `Temp-${crypto.randomUUID().slice(0, 4)}`;
+
+        const tempRes = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: tempEmail,
+            password: "Temporary123!",
+            first_name: "Temporary",
+            last_name: tempName,
+            role: "temporary"
+          })
+        });
+
+        const tempUser = await tempRes.json();
+        if (!tempRes.ok) throw new Error(tempUser.message || "Failed to create temporary user");
+
+        userId = tempUser.id;
+
+      } catch (err) {
+        statusEl.textContent = `❌ Temp user error: ${err.message}`;
+        statusEl.style.color = "red";
         return;
       }
+    }
 
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}`);
-      const users = await res.json();
+    if (!userId) {
+      statusEl.textContent = "❌ Please select a user or enable temporary mode.";
+      statusEl.style.color = "red";
+      return;
+    }
 
-      if (!users.length) {
-        suggestions.innerHTML = "<div>No users found</div>";
-      } else {
-        suggestions.innerHTML = users.map(u => `
-          <div class="user-suggestion" data-id="${u.id}">
-            ${u.first_name} ${u.last_name} (${u.email})
-          </div>`).join("");
-      }
-
-      suggestions.style.display = "block";
-    });
-
-    suggestions.addEventListener("click", (e) => {
-      const item = e.target.closest(".user-suggestion");
-      if (!item) return;
-      selectedUser = { id: item.dataset.id };
-      userSearch.value = item.textContent;
-      suggestions.style.display = "none";
-    });
-
-    assignBtn.addEventListener("click", async () => {
-      const uid = uidEl.value.trim();
-      const mode = modeSelect.value;
-      const type = passType.value;
-      const value = type === "rides" ? rideCount.value : daysValid.value;
-
-      if (!uid) return alert("UID required. Click 'Generate' or scan.");
-
-      const body = {
-        uid,
-        card_type: "transit",
-        transport_mode: mode,
-        pass_type: type,
-        pass_value: value,
-        user_id: selectedUser?.id || null,
-        issued_by: "admin@example.com"
-      };
-
+    try {
       const res = await fetch("/api/cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          uid,
+          card_type: "transit",
+          transport_mode: mode,
+          pass_type: type,
+          pass_value: value,
+          user_id: userId,
+          issued_by: currentUser.id
+        })
       });
 
-      if (res.ok) {
-        statusEl.textContent = "Transit card assigned.";
-        uidEl.value = "";
-        userSearch.value = "";
-        selectedUser = null;
-      } else {
-        statusEl.textContent = "Failed to assign card.";
-      }
-    });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || "Card assignment failed");
 
-    document.addEventListener("click", (e) => {
-      if (!suggestions.contains(e.target) && e.target !== userSearch) {
-        suggestions.style.display = "none";
-      }
-    });
+      statusEl.textContent = "✅ Transit card assigned!";
+      statusEl.style.color = "green";
+      uidEl.value = "";
+      userSearch.value = "";
+      selectedUser = null;
+      tempCheckbox.checked = false;
 
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = `❌ ${err.message}`;
+      statusEl.style.color = "red";
+    }
+  });
 
-  const scanBtn = document.getElementById("scanBtn");
-  const uidInput = document.getElementById("cardUID");
-
+  // NFC Scanner fallback
   scanBtn?.addEventListener("click", async () => {
     try {
       const res = await fetch("http://localhost:3001/scan");
       const data = await res.json();
-
-      if (data.uid) {
-        uidInput.value = data.uid;
-      } else {
-        alert("No UID received. Please try again.");
-      }
+      uidEl.value = data.uid || "";
     } catch (err) {
-      console.error("Failed to contact NFC scanner app:", err);
-      alert("NFC scanner is not available. Make sure it's running on your computer.");
+      alert("NFC scanner not available.");
     }
   });
 
-
-  </script>
+  // Logout
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      localStorage.removeItem("boopUser");
+      window.location.href = "login.html";
+    });
+  });
+</script>
 </body>
 </html>
