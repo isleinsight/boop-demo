@@ -203,20 +203,17 @@
       window.location.href = "login.html";
     });
   });
+</script>
 
-  <!-- Auth Script -->
-  // Role-based protection: Only allow admins
+  <script>
+  // 🔒 IMMEDIATE redirect for unauthorized users
   const user = JSON.parse(localStorage.getItem("boopUser"));
   if (!user || user.role !== "admin") {
-    window.location.href = "login.html"; // Redirect non-admins to login
+    window.location.href = "login.html"; // Boot them out
   }
 
-  // DOM loaded logic
+  // ✅ DOM logic after authorization confirmed
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("admin.js has loaded!");
-
-
-    // Logout logic
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", (e) => {
@@ -227,6 +224,8 @@
     }
   });
 </script>
+</body>
+
 
 </body>
 </html>
