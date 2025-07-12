@@ -1,3 +1,21 @@
+<script>
+  // 🔒 Auth check at top
+  let user;
+  try {
+    user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || typeof user !== "object" || user.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+  } catch (err) {
+    localStorage.removeItem("boopUser");
+    window.location.href = "login.html";
+  }
+
+  // ✅ DOM logic after authorization confirmed
+  document.addEventListener("DOMContentLoaded", () => {
+    // your logic below...
+  });
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -112,24 +130,6 @@
 </div>
 
   <script>
-  // 🔒 IMMEDIATE redirect for unauthorized users
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  if (!user || user.role !== "admin") {
-    window.location.href = "login.html"; // Boot them out
-  }
-
-  // ✅ DOM logic after authorization confirmed
-  document.addEventListener("DOMContentLoaded", () => {
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        localStorage.removeItem("boopUser");
-        window.location.href = "login.html";
-      });
-    }
-  });
-    
   const parentSearch = document.getElementById("parentSearch");
   const studentSearch = document.getElementById("studentSearch");
   const parentSuggestions = document.getElementById("parentSuggestions");
