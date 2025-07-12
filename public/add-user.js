@@ -26,12 +26,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const studentGradeLevel = document.getElementById("studentGradeLevel");
   const expiryDateInput = document.getElementById("expiryDate");
 
-  const updateConditionalFields = () => {
-    const role = roleSelect.value;
-    vendorFields.style.display = role === "vendor" ? "block" : "none";
-    studentFields.style.display = role === "student" ? "block" : "none";
-    assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
-  };
+const updateConditionalFields = () => {
+  const role = roleSelect.value;
+
+  vendorFields.style.display = role === "vendor" ? "block" : "none";
+  studentFields.style.display = role === "student" ? "block" : "none";
+  assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
+
+  // ✅ Toggle required only if student is selected
+  studentSchoolName.required = role === "student";
+  expiryDateInput.required = role === "student";
+};
 
   roleSelect.addEventListener("change", updateConditionalFields);
   updateConditionalFields();
