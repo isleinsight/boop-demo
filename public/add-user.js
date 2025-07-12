@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const form = document.getElementById("addUserForm");
 
+  // Input fields
   const emailInput = document.getElementById("email");
   const passwordInput = document.getElementById("password");
   const firstNameInput = document.getElementById("firstName");
@@ -26,21 +27,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const studentGradeLevel = document.getElementById("studentGradeLevel");
   const expiryDateInput = document.getElementById("expiryDate");
 
-const updateConditionalFields = () => {
-  const role = roleSelect.value;
+  // ⬇️ Update dynamic field visibility and required attributes
+  const updateConditionalFields = () => {
+    const role = roleSelect.value;
 
-  vendorFields.style.display = role === "vendor" ? "block" : "none";
-  studentFields.style.display = role === "student" ? "block" : "none";
-  assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
+    vendorFields.style.display = role === "vendor" ? "block" : "none";
+    studentFields.style.display = role === "student" ? "block" : "none";
+    assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
 
-  // ✅ Toggle required only if student is selected
-  studentSchoolName.required = role === "student";
-  expiryDateInput.required = role === "student";
-};
+    studentSchoolName.required = role === "student";
+    expiryDateInput.required = role === "student";
+  };
 
   roleSelect.addEventListener("change", updateConditionalFields);
-  updateConditionalFields();
+  updateConditionalFields(); // initialize on load
 
+  // 🔓 Logout handler
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("boopUser");
@@ -49,11 +51,13 @@ const updateConditionalFields = () => {
     });
   }
 
+  // 📤 Form submit handler
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     statusDiv.textContent = "Creating user...";
     statusDiv.style.color = "black";
 
+    // Collect values
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     const first_name = firstNameInput.value.trim();
@@ -62,12 +66,14 @@ const updateConditionalFields = () => {
     const role = roleSelect.value;
     const on_assistance = onAssistanceCheckbox.checked;
 
+    // Validation
     if (!email || !password || password.length < 6 || !first_name || !last_name || !role) {
       statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
       statusDiv.style.color = "red";
       return;
     }
 
+    // Payload
     const userPayload = {
       email,
       password,
@@ -75,7 +81,7 @@ const updateConditionalFields = () => {
       middle_name,
       last_name,
       role,
-      on_assistance: role === "cardholder" ? on_assistance : false,
+      on_assistance: role === "cardholder" ? on_assistance : false
     };
 
     if (role === "vendor") {
@@ -105,34 +111,30 @@ const updateConditionalFields = () => {
       };
     }
 
+    // 🚀 Submit
     try {
-  const res = await fetch("/api/cards", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      uid,
-      wallet_id: selectedUser.wallet_id,
-      issued_by: admin?.id,
-      type: "spending"
-    })
-  });
+      const resUser = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userPayload)
+      });
 
-  const result = await res.json();
+      const result = await resUser.json();
 
-  if (!res.ok) {
-    const backendMessage = result?.message || "Failed to assign card";
-    throw new Error(backendMessage);
-  }
+      if (!resUser.ok) {
+        throw new Error(result.message || "Failed to create user");
+      }
 
-  statusEl.textContent = "✅ Card assigned successfully!";
-  statusEl.style.color = "green";
-  cardUID.value = "";
-  userSearch.value = "";
-  selectedUser = null;
-} catch (err) {
-  console.error("❌ Error:", err);
-  statusEl.textContent = `❌ ${err.message}`;
-  statusEl.style.color = "red";
-}
+      // Success!
+      statusDiv.textContent = "✅ User created successfully!";
+      statusDiv.style.color = "green";
+      form.reset();
+      updateConditionalFields(); // Reset visibility/required fields
+
+    } catch (err) {
+      console.error("❌ Error:", err);
+      statusDiv.textContent = err.message;
+      statusDiv.style.color = "red";
+    }
   });
 });
