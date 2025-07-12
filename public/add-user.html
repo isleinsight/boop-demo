@@ -1,3 +1,22 @@
+<script>
+  // 🔒 IMMEDIATE redirect for unauthorized users
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  if (!user || user.role !== "admin") {
+    window.location.href = "login.html"; // Boot them out
+  }
+
+  // ✅ DOM logic after authorization confirmed
+  document.addEventListener("DOMContentLoaded", () => {
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+  });
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
