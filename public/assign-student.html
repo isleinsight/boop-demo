@@ -203,6 +203,29 @@
       window.location.href = "login.html";
     });
   });
+
+  <!-- Auth Script -->
+  // Role-based protection: Only allow admins
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  if (!user || user.role !== "admin") {
+    window.location.href = "login.html"; // Redirect non-admins to login
+  }
+
+  // DOM loaded logic
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("admin.js has loaded!");
+
+
+    // Logout logic
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+  });
 </script>
 
 </body>
