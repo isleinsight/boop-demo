@@ -248,22 +248,21 @@
 
 
 
-    <!-- Auth Script -->
 <script>
+  // 🔒 IMMEDIATE redirect for unauthorized users
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  if (!user || user.role !== "admin") {
+    window.location.href = "login.html"; // Boot them out
+  }
+
+  // ✅ DOM logic after authorization confirmed
   document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logoutBtn");
-
     if (logoutBtn) {
       logoutBtn.addEventListener("click", (e) => {
         e.preventDefault();
-
-        // 🚪 Remove local user session
         localStorage.removeItem("boopUser");
-
-        // 🔐 Optional: log out server session (if using cookies/sessions)
-        fetch("/api/logout", { method: "POST" }).finally(() => {
-          window.location.href = "login.html";
-        });
+        window.location.href = "login.html";
       });
     }
   });
