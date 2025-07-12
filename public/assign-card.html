@@ -225,17 +225,22 @@
       })
     });
 
-    if (!res.ok) throw new Error("Failed to assign");
+   const result = await res.json();
 
-    statusEl.textContent = "✅ Card assigned successfully!";
-    statusEl.style.color = "green";
-    cardUID.value = "";
-    userSearch.value = "";
-    selectedUser = null;
+if (!res.ok) {
+  throw new Error(result.message || "Failed to assign card.");
+}
+
+statusEl.textContent = "✅ Card assigned successfully!";
+statusEl.style.color = "green";
+cardUID.value = "";
+userSearch.value = "";
+selectedUser = null;
   } catch (err) {
-    console.error(err);
-    statusEl.textContent = "❌ Failed to assign card.";
-  }
+  console.error(err);
+  statusEl.textContent = `❌ ${err.message}`;
+  statusEl.style.color = "red";
+}
 });
 
     // 🚪 Logout
