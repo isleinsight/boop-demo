@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ add-user.js loaded");
-statusDiv.textContent = "✅ JS loaded";
-statusDiv.style.color = "blue";
+
   const form = document.getElementById("addUserForm");
 
   const emailInput = document.getElementById("email");
