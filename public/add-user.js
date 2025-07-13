@@ -125,6 +125,24 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(result.message || "Failed to create user");
       }
 
+      // 🎫 Create Transit Wallet for all users
+try {
+  const resTransit = await fetch("/api/transit-wallets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: result.id })
+  });
+
+  if (!resTransit.ok) {
+    const errMsg = await resTransit.text();
+    console.warn("🟡 Transit wallet creation failed:", errMsg);
+  } else {
+    console.log("✅ Transit wallet created.");
+  }
+} catch (err) {
+  console.error("❌ Failed to create transit wallet:", err);
+}
+      
       // ✅ Success!
       statusDiv.textContent = "✅ User created successfully!";
       statusDiv.style.color = "green";
