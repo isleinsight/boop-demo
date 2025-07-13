@@ -39,19 +39,6 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 
       let walletHTML = "";
 
-// ✅ Regular Spending Wallet
-try {
-  const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
-  if (wallet?.id) {
-    walletHTML += `<div><span class="label">Spending Wallet ID</span><span class="value">${wallet.id}</span></div>`;
-    const cards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
-    if (Array.isArray(cards) && cards.length > 1) {
-      walletHTML += `<div><span class="label">Spending Card Number</span><span class="value">${cards[0].uid}</span></div>`;
-    }
-  }
-} catch (err) {
-  console.warn("🟡 No spending wallet info:", err.message);
-}
 
 
 // ✅ All Cards: Transit & Spending
