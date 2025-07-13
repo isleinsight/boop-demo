@@ -38,27 +38,37 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
       currentUserData = user;
 
       let walletHTML = "";
-      try {
-        const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
-        if (wallet?.id) {
-          walletHTML += `<div><span class="label">Wallet ID</span><span class="value">${wallet.id}</span></div>`;
 
-          // Spending Card
-          const cards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
-          if (Array.isArray(cards) && cards.length > 0) {
-            walletHTML += `<div><span class="label">Spending Card Number</span><span class="value">${cards[0].uid}</span></div>`;
-          }
-
-          // Transit Card
 try {
-  const transitCard = await fetchJSON(`/api/transit-cards/user/${user.id}`);
-  if (transitCard && transitCard.uid) {
-    walletHTML += `<div><span class="label">Transit Card</span><span class="value">${transitCard.uid}</span></div>`;
+  // Regular Spending Wallet
+  const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
+  if (wallet?.id) {
+    walletHTML += `<div><span class="label">Spending Wallet ID</span><span class="value">${wallet.id}</span></div>`;
+    const cards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
+    if (Array.isArray(cards) && cards.length > 0) {
+      walletHTML += `<div><span class="label">Spending Card Number</span><span class="value">${cards[0].uid}</span></div>`;
+    }
   }
 } catch (err) {
-  console.warn("No transit card found for this user:", err.message);
+  console.warn("🟡 No spending wallet info:", err.message);
 }
-        }
+
+try {
+  // Transit Wallet
+  const transitWallet = await fetchJSON(`/api/transit-wallets/${user.id}`);
+  if (transitWallet?.id) {
+    walletHTML += `<div><span class="label">Transit Wallet ID</span><span class="value">${transitWallet.id}</span></div>`;
+
+    const transitCards = await fetchJSON(`/api/transit-cards?wallet_id=${transitWallet.id}`);
+    if (Array.isArray(transitCards) && transitCards.length > 0) {
+      transitCards.forEach(card => {
+        walletHTML += `<div><span class="label">Transit Card Number</span><span class="value">${card.uid}</span></div>`;
+      });
+    }
+  }
+} catch (err) {
+  console.warn("🟡 No transit wallet info:", err.message);
+}
       } catch (err) {
         console.warn("No wallet/card info:", err.message);
       }
