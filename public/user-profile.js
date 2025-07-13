@@ -39,8 +39,8 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 
       let walletHTML = "";
 
+// ✅ Regular Spending Wallet
 try {
-  // Regular Spending Wallet
   const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
   if (wallet?.id) {
     walletHTML += `<div><span class="label">Spending Wallet ID</span><span class="value">${wallet.id}</span></div>`;
@@ -53,12 +53,11 @@ try {
   console.warn("🟡 No spending wallet info:", err.message);
 }
 
+// ✅ Transit Wallet
 try {
-  // Transit Wallet
   const transitWallet = await fetchJSON(`/api/transit-wallets/${user.id}`);
   if (transitWallet?.id) {
     walletHTML += `<div><span class="label">Transit Wallet ID</span><span class="value">${transitWallet.id}</span></div>`;
-
     const transitCards = await fetchJSON(`/api/transit-cards?wallet_id=${transitWallet.id}`);
     if (Array.isArray(transitCards) && transitCards.length > 0) {
       transitCards.forEach(card => {
@@ -69,9 +68,6 @@ try {
 } catch (err) {
   console.warn("🟡 No transit wallet info:", err.message);
 }
-      } catch (err) {
-        console.warn("No wallet/card info:", err.message);
-      }
 
       userInfo.innerHTML = `
         <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
