@@ -218,7 +218,9 @@ if (user.role === "student") {
         if (!confirmed) return;
 
         try {
-          const res = await fetch(`/api/user-students/${studentId}`, { method: "DELETE" });
+          const res = await fetch(`/api/students/${studentId}/parents/${currentUserId}`, {
+  method: "DELETE"
+});
           if (!res.ok) throw new Error("Failed to remove student");
 
           alert("Student removed.");
