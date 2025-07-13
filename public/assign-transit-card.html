@@ -147,197 +147,191 @@
   </div>
 
 <script type="module">
-  const uidEl = document.getElementById("cardUID");
-  const generateBtn = document.getElementById("generateUIDBtn");
-  const scanBtn = document.getElementById("scanUIDBtn");
-  const passType = document.getElementById("passType");
-  const rideGroup = document.getElementById("ridesInputGroup");
-  const timeGroup = document.getElementById("timeInputGroup");
-  const rideCount = document.getElementById("rideCount");
-  const daysValid = document.getElementById("daysValid");
-  const assignBtn = document.getElementById("assignBtn");
-  const userSearch = document.getElementById("userSearch");
-  const userGroup = document.getElementById("userSearchGroup");
-  const suggestions = document.getElementById("userSuggestions");
-  const userTypeSelect = document.getElementById("userTypeSelect");
-  const statusEl = document.getElementById("status");
+const uidEl = document.getElementById("cardUID");
+const generateBtn = document.getElementById("generateUIDBtn");
+const scanBtn = document.getElementById("scanUIDBtn");
+const passType = document.getElementById("passType");
+const rideGroup = document.getElementById("ridesInputGroup");
+const timeGroup = document.getElementById("timeInputGroup");
+const rideCount = document.getElementById("rideCount");
+const daysValid = document.getElementById("daysValid");
+const assignBtn = document.getElementById("assignBtn");
+const userSearch = document.getElementById("userSearch");
+const userGroup = document.getElementById("userSearchGroup");
+const suggestions = document.getElementById("userSuggestions");
+const userTypeSelect = document.getElementById("userTypeSelect");
+const statusEl = document.getElementById("status");
 
-  let selectedUser = null;
+let selectedUser = null;
 
-  generateBtn.addEventListener("click", () => {
-    const uid = crypto.randomUUID().slice(0, 12).replace(/-/g, "").toUpperCase();
-    uidEl.value = uid;
-  });
+// 🔧 Generate UID
+generateBtn.addEventListener("click", () => {
+  const uid = crypto.randomUUID().slice(0, 12).replace(/-/g, "").toUpperCase();
+  uidEl.value = uid;
+});
 
-  scanBtn.addEventListener("click", async () => {
-    try {
-      const res = await fetch("http://localhost:3001/scan");
-      const data = await res.json();
-      if (data.uid) {
-        uidEl.value = data.uid;
-      } else {
-        alert("No UID received. Please try again.");
-      }
-    } catch (err) {
-      console.error("Failed to contact NFC scanner app:", err);
-      alert("NFC scanner is not available. Make sure it's running on your computer.");
-    }
-  });
-
-  passType.addEventListener("change", () => {
-    if (passType.value === "rides") {
-      rideGroup.style.display = "block";
-      timeGroup.style.display = "none";
+// 🛰️ Scan card via NFC
+scanBtn.addEventListener("click", async () => {
+  try {
+    const res = await fetch("http://localhost:3001/scan");
+    const data = await res.json();
+    if (data.uid) {
+      uidEl.value = data.uid;
     } else {
-      rideGroup.style.display = "none";
-      timeGroup.style.display = "block";
+      alert("No UID received. Please try again.");
     }
-  });
+  } catch (err) {
+    console.error("Scan error:", err);
+    alert("NFC scanner is not available.");
+  }
+});
 
-  userTypeSelect.addEventListener("change", () => {
-    if (userTypeSelect.value === "existing") {
-      userGroup.style.display = "block";
-    } else {
-      userGroup.style.display = "none";
-      selectedUser = null;
-      userSearch.value = "";
-    }
-  });
+// 🧮 Switch ride/time input
+passType.addEventListener("change", () => {
+  rideGroup.style.display = passType.value === "rides" ? "block" : "none";
+  timeGroup.style.display = passType.value === "time" ? "block" : "none";
+});
 
-  userSearch.addEventListener("input", async () => {
-    const query = userSearch.value.trim();
-    if (query.length < 2) {
-      suggestions.style.display = "none";
-      return;
-    }
+// 🎭 Toggle user search UI
+userTypeSelect.addEventListener("change", () => {
+  if (userTypeSelect.value === "existing") {
+    userGroup.style.display = "block";
+  } else {
+    userGroup.style.display = "none";
+    selectedUser = null;
+    userSearch.value = "";
+  }
+});
 
-    const res = await fetch(`/api/users?search=${encodeURIComponent(query)}`);
-    const users = await res.json();
-
-    if (!users.length) {
-      suggestions.innerHTML = "<div>No users found</div>";
-    } else {
-      suggestions.innerHTML = users.map(u => `
-        <div class="user-suggestion" data-id="${u.id}">
-          ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
-        </div>`).join("");
-    }
-
-    suggestions.style.display = "block";
-  });
-
-  suggestions.addEventListener("click", (e) => {
-    const item = e.target.closest(".user-suggestion");
-    if (!item) return;
-    selectedUser = { id: item.dataset.id };
-    userSearch.value = item.textContent;
+// 🔍 Search users
+userSearch.addEventListener("input", async () => {
+  const query = userSearch.value.trim();
+  if (query.length < 2) {
     suggestions.style.display = "none";
-  });
+    return;
+  }
 
-  document.addEventListener("click", (e) => {
-    if (!suggestions.contains(e.target) && e.target !== userSearch) {
-      suggestions.style.display = "none";
-    }
-  });
+  const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
+  const users = await res.json();
 
-  assignBtn.addEventListener("click", async () => {
-    const uid = uidEl.value.trim();
-    const type = passType.value;
-    const value = type === "rides" ? rideCount.value : daysValid.value;
-    const admin = JSON.parse(localStorage.getItem("boopUser"));
+  if (!users.length) {
+    suggestions.innerHTML = "<div>No users found</div>";
+  } else {
+    suggestions.innerHTML = users.map(u => `
+      <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+        ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
+      </div>
+    `).join("");
+  }
 
-    if (!uid || !type || !value || !admin?.id) {
-      statusEl.textContent = "Missing required fields.";
+  suggestions.style.display = "block";
+});
+
+// 👤 Select user
+suggestions.addEventListener("click", (e) => {
+  const item = e.target.closest(".user-suggestion");
+  if (!item) return;
+  selectedUser = {
+    id: item.dataset.id,
+    wallet_id: item.dataset.wallet
+  };
+  userSearch.value = item.textContent;
+  suggestions.style.display = "none";
+});
+
+document.addEventListener("click", (e) => {
+  if (!suggestions.contains(e.target) && e.target !== userSearch) {
+    suggestions.style.display = "none";
+  }
+});
+
+// 📨 Assign card
+assignBtn.addEventListener("click", async () => {
+  const uid = uidEl.value.trim();
+  const type = passType.value;
+  const value = type === "rides" ? rideCount.value : daysValid.value;
+  const admin = JSON.parse(localStorage.getItem("boopUser"));
+
+  if (!uid || !type || !value || !admin?.id) {
+    statusEl.textContent = "Missing required fields.";
+    statusEl.style.color = "red";
+    return;
+  }
+
+  const body = {
+    uid,
+    pass_type: type,
+    pass_value: value,
+    issued_by: admin.id,
+    type: "transit"
+  };
+
+  if (userTypeSelect.value === "existing") {
+    if (!selectedUser?.wallet_id) {
+      statusEl.textContent = "Please select a valid user with a wallet.";
       statusEl.style.color = "red";
       return;
     }
+    body.wallet_id = selectedUser.wallet_id;
+  } else {
+    const email = `guest-${Date.now()}@boop.local`;
+    body.temporary_user = { email };
+  }
 
-    if (!selectedUser?.id) {
-      statusEl.textContent = "Please select a user.";
-      statusEl.style.color = "red";
-      return;
-    }
-
-    // 🧠 Fetch that user’s wallet_id
-    let wallet_id = null;
-    try {
-      const res = await fetch(`/api/wallets/${selectedUser.id}`);
-      const wallet = await res.json();
-      wallet_id = wallet?.id;
-    } catch (err) {
-      console.warn("🟡 Could not fetch wallet:", err.message);
-    }
-
-    if (!wallet_id) {
-      statusEl.textContent = "User does not have a wallet.";
-      statusEl.style.color = "red";
-      return;
-    }
-
-    const cardPayload = {
-      uid,
-      type: "transit",        // 🔑 Card type
-      pass_type: type,        // optional metadata
-      pass_value: value,      // optional metadata
-      issued_by: admin.id,
-      user_id: selectedUser.id,
-      wallet_id
-    };
-
-    try {
-      const res = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cardPayload)
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        statusEl.textContent = "✅ Transit card assigned successfully!";
-        statusEl.style.color = "green";
-        uidEl.value = "";
-        userSearch.value = "";
-        selectedUser = null;
-
-        let resetBtn = document.getElementById("assignAnotherBtn");
-        if (!resetBtn) {
-          resetBtn = document.createElement("button");
-          resetBtn.id = "assignAnotherBtn";
-          resetBtn.textContent = "Assign Another Transit Card";
-          resetBtn.style.marginTop = "12px";
-          resetBtn.style.width = "100%";
-          resetBtn.style.padding = "10px";
-          resetBtn.style.fontSize = "1rem";
-          statusEl.insertAdjacentElement("afterend", resetBtn);
-
-          resetBtn.addEventListener("click", () => {
-            uidEl.value = "";
-            userSearch.value = "";
-            selectedUser = null;
-            statusEl.textContent = "";
-            resetBtn.remove();
-          });
-        }
-      } else {
-        statusEl.textContent = `❌ ${result.error || "Failed to assign card."}`;
-        statusEl.style.color = "red";
-      }
-    } catch (err) {
-      console.error(err);
-      statusEl.textContent = "❌ Server error occurred.";
-      statusEl.style.color = "red";
-    }
-  });
-
-  // Clear status on input
-  document.querySelectorAll("input, select").forEach(el => {
-    el.addEventListener("input", () => {
-      statusEl.textContent = "";
-      const btn = document.getElementById("assignAnotherBtn");
-      if (btn) btn.remove();
+  try {
+    const res = await fetch("/api/cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
     });
+
+    const result = await res.json();
+
+    if (res.ok) {
+      statusEl.textContent = "✅ Transit card assigned successfully!";
+      statusEl.style.color = "green";
+      uidEl.value = "";
+      userSearch.value = "";
+      selectedUser = null;
+
+      let resetBtn = document.getElementById("assignAnotherBtn");
+      if (!resetBtn) {
+        resetBtn = document.createElement("button");
+        resetBtn.id = "assignAnotherBtn";
+        resetBtn.textContent = "Assign Another Transit Card";
+        resetBtn.style.marginTop = "12px";
+        resetBtn.style.width = "100%";
+        resetBtn.style.padding = "10px";
+        resetBtn.style.fontSize = "1rem";
+        statusEl.insertAdjacentElement("afterend", resetBtn);
+
+        resetBtn.addEventListener("click", () => {
+          uidEl.value = "";
+          userSearch.value = "";
+          selectedUser = null;
+          statusEl.textContent = "";
+          resetBtn.remove();
+        });
+      }
+    } else {
+      statusEl.textContent = `❌ ${result.error || "Failed to assign card."}`;
+      statusEl.style.color = "red";
+    }
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "❌ Server error occurred.";
+    statusEl.style.color = "red";
+  }
+});
+
+// Clear status
+document.querySelectorAll("input, select").forEach(el => {
+  el.addEventListener("input", () => {
+    statusEl.textContent = "";
+    const btn = document.getElementById("assignAnotherBtn");
+    if (btn) btn.remove();
   });
+});
 </script>
 </body>
 </html>
