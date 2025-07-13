@@ -26,21 +26,23 @@ const cardsRoute = require('./auth/routes/cards');
 const walletRoutes = require('./auth/routes/wallets'); 
 const vendorsRoute = require('./auth/routes/vendors');
 const userStudentsRoute = require('./auth/routes/userStudents');
-const transitCardsRoute = require('./auth/routes/transit-cards'); // ✅ NEW
+const transitCardsRoute = require('./auth/routes/transit-cards');
+const transitWalletRoutes = require('./auth/routes/transit-wallets'); // ✅ NEW
 
 app.use('/api/users', usersRoute);
 app.use('/api/cards', cardsRoute);
 app.use('/api/wallets', walletRoutes); 
 app.use('/api/vendors', vendorsRoute);
 app.use('/api/user-students', userStudentsRoute);
-app.use('/api/transit-cards', transitCardsRoute); // ✅ REGISTERED HERE
+app.use('/api/transit-cards', transitCardsRoute);
+app.use('/api/transit-wallets', transitWalletRoutes); // ✅ REGISTERED HERE
 
 // ✅ Health check
 app.get('/health', (req, res) => {
   res.send('OK');
 });
 
-// ✅ GitHub webhook endpoint (keep this inline if simple)
+// ✅ GitHub webhook endpoint
 app.post('/webhook', (req, res) => {
   console.log('🔔 GitHub Webhook triggered');
   exec('cd ~/boop-demo && git pull && pm2 restart all', (err, stdout, stderr) => {
@@ -53,7 +55,7 @@ app.post('/webhook', (req, res) => {
   });
 });
 
-// ✅ Optional webhook handler (if more logic is inside)
+// ✅ Optional webhook logic
 const webhookRoutes = require('./webhook-handler');
 app.use('/webhook', webhookRoutes);
 
