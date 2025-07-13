@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../../../db'); // Adjust based on your folder structure
+const db = require('../../db'); // Adjust based on your folder structure
 
 // GET: Fetch transit wallet and its cards by user_id
 router.get('/:user_id', async (req, res) => {
