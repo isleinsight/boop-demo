@@ -58,15 +58,21 @@ try {
   const transitWallet = await fetchJSON(`/api/transit-wallets/${user.id}`);
   if (transitWallet?.id) {
     walletHTML += `<div><span class="label">Transit Wallet ID</span><span class="value">${transitWallet.id}</span></div>`;
+
     const transitCards = await fetchJSON(`/api/transit-cards?wallet_id=${transitWallet.id}`);
     if (Array.isArray(transitCards) && transitCards.length > 0) {
       transitCards.forEach(card => {
         walletHTML += `<div><span class="label">Transit Card Number</span><span class="value">${card.uid}</span></div>`;
       });
+    } else {
+      walletHTML += `<div><span class="label">Transit Card</span><span class="value">No cards found</span></div>`;
     }
+  } else {
+    walletHTML += `<div><span class="label">Transit Wallet</span><span class="value">Not available</span></div>`;
   }
 } catch (err) {
   console.warn("🟡 No transit wallet info:", err.message);
+  walletHTML += `<div><span class="label">Transit Wallet</span><span class="value">Failed to load</span></div>`;
 }
 
       userInfo.innerHTML = `
