@@ -111,15 +111,6 @@
       <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
     </div>
 
-    <!-- TRANSPORT MODE -->
-    <div class="input-group">
-      <label for="modeSelect">Mode of Transport</label>
-      <select id="modeSelect">
-        <option value="bus">Bus</option>
-        <option value="ferry">Ferry</option>
-      </select>
-    </div>
-
     <!-- PASS TYPE -->
     <div class="input-group">
       <label for="passType">Pass Type</label>
@@ -168,7 +159,6 @@
   const userSearch = document.getElementById("userSearch");
   const userGroup = document.getElementById("userSearchGroup");
   const suggestions = document.getElementById("userSuggestions");
-  const modeSelect = document.getElementById("modeSelect");
   const userTypeSelect = document.getElementById("userTypeSelect");
   const statusEl = document.getElementById("status");
 
@@ -252,43 +242,53 @@
 
   assignBtn.addEventListener("click", async () => {
     const uid = uidEl.value.trim();
-    const mode = modeSelect.value;
     const type = passType.value;
     const value = type === "rides" ? rideCount.value : daysValid.value;
     const admin = JSON.parse(localStorage.getItem("boopUser"));
 
-    if (!uid || !mode || !type || !value || !admin?.id) {
+    if (!uid || !type || !value || !admin?.id) {
       statusEl.textContent = "Missing required fields.";
       statusEl.style.color = "red";
       return;
     }
 
-    const body = {
-      uid,
-      mode,
-      pass_type: type,
-      pass_value: value,
-      issued_by: admin.id,
-      type: "transit" // 🚍 NEW: Save as transit card
-    };
-
-    if (userTypeSelect.value === "existing") {
-      if (!selectedUser?.id) {
-        statusEl.textContent = "Please select a user.";
-        statusEl.style.color = "red";
-        return;
-      }
-      body.user_id = selectedUser.id;
-    } else {
-      const email = `guest-${Date.now()}@boop.local`;
-      body.temporary_user = { email };
+    if (!selectedUser?.id) {
+      statusEl.textContent = "Please select a user.";
+      statusEl.style.color = "red";
+      return;
     }
+
+    // 🧠 Fetch that user’s wallet_id
+    let wallet_id = null;
+    try {
+      const res = await fetch(`/api/wallets/${selectedUser.id}`);
+      const wallet = await res.json();
+      wallet_id = wallet?.id;
+    } catch (err) {
+      console.warn("🟡 Could not fetch wallet:", err.message);
+    }
+
+    if (!wallet_id) {
+      statusEl.textContent = "User does not have a wallet.";
+      statusEl.style.color = "red";
+      return;
+    }
+
+    const cardPayload = {
+      uid,
+      type: "transit",        // 🔑 Card type
+      pass_type: type,        // optional metadata
+      pass_value: value,      // optional metadata
+      issued_by: admin.id,
+      user_id: selectedUser.id,
+      wallet_id
+    };
 
     try {
       const res = await fetch("/api/cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(cardPayload)
       });
 
       const result = await res.json();
@@ -296,7 +296,6 @@
       if (res.ok) {
         statusEl.textContent = "✅ Transit card assigned successfully!";
         statusEl.style.color = "green";
-
         uidEl.value = "";
         userSearch.value = "";
         selectedUser = null;
