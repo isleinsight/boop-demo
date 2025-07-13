@@ -280,8 +280,8 @@ saveBtn.onclick = async () => {
   }
 };
 
-// Attach remove listeners
-setTimeout(() => {
+// ✅ Re-attach remove listeners *after* profile is loaded
+function attachRemoveListeners() {
   document.querySelectorAll(".remove-student-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const studentId = btn.dataset.id;
@@ -303,4 +303,4 @@ setTimeout(() => {
       }
     });
   });
-}, 0);
+}
