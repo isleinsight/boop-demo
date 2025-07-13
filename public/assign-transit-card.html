@@ -268,7 +268,8 @@
       mode,
       pass_type: type,
       pass_value: value,
-      issued_by: admin.id
+      issued_by: admin.id,
+      type: "transit" // 🚍 NEW: Save as transit card
     };
 
     if (userTypeSelect.value === "existing") {
@@ -284,7 +285,7 @@
     }
 
     try {
-      const res = await fetch("/api/transit-cards", {
+      const res = await fetch("/api/cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
@@ -300,7 +301,6 @@
         userSearch.value = "";
         selectedUser = null;
 
-        // 🎯 Add "Assign Another Transit Card" button
         let resetBtn = document.getElementById("assignAnotherBtn");
         if (!resetBtn) {
           resetBtn = document.createElement("button");
@@ -331,7 +331,7 @@
     }
   });
 
-  // Clear status on new input
+  // Clear status on input
   document.querySelectorAll("input, select").forEach(el => {
     el.addEventListener("input", () => {
       statusEl.textContent = "";
