@@ -222,6 +222,7 @@ if (user.role === "student") {
   }, 0);
 
   studentInfoSection.style.display = "block";
+   attachRemoveListeners();
 }
 
       // === Vendor View ===
