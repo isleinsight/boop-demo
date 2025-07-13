@@ -130,7 +130,7 @@ try {
   const resTransit = await fetch("/api/transit-wallets", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: result.id })
+body: JSON.stringify({ user_id: result.user.id })
   });
 
   if (!resTransit.ok) {
