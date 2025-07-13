@@ -13,6 +13,7 @@ let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParam
 // 🚫 Remove any accidental whitespace or malformed characters from UUID
 currentUserId = currentUserId?.replace(/\s+/g, ''); 
   let currentUserData = null;
+  let isEditMode = false;
 
   if (!currentUserId) {
     alert("User ID not found.");
@@ -160,23 +161,52 @@ if (user.role === "student") {
   }
 }
       // === Parent View ===
-      if (user.role === "parent" && Array.isArray(user.assigned_students)) {
-        studentInfoSection.innerHTML = '<div class="section-title">Assigned Students</div>';
-        user.assigned_students.forEach(student => {
-          const block = document.createElement("div");
-          block.classList.add("user-details-grid");
-          block.innerHTML = `
-            <div><span class="label">Name</span><span class="value">
-              <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${student.id}')">
-                ${student.first_name} ${student.last_name}
-              </a></span></div>
-            <div><span class="label">Email</span><span class="value">${student.email}</span></div>
-          `;
-          studentInfoSection.appendChild(block);
-        });
+ if (user.role === "parent" && Array.isArray(user.assigned_students)) {
+  studentInfoSection.innerHTML = '<div class="section-title">Assigned Students</div>';
+  user.assigned_students.forEach(student => {
+    const block = document.createElement("div");
+    block.classList.add("user-details-grid");
+    block.setAttribute("data-student-id", student.id);
 
-        studentInfoSection.style.display = "block";
-      }
+    block.innerHTML = `
+      <div><span class="label">Name</span><span class="value">
+        <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${student.id}')">
+          ${student.first_name} ${student.last_name}
+        </a></span></div>
+      <div><span class="label">Email</span><span class="value">${student.email}</span></div>
+      <div class="remove-student-wrapper" style="display: ${isEditMode ? 'block' : 'none'};">
+        <button class="remove-student-btn" data-id="${student.id}" style="margin-top: 10px; background-color: #e74c3c; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">
+          Remove
+        </button>
+      </div>
+    `;
+    studentInfoSection.appendChild(block);
+  });
+
+  // Attach remove listeners
+  setTimeout(() => {
+    document.querySelectorAll(".remove-student-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const studentId = btn.dataset.id;
+        const confirmed = confirm("Are you sure you want to remove this student?");
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch(`/api/user-students/${studentId}`, { method: "DELETE" });
+          if (!res.ok) throw new Error("Failed to remove student");
+
+          alert("Student removed.");
+          loadUserProfile();
+        } catch (err) {
+          console.error("❌ Remove failed:", err);
+          alert("Failed to remove student.");
+        }
+      });
+    });
+  }, 0);
+
+  studentInfoSection.style.display = "block";
+}
 
       // === Vendor View ===
       if (user.role === "vendor") {
@@ -199,12 +229,18 @@ if (user.role === "student") {
 
       // === Edit Profile Setup ===
       editBtn.onclick = () => {
-        ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
-          document.getElementById(`view${field}`).style.display = "none";
-          document.getElementById(`edit${field}`).style.display = "block";
-        });
-        saveBtn.style.display = "inline-block";
-      };
+  isEditMode = true;
+  ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
+    document.getElementById(`view${field}`).style.display = "none";
+    document.getElementById(`edit${field}`).style.display = "block";
+  });
+  saveBtn.style.display = "inline-block";
+
+  // Show remove buttons
+  document.querySelectorAll(".remove-student-wrapper").forEach(el => {
+    el.style.display = "block";
+  });
+};
 
       saveBtn.onclick = async () => {
         try {
@@ -240,6 +276,6 @@ if (user.role === "student") {
       window.location.href = "index.html";
     });
   });
-
+isEditMode = false;
   loadUserProfile();
 });
