@@ -137,4 +137,10 @@ document.addEventListener("DOMContentLoaded", () => {
       statusDiv.style.color = "red";
     }
   });
+    // Clear status message when typing in the form again
+  document.querySelectorAll("input, select").forEach(el => {
+    el.addEventListener("input", () => {
+      statusDiv.textContent = "";
+    });
+  });
 });
