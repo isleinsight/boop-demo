@@ -55,11 +55,13 @@ try {
 
 // ✅ Transit Wallet
 try {
-  const transitWallet = await fetchJSON(`/api/transit-wallets/${user.id}`);
+  const transitData = await fetchJSON(`/api/transit-wallets/${user.id}`);
+  const transitWallet = transitData.wallet;
+  const transitCards = transitData.cards;
+
   if (transitWallet?.id) {
     walletHTML += `<div><span class="label">Transit Wallet ID</span><span class="value">${transitWallet.id}</span></div>`;
 
-    const transitCards = await fetchJSON(`/api/transit-cards?wallet_id=${transitWallet.id}`);
     if (Array.isArray(transitCards) && transitCards.length > 0) {
       transitCards.forEach(card => {
         walletHTML += `<div><span class="label">Transit Card Number</span><span class="value">${card.uid}</span></div>`;
@@ -75,79 +77,79 @@ try {
   walletHTML += `<div><span class="label">Transit Wallet</span><span class="value">Failed to load</span></div>`;
 }
 
-      userInfo.innerHTML = `
-        <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
-          <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
+userInfo.innerHTML = `
+  <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
+    <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
 
-        <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
-          <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
+  <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
+    <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
 
-        <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
-          <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
+  <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
+    <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
 
-        <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
-          <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
+  <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
+    <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
 
-        <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
+  <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
 
-        <div><span class="label">Role</span><span class="value">${user.role}</span></div>
+  <div><span class="label">Role</span><span class="value">${user.role}</span></div>
 
-        <div>
-          <span class="label">On Assistance</span>
-          <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
-          <select id="editAssistance" style="display:none; width: 100%;">
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </div>
+  <div>
+    <span class="label">On Assistance</span>
+    <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
+    <select id="editAssistance" style="display:none; width: 100%;">
+      <option value="true">Yes</option>
+      <option value="false">No</option>
+    </select>
+  </div>
 
-        ${walletHTML}
-      `;
+  ${walletHTML}
+`;
 
-      document.getElementById("editAssistance").value = user.on_assistance ? "true" : "false";
+document.getElementById("editAssistance").value = user.on_assistance ? "true" : "false";
 
-      const dropdown = document.createElement("select");
-      dropdown.innerHTML = `
-        <option value="">Actions</option>
-        <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">${user.status === "suspended" ? "Unsuspend" : "Suspend"}</option>
-        <option value="signout">Force Sign-out</option>
-        <option value="delete">Delete</option>
-      `;
-      dropdown.addEventListener("change", async () => {
-        const action = dropdown.value;
-        dropdown.value = "";
+const dropdown = document.createElement("select");
+dropdown.innerHTML = `
+  <option value="">Actions</option>
+  <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">${user.status === "suspended" ? "Unsuspend" : "Suspend"}</option>
+  <option value="signout">Force Sign-out</option>
+  <option value="delete">Delete</option>
+`;
+dropdown.addEventListener("change", async () => {
+  const action = dropdown.value;
+  dropdown.value = "";
 
-        if (action === "delete") {
-          const confirmDelete = prompt("Type DELETE to confirm.");
-          if (confirmDelete !== "DELETE") return;
-        }
+  if (action === "delete") {
+    const confirmDelete = prompt("Type DELETE to confirm.");
+    if (confirmDelete !== "DELETE") return;
+  }
 
-        try {
-          if (action === "suspend" || action === "unsuspend") {
-            const status = action === "suspend" ? "suspended" : "active";
-            await fetch(`/api/users/${currentUserId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status })
-            });
-            alert(`User ${status}.`);
-          } else if (action === "signout") {
-            await fetch(`/api/users/${currentUserId}/signout`, { method: "POST" });
-            alert("Sign-out requested.");
-          } else if (action === "delete") {
-            await fetch(`/api/users/${currentUserId}`, { method: "DELETE" });
-            alert("User deleted.");
-            window.location.href = "view-users.html";
-            return;
-          }
-
-          await loadUserProfile();
-        } catch (err) {
-          console.error("❌ Action failed:", err);
-          alert("Action failed.");
-        }
+  try {
+    if (action === "suspend" || action === "unsuspend") {
+      const status = action === "suspend" ? "suspended" : "active";
+      await fetch(`/api/users/${currentUserId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
       });
-      userInfo.appendChild(dropdown);
+      alert(`User ${status}.`);
+    } else if (action === "signout") {
+      await fetch(`/api/users/${currentUserId}/signout`, { method: "POST" });
+      alert("Sign-out requested.");
+    } else if (action === "delete") {
+      await fetch(`/api/users/${currentUserId}`, { method: "DELETE" });
+      alert("User deleted.");
+      window.location.href = "view-users.html";
+      return;
+    }
+
+    await loadUserProfile();
+  } catch (err) {
+    console.error("❌ Action failed:", err);
+    alert("Action failed.");
+  }
+});
+userInfo.appendChild(dropdown);
 
 // === Student View ===
 if (user.role === "student") {
