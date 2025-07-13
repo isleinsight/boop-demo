@@ -236,12 +236,37 @@
         throw new Error(result.message || "Card assignment failed.");
       }
 
+      // ✅ Success message
       statusEl.textContent = "✅ Card assigned successfully!";
       statusEl.style.color = "green";
 
       cardUID.value = "";
       userSearch.value = "";
       selectedUser = null;
+
+      // ✅ Create & show "Assign New Card" button
+      let newBtn = document.getElementById("assignNewCardBtn");
+      if (!newBtn) {
+        newBtn = document.createElement("button");
+        newBtn.id = "assignNewCardBtn";
+        newBtn.textContent = "Assign Another Card";
+        newBtn.style.marginTop = "12px";
+        newBtn.style.width = "100%";
+        newBtn.style.padding = "10px";
+        newBtn.style.fontSize = "1rem";
+
+        statusEl.insertAdjacentElement("afterend", newBtn);
+
+        newBtn.addEventListener("click", () => {
+          cardUID.value = "";
+          userSearch.value = "";
+          selectedUser = null;
+          statusEl.textContent = "";
+          statusEl.style.color = "";
+          newBtn.remove();
+        });
+      }
+
     } catch (err) {
       console.error("❌ Error:", err);
       statusEl.textContent = err.message || "Unknown error occurred.";
@@ -249,10 +274,12 @@
     }
   });
 
-  // 🚪 Logout
-  document.getElementById("logoutBtn")?.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST" }).then(() => {
-      window.location.href = "login.html";
+  // Clear status on new input
+  document.querySelectorAll("input").forEach(el => {
+    el.addEventListener("input", () => {
+      statusEl.textContent = "";
+      const btn = document.getElementById("assignNewCardBtn");
+      if (btn) btn.remove();
     });
   });
 </script>
