@@ -53,21 +53,31 @@ try {
   console.warn("🟡 No spending wallet info:", err.message);
 }
 
-// ✅ Transit Wallet
-try {
-  const allCards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
-  const transitCards = allCards.filter(c => c.type === "transit");
 
+// ✅ All Cards: Transit & Spending
+try {
+  const allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
+  const transitCards = allCards.filter(c => c.type === "transit");
+  const spendingCards = allCards.filter(c => c.type === "spending");
+
+  // Show Transit Cards
   if (transitCards.length > 0) {
     transitCards.forEach(card => {
-      walletHTML += `<div><span class="label">Transit Card Number</span><span class="value">${card.uid}</span></div>`;
+      walletHTML += `<div><span class="label">Transit Card</span><span class="value">${card.uid}</span></div>`;
     });
   } else {
-    walletHTML += `<div><span class="label">Transit Card</span><span class="value">No transit cards</span></div>`;
+    walletHTML += `<div><span class="label">Transit Card</span><span class="value">None</span></div>`;
+  }
+
+  // Show Spending Card (optional, remove if you want only transit)
+  if (spendingCards.length > 0) {
+    spendingCards.forEach(card => {
+      walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
+    });
   }
 } catch (err) {
-  console.warn("🟡 Failed to load transit cards:", err.message);
-  walletHTML += `<div><span class="label">Transit Card</span><span class="value">Failed to load</span></div>`;
+  console.warn("🟡 Failed to load cards:", err.message);
+  walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
 }
 
 userInfo.innerHTML = `
