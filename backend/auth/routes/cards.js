@@ -4,7 +4,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../../db");
 
-const validTypes = ["bus", "spending", "assistance"];
+const validTypes = ["spending", "assistance", "transit"];
 const exclusiveGroup = ["spending", "assistance"];
 
 // Create a new card
