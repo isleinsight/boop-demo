@@ -129,7 +129,7 @@
   <div id="statusMessage" class="status-message"></div>
 </div>
 
-  <script>
+<script>
   const parentSearch = document.getElementById("parentSearch");
   const studentSearch = document.getElementById("studentSearch");
   const parentSuggestions = document.getElementById("parentSuggestions");
@@ -209,6 +209,29 @@
       studentSearch.value = "";
       selectedParent = null;
       selectedStudent = null;
+
+      // ✅ Add button to assign another
+      let anotherBtn = document.getElementById("assignAnotherBtn");
+      if (!anotherBtn) {
+        anotherBtn = document.createElement("button");
+        anotherBtn.id = "assignAnotherBtn";
+        anotherBtn.textContent = "Assign Another Student";
+        anotherBtn.style.marginTop = "12px";
+        anotherBtn.style.width = "100%";
+        anotherBtn.style.padding = "10px";
+        anotherBtn.style.fontSize = "1rem";
+        statusMessage.insertAdjacentElement("afterend", anotherBtn);
+
+        anotherBtn.addEventListener("click", () => {
+          parentSearch.value = "";
+          studentSearch.value = "";
+          selectedParent = null;
+          selectedStudent = null;
+          statusMessage.textContent = "";
+          anotherBtn.remove();
+        });
+      }
+
     } catch (err) {
       console.error("❌ Assignment failed:", err);
       statusMessage.textContent = "❌ Failed to assign student.";
@@ -216,6 +239,16 @@
     }
   });
 
+  // Clear status + button on new input
+  document.querySelectorAll("input").forEach(el => {
+    el.addEventListener("input", () => {
+      statusMessage.textContent = "";
+      const resetBtn = document.getElementById("assignAnotherBtn");
+      if (resetBtn) resetBtn.remove();
+    });
+  });
+
+  // Logout
   document.getElementById("logoutBtn")?.addEventListener("click", () => {
     fetch("/api/logout", { method: "POST" }).then(() => {
       window.location.href = "login.html";
