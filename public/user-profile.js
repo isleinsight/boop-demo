@@ -243,8 +243,8 @@ if (user.role === "student") {
         }
       }
 
-      // === Edit Profile Setup ===
-      editBtn.onclick = () => {
+// === Edit Profile Setup ===
+editBtn.onclick = () => {
   isEditMode = true;
   ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
     document.getElementById(`view${field}`).style.display = "none";
@@ -258,40 +258,49 @@ if (user.role === "student") {
   });
 };
 
-      saveBtn.onclick = async () => {
-        try {
-          await fetch(`/api/users/${currentUserId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              first_name: document.getElementById("editFirstName").value,
-              middle_name: document.getElementById("editMiddleName").value,
-              last_name: document.getElementById("editLastName").value,
-              email: document.getElementById("editEmail").value,
-              on_assistance: document.getElementById("editAssistance").value === "true"
-            })
-          });
+saveBtn.onclick = async () => {
+  try {
+    await fetch(`/api/users/${currentUserId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        first_name: document.getElementById("editFirstName").value,
+        middle_name: document.getElementById("editMiddleName").value,
+        last_name: document.getElementById("editLastName").value,
+        email: document.getElementById("editEmail").value,
+        on_assistance: document.getElementById("editAssistance").value === "true"
+      })
+    });
 
-          alert("Profile updated.");
-          loadUserProfile();
-        } catch (err) {
-          console.error("❌ Failed to save profile:", err);
-          alert("Error saving changes.");
-        }
-      };
-
-    } catch (err) {
-      console.error("❌ Failed to load user:", err);
-      alert("Error loading user");
-      window.location.href = "view-users.html";
-    }
+    alert("Profile updated.");
+    loadUserProfile();
+  } catch (err) {
+    console.error("❌ Failed to save profile:", err);
+    alert("Error saving changes.");
   }
+};
 
-  logoutBtn?.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST" }).then(() => {
-      window.location.href = "index.html";
+// Attach remove listeners
+setTimeout(() => {
+  document.querySelectorAll(".remove-student-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const studentId = btn.dataset.id;
+      const confirmed = confirm("Are you sure you want to remove this student?");
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch(`/api/students/${studentId}/parents/${currentUserId}`, {
+          method: "DELETE"
+        });
+
+        if (!res.ok) throw new Error("Unlink failed");
+
+        alert("Student removed from your account.");
+        loadUserProfile();
+      } catch (err) {
+        console.error("❌ Remove failed:", err);
+        alert("Failed to remove student.");
+      }
     });
   });
-isEditMode = false;
-  loadUserProfile();
-});
+}, 0);
