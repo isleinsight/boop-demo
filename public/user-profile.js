@@ -1,3 +1,4 @@
+
 document.addEventListener("DOMContentLoaded", () => {
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
@@ -5,13 +6,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("logoutBtn");
   const parentSection = document.getElementById("parentSection");
   const studentInfoSection = document.getElementById("studentInfoSection");
+  const vendorSection = document.getElementById("vendorInfoSection");
   const parentNameEl = document.getElementById("parentName");
   const parentEmailEl = document.getElementById("parentEmail");
+  const toast = document.getElementById("toast");
 
-let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
-
-// 🚫 Remove any accidental whitespace or malformed characters from UUID
-currentUserId = currentUserId?.replace(/\s+/g, ''); 
+  let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
+  currentUserId = currentUserId?.replace(/\s+/g, ''); 
   let currentUserData = null;
 
   if (!currentUserId) {
@@ -29,6 +30,14 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
     const date = new Date(dateStr);
     const options = { year: "numeric", month: "long", day: "numeric" };
     return date.toLocaleDateString("en-US", options);
+  }
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.style.display = "block";
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 3000);
   }
 
   async function loadUserProfile() {
@@ -56,6 +65,114 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 
         <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
           <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
+
+        <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
+          <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
+
+        <div><span class="label">Email</span><span class="value">${user.email}</span></div>
+
+        ${walletHTML}
+      `;
+
+      // ð Student Section
+      if (user.role === "student") {
+        studentInfoSection.style.display = "block";
+        document.getElementById("studentSchoolName").textContent = user.student?.school_name || "-";
+        document.getElementById("studentGradeLevel").textContent = user.student?.grade_level || "-";
+        document.getElementById("studentExpiry").textContent = formatDatePretty(user.student?.expiry_date);
+      } else {
+        studentInfoSection.style.display = "none";
+      }
+
+      // ð§¾ Vendor Section
+      if (user.role === "vendor") {
+        vendorSection.style.display = "block";
+        document.getElementById("vendorName").textContent = user.vendor?.name || "-";
+        document.getElementById("vendorPhone").textContent = user.vendor?.phone || "-";
+        document.getElementById("vendorCategory").textContent = user.vendor?.category || "-";
+        document.getElementById("vendorApproved").textContent = user.vendor?.approved ? "Yes" : "No";
+      } else {
+        vendorSection.style.display = "none";
+      }
+
+      // ðª Parent Section
+      if (user.role === "parent") {
+        parentSection.style.display = "block";
+        const container = document.getElementById("assignedStudentsList");
+        container.innerHTML = "";
+
+        if (Array.isArray(user.students) && user.students.length) {
+          user.students.forEach(student => {
+            const row = document.createElement("div");
+            row.classList.add("student-row");
+            row.innerHTML = `
+              <span>${student.first_name} ${student.last_name}</span>
+              <button class="removeStudentBtn" data-id="${student.id}" style="display: none;">Remove</button>
+            `;
+            container.appendChild(row);
+          });
+        } else {
+          container.innerHTML = "<p>No students assigned.</p>";
+        }
+      } else {
+        parentSection.style.display = "none";
+      }
+    } catch (err) {
+      console.error("Error loading profile:", err);
+      alert("Failed to load profile.");
+    }
+  }
+
+  // Remove student handler
+  document.addEventListener("click", async (e) => {
+    if (e.target.classList.contains("removeStudentBtn")) {
+      const studentId = e.target.dataset.id;
+      try {
+        const res = await fetch(`/api/user-students/remove`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: currentUserId, student_id: studentId })
+        });
+
+        if (!res.ok) throw new Error("Failed to remove student");
+        showToast("Student removed successfully.");
+        await loadUserProfile(); // Refresh
+        toggleEditMode(true); // Keep in edit mode
+      } catch (err) {
+        console.error(err);
+        showToast("Failed to remove student.");
+      }
+    }
+  });
+
+  function toggleEditMode(editing) {
+    const viewEls = document.querySelectorAll(".value");
+    const editInputs = document.querySelectorAll("input[type=text]");
+    viewEls.forEach(el => el.style.display = editing ? "none" : "inline-block");
+    editInputs.forEach(el => el.style.display = editing ? "inline-block" : "none");
+
+    saveBtn.style.display = editing ? "inline-block" : "none";
+    editBtn.style.display = editing ? "none" : "inline-block";
+
+    // Toggle Remove buttons
+    document.querySelectorAll(".removeStudentBtn").forEach(btn => {
+      btn.style.display = editing ? "inline-block" : "none";
+    });
+  }
+
+  editBtn.addEventListener("click", () => toggleEditMode(true));
+  saveBtn.addEventListener("click", () => toggleEditMode(false));
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("boopUser");
+      window.location.href = "login.html";
+    });
+  }
+
+  loadUserProfile();
+});
+ value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
 
         <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
           <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
