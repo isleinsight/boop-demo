@@ -125,11 +125,35 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(result.message || "Failed to create user");
       }
 
-      // Success!
+      // ✅ Success!
       statusDiv.textContent = "✅ User created successfully!";
       statusDiv.style.color = "green";
       form.reset();
-      updateConditionalFields(); // Reset visibility/required fields
+      updateConditionalFields();
+
+      // 🧠 Add "Add Another User" button dynamically
+      let addBtn = document.getElementById("addAnotherBtn");
+      if (!addBtn) {
+        addBtn = document.createElement("button");
+        addBtn.id = "addAnotherBtn";
+        addBtn.textContent = "Add Another User";
+        addBtn.style.marginTop = "10px";
+        addBtn.style.display = "inline-block";
+        addBtn.style.padding = "10px";
+        addBtn.style.width = "100%";
+        addBtn.style.fontSize = "1rem";
+        addBtn.style.cursor = "pointer";
+
+        statusDiv.insertAdjacentElement("afterend", addBtn);
+
+        addBtn.addEventListener("click", () => {
+          statusDiv.textContent = "";
+          statusDiv.style.color = "";
+          addBtn.remove();
+          form.reset();
+          updateConditionalFields();
+        });
+      }
 
     } catch (err) {
       console.error("❌ Error:", err);
@@ -137,7 +161,8 @@ document.addEventListener("DOMContentLoaded", () => {
       statusDiv.style.color = "red";
     }
   });
-    // Clear status message when typing in the form again
+
+  // Clear status message when typing in the form again
   document.querySelectorAll("input, select").forEach(el => {
     el.addEventListener("input", () => {
       statusDiv.textContent = "";
