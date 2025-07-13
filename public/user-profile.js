@@ -32,7 +32,7 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
     return date.toLocaleDateString("en-US", options);
   }
 
-  async function loadUserProfile() {
+    async function loadUserProfile() {
     try {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
       currentUserData = user;
@@ -42,9 +42,18 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
         const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
         if (wallet?.id) {
           walletHTML += `<div><span class="label">Wallet ID</span><span class="value">${wallet.id}</span></div>`;
+
+          // Spending Card
           const cards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
           if (Array.isArray(cards) && cards.length > 0) {
-            walletHTML += `<div><span class="label">Card Number</span><span class="value">${cards[0].uid}</span></div>`;
+            walletHTML += `<div><span class="label">Spending Card Number</span><span class="value">${cards[0].uid}</span></div>`;
+          }
+
+          // Transit Card
+          const transitRes = await fetch(`/api/transit-cards?wallet_id=${wallet.id}`);
+          const transitCards = await transitRes.json();
+          if (Array.isArray(transitCards) && transitCards.length > 0) {
+            walletHTML += `<div><span class="label">Transit Card Number</span><span class="value">${transitCards[0].uid}</span></div>`;
           }
         }
       } catch (err) {
