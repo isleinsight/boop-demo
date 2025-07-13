@@ -250,57 +250,77 @@
       }
     });
 
-    assignBtn.addEventListener("click", async () => {
-      const uid = uidEl.value.trim();
-      const mode = modeSelect.value;
-      const type = passType.value;
-      const value = type === "rides" ? rideCount.value : daysValid.value;
-      const admin = JSON.parse(localStorage.getItem("boopUser"));
+assignBtn.addEventListener("click", async () => {
+  const uid = uidEl.value.trim();
+  const mode = modeSelect.value;
+  const type = passType.value;
+  const value = type === "rides" ? rideCount.value : daysValid.value;
+  const admin = JSON.parse(localStorage.getItem("boopUser"));
 
-      if (!uid || !mode || !type || !value || !admin?.id) {
-        statusEl.textContent = "Missing required fields.";
-        return;
-      }
+  if (!uid || !mode || !type || !value || !admin?.id) {
+    statusEl.textContent = "Missing required fields.";
+    statusEl.style.color = "red";
+    return;
+  }
 
-      const body = {
-        uid,
-        mode,
-        pass_type: type,
-        pass_value: value,
-        issued_by: admin.id
-      };
+  const body = {
+    uid,
+    mode,
+    pass_type: type,
+    pass_value: value,
+    issued_by: admin.id
+  };
 
-      if (userTypeSelect.value === "existing") {
-        if (!selectedUser?.id) {
-          statusEl.textContent = "Please select a user.";
-          return;
-        }
-        body.user_id = selectedUser.id;
-      } else {
-        const email = `guest-${Date.now()}@boop.local`;
-        body.temporary_user = { email };
-      }
+  if (userTypeSelect.value === "existing") {
+    if (!selectedUser?.id) {
+      statusEl.textContent = "Please select a user.";
+      statusEl.style.color = "red";
+      return;
+    }
+    body.user_id = selectedUser.id;
+  } else {
+    const email = `guest-${Date.now()}@boop.local`;
+    body.temporary_user = { email };
+  }
 
-      const res = await fetch("/api/transit-cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-
-      if (res.ok) {
-        statusEl.textContent = "✅ Transit card assigned successfully!";
-        statusEl.style.color = "green";
-        uidEl.value = "";
-        userSearch.value = "";
-        selectedUser = null;
-        userTypeSelect.value = "";
-        userGroup.style.display = "none";
-      } else {
-        const error = await res.json();
-        statusEl.textContent = `❌ ${error.error || "Failed to assign card."}`;
-        statusEl.style.color = "red";
-      }
+  try {
+    const res = await fetch("/api/transit-cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
     });
+
+    const result = await res.json();
+
+    if (res.ok) {
+      statusEl.textContent = "✅ Transit card assigned successfully!";
+      statusEl.style.color = "green";
+
+      uidEl.value = "";
+      userSearch.value = "";
+      selectedUser = null;
+
+      // Hide success after 5 seconds
+      setTimeout(() => {
+        statusEl.textContent = "";
+      }, 5000);
+    } else {
+      statusEl.textContent = `❌ ${result.error || "Failed to assign card."}`;
+      statusEl.style.color = "red";
+    }
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "❌ Server error occurred.";
+    statusEl.style.color = "red";
+  }
+});
+
+// Clear status message when typing in the form again
+document.querySelectorAll("input, select").forEach(el => {
+  el.addEventListener("input", () => {
+    statusEl.textContent = "";
+  });
+});
   </script>
 </body>
 </html>
