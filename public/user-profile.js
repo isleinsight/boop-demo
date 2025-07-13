@@ -186,9 +186,10 @@ if (user.role === "student") {
     parentSection.style.display = "block";
   }
 }
-      // === Parent View ===
- if (user.role === "parent" && Array.isArray(user.assigned_students)) {
+// === Parent View ===
+if (user.role === "parent" && Array.isArray(user.assigned_students)) {
   studentInfoSection.innerHTML = '<div class="section-title">Assigned Students</div>';
+  
   user.assigned_students.forEach(student => {
     const block = document.createElement("div");
     block.classList.add("user-details-grid");
@@ -206,10 +207,11 @@ if (user.role === "student") {
         </button>
       </div>
     `;
+
     studentInfoSection.appendChild(block);
   });
 
-  // Attach remove listeners
+  // ✅ Attach remove listeners
   setTimeout(() => {
     document.querySelectorAll(".remove-student-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
@@ -218,12 +220,15 @@ if (user.role === "student") {
         if (!confirmed) return;
 
         try {
-          const res = await fetch(`/api/students/${studentId}/parents/${currentUserId}`, {
-  method: "DELETE"
-});
-          if (!res.ok) throw new Error("Failed to remove student");
+          const res = await fetch(`/api/user-students/${studentId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parent_id: currentUserId }) // <- ensure backend expects this!
+          });
 
-          alert("Student removed.");
+          if (!res.ok) throw new Error("Unlink failed");
+
+          alert("Student removed from your account.");
           loadUserProfile();
         } catch (err) {
           console.error("❌ Remove failed:", err);
