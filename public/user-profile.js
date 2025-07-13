@@ -50,11 +50,14 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
           }
 
           // Transit Card
-          const transitRes = await fetch(`/api/transit-cards?wallet_id=${wallet.id}`);
-          const transitCards = await transitRes.json();
-          if (Array.isArray(transitCards) && transitCards.length > 0) {
-            walletHTML += `<div><span class="label">Transit Card Number</span><span class="value">${transitCards[0].uid}</span></div>`;
-          }
+try {
+  const transitCard = await fetchJSON(`/api/transit-cards/user/${user.id}`);
+  if (transitCard && transitCard.uid) {
+    walletHTML += `<div><span class="label">Transit Card</span><span class="value">${transitCard.uid}</span></div>`;
+  }
+} catch (err) {
+  console.warn("No transit card found for this user:", err.message);
+}
         }
       } catch (err) {
         console.warn("No wallet/card info:", err.message);
