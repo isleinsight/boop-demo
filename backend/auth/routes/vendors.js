@@ -2,18 +2,19 @@ const express = require("express");
 const router = express.Router();
 const db = require("../../db");
 
-// ❌ Disabled: vendor creation must go through /api/users
+// Block direct vendor creation
 router.post("/", (req, res) => {
   res.status(405).json({ error: "Use /api/users to create vendors." });
 });
 
-// ✅ GET: All vendors with associated user profile info
+// GET: Only active, non-deleted vendors
 router.get("/", async (req, res) => {
   try {
     const result = await db.query(
       `SELECT v.*, u.email, u.first_name, u.last_name
        FROM vendors v
-       JOIN users u ON v.id = u.id`
+       JOIN users u ON v.id = u.id
+       WHERE u.deleted_at IS NULL AND u.status = 'active'`
     );
     res.json(result.rows);
   } catch (err) {
@@ -22,7 +23,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ PATCH: Update vendor profile (without approved)
+// PATCH: Update vendor details
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
   const { business_name, category, phone } = req.body;
@@ -50,17 +51,28 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// ⚠️ DEV ONLY: Delete vendor and associated user
+// DELETE: Soft-delete vendor (set deleted_at and suspend status)
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    await db.query("DELETE FROM vendors WHERE id = $1", [id]);
-    await db.query("DELETE FROM users WHERE id = $1", [id]); // Optional: if you're OK removing the user too
+    const result = await db.query(
+      `UPDATE users
+       SET deleted_at = NOW(),
+           status = 'suspended'
+       WHERE id = $1 AND role = 'vendor'
+       RETURNING id`,
+      [id]
+    );
 
-    res.json({ message: "Vendor deleted" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Vendor not found or already deleted" });
+    }
+
+    res.json({ message: "Vendor soft-deleted", vendor_id: result.rows[0].id });
+
   } catch (err) {
-    console.error("❌ Failed to delete vendor:", err);
+    console.error("❌ Failed to soft-delete vendor:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
