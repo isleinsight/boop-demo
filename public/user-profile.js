@@ -292,43 +292,47 @@ if (user.role === "vendor") {
 }
       
       // === Edit Profile Setup ===
-      editBtn.onclick = () => {
+editBtn.onclick = () => {
   isEditMode = true;
 
-  // Show user inputs
+  // Toggle user input fields
   ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
-    document.getElementById(`view${field}`).style.display = "none";
-    document.getElementById(`edit${field}`).style.display = "block";
+    const viewEl = document.getElementById(`view${field}`);
+    const editEl = document.getElementById(`edit${field}`);
+    if (viewEl && editEl) {
+      viewEl.style.display = "none";
+      editEl.style.display = "block";
+    }
   });
 
-  // Show student inputs
+  // Toggle student input fields
   if (currentUserData.role === "student") {
-    document.getElementById("studentSchoolName").style.display = "none";
-    document.getElementById("studentGradeLevel").style.display = "none";
-    document.getElementById("studentExpiryDate").style.display = "none";
-
-    document.getElementById("editSchoolName").style.display = "block";
-    document.getElementById("editGradeLevel").style.display = "block";
-    document.getElementById("editExpiryDate").style.display = "block";
+    ["School", "Grade", "Expiry"].forEach(field => {
+      const viewEl = document.getElementById(`view${field}`);
+      const editEl = document.getElementById(`edit${field}`);
+      if (viewEl && editEl) {
+        viewEl.style.display = "none";
+        editEl.style.display = "block";
+      }
+    });
   }
 
-  // Show vendor inputs
+  // Toggle vendor input fields
   if (currentUserData.role === "vendor") {
-    document.getElementById("vendorBusiness").style.display = "none";
-    document.getElementById("vendorCategory").style.display = "none";
-    document.getElementById("vendorPhone").style.display = "none";
-    document.getElementById("vendorApproved").style.display = "none";
-
-    document.getElementById("editBusiness").style.display = "block";
-    document.getElementById("editCategory").style.display = "block";
-    document.getElementById("editPhone").style.display = "block";
-    document.getElementById("editVendorApproved").style.display = "block";
+    ["Business", "Category", "Phone", "VendorApproved"].forEach(field => {
+      const viewEl = document.getElementById(`vendor${field}`) || document.getElementById(`view${field}`);
+      const editEl = document.getElementById(`editVendor${field}`) || document.getElementById(`edit${field}`);
+      if (viewEl && editEl) {
+        viewEl.style.display = "none";
+        editEl.style.display = "block";
+      }
+    });
   }
 
   // Show save button
   saveBtn.style.display = "inline-block";
 
-  // Show remove buttons (for parent view)
+  // Show remove buttons for parents
   document.querySelectorAll(".remove-student-wrapper").forEach(el => {
     el.style.display = "block";
   });
@@ -336,7 +340,7 @@ if (user.role === "vendor") {
 
 saveBtn.onclick = async () => {
   try {
-    // 1. Update base user fields
+    // Update user base profile
     await fetch(`/api/users/${currentUserId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -349,47 +353,45 @@ saveBtn.onclick = async () => {
       })
     });
 
-    // 2. Conditionally update student profile
+    // Conditionally update student
     if (currentUserData.role === "student") {
       await fetch(`/api/students/${currentUserId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          school_name: document.getElementById("editSchoolName")?.value,
-          grade_level: document.getElementById("editGradeLevel")?.value,
-          expiry_date: document.getElementById("editExpiryDate")?.value
+          school_name: document.getElementById("editSchool")?.value,
+          grade_level: document.getElementById("editGrade")?.value,
+          expiry_date: document.getElementById("editExpiry")?.value
         })
       });
     }
 
-    // 3. Conditionally update vendor profile
+    // Conditionally update vendor
     if (currentUserData.role === "vendor") {
       await fetch(`/api/vendors/${currentUserId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          business_name: document.getElementById("editBusiness")?.value,
-          category: document.getElementById("editCategory")?.value,
-          phone: document.getElementById("editPhone")?.value
+          business_name: document.getElementById("editVendorBusiness")?.value,
+          category: document.getElementById("editVendorCategory")?.value,
+          phone: document.getElementById("editVendorPhone")?.value,
+          approved: document.getElementById("editVendorApproved")?.value === "true"
         })
       });
     }
 
     alert("Profile updated.");
-
     isEditMode = false;
     saveBtn.style.display = "none";
 
-    // Hide edit fields again
-    ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
-      document.getElementById(`view${field}`).style.display = "inline-block";
-      document.getElementById(`edit${field}`).style.display = "none";
-    });
-
-    // Hide student/vendor edit fields
-    ["SchoolName", "GradeLevel", "ExpiryDate", "Business", "Category", "Phone"].forEach(field => {
-      const viewEl = document.getElementById(`view${field}`);
-      const editEl = document.getElementById(`edit${field}`);
+    // Toggle all inputs back to display mode
+    [
+      "FirstName", "MiddleName", "LastName", "Email", "Assistance",
+      "School", "Grade", "Expiry",
+      "Business", "Category", "Phone", "VendorApproved"
+    ].forEach(field => {
+      const viewEl = document.getElementById(`view${field}`) || document.getElementById(`vendor${field}`);
+      const editEl = document.getElementById(`edit${field}`) || document.getElementById(`editVendor${field}`);
       if (viewEl && editEl) {
         viewEl.style.display = "inline-block";
         editEl.style.display = "none";
@@ -407,6 +409,9 @@ saveBtn.onclick = async () => {
     alert("Error saving changes.");
   }
 };
+
+
+      ////
 
     } catch (err) {
       console.error("❌ Failed to load user:", err);
