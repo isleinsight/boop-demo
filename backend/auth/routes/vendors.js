@@ -22,21 +22,20 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ PATCH: Update vendor profile
+// ✅ PATCH: Update vendor profile (without approved)
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const { business_name, category, phone, approved } = req.body;
+  const { business_name, category, phone } = req.body;
 
   try {
     const result = await db.query(
       `UPDATE vendors
        SET business_name = COALESCE($1, business_name),
            category = COALESCE($2, category),
-           phone = COALESCE($3, phone),
-           approved = COALESCE($4, approved)
-       WHERE id = $5
+           phone = COALESCE($3, phone)
+       WHERE id = $4
        RETURNING *`,
-      [business_name, category, phone, approved, id]
+      [business_name, category, phone, id]
     );
 
     if (result.rows.length === 0) {
