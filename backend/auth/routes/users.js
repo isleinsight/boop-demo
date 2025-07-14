@@ -111,9 +111,11 @@ router.get("/", async (req, res) => {
 
     const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
+    // 🔍 Autocomplete mode: limit results, no pagination
     if (isAutocomplete) {
       const result = await pool.query(
-        `SELECT id, first_name, last_name, email, wallet_id FROM users
+        `SELECT id, first_name, last_name, email, wallet_id
+         FROM users
          ${whereSQL}
          ORDER BY first_name ASC
          LIMIT 10`,
@@ -122,9 +124,11 @@ router.get("/", async (req, res) => {
       return res.json(result.rows);
     }
 
+    // 📦 Pagination logic
     const limit = parseInt(perPage) || 10;
     const offset = ((parseInt(page) || 1) - 1) * limit;
 
+    // ⏱️ Fetch paginated users
     const result = await pool.query(
       `SELECT * FROM users
        ${whereSQL}
@@ -134,11 +138,21 @@ router.get("/", async (req, res) => {
       [...values, limit, offset]
     );
 
-    const countRes = await pool.query(`SELECT COUNT(*) FROM users ${whereSQL}`, values);
+    // 📊 Count total users across all pages with same filters
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM users ${whereSQL}`,
+      values
+    );
+
     const totalUsers = parseInt(countRes.rows[0].count, 10);
     const totalPages = Math.ceil(totalUsers / limit);
 
-    res.json({ users: result.rows, total: totalUsers, totalPages });
+    res.json({
+      users: result.rows,
+      total: totalUsers,
+      totalPages
+    });
+
   } catch (err) {
     console.error("❌ Error in GET /api/users:", err);
     res.status(500).json({ message: "Failed to fetch users" });
