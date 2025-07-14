@@ -81,7 +81,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Get users (with autocomplete or pagination)
+// ✅ Get users (with autocomplete or pagination, now excluding soft-deleted)
 router.get("/", async (req, res) => {
   const { search, role, status, page, perPage } = req.query;
   const isAutocomplete = !page && !perPage;
@@ -89,6 +89,9 @@ router.get("/", async (req, res) => {
   try {
     const values = [];
     const whereClauses = [];
+
+    // 🔍 Only show users that are not soft-deleted
+    whereClauses.push("deleted_at IS NULL");
 
     if (search) {
       whereClauses.push(`(
@@ -109,7 +112,7 @@ router.get("/", async (req, res) => {
       values.push(status);
     }
 
-    const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
+    const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
 
     // 🔍 Autocomplete mode: limit results, no pagination
     if (isAutocomplete) {
