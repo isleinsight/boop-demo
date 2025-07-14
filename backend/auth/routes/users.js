@@ -207,8 +207,13 @@ router.delete("/:id", async (req, res) => {
 
   try {
     await pool.query(`UPDATE wallets SET status = 'archived' WHERE user_id = $1`, [id]);
-    await pool.query("DELETE FROM users WHERE id = $1", [id]);
-    res.json({ message: "User deleted" });
+await pool.query(
+  `UPDATE users
+   SET deleted_at = NOW(), status = 'suspended'
+   WHERE id = $1`,
+  [id]
+);
+res.json({ message: "User soft-deleted" });
   } catch (err) {
     console.error("❌ Error deleting user:", err);
     res.status(500).json({ message: "Delete failed" });
