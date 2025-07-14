@@ -50,4 +50,19 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+// ⚠️ DEV ONLY: Delete vendor and associated user
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await db.query("DELETE FROM vendors WHERE id = $1", [id]);
+    await db.query("DELETE FROM users WHERE id = $1", [id]); // Optional: if you're OK removing the user too
+
+    res.json({ message: "Vendor deleted" });
+  } catch (err) {
+    console.error("❌ Failed to delete vendor:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 module.exports = router;
