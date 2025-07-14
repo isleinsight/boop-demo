@@ -144,9 +144,28 @@ if (user.role === "student") {
   const s = user.student_profile;
 
   if (s) {
-    document.getElementById("studentSchoolName").textContent = s.school_name || "-";
-    document.getElementById("studentGradeLevel").textContent = s.grade_level || "-";
-    document.getElementById("studentExpiryDate").textContent = s.expiry_date ? formatDatePretty(s.expiry_date) : "-";
+    studentInfoSection.innerHTML = `
+      <div class="section-title">Student Info</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">School</span>
+          <span class="value" id="viewSchool">${s.school_name || "-"}</span>
+          <input type="text" id="editSchool" value="${s.school_name || ""}" style="display:none; width: 100%;" />
+        </div>
+
+        <div>
+          <span class="label">Grade</span>
+          <span class="value" id="viewGrade">${s.grade_level || "-"}</span>
+          <input type="text" id="editGrade" value="${s.grade_level || ""}" style="display:none; width: 100%;" />
+        </div>
+
+        <div>
+          <span class="label">Expiry</span>
+          <span class="value" id="viewExpiry">${s.expiry_date ? formatDatePretty(s.expiry_date) : "-"}</span>
+          <input type="date" id="editExpiry" value="${s.expiry_date ? s.expiry_date.slice(0, 10) : ""}" style="display:none; width: 100%;" />
+        </div>
+      </div>
+    `;
     studentInfoSection.style.display = "block";
   }
 
@@ -174,6 +193,7 @@ if (user.role === "student") {
     parentSection.style.display = "block";
   }
 }
+      
 // === Parent View ===
 if (user.role === "parent" && Array.isArray(user.assigned_students)) {
   studentInfoSection.innerHTML = '<div class="section-title">Assigned Students</div>';
@@ -229,25 +249,48 @@ if (user.role === "parent" && Array.isArray(user.assigned_students)) {
   studentInfoSection.style.display = "block";
 }
 
-      // === Vendor View ===
-      if (user.role === "vendor") {
-        try {
-          const vendorSection = document.getElementById("vendorSection");
-          const vendorData = await fetchJSON(`/api/vendors`);
-          const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id);
+// === Vendor View ===
+if (user.role === "vendor") {
+  try {
+    const vendorSection = document.getElementById("vendorSection");
+    const vendorData = await fetchJSON(`/api/vendors`);
+    const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id);
 
-          if (vendor) {
-            document.getElementById("vendorBusiness").textContent = vendor.business_name || "-";
-            document.getElementById("vendorCategory").textContent = vendor.category || "-";
-            document.getElementById("vendorPhone").textContent = vendor.phone || "-";
-            document.getElementById("vendorApproved").textContent = vendor.approved ? "Yes" : "No";
-            vendorSection.style.display = "block";
-          }
-        } catch (err) {
-          console.error("❌ Failed to fetch vendor info:", err);
-        }
-      }
+    if (vendor) {
+      vendorSection.innerHTML = `
+        <div class="section-title">Vendor Info</div>
+        <div class="user-details-grid">
+          <div>
+            <span class="label">Business Name</span>
+            <span class="value" id="viewBusiness">${vendor.business_name || "-"}</span>
+            <input type="text" id="editBusiness" value="${vendor.business_name || ""}" style="display:none; width: 100%;" />
+          </div>
 
+          <div>
+            <span class="label">Category</span>
+            <span class="value" id="viewCategory">${vendor.category || "-"}</span>
+            <input type="text" id="editCategory" value="${vendor.category || ""}" style="display:none; width: 100%;" />
+          </div>
+
+          <div>
+            <span class="label">Phone</span>
+            <span class="value" id="viewPhone">${vendor.phone || "-"}</span>
+            <input type="tel" id="editPhone" value="${vendor.phone || ""}" style="display:none; width: 100%;" />
+          </div>
+
+          <div>
+            <span class="label">Approved</span>
+            <span class="value" id="viewApproved">${vendor.approved ? "Yes" : "No"}</span>
+          </div>
+        </div>
+      `;
+      vendorSection.style.display = "block";
+    }
+  } catch (err) {
+    console.error("❌ Failed to fetch vendor info:", err);
+  }
+}
+      
       // === Edit Profile Setup ===
       editBtn.onclick = () => {
   isEditMode = true;
@@ -263,8 +306,9 @@ if (user.role === "parent" && Array.isArray(user.assigned_students)) {
   });
 };
 
-      saveBtn.onclick = async () => {
+saveBtn.onclick = async () => {
   try {
+    // 1. Update base user fields
     await fetch(`/api/users/${currentUserId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -277,25 +321,59 @@ if (user.role === "parent" && Array.isArray(user.assigned_students)) {
       })
     });
 
-    alert("Profile updated.");
-    
-    // 🔄 Reload profile to update display
-    await loadUserProfile();
+    // 2. Conditionally update student profile
+    if (currentUserData.role === "student") {
+      await fetch(`/api/students/${currentUserId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          school_name: document.getElementById("editSchoolName")?.value,
+          grade_level: document.getElementById("editGradeLevel")?.value,
+          expiry_date: document.getElementById("editExpiryDate")?.value
+        })
+      });
+    }
 
-    // ✅ Exit edit mode
+    // 3. Conditionally update vendor profile
+    if (currentUserData.role === "vendor") {
+      await fetch(`/api/vendors/${currentUserId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_name: document.getElementById("editBusiness")?.value,
+          category: document.getElementById("editCategory")?.value,
+          phone: document.getElementById("editPhone")?.value
+        })
+      });
+    }
+
+    alert("Profile updated.");
+
     isEditMode = false;
+    saveBtn.style.display = "none";
+
+    // Hide edit fields again
     ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
       document.getElementById(`view${field}`).style.display = "inline-block";
       document.getElementById(`edit${field}`).style.display = "none";
     });
 
-    saveBtn.style.display = "none";
+    // Hide student/vendor edit fields
+    ["SchoolName", "GradeLevel", "ExpiryDate", "Business", "Category", "Phone"].forEach(field => {
+      const viewEl = document.getElementById(`view${field}`);
+      const editEl = document.getElementById(`edit${field}`);
+      if (viewEl && editEl) {
+        viewEl.style.display = "inline-block";
+        editEl.style.display = "none";
+      }
+    });
 
-    // 🔒 Hide remove buttons again
+    // Hide remove buttons again
     document.querySelectorAll(".remove-student-wrapper").forEach(el => {
       el.style.display = "none";
     });
 
+    loadUserProfile();
   } catch (err) {
     console.error("❌ Failed to save profile:", err);
     alert("Error saving changes.");
