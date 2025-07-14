@@ -138,7 +138,7 @@ router.get("/", async (req, res) => {
     const totalUsers = parseInt(countRes.rows[0].count, 10);
     const totalPages = Math.ceil(totalUsers / limit);
 
-    res.json({ users: result.rows, totalPages });
+    res.json({ users: result.rows, total: totalUsers, totalPages });
   } catch (err) {
     console.error("❌ Error in GET /api/users:", err);
     res.status(500).json({ message: "Failed to fetch users" });
