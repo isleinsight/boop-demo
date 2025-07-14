@@ -376,7 +376,7 @@ saveBtn.onclick = async () => {
       });
     }
 
-    alert("Profile updated.");
+       alert("Profile updated.");
     isEditMode = false;
     saveBtn.style.display = "none";
 
@@ -399,28 +399,20 @@ saveBtn.onclick = async () => {
       el.style.display = "none";
     });
 
-    loadUserProfile();
+    await loadUserProfile();
   } catch (err) {
     console.error("❌ Failed to save profile:", err);
     alert("Error saving changes.");
   }
 };
 
-
-      ////
-
-    } catch (err) {
-      console.error("❌ Failed to load user:", err);
-      alert("Error loading user");
-      window.location.href = "view-users.html";
-    }
-  }
-
-  logoutBtn?.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST" }).then(() => {
-      window.location.href = "index.html";
-    });
+// ✅ Final script setup
+logoutBtn?.addEventListener("click", () => {
+  fetch("/api/logout", { method: "POST" }).then(() => {
+    window.location.href = "index.html";
   });
+});
+
 isEditMode = false;
-  loadUserProfile();
+loadUserProfile();
 });
