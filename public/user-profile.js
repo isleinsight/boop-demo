@@ -36,11 +36,6 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
     try {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
       currentUserData = user;
-      if (user.deleted_at) {
-  alert("This user has been deleted.");
-  window.location.href = "view-users.html";
-  return;
-}
 
       let walletHTML = "";
 
@@ -381,7 +376,7 @@ saveBtn.onclick = async () => {
       });
     }
 
-       alert("Profile updated.");
+    alert("Profile updated.");
     isEditMode = false;
     saveBtn.style.display = "none";
 
@@ -404,26 +399,28 @@ saveBtn.onclick = async () => {
       el.style.display = "none";
     });
 
-    await loadUserProfile();
+    loadUserProfile();
   } catch (err) {
     console.error("❌ Failed to save profile:", err);
     alert("Error saving changes.");
   }
 };
 
-// ✅ Final script setup
-logoutBtn?.addEventListener("click", () => {
-  fetch("/api/logout", { method: "POST" }).then(() => {
-    window.location.href = "index.html";
-  });
-});
 
+      ////
+
+    } catch (err) {
+      console.error("❌ Failed to load user:", err);
+      alert("Error loading user");
+      window.location.href = "view-users.html";
+    }
+  }
+
+  logoutBtn?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" }).then(() => {
+      window.location.href = "index.html";
+    });
+  });
 isEditMode = false;
-      
-loadUserProfile();
-      loadUserProfile().catch(err => {
-  console.error("❌ Could not load user profile:", err);
-  alert("Something went wrong loading the profile. Returning to user list.");
-  window.location.href = "view-users.html";
-});
+  loadUserProfile();
 });
