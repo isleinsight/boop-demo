@@ -277,11 +277,7 @@ if (user.role === "vendor") {
             <span class="value" id="viewPhone">${vendor.phone || "-"}</span>
             <input type="tel" id="editPhone" value="${vendor.phone || ""}" style="display:none; width: 100%;" />
           </div>
-
-          <div>
-            <span class="label">Approved</span>
-            <span class="value" id="viewApproved">${vendor.approved ? "Yes" : "No"}</span>
-          </div>
+          
         </div>
       `;
       vendorSection.style.display = "block";
