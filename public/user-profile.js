@@ -294,13 +294,41 @@ if (user.role === "vendor") {
       // === Edit Profile Setup ===
       editBtn.onclick = () => {
   isEditMode = true;
+
+  // Show user inputs
   ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
     document.getElementById(`view${field}`).style.display = "none";
     document.getElementById(`edit${field}`).style.display = "block";
   });
+
+  // Show student inputs
+  if (currentUserData.role === "student") {
+    document.getElementById("studentSchoolName").style.display = "none";
+    document.getElementById("studentGradeLevel").style.display = "none";
+    document.getElementById("studentExpiryDate").style.display = "none";
+
+    document.getElementById("editSchoolName").style.display = "block";
+    document.getElementById("editGradeLevel").style.display = "block";
+    document.getElementById("editExpiryDate").style.display = "block";
+  }
+
+  // Show vendor inputs
+  if (currentUserData.role === "vendor") {
+    document.getElementById("vendorBusiness").style.display = "none";
+    document.getElementById("vendorCategory").style.display = "none";
+    document.getElementById("vendorPhone").style.display = "none";
+    document.getElementById("vendorApproved").style.display = "none";
+
+    document.getElementById("editBusiness").style.display = "block";
+    document.getElementById("editCategory").style.display = "block";
+    document.getElementById("editPhone").style.display = "block";
+    document.getElementById("editVendorApproved").style.display = "block";
+  }
+
+  // Show save button
   saveBtn.style.display = "inline-block";
 
-  // Show remove buttons
+  // Show remove buttons (for parent view)
   document.querySelectorAll(".remove-student-wrapper").forEach(el => {
     el.style.display = "block";
   });
