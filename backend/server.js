@@ -26,16 +26,14 @@ const cardsRoute = require('./auth/routes/cards');
 const walletRoutes = require('./auth/routes/wallets'); 
 const vendorsRoute = require('./auth/routes/vendors');
 const userStudentsRoute = require('./auth/routes/userStudents');
-const transitCardsRoute = require('./auth/routes/transit-cards');
-const transitWalletRoutes = require('./auth/routes/transit-wallets'); // ✅ NEW
+
 
 app.use('/api/users', usersRoute);
 app.use('/api/cards', cardsRoute);
 app.use('/api/wallets', walletRoutes); 
 app.use('/api/vendors', vendorsRoute);
 app.use('/api/user-students', userStudentsRoute);
-app.use('/api/transit-cards', transitCardsRoute);
-app.use('/api/transit-wallets', transitWalletRoutes); // ✅ REGISTERED HERE
+
 
 // ✅ Health check
 app.get('/health', (req, res) => {
