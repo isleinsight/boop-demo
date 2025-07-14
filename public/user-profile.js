@@ -375,7 +375,7 @@ saveBtn.onclick = async () => {
           business_name: document.getElementById("editVendorBusiness")?.value,
           category: document.getElementById("editVendorCategory")?.value,
           phone: document.getElementById("editVendorPhone")?.value,
-          approved: document.getElementById("editVendorApproved")?.value === "true"
+
         })
       });
     }
