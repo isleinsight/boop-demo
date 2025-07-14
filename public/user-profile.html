@@ -27,14 +27,14 @@
 
   <style>
     .user-details-grid {
-  margin-bottom: 24px; /* adds spacing between each block */
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e0e0e0;
-}
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e0e0e0;
+    }
 
-.remove-student-wrapper {
-  margin-top: 12px;
-}
+    .remove-student-wrapper {
+      margin-top: 12px;
+    }
   </style>
 </head>
 <body>
@@ -77,40 +77,62 @@
     <div id="vendorSection" style="display: none; margin-top: 40px;">
       <div class="section-title">Vendor Information</div>
       <div class="user-details-grid">
-        <div><span class="label">Business Name</span><span class="value" id="vendorBusiness">-</span><input type="text" id="editVendorBusiness" style="display: none; width: 100%;" /></div>
-        <div><span class="label">Category</span><span class="value" id="vendorCategory">-</span><input type="text" id="editVendorCategory" style="display: none; width: 100%;" /></div>
-        <div><span class="label">Phone</span><span class="value" id="vendorPhone">-</span><input type="text" id="editVendorPhone" style="display: none; width: 100%;" /></div>
-        <div><span class="label">Approved</span><span class="value" id="vendorApproved">-</span><select id="editVendorApproved" style="display: none; width: 100%;"><option value="true">Yes</option><option value="false">No</option></select></div>
+        <div>
+          <span class="label">Business Name</span>
+          <span class="value" id="vendorBusiness">-</span>
+          <input type="text" id="editBusiness" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Category</span>
+          <span class="value" id="vendorCategory">-</span>
+          <input type="text" id="editCategory" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Phone</span>
+          <span class="value" id="vendorPhone">-</span>
+          <input type="text" id="editPhone" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Approved</span>
+          <span class="value" id="vendorApproved">-</span>
+          <select id="editVendorApproved" style="display: none; width: 100%;">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
       </div>
     </div>
 
     <!-- Parent Info -->
     <div id="parentSection" style="display:none;">
-  <h3>Parent</h3>
-  <div class="user-details-grid">
-    <div><span class="label">Name</span><span class="value" id="parentName">-</span></div>
-    <div><span class="label">Email</span><span class="value" id="parentEmail">-</span></div>
-  </div>
-</div>
+      <h3>Parent</h3>
+      <div class="user-details-grid">
+        <div><span class="label">Name</span><span class="value" id="parentName">-</span></div>
+        <div><span class="label">Email</span><span class="value" id="parentEmail">-</span></div>
+      </div>
+    </div>
 
-<!-- Student Info -->
-<div id="studentInfoSection" style="display: none; margin-top: 40px;">
-  <div class="section-title">Student Info</div>
-  <div class="user-details-grid">
-    <div>
-      <span class="label">School Name</span>
-      <span class="value" id="studentSchoolName">-</span>
+    <!-- Student Info -->
+    <div id="studentInfoSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Student Info</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">School Name</span>
+          <span class="value" id="studentSchoolName">-</span>
+          <input type="text" id="editSchoolName" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Grade Level</span>
+          <span class="value" id="studentGradeLevel">-</span>
+          <input type="text" id="editGradeLevel" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Expiry Date</span>
+          <span class="value" id="studentExpiryDate">-</span>
+          <input type="date" id="editExpiryDate" style="display: none; width: 100%;" />
+        </div>
+      </div>
     </div>
-    <div>
-      <span class="label">Grade Level</span>
-      <span class="value" id="studentGradeLevel">-</span>
-    </div>
-    <div>
-      <span class="label">Expiry Date</span>
-      <span class="value" id="studentExpiryDate">-</span>
-    </div>
-  </div>
-</div>
 
     <!-- Transaction History -->
     <div class="section-title">Transaction History</div>
@@ -124,30 +146,23 @@
 
   <script type="module" src="user-profile.js"></script>
   <script>
-
-    <!-- Auth Script -->
-  // Role-based protection: Only allow admins
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  if (!user || user.role !== "admin") {
-    window.location.href = "login.html"; // Redirect non-admins to login
-  }
-
-  // DOM loaded logic
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("admin.js has loaded!");
-
-
-    // Logout logic
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        localStorage.removeItem("boopUser");
-        window.location.href = "login.html";
-      });
+    // Role-based protection: Only allow admins
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html"; // Redirect non-admins to login
     }
-  });
-    
+
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("admin.js has loaded!");
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          localStorage.removeItem("boopUser");
+          window.location.href = "login.html";
+        });
+      }
+    });
   </script>
 </body>
 </html>
