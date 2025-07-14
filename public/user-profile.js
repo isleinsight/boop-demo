@@ -276,26 +276,43 @@ if (user.role === "parent" && Array.isArray(user.assigned_students)) {
 };
 
       saveBtn.onclick = async () => {
-        try {
-          await fetch(`/api/users/${currentUserId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              first_name: document.getElementById("editFirstName").value,
-              middle_name: document.getElementById("editMiddleName").value,
-              last_name: document.getElementById("editLastName").value,
-              email: document.getElementById("editEmail").value,
-              on_assistance: document.getElementById("editAssistance").value === "true"
-            })
-          });
+  try {
+    await fetch(`/api/users/${currentUserId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        first_name: document.getElementById("editFirstName").value,
+        middle_name: document.getElementById("editMiddleName").value,
+        last_name: document.getElementById("editLastName").value,
+        email: document.getElementById("editEmail").value,
+        on_assistance: document.getElementById("editAssistance").value === "true"
+      })
+    });
 
-          alert("Profile updated.");
-          loadUserProfile();
-        } catch (err) {
-          console.error("❌ Failed to save profile:", err);
-          alert("Error saving changes.");
-        }
-      };
+    alert("Profile updated.");
+    
+    // 🔄 Reload profile to update display
+    await loadUserProfile();
+
+    // ✅ Exit edit mode
+    isEditMode = false;
+    ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
+      document.getElementById(`view${field}`).style.display = "inline-block";
+      document.getElementById(`edit${field}`).style.display = "none";
+    });
+
+    saveBtn.style.display = "none";
+
+    // 🔒 Hide remove buttons again
+    document.querySelectorAll(".remove-student-wrapper").forEach(el => {
+      el.style.display = "none";
+    });
+
+  } catch (err) {
+    console.error("❌ Failed to save profile:", err);
+    alert("Error saving changes.");
+  }
+};
 
     } catch (err) {
       console.error("❌ Failed to load user:", err);
