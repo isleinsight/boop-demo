@@ -39,42 +39,30 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 
       let walletHTML = "";
 
-// ✅ Regular Spending Wallet
+// ✅ All Cards: Transit & Spending
 try {
-  const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
-  if (wallet?.id) {
-    walletHTML += `<div><span class="label">Spending Wallet ID</span><span class="value">${wallet.id}</span></div>`;
-    const cards = await fetchJSON(`/api/cards?wallet_id=${wallet.id}`);
-    if (Array.isArray(cards) && cards.length > 0) {
-      walletHTML += `<div><span class="label">Spending Card Number</span><span class="value">${cards[0].uid}</span></div>`;
-    }
-  }
-} catch (err) {
-  console.warn("🟡 No spending wallet info:", err.message);
-}
+  const allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
+  const transitCards = allCards.filter(c => c.type === "transit");
+  const spendingCards = allCards.filter(c => c.type === "spending");
 
-// ✅ Transit Wallet
-try {
-  const transitData = await fetchJSON(`/api/transit-wallets/${user.id}`);
-  const transitWallet = transitData.wallet;
-  const transitCards = transitData.cards;
-
-  if (transitWallet?.id) {
-    walletHTML += `<div><span class="label">Transit Wallet ID</span><span class="value">${transitWallet.id}</span></div>`;
-
-    if (Array.isArray(transitCards) && transitCards.length > 0) {
-      transitCards.forEach(card => {
-        walletHTML += `<div><span class="label">Transit Card Number</span><span class="value">${card.uid}</span></div>`;
-      });
-    } else {
-      walletHTML += `<div><span class="label">Transit Card</span><span class="value">No cards found</span></div>`;
-    }
+  // Show Transit Cards
+  if (transitCards.length > 0) {
+    transitCards.forEach(card => {
+      walletHTML += `<div><span class="label">Transit Card</span><span class="value">${card.uid}</span></div>`;
+    });
   } else {
-    walletHTML += `<div><span class="label">Transit Wallet</span><span class="value">Not available</span></div>`;
+    walletHTML += `<div><span class="label">Transit Card</span><span class="value">None</span></div>`;
+  }
+
+  // Show Spending Card (optional, remove if you want only transit)
+  if (spendingCards.length > 0) {
+    spendingCards.forEach(card => {
+      walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
+    });
   }
 } catch (err) {
-  console.warn("🟡 No transit wallet info:", err.message);
-  walletHTML += `<div><span class="label">Transit Wallet</span><span class="value">Failed to load</span></div>`;
+  console.warn("🟡 Failed to load cards:", err.message);
+  walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
 }
 
 userInfo.innerHTML = `
