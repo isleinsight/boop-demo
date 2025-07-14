@@ -36,6 +36,11 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
     try {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
       currentUserData = user;
+      if (user.deleted_at) {
+  alert("This user has been deleted.");
+  window.location.href = "view-users.html";
+  return;
+}
 
       let walletHTML = "";
 
