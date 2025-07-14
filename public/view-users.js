@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentPage = 1;
   const perPage = 10;
   let totalPages = 1;
+  let totalUsersCount = 0; // ✅ Needed for total across all pages
 
   let sortKey = null;
   let sortOrder = 'asc';
@@ -40,6 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       allUsers = data.users || [];
       totalPages = data.totalPages || 1;
+      totalUsersCount = data.total || 0; // ✅ store total count from API
       render();
     } catch (e) {
       console.error("Error fetching users:", e);
@@ -128,7 +130,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       userTableBody.appendChild(row);
     });
 
-    userCount.textContent = `Total Users: ${allUsers.length}`;
+    // ✅ TOTAL users for entire result set, not just this page
+    userCount.textContent = `Total Users: ${totalUsersCount}`;
     paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     prevBtn.style.display = currentPage > 1 ? "inline-block" : "none";
     nextBtn.style.display = currentPage < totalPages ? "inline-block" : "none";
