@@ -419,5 +419,11 @@ logoutBtn?.addEventListener("click", () => {
 });
 
 isEditMode = false;
+      
 loadUserProfile();
+      loadUserProfile().catch(err => {
+  console.error("❌ Could not load user profile:", err);
+  alert("Something went wrong loading the profile. Returning to user list.");
+  window.location.href = "view-users.html";
+});
 });
