@@ -169,7 +169,7 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ message: "Invalid user ID" });
   }
 
-  const fields = ["first_name", "middle_name", "last_name", "email", "role", "status", "on_assistance"];
+  const fields = ["first_name", "middle_name", "last_name", "email", "role", "status", "on_assistance", "deleted_at"];
   const updates = [];
   const values = [];
 
