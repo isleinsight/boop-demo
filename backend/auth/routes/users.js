@@ -81,7 +81,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Get users (with autocomplete or pagination, now excluding soft-deleted)
+// ✅ Get users (with autocomplete or pagination, now including deleted filter)
 router.get("/", async (req, res) => {
   const { search, role, status, page, perPage } = req.query;
   const isAutocomplete = !page && !perPage;
@@ -90,12 +90,12 @@ router.get("/", async (req, res) => {
     const values = [];
     const whereClauses = [];
 
-    // 🔍 Only show users that are not soft-deleted
+    // 🧠 Soft-delete logic
     if (status === "deleted") {
-  whereClauses.push("deleted_at IS NOT NULL");
-} else {
-  whereClauses.push("deleted_at IS NULL");
-}
+      whereClauses.push("deleted_at IS NOT NULL");
+    } else {
+      whereClauses.push("deleted_at IS NULL");
+    }
 
     if (search) {
       whereClauses.push(`(
@@ -111,14 +111,15 @@ router.get("/", async (req, res) => {
       values.push(role);
     }
 
-    if (status) {
+    // ⛔ Skip adding "status = deleted" — it's not a real status in DB
+    if (status && status !== "deleted") {
       whereClauses.push(`status = $${values.length + 1}`);
       values.push(status);
     }
 
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
 
-    // 🔍 Autocomplete mode: limit results, no pagination
+    // 🔍 Autocomplete mode
     if (isAutocomplete) {
       const result = await pool.query(
         `SELECT id, first_name, last_name, email, wallet_id
@@ -135,7 +136,6 @@ router.get("/", async (req, res) => {
     const limit = parseInt(perPage) || 10;
     const offset = ((parseInt(page) || 1) - 1) * limit;
 
-    // ⏱️ Fetch paginated users
     const result = await pool.query(
       `SELECT * FROM users
        ${whereSQL}
@@ -145,7 +145,6 @@ router.get("/", async (req, res) => {
       [...values, limit, offset]
     );
 
-    // 📊 Count total users across all pages with same filters
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM users ${whereSQL}`,
       values
