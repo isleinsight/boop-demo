@@ -70,8 +70,6 @@ userInfo.innerHTML = `
   
   <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
     <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
-  <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
-    <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
 
   <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
     <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
