@@ -66,6 +66,10 @@ try {
 }
 
 userInfo.innerHTML = `
+  <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
+  
+  <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
+    <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
   <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
     <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
 
