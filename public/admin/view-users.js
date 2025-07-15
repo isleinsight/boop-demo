@@ -54,11 +54,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     select.innerHTML = `
       <option value="action">Action</option>
       <option value="view">View Profile</option>
+      ${user.deleted_at
+  ? '<option value="restore">Restore</option>'
+  : `
       ${user.status === "suspended"
         ? '<option value="unsuspend">Unsuspend</option>'
         : '<option value="suspend">Suspend</option>'}
       <option value="signout">Force Sign-out</option>
       <option value="delete">Delete</option>
+    `
+}
     `;
     select.addEventListener("change", async () => {
       const action = select.value;
