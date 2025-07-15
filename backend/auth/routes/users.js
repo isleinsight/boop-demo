@@ -304,9 +304,9 @@ router.post("/:id/signout", async (req, res) => {
 });
 
 // ✅ Get current user info (used by /api/me)
-router.get("/me", async (req, res) => {
+router.get("/me", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user?.id; // assumes auth middleware sets req.user
+    const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({ message: "Not authenticated" });
