@@ -7,13 +7,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let currentUserType = null;
 
-  try {
-    const res = await fetch("/api/me");
-    const user = await res.json();
-    currentUserType = user.type;
-  } catch (e) {
-    console.error("Failed to fetch current user info:", e);
-  }
+  const currentUser = JSON.parse(localStorage.getItem("boopUser"));
+const currentUserType = currentUser?.type;
 
   // 🧠 Dynamic role options
   const baseRoles = [
