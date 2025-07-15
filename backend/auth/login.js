@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // or manual config
+  connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
@@ -29,16 +29,19 @@ module.exports = async function (req, res) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
+    // ✅ Include type in the token payload
     const token = jwt.sign(
       {
         userId: user.id,
         role: user.role,
-        email: user.email
+        email: user.email,
+        type: user.type
       },
       process.env.JWT_SECRET || 'tempsecret',
       { expiresIn: '2h' }
     );
 
+    // ✅ Include type in the response body
     res.status(200).json({
       message: 'Login successful',
       token,
@@ -46,6 +49,7 @@ module.exports = async function (req, res) {
         id: user.id,
         email: user.email,
         role: user.role,
+        type: user.type,
         name: `${user.first_name} ${user.last_name}`
       }
     });
