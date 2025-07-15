@@ -44,17 +44,29 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials (incorrect password)' });
     }
 
-    // Success
-    res.status(200).json({
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: `${user.first_name} ${user.last_name}`,
-        role: user.role,
-        type: user.type
-      }
-    });
+   // 🔐 Generate JWT token
+const token = jwt.sign(
+  {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    type: user.type, // optional: includes super_admin
+  },
+  process.env.JWT_SECRET,
+  { expiresIn: "1d" }
+);
+
+res.status(200).json({
+  message: 'Login successful',
+  token, // 🧠 frontend will save this
+  user: {
+    id: user.id,
+    email: user.email,
+    name: `${user.first_name} ${user.last_name}`,
+    role: user.role,
+    type: user.type
+  }
+});
   } catch (err) {
     console.error('🔥 Login error:', err.message);
     res.status(500).json({ message: 'Server error during login' });
