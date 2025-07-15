@@ -87,25 +87,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function performAction(user, action) {
-    try {
-      if (action === "delete") {
-        await fetch(`/api/users/${user.id}`, { method: "DELETE" });
-      } else if (action === "suspend" || action === "unsuspend") {
-        const newStatus = action === "suspend" ? "suspended" : "active";
-        await fetch(`/api/users/${user.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        });
-      } else if (action === "signout") {
-        await fetch(`/api/users/${user.id}/signout`, { method: "POST" });
-      }
-      fetchUsers(); // Refresh table
-    } catch (err) {
-      console.error("❌ Action failed:", err);
-      alert("Action failed.");
+  try {
+    if (action === "delete") {
+      await fetch(`/api/users/${user.id}`, { method: "DELETE" });
+    } else if (action === "suspend" || action === "unsuspend") {
+      const newStatus = action === "suspend" ? "suspended" : "active";
+      await fetch(`/api/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } else if (action === "signout") {
+      await fetch(`/api/users/${user.id}/signout`, { method: "POST" });
+    } else if (action === "restore") {
+      await fetch(`/api/users/${user.id}/restore`, {
+        method: "PATCH"
+      });
     }
+    fetchUsers(); // Refresh table
+  } catch (err) {
+    console.error("❌ Action failed:", err);
+    alert("Action failed.");
   }
+}
 
   function render() {
     userTableBody.innerHTML = "";
