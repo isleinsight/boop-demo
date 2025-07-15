@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("✅ add-user.js loaded");
 
+  const form = document.getElementById("addUserForm");
   const roleSelect = document.getElementById("role");
   const adminTypeContainer = document.getElementById("adminTypeContainer");
-  const form = document.getElementById("addUserForm");
 
   let currentUserType = null;
 
@@ -32,26 +32,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   roleSelect.innerHTML = `<option value="">Select Role</option>` + baseRoles.map(role =>
     `<option value="${role.value}">${role.label}</option>`).join("");
 
-  // Optional: Show admin type dropdown when 'admin' is selected
-  roleSelect.addEventListener("change", () => {
-    if (roleSelect.value === "admin") {
-      adminTypeContainer.style.display = "block";
-    } else {
-      adminTypeContainer.style.display = "none";
-    }
-  });
-
-});
-
-  // Input fields
+  // Elements
   const emailInput = document.getElementById("email");
   const passwordInput = document.getElementById("password");
   const firstNameInput = document.getElementById("firstName");
   const middleNameInput = document.getElementById("middleName");
   const lastNameInput = document.getElementById("lastName");
-  const roleSelect = document.getElementById("role");
   const onAssistanceCheckbox = document.getElementById("onAssistance");
-
   const assistanceContainer = document.getElementById("assistanceContainer");
   const vendorFields = document.getElementById("vendorFields");
   const studentFields = document.getElementById("studentFields");
@@ -67,22 +54,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   const studentGradeLevel = document.getElementById("studentGradeLevel");
   const expiryDateInput = document.getElementById("expiryDate");
 
-  // ⬇️ Update dynamic field visibility and required attributes
   const updateConditionalFields = () => {
     const role = roleSelect.value;
 
     vendorFields.style.display = role === "vendor" ? "block" : "none";
     studentFields.style.display = role === "student" ? "block" : "none";
     assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
+    adminTypeContainer.style.display = role === "admin" ? "block" : "none";
 
     studentSchoolName.required = role === "student";
     expiryDateInput.required = role === "student";
   };
 
   roleSelect.addEventListener("change", updateConditionalFields);
-  updateConditionalFields(); // initialize on load
+  updateConditionalFields();
 
-  // 🔓 Logout handler
+  // 🔓 Logout
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("boopUser");
@@ -91,13 +78,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // 📤 Form submit handler
+  // 📤 Submit
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     statusDiv.textContent = "Creating user...";
     statusDiv.style.color = "black";
 
-    // Collect values
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     const first_name = firstNameInput.value.trim();
@@ -105,15 +91,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const last_name = lastNameInput.value.trim();
     const role = roleSelect.value;
     const on_assistance = onAssistanceCheckbox.checked;
+    const adminType = document.getElementById("adminType")?.value || null;
 
-    // Validation
     if (!email || !password || password.length < 6 || !first_name || !last_name || !role) {
       statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
       statusDiv.style.color = "red";
       return;
     }
 
-    // Payload
     const userPayload = {
       email,
       password,
@@ -121,7 +106,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       middle_name,
       last_name,
       role,
-      on_assistance: role === "cardholder" ? on_assistance : false
+      on_assistance: role === "cardholder" ? on_assistance : false,
+      type: role === "admin" ? adminType : null
     };
 
     if (role === "vendor") {
@@ -151,7 +137,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       };
     }
 
-    // 🚀 Submit
     try {
       const resUser = await fetch("/api/users", {
         method: "POST",
@@ -165,31 +150,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error(result.message || "Failed to create user");
       }
 
-      // 🎫 Create Transit Wallet for all users
-try {
-  const resTransit = await fetch("/api/transit-wallets", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-body: JSON.stringify({ user_id: result.user.id })
-  });
+      try {
+        const resTransit = await fetch("/api/transit-wallets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: result.user.id })
+        });
 
-  if (!resTransit.ok) {
-    const errMsg = await resTransit.text();
-    console.warn("🟡 Transit wallet creation failed:", errMsg);
-  } else {
-    console.log("✅ Transit wallet created.");
-  }
-} catch (err) {
-  console.error("❌ Failed to create transit wallet:", err);
-}
-      
-      // ✅ Success!
+        if (!resTransit.ok) {
+          const errMsg = await resTransit.text();
+          console.warn("🟡 Transit wallet creation failed:", errMsg);
+        } else {
+          console.log("✅ Transit wallet created.");
+        }
+      } catch (err) {
+        console.error("❌ Failed to create transit wallet:", err);
+      }
+
       statusDiv.textContent = "✅ User created successfully!";
       statusDiv.style.color = "green";
       form.reset();
       updateConditionalFields();
 
-      // 🧠 Add "Add Another User" button dynamically
       let addBtn = document.getElementById("addAnotherBtn");
       if (!addBtn) {
         addBtn = document.createElement("button");
@@ -220,7 +202,6 @@ body: JSON.stringify({ user_id: result.user.id })
     }
   });
 
-  // Clear status message when typing in the form again
   document.querySelectorAll("input, select").forEach(el => {
     el.addEventListener("input", () => {
       statusDiv.textContent = "";
