@@ -91,7 +91,11 @@ router.get("/", async (req, res) => {
     const whereClauses = [];
 
     // 🔍 Only show users that are not soft-deleted
-    whereClauses.push("deleted_at IS NULL");
+    if (status === "deleted") {
+  whereClauses.push("deleted_at IS NOT NULL");
+} else {
+  whereClauses.push("deleted_at IS NULL");
+}
 
     if (search) {
       whereClauses.push(`(
