@@ -1,3 +1,34 @@
+document.addEventListener("DOMContentLoaded", async () => {
+  const roleSelect = document.getElementById("role");
+  const adminTypeContainer = document.getElementById("adminTypeContainer");
+
+  let currentUserType = null;
+
+  try {
+    const res = await fetch("/api/me");
+    const user = await res.json();
+    currentUserType = user.type;
+  } catch (e) {
+    console.error("Failed to fetch current user info:", e);
+  }
+
+  // 🧠 Dynamic role options
+  const baseRoles = [
+    { value: "student", label: "Student" },
+    { value: "parent", label: "Parent" },
+    { value: "senior", label: "Senior" },
+    { value: "vendor", label: "Vendor" },
+    { value: "cardholder", label: "Cardholder" }
+  ];
+
+  if (currentUserType === "super_admin") {
+    baseRoles.unshift({ value: "admin", label: "Admin" });
+  }
+
+  // Populate the role select
+  roleSelect.innerHTML = `<option value="">Select Role</option>` + baseRoles.map(role =>
+    `<option value="${role.value}">${role.label}</option>`).join("");
+
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ add-user.js loaded");
 
