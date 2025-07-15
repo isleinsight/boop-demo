@@ -4,30 +4,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("addUserForm");
   const roleSelect = document.getElementById("role");
   const adminTypeContainer = document.getElementById("adminTypeContainer");
-
-  let currentUserType = null;
-
-  const currentUser = JSON.parse(localStorage.getItem("boopUser"));
-const currentUserType = currentUser?.type;
-
-  // 🧠 Dynamic role options
-  const baseRoles = [
-    { value: "student", label: "Student" },
-    { value: "parent", label: "Parent" },
-    { value: "senior", label: "Senior" },
-    { value: "vendor", label: "Vendor" },
-    { value: "cardholder", label: "Cardholder" }
-  ];
-
-  if (currentUserType === "super_admin") {
-    baseRoles.unshift({ value: "admin", label: "Admin" });
-  }
-
-  // Populate the role select
-  roleSelect.innerHTML = `<option value="">Select Role</option>` + baseRoles.map(role =>
-    `<option value="${role.value}">${role.label}</option>`).join("");
-
-  // Elements
   const emailInput = document.getElementById("email");
   const passwordInput = document.getElementById("password");
   const firstNameInput = document.getElementById("firstName");
@@ -49,6 +25,34 @@ const currentUserType = currentUser?.type;
   const studentGradeLevel = document.getElementById("studentGradeLevel");
   const expiryDateInput = document.getElementById("expiryDate");
 
+  let currentUserType = null;
+
+  try {
+    const res = await fetch("/api/me");
+    const user = await res.json();
+    currentUserType = user.type;
+  } catch (e) {
+    console.error("Failed to fetch current user info:", e);
+  }
+
+  // 🧠 Dynamic role options
+  const baseRoles = [
+    { value: "student", label: "Student" },
+    { value: "parent", label: "Parent" },
+    { value: "senior", label: "Senior" },
+    { value: "vendor", label: "Vendor" },
+    { value: "cardholder", label: "Cardholder" }
+  ];
+
+  if (currentUserType === "super_admin") {
+    baseRoles.unshift({ value: "admin", label: "Admin" });
+  }
+
+  // Populate role dropdown
+  roleSelect.innerHTML = `<option value="">Select Role</option>` +
+    baseRoles.map(role => `<option value="${role.value}">${role.label}</option>`).join("");
+
+  // 🔁 Update conditional visibility
   const updateConditionalFields = () => {
     const role = roleSelect.value;
 
@@ -64,7 +68,7 @@ const currentUserType = currentUser?.type;
   roleSelect.addEventListener("change", updateConditionalFields);
   updateConditionalFields();
 
-  // 🔓 Logout
+  // 🔓 Logout handler
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("boopUser");
@@ -73,7 +77,7 @@ const currentUserType = currentUser?.type;
     });
   }
 
-  // 📤 Submit
+  // 📤 Form submit handler
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     statusDiv.textContent = "Creating user...";
@@ -197,6 +201,7 @@ const currentUserType = currentUser?.type;
     }
   });
 
+  // Clear status on input
   document.querySelectorAll("input, select").forEach(el => {
     el.addEventListener("input", () => {
       statusDiv.textContent = "";
