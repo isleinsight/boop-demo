@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log("✅ add-user.js loaded");
+
   const roleSelect = document.getElementById("role");
   const adminTypeContainer = document.getElementById("adminTypeContainer");
+  const form = document.getElementById("addUserForm");
 
   let currentUserType = null;
 
@@ -29,10 +32,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   roleSelect.innerHTML = `<option value="">Select Role</option>` + baseRoles.map(role =>
     `<option value="${role.value}">${role.label}</option>`).join("");
 
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ add-user.js loaded");
+  // Optional: Show admin type dropdown when 'admin' is selected
+  roleSelect.addEventListener("change", () => {
+    if (roleSelect.value === "admin") {
+      adminTypeContainer.style.display = "block";
+    } else {
+      adminTypeContainer.style.display = "none";
+    }
+  });
 
-  const form = document.getElementById("addUserForm");
+});
 
   // Input fields
   const emailInput = document.getElementById("email");
