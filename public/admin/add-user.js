@@ -30,11 +30,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const token = localStorage.getItem("boop_jwt");
 
-const res = await fetch("/api/me", {
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-});
+    const res = await fetch("/api/me", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
     const user = await res.json();
     currentUserType = user.type;
   } catch (e) {
