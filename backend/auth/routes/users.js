@@ -1,4 +1,4 @@
-const authenticateToken = require("../middleware/auth-middleware");
+const authenticateToken = require("../middleware/authMiddleware.js");
 const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
