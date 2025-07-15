@@ -1,5 +1,5 @@
 // backend/login.js
-
+require('dotenv').config(); 
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
