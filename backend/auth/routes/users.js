@@ -16,6 +16,7 @@ router.post("/", async (req, res) => {
     middle_name,
     last_name,
     role,
+    type,
     on_assistance,
     vendor,
     student
@@ -27,10 +28,10 @@ router.post("/", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const result = await client.query(
-      `INSERT INTO users (email, password_hash, first_name, middle_name, last_name, role, on_assistance)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO users (email, password_hash, first_name, middle_name, last_name, role, type, on_assistance)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [email, hashedPassword, first_name, middle_name || null, last_name, role, on_assistance]
+      [email, hashedPassword, first_name, middle_name || null, last_name, role, type, on_assistance]
     );
 
     const user = result.rows[0];
@@ -172,7 +173,7 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ message: "Invalid user ID" });
   }
 
-  const fields = ["first_name", "middle_name", "last_name", "email", "role", "status", "on_assistance", "deleted_at"];
+  const fields = ["first_name", "middle_name", "last_name", "email", "role", "type", "status", "on_assistance", "deleted_at"];
   const updates = [];
   const values = [];
 
