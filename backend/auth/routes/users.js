@@ -309,7 +309,8 @@ router.get("/me", authenticateToken, async (req, res) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
+      console.warn("🛑 No user ID found in token payload.");
+      return res.status(401).json({ message: "Not authenticated — missing user ID" });
     }
 
     const result = await pool.query(
@@ -318,12 +319,16 @@ router.get("/me", authenticateToken, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      console.warn("❌ User ID from token not found in DB:", userId);
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(result.rows[0]);
+    const user = result.rows[0];
+    console.log("👤 Current user:", user.email, "| Role:", user.role);
+
+    res.status(200).json(user);
   } catch (err) {
-    console.error("❌ Error fetching /me:", err);
+    console.error("🔥 Error in /me route:", err.message);
     res.status(500).json({ message: "Failed to fetch current user info" });
   }
 });
