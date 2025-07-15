@@ -223,6 +223,28 @@ res.json({ message: "User soft-deleted" });
   }
 });
 
+
+// ✅ Restore user
+router.patch("/:id/restore", async (req, res) => {
+  const { id } = req.params;
+  if (!isValidUUID(id)) return res.status(400).json({ message: "Invalid user ID" });
+
+  try {
+    await pool.query(
+      `UPDATE users SET deleted_at = NULL, status = 'active' WHERE id = $1`,
+      [id]
+    );
+
+    // Optional: restore wallet too
+    await pool.query(`UPDATE wallets SET status = 'active' WHERE user_id = $1`, [id]);
+
+    res.json({ message: "User restored" });
+  } catch (err) {
+    console.error("❌ Error restoring user:", err);
+    res.status(500).json({ message: "Restore failed" });
+  }
+});
+
 // ✅ Get user by ID
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
