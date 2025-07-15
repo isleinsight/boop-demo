@@ -1,4 +1,12 @@
 
+form input,
+form select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
 
 .activity-list {
   display: flex;
