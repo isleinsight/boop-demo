@@ -306,7 +306,7 @@ router.post("/:id/signout", async (req, res) => {
 // ✅ Get current user info (used by /api/me)
 router.get("/me", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user && req.user.id;
 
     if (!userId) {
       console.warn("🛑 No user ID found in token payload.");
@@ -323,10 +323,7 @@ router.get("/me", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const user = result.rows[0];
-    console.log("👤 Current user:", user.email, "| Role:", user.role);
-
-    res.status(200).json(user);
+    res.status(200).json(result.rows[0]);
   } catch (err) {
     console.error("🔥 Error in /me route:", err.message);
     res.status(500).json({ message: "Failed to fetch current user info" });
