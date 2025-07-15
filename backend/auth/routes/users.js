@@ -302,4 +302,30 @@ router.post("/:id/signout", async (req, res) => {
   res.json({ message: "Force sign-out not implemented yet" });
 });
 
+
+// ✅ Get current user info (used by /api/me)
+router.get("/me", async (req, res) => {
+  try {
+    const userId = req.user?.id; // assumes auth middleware sets req.user
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const result = await pool.query(
+      "SELECT id, email, role, type, first_name, last_name FROM users WHERE id = $1",
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("❌ Error fetching /me:", err);
+    res.status(500).json({ message: "Failed to fetch current user info" });
+  }
+});
+
 module.exports = router;
