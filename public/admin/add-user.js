@@ -28,7 +28,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentUserType = null;
 
   try {
-    const res = await fetch("/api/me");
+    const token = localStorage.getItem("boop_jwt");
+
+const res = await fetch("/api/me", {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+});
     const user = await res.json();
     currentUserType = user.type;
   } catch (e) {
