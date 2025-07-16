@@ -4,7 +4,7 @@ require('dotenv').config(); // 👈 Always first
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('./db'); // 👈 Use shared pool
+const db = require('../db'); // 👈 Use shared pool
 
 const router = express.Router();
 
