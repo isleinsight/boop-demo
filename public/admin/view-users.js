@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  const token = localStorage.getItem("boop_jwt");
   const userTableBody = document.getElementById("userTableBody");
   const searchInput = document.getElementById("searchInput");
   const searchBtn = document.getElementById("searchBtn");
@@ -36,7 +37,7 @@ const res = await fetch("/api/me", {
   }
 
   async function fetchUsers() {
-    const token = localStorage.getItem("boop_jwt");
+
     try {
       const search = encodeURIComponent(searchInput.value);
       const role = encodeURIComponent(roleFilter.value);
@@ -246,9 +247,16 @@ const res = await fetch("/api/me", {
     if (confirmText !== "DELETE") return;
 
     try {
-      await Promise.all(ids.map(id =>
-        fetch(`/api/users/${id}`, { method: "DELETE" })
-      ));
+      const token = localStorage.getItem("boop_jwt");
+
+await Promise.all(ids.map(id =>
+  fetch(`/api/users/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  })
+));
       fetchUsers(); // Refresh after delete
     } catch (e) {
       console.error("Bulk delete failed:", e);
