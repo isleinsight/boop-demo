@@ -42,7 +42,7 @@ router.post("/", authenticateToken, async (req, res) => {
 
 await logAdminAction({
   client,
-  admin_id: req.user?.id,
+  admin_id: req.user && req.user.id,
   uid: user.id,
   action: "create_user",
   new_email: user.email,
