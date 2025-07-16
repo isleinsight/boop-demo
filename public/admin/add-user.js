@@ -144,11 +144,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      const resUser = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userPayload)
-      });
+      const token = localStorage.getItem("boop_jwt");
+
+const resUser = await fetch("/api/users", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}` // 👈 this is critical!
+  },
+  body: JSON.stringify(userPayload)
+});
 
       const result = await resUser.json();
 
