@@ -23,8 +23,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   let sortOrder = 'asc';
 
   try {
-    const meRes = await fetch("/api/me");
-    const meData = await meRes.json();
+    const token = localStorage.getItem("boop_jwt");
+const res = await fetch("/api/me", {
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+});
+    const meData = await res.json();
     currentUserEmail = meData.email;
   } catch (err) {
     console.error("Could not fetch current user email");
@@ -37,7 +42,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const status = encodeURIComponent(statusFilter.value);
       const query = `?page=${currentPage}&perPage=${perPage}&search=${search}&role=${role}&status=${status}`;
 
-      const res = await fetch(`/api/users${query}`);
+      const res = await fetch(`/api/users${query}`, {
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+});
       const data = await res.json();
       allUsers = data.users || [];
       totalPages = data.totalPages || 1;
@@ -89,20 +98,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function performAction(user, action) {
   try {
     if (action === "delete") {
-      await fetch(`/api/users/${user.id}`, { method: "DELETE" });
+      await fetch(`/api/users/${user.id}`, {
+  method: "DELETE",
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+});
     } else if (action === "suspend" || action === "unsuspend") {
       const newStatus = action === "suspend" ? "suspended" : "active";
       await fetch(`/api/users/${user.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
+  method: "PATCH",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  },
+  body: JSON.stringify({ status: newStatus }),
+});
     } else if (action === "signout") {
-      await fetch(`/api/users/${user.id}/signout`, { method: "POST" });
+      await fetch(`/api/users/${user.id}/signout`, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+});
     } else if (action === "restore") {
       await fetch(`/api/users/${user.id}/restore`, {
-        method: "PATCH"
-      });
+  method: "PATCH",
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+});
     }
     fetchUsers(); // Refresh table
   } catch (err) {
