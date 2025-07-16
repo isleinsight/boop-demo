@@ -1,5 +1,5 @@
 // backend/login.js
-require('dotenv').config(); 
+require('dotenv').config();
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -23,13 +23,23 @@ module.exports = async function (req, res) {
     }
 
     const user = result.rows[0];
+
+    // 🔒 Sanity check before comparing
+    if (typeof user.password_hash !== 'string') {
+      console.error('❌ Invalid password hash type:', typeof user.password_hash);
+      return res.status(500).json({ message: 'Server error: invalid password hash' });
+    }
+
+    // 🧠 Optional debugging
+    // console.log('User hash:', user.password_hash);
+    // console.log('Incoming password:', password);
+
     const match = await bcrypt.compare(password, user.password_hash);
 
     if (!match) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
-    // ✅ Include type in the token payload
     const token = jwt.sign(
       {
         userId: user.id,
@@ -41,7 +51,6 @@ module.exports = async function (req, res) {
       { expiresIn: '2h' }
     );
 
-    // ✅ Include type in the response body
     res.status(200).json({
       message: 'Login successful',
       token,
