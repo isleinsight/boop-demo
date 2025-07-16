@@ -1,13 +1,11 @@
 // backend/login.js
-require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const pool = require('./db'); // ✅ Reusable pool module
+const pool = require('./db'); // uses .env from db.js
 
 module.exports = async function (req, res) {
   const { email, password } = req.body;
 
-  // 🔍 Input validation
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required.' });
   }
@@ -24,18 +22,12 @@ module.exports = async function (req, res) {
 
     const user = result.rows[0];
 
-    // 🧠 Debug logs (optional)
-    console.log('👉 Raw user from DB:', user);
-    console.log('👉 typeof user.password_hash:', typeof user.password_hash);
-
-    // 🧱 Defensive check
     if (typeof user.password_hash !== 'string') {
       console.error('❌ Invalid password hash type:', typeof user.password_hash);
       return res.status(500).json({ message: 'Server error: password hash corrupted' });
     }
 
     const match = await bcrypt.compare(password, user.password_hash);
-
     if (!match) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
@@ -57,7 +49,6 @@ module.exports = async function (req, res) {
       { expiresIn: '2h' }
     );
 
-    // 🚀 All good
     res.status(200).json({
       message: 'Login successful',
       token,
@@ -66,7 +57,7 @@ module.exports = async function (req, res) {
         email: user.email,
         role: user.role,
         type: user.type,
-        name: `${user.first_name} ${user.last_name}`,
+        name: `${user.first_name} ${user.last_name}`
       }
     });
 
