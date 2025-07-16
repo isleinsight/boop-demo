@@ -1,7 +1,8 @@
 // backend/login.js
+require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const pool = require('./db'); // uses .env from db.js
+const pool = require('./db'); // Uses updated db.js
 
 module.exports = async function (req, res) {
   const { email, password } = req.body;
@@ -24,18 +25,13 @@ module.exports = async function (req, res) {
 
     if (typeof user.password_hash !== 'string') {
       console.error('❌ Invalid password hash type:', typeof user.password_hash);
-      return res.status(500).json({ message: 'Server error: password hash corrupted' });
+      return res.status(500).json({ message: 'Password hash corrupted' });
     }
 
     const match = await bcrypt.compare(password, user.password_hash);
+
     if (!match) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
-    }
-
-    const jwtSecret = process.env.JWT_SECRET;
-    if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
-      console.error('❌ JWT_SECRET is missing or invalid.');
-      return res.status(500).json({ message: 'Server misconfigured: JWT secret missing' });
     }
 
     const token = jwt.sign(
@@ -45,7 +41,7 @@ module.exports = async function (req, res) {
         email: user.email,
         type: user.type,
       },
-      jwtSecret,
+      process.env.JWT_SECRET,
       { expiresIn: '2h' }
     );
 
