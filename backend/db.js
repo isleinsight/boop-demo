@@ -1,21 +1,23 @@
 // backend/db.js
 const { Pool } = require('pg');
 require('dotenv').config();
-console.log('🔍 DATABASE_URL =', process.env.DATABASE_URL);
 
-let pool;
+const connectionString = process.env.DATABASE_URL;
 
-try {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  });
-
-  pool.connect()
-    .then(() => console.log('✅ PostgreSQL pool connected'))
-    .catch((err) => console.warn('⚠️ DB connection failed on startup:', err.message));
-} catch (err) {
-  console.error('❌ Failed to configure DB pool:', err.message);
+if (!connectionString) {
+  throw new Error('❌ Missing DATABASE_URL in environment variables.');
 }
+
+console.log('🔍 DATABASE_URL =', connectionString);
+
+const pool = new Pool({
+  connectionString,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+// Optionally test the connection
+pool.connect()
+  .then(() => console.log('✅ PostgreSQL pool connected'))
+  .catch((err) => console.warn('⚠️ DB connection failed on startup:', err.message));
 
 module.exports = pool;
