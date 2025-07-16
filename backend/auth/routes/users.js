@@ -40,6 +40,15 @@ router.post("/", authenticateToken, async (req, res) => {
 
     const user = result.rows[0];
 
+await logAdminAction({
+  client,
+  admin_id: req.user?.id,
+  uid: user.id,
+  action: "create_user",
+  new_email: user.email,
+  status: "completed"
+});
+
     if (rolesWithWallet.includes(role)) {
       const walletRes = await client.query(
         `INSERT INTO wallets (user_id, id, status)
