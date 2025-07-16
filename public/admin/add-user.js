@@ -1,6 +1,13 @@
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("✅ add-user.js loaded");
 
+  const token = localStorage.getItem("boop_jwt");
+  if (!token) {
+    console.warn("🔐 No token found. Redirecting to login.");
+    window.location.href = "login.html";
+    return;
+  }
+
   const form = document.getElementById("addUserForm");
   const roleSelect = document.getElementById("role");
   const adminTypeContainer = document.getElementById("adminTypeContainer");
@@ -163,10 +170,13 @@ const resUser = await fetch("/api/users", {
 
       try {
         const resTransit = await fetch("/api/transit-wallets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: result.user.id })
-        });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  },
+  body: JSON.stringify({ user_id: result.user.id })
+});
 
         if (!resTransit.ok) {
           const errMsg = await resTransit.text();
