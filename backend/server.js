@@ -1,4 +1,5 @@
 // backend/server.js
+const authenticateToken = require('./middleware/authMiddleware');
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const express = require('express');
@@ -35,6 +36,16 @@ app.use('/api/wallets', walletRoutes);
 app.use('/api/vendors', vendorsRoute);
 app.use('/api/user-students', userStudentsRoute);
 
+// ✅ /api/me - current logged-in user info
+app.get('/api/me', authenticateToken, (req, res) => {
+  const { id, userId, email, role, type } = req.user;
+  res.json({
+    id: userId || id,
+    email,
+    role,
+    type
+  });
+});
 
 // ✅ Health check
 app.get('/health', (req, res) => {
