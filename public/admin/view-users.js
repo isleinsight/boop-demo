@@ -36,6 +36,7 @@ const res = await fetch("/api/me", {
   }
 
   async function fetchUsers() {
+    const token = localStorage.getItem("boop_jwt");
     try {
       const search = encodeURIComponent(searchInput.value);
       const role = encodeURIComponent(roleFilter.value);
