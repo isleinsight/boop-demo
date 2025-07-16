@@ -1,16 +1,16 @@
 // backend/login.js
 require('dotenv').config();
-const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+const pool = require('./db'); // Use shared, pre-validated pool
 
 module.exports = async function (req, res) {
   const { email, password } = req.body;
+
+  // ✅ Check for missing fields
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required.' });
+  }
 
   try {
     const result = await pool.query(
@@ -24,15 +24,11 @@ module.exports = async function (req, res) {
 
     const user = result.rows[0];
 
-    // 🔒 Sanity check before comparing
+    // 🔒 Confirm password hash is a string
     if (typeof user.password_hash !== 'string') {
       console.error('❌ Invalid password hash type:', typeof user.password_hash);
-      return res.status(500).json({ message: 'Server error: invalid password hash' });
+      return res.status(500).json({ message: 'Server error: password hash corrupted' });
     }
-
-    // 🧠 Optional debugging
-    // console.log('User hash:', user.password_hash);
-    // console.log('Incoming password:', password);
 
     const match = await bcrypt.compare(password, user.password_hash);
 
@@ -40,17 +36,25 @@ module.exports = async function (req, res) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
+    // 🔐 Create JWT
+    const jwtSecret = process.env.JWT_SECRET;
+    if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
+      console.error('❌ JWT_SECRET is missing or invalid.');
+      return res.status(500).json({ message: 'Server misconfigured: JWT secret missing' });
+    }
+
     const token = jwt.sign(
       {
         userId: user.id,
         role: user.role,
         email: user.email,
-        type: user.type
+        type: user.type,
       },
-      process.env.JWT_SECRET || 'tempsecret',
+      jwtSecret,
       { expiresIn: '2h' }
     );
 
+    // 🎉 Success response
     res.status(200).json({
       message: 'Login successful',
       token,
