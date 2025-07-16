@@ -1,4 +1,5 @@
 const authenticateToken = require("../middleware/authMiddleware");
+const logAdminAction = require("../../utils/logAdminAction");
 const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
@@ -9,7 +10,9 @@ const isValidUUID = (str) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 
 // ✅ Create user
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, async (req, res) => {
+  const adminId = req.user.id;
+  const adminType = req.user.type;
   const {
     email,
     password,
@@ -168,7 +171,7 @@ router.get("/", async (req, res) => {
 });
 
 // ✅ Update user
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
@@ -199,6 +202,13 @@ router.patch("/:id", async (req, res) => {
       await pool.query(`UPDATE wallets SET status = $1 WHERE user_id = $2`, [req.body.status, id]);
     }
 
+    // 📝 Log update action
+    await pool.query(
+      `INSERT INTO admin_actions (admin_id, action, target_user_id, type)
+       VALUES ($1, 'update', $2, $3)`,
+      [req.user.id, id, req.user.type]
+    );
+
     res.json({ message: "User updated" });
   } catch (err) {
     console.error("❌ Error updating user:", err);
@@ -207,7 +217,7 @@ router.patch("/:id", async (req, res) => {
 });
 
 // ✅ Delete user
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
@@ -215,22 +225,29 @@ router.delete("/:id", async (req, res) => {
 
   try {
     await pool.query(`UPDATE wallets SET status = 'archived' WHERE user_id = $1`, [id]);
-await pool.query(
-  `UPDATE users
-   SET deleted_at = NOW(), status = 'suspended'
-   WHERE id = $1`,
-  [id]
-);
-res.json({ message: "User soft-deleted" });
+    await pool.query(
+      `UPDATE users
+       SET deleted_at = NOW(), status = 'suspended'
+       WHERE id = $1`,
+      [id]
+    );
+
+    // 📝 Log deletion
+    await pool.query(
+      `INSERT INTO admin_actions (admin_id, action, target_user_id, type)
+       VALUES ($1, 'delete', $2, $3)`,
+      [req.user.id, id, req.user.type]
+    );
+
+    res.json({ message: "User soft-deleted" });
   } catch (err) {
     console.error("❌ Error deleting user:", err);
     res.status(500).json({ message: "Delete failed" });
   }
 });
 
-
 // ✅ Restore user
-router.patch("/:id/restore", async (req, res) => {
+router.patch("/:id/restore", authenticateToken, async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) return res.status(400).json({ message: "Invalid user ID" });
 
@@ -240,8 +257,14 @@ router.patch("/:id/restore", async (req, res) => {
       [id]
     );
 
-    // Optional: restore wallet too
     await pool.query(`UPDATE wallets SET status = 'active' WHERE user_id = $1`, [id]);
+
+    // 📝 Log restore action
+    await pool.query(
+      `INSERT INTO admin_actions (admin_id, action, target_user_id, type)
+       VALUES ($1, 'restore', $2, $3)`,
+      [req.user.id, id, req.user.type]
+    );
 
     res.json({ message: "User restored" });
   } catch (err) {
