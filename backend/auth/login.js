@@ -23,6 +23,10 @@ module.exports = async function (req, res) {
     }
 
     const user = result.rows[0];
+    const user = result.rows[0];
+
+console.log('👉 Raw user from DB:', user);
+console.log('👉 typeof user.password_hash:', typeof user.password_hash);
 
     // 🔒 Confirm password hash is a string
     if (typeof user.password_hash !== 'string') {
