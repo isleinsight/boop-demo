@@ -17,6 +17,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// ✅ Auth middleware
+const authenticateToken = require('./middleware/auth-middleware'); // ✅ Adjust path if needed
+
 // ✅ Auth routes
 const authRoutes = require('./auth/auth');
 app.use('/auth', authRoutes); // routes like /auth/login, /auth/signup
@@ -28,13 +31,21 @@ const walletRoutes = require('./auth/routes/wallets');
 const vendorsRoute = require('./auth/routes/vendors');
 const userStudentsRoute = require('./auth/routes/userStudents');
 
-
 app.use('/api/users', usersRoute);
 app.use('/api/cards', cardsRoute);
 app.use('/api/wallets', walletRoutes); 
 app.use('/api/vendors', vendorsRoute);
 app.use('/api/user-students', userStudentsRoute);
 
+// ✅ /api/me - get current user from token
+app.get('/api/me', authenticateToken, (req, res) => {
+  res.json({
+    id: req.user.userId || req.user.id,
+    email: req.user.email,
+    role: req.user.role,
+    type: req.user.type
+  });
+});
 
 // ✅ Health check
 app.get('/health', (req, res) => {
