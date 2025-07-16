@@ -1,5 +1,5 @@
 // backend/server.js
-const authenticateToken = require('auth/middleware/authMiddleware');
+const authenticateToken = require('./auth/middleware/authMiddleware');
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const express = require('express');
