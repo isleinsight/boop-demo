@@ -1,5 +1,5 @@
 const authenticateToken = require("../middleware/authMiddleware");
-const logAdminAction = require("../middleware/logAdminAction");
+const logAdminAction = require("../middleware/logadminaction");
 const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
