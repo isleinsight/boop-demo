@@ -2,12 +2,12 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const pool = require('./db'); // Use shared, pre-validated pool
+const pool = require('./db'); // ✅ Reusable pool module
 
 module.exports = async function (req, res) {
   const { email, password } = req.body;
 
-  // ✅ Check for missing fields
+  // 🔍 Input validation
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required.' });
   }
@@ -23,12 +23,12 @@ module.exports = async function (req, res) {
     }
 
     const user = result.rows[0];
-    const user = result.rows[0];
 
-console.log('👉 Raw user from DB:', user);
-console.log('👉 typeof user.password_hash:', typeof user.password_hash);
+    // 🧠 Debug logs (optional)
+    console.log('👉 Raw user from DB:', user);
+    console.log('👉 typeof user.password_hash:', typeof user.password_hash);
 
-    // 🔒 Confirm password hash is a string
+    // 🧱 Defensive check
     if (typeof user.password_hash !== 'string') {
       console.error('❌ Invalid password hash type:', typeof user.password_hash);
       return res.status(500).json({ message: 'Server error: password hash corrupted' });
@@ -40,7 +40,6 @@ console.log('👉 typeof user.password_hash:', typeof user.password_hash);
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
-    // 🔐 Create JWT
     const jwtSecret = process.env.JWT_SECRET;
     if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
       console.error('❌ JWT_SECRET is missing or invalid.');
@@ -58,7 +57,7 @@ console.log('👉 typeof user.password_hash:', typeof user.password_hash);
       { expiresIn: '2h' }
     );
 
-    // 🎉 Success response
+    // 🚀 All good
     res.status(200).json({
       message: 'Login successful',
       token,
@@ -67,7 +66,7 @@ console.log('👉 typeof user.password_hash:', typeof user.password_hash);
         email: user.email,
         role: user.role,
         type: user.type,
-        name: `${user.first_name} ${user.last_name}`
+        name: `${user.first_name} ${user.last_name}`,
       }
     });
 
