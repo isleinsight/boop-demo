@@ -384,10 +384,10 @@ router.post("/:id/signout", authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 🚨 Actually force the user out
-    await pool.query("UPDATE users SET force_signed_out = true WHERE id = $1", [id]);
+    // ✅ Set force_signed_out = true
+    await pool.query(`UPDATE users SET force_signed_out = true WHERE id = $1`, [id]);
 
-    // ✅ Log the sign-out action
+    // ✅ Log the sign-out action to admin_actions
     await logAdminAction({
       performed_by: req.user.id,
       action: "signout",
@@ -395,6 +395,13 @@ router.post("/:id/signout", authenticateToken, async (req, res) => {
       type: req.user.type,
       status: "completed"
     });
+
+    res.status(200).json({ message: "User has been signed out successfully." });
+  } catch (err) {
+    console.error("❌ Failed to sign out user:", err);
+    res.status(500).json({ message: "Failed to force sign-out" });
+  }
+});
 
     res.status(200).json({ message: "User was force signed out." });
   } catch (err) {
