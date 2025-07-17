@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let sortOrder = 'asc';
 
   try {
+    let currentUser = null;
     const token = localStorage.getItem("boop_jwt");
 const res = await fetch("/api/me", {
   headers: {
@@ -102,11 +103,13 @@ const res = await fetch("/api/me", {
   try {
     if (action === "delete") {
       await fetch(`/api/users/${user.id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
+  method: "DELETE",
+  headers: {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({ uid: currentUser?.id })  // ✅ send the ID of the deleter
+});
     } else if (action === "suspend" || action === "unsuspend") {
       const newStatus = action === "suspend" ? "suspended" : "active";
       await fetch(`/api/users/${user.id}`, {
@@ -253,8 +256,10 @@ await Promise.all(ids.map(id =>
   fetch(`/api/users/${id}`, {
     method: "DELETE",
     headers: {
-      "Authorization": `Bearer ${token}`
-    }
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ uid: currentUser?.id })  // ✅ Track admin who performed it
   })
 ));
       fetchUsers(); // Refresh after delete
