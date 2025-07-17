@@ -403,12 +403,6 @@ router.post("/:id/signout", authenticateToken, async (req, res) => {
   }
 });
 
-    res.status(200).json({ message: "User was force signed out." });
-  } catch (err) {
-    console.error("❌ Failed to force sign-out:", err);
-    res.status(500).json({ message: "Failed to force sign-out" });
-  }
-});
 
 // ✅ Get current user info (used by /api/me)
 router.get("/me", authenticateToken, async (req, res) => {
