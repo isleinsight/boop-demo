@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let allUsers = [];
   let currentUserEmail = null;
+  let currentUser = null; 
   let currentPage = 1;
   const perPage = 10;
   let totalPages = 1;
@@ -24,18 +25,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   let sortOrder = 'asc';
 
   try {
-    let currentUser = null;
-    const token = localStorage.getItem("boop_jwt");
-const res = await fetch("/api/me", {
-  headers: {
-    "Authorization": `Bearer ${token}`
-  }
-});
-    const meData = await res.json();
-    currentUserEmail = meData.email;
-  } catch (err) {
-    console.error("Could not fetch current user email");
-  }
+  const res = await fetch("/api/me", {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  const meData = await res.json();
+  currentUser = meData; // ✅ Save full user object for later use
+  currentUserEmail = meData.email;
+} catch (err) {
+  console.error("Could not fetch current user email");
+}
 
   async function fetchUsers() {
 
@@ -258,7 +258,7 @@ await Promise.all(ids.map(id =>
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ uid: currentUser?.id })  // ✅ Track admin who performed it
+    body: JSON.stringify({ uid: currentUser?.id }) // ✅ Track admin who performed it
   })
 ));
       fetchUsers(); // Refresh after delete
