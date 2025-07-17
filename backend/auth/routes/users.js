@@ -380,8 +380,24 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/:id/signout", async (req, res) => {
-  res.json({ message: "Force sign-out not implemented yet" });
+router.post("/:id/signout", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // ✅ Log the sign-out action to admin_actions
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "signout",
+      target_user_id: id,
+      type: req.user.type,
+      status: "completed"
+    });
+
+    res.status(200).json({ message: "User force sign-out logged." });
+  } catch (err) {
+    console.error("❌ Failed to log sign-out:", err);
+    res.status(500).json({ message: "Failed to force sign-out" });
+  }
 });
 
 // ✅ Get current user info (used by /api/me)
