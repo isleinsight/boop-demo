@@ -76,6 +76,7 @@ router.post("/", authenticateToken, async (req, res) => {
     }
 
     // ✅ Log creation
+    console.log("🧪 [CREATE USER] req.user =", req.user);
     await logAdminAction({
       performed_by: req.user.id,
       action: "create_user",
