@@ -2,8 +2,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const form = e.target;
-  const expectedRole = form.dataset.role;
-  const redirectTo = form.dataset.redirect;
+  const expectedRole = form.dataset.role;     // e.g. "cardholder", "parent", etc
+  const redirectTo = form.dataset.redirect;   // e.g. "cardholder.html", etc
 
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -13,7 +13,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const res = await fetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({
+        email,
+        password,
+        audience: expectedRole  // 👈 REQUIRED for backend role verification
+      })
     });
 
     const data = await res.json();
@@ -25,7 +29,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       localStorage.setItem("boop_jwt", data.token);
       localStorage.setItem("boopUser", JSON.stringify(data.user));
 
-      // ✅ Role validation
+      // ✅ Frontend check for extra security
       const allowedRoles = {
         cardholder: ["cardholder", "student", "senior"],
         parent: ["parent"],
