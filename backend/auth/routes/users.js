@@ -186,7 +186,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
     return res.status(400).json({ message: "Invalid user ID" });
   }
 
-  const fields = ["first_name", "middle_name", "last_name", "email", "role", "type", "status", "on_assistance", "deleted_at"];
+  const fields = ["first_name", "middle_name", "last_name", "email", "role", "type", "status", "on_assistance", "deleted_at", "performed_by"];
   const updates = [];
   const values = [];
 
@@ -213,10 +213,10 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 
     // 📝 Log update action
     await pool.query(
-      `INSERT INTO admin_actions (admin_id, action, target_user_id, type)
-       VALUES ($1, 'update', $2, $3)`,
-      [req.user.id, id, req.user.type]
-    );
+  `INSERT INTO admin_actions (admin_id, action, target_user_id, type, performed_by)
+   VALUES ($1, 'delete', $2, $3, $4)`,
+  [req.user.id, id, req.user.type, req.user.id]
+);
 
     res.json({ message: "User updated" });
   } catch (err) {
@@ -243,10 +243,10 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 
     // 📝 Log deletion
     await pool.query(
-      `INSERT INTO admin_actions (admin_id, action, target_user_id, type)
-       VALUES ($1, 'delete', $2, $3)`,
-      [req.user.id, id, req.user.type]
-    );
+  `INSERT INTO admin_actions (admin_id, action, target_user_id, type, performed_by)
+   VALUES ($1, 'delete', $2, $3, $4)`,
+  [req.user.id, id, req.user.type, req.user.id]
+);
 
     res.json({ message: "User soft-deleted" });
   } catch (err) {
@@ -270,10 +270,10 @@ router.patch("/:id/restore", authenticateToken, async (req, res) => {
 
     // 📝 Log restore action
     await pool.query(
-      `INSERT INTO admin_actions (admin_id, action, target_user_id, type)
-       VALUES ($1, 'restore', $2, $3)`,
-      [req.user.id, id, req.user.type]
-    );
+  `INSERT INTO admin_actions (admin_id, action, target_user_id, type, performed_by)
+   VALUES ($1, 'delete', $2, $3, $4)`,
+  [req.user.id, id, req.user.type, req.user.id]
+);
 
     res.json({ message: "User restored" });
   } catch (err) {
