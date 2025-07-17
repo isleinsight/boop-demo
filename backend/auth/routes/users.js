@@ -32,17 +32,16 @@ router.post("/", authenticateToken, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const result = await client.query(
-      `INSERT INTO users (email, password_hash, first_name, middle_name, last_name, role, type, on_assistance, performed_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO users (email, password_hash, first_name, middle_name, last_name, role, type, on_assistance)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [email, hashedPassword, first_name, middle_name || null, last_name, role, type, on_assistance, performed_by]
+      [email, hashedPassword, first_name, middle_name || null, last_name, role, type, on_assistance]
     );
 
     const user = result.rows[0];
 
 await logAdminAction({
-  client,
-  admin_id: req.user.id,
+  performed_by: req.user.id,
   target_user_id: user.id,
   action: "create_user",
   type: req.user.type,
@@ -214,9 +213,9 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 
     // 📝 Log update action
     await pool.query(
-  `INSERT INTO admin_actions (admin_id, action, target_user_id, type, performed_by)
-   VALUES ($1, 'delete', $2, $3, $4)`,
-  [req.user.id, id, req.user.type, req.user.id]
+  `INSERT INTO admin_actions (performed_by, action, target_user_id, type)
+   VALUES ($1, 'delete', $2, $3)`,
+  [req.user.id, id, req.user.type]
 );
 
     res.json({ message: "User updated" });
