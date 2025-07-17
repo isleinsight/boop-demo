@@ -1,15 +1,15 @@
 const pool = require("../../db");
 
 const logAdminAction = async ({
-  admin_id,
+  performed_by,
   action,
   target_user_id,
-  type,
+  new_email,
   status,
-  old_email = null,
-  new_email = null
+  error_message,
+  type
 }) => {
-  if (!admin_id || !action) {
+  if (!performed_by || !action) {
     console.warn("⚠️ Missing required admin log fields");
     return;
   }
@@ -17,29 +17,28 @@ const logAdminAction = async ({
   try {
     await pool.query(
       `INSERT INTO admin_actions (
-        admin_id,
+        performed_by, 
+        action, 
+        target_user_id, 
+        new_email, 
+        status, 
+        error_message, 
+        type
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
         performed_by,
         action,
-        target_user_id,
-        type,
-        status,
-        old_email,
-        new_email
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        admin_id,       // performed_by
-        admin_id,       // again for admin_id (some schemas separate these)
-        action,
         target_user_id || null,
-        type || null,
-        status || null,
-        old_email,
-        new_email
+        new_email || null,
+        status || "completed",
+        error_message || null,
+        type || "admin"
       ]
     );
     console.log("📝 Admin action logged");
   } catch (err) {
-    console.error("❌ Failed to log admin action:", err.message);
+    console.error("❌ Failed to log admin action:", err);
   }
 };
 
