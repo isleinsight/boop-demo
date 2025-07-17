@@ -312,6 +312,7 @@ router.patch("/:id/restore", authenticateToken, async (req, res) => {
       [id]
     );
 
+    console.log("🧪 req.user contents:", req.user);
     await logAdminAction({
       performed_by: req.user.id,
       action: "restore",
