@@ -2,13 +2,25 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const pool = require('./db'); // Uses updated db.js
+const pool = require('./db');
 
 module.exports = async function (req, res) {
-  const { email, password } = req.body;
+  const { email, password, audience } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required.' });
+  }
+
+  // 🎯 Role access control based on login source
+  const roleMap = {
+    admin: ["admin", "super_admin"],
+    cardholder: ["cardholder", "student", "senior"],
+    parent: ["parent"],
+    vendor: ["vendor"]
+  };
+
+  if (!audience || !roleMap[audience]) {
+    return res.status(400).json({ message: "Missing or invalid login audience" });
   }
 
   try {
@@ -34,6 +46,13 @@ module.exports = async function (req, res) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
+    // ❌ BLOCK unauthorized role for this login target
+    const allowedRoles = roleMap[audience];
+    if (!allowedRoles.includes(user.role)) {
+      return res.status(403).json({ message: "Unauthorized role for this login" });
+    }
+
+    // ✅ Reset force sign-out flag
     await pool.query("UPDATE users SET force_signed_out = false WHERE id = $1", [user.id]);
 
     const token = jwt.sign(
