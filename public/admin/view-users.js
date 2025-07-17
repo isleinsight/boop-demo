@@ -102,14 +102,13 @@ const res = await fetch("/api/me", {
   const token = localStorage.getItem("boop_jwt"); // ✅ Add this line
   try {
     if (action === "delete") {
-      await fetch(`/api/users/${user.id}`, {
-  method: "DELETE",
-  headers: {
-    "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({ uid: currentUser?.id })  // ✅ send the ID of the deleter
-});
+  await fetch(`/api/users/${user.id}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+
     } else if (action === "suspend" || action === "unsuspend") {
       const newStatus = action === "suspend" ? "suspended" : "active";
       await fetch(`/api/users/${user.id}`, {
