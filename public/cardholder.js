@@ -16,20 +16,35 @@ if (!token) {
 (async () => {
   try {
     const res = await fetch("/api/me", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!res.ok) throw new Error("Unauthorized or force signed out");
+    if (res.status === 401) {
+      // Force sign-out or invalid token
+      console.warn("⛔ Unauthorized or force signed out");
+      localStorage.clear();
+      window.location.href = "cardholder-login.html";
+      return;
+    }
 
     const user = await res.json();
 
     if (user.force_signed_out) {
       console.warn("⛔ User has been force signed out");
-      redirectToLogin();
+      localStorage.clear();
+      window.location.href = "cardholder-login.html";
       return;
     }
+
+    // 👇 Your existing logic continues here...
+    // e.g. populate UI, fetch wallet, etc.
+
+  } catch (err) {
+    console.error("🔥 Error fetching user info:", err);
+    localStorage.clear();
+    window.location.href = "cardholder-login.html";
+  }
+})();
 
     cardholderNameEl.textContent = `${user.first_name || ""} ${user.last_name || ""}`;
     cardholderEmailEl.textContent = user.email || "-";
