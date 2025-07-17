@@ -1,36 +1,5 @@
-// Firebase v10 imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const token = localStorage.getItem("boop_jwt");
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-  authDomain: "boop-becff.firebaseapp.com",
-  projectId: "boop-becff",
-  storageBucket: "boop-becff.appspot.com",
-  messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-};
-
-// Init
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// DOM elements
 const logoutBtn = document.getElementById("logoutBtn");
 const cardholderNameEl = document.getElementById("cardholderName");
 const cardholderEmailEl = document.getElementById("cardholderEmail");
@@ -39,119 +8,56 @@ const walletBalanceEl = document.getElementById("walletBalance");
 const transactionBody = document.getElementById("transactionBody");
 const sendReceiveButtons = document.getElementById("sendReceiveButtons");
 
-// Auth check
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
+// 🔐 Redirect if no token
+if (!token) {
+  window.location.href = "cardholder-login.html";
+}
 
+// 🔐 Fetch user info
+(async () => {
   try {
-    const userDoc = await getDoc(doc(db, "users", user.uid));
-    if (userDoc.exists()) {
-      const data = userDoc.data();
-
-      // Populate profile info
-      cardholderNameEl.textContent = `${data.firstName || ""} ${data.lastName || ""}`;
-      cardholderEmailEl.textContent = data.email || "-";
-      walletIdEl.textContent = data.walletId || "N/A";
-      walletBalanceEl.textContent = `$${(data.walletBalance || 0).toFixed(2)}`;
-
-      // Role-based logic for showing transfer/add funds buttons
-      const role = data.role?.toLowerCase(); // normalize casing
-
-      if (sendReceiveButtons) {
-        const showButtons =
-          role === "vendor" ||
-          (role === "cardholder" && !data.isOnGovernmentAssistance);
-
-        if (showButtons) {
-          sendReceiveButtons.classList.remove("hidden");
-        } else {
-          sendReceiveButtons.classList.add("hidden");
-        }
+    const res = await fetch("/api/me", {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-
-      // Load transaction history
-      loadTransactions(user.uid);
-    }
-  } catch (err) {
-    console.error("Failed to load cardholder data:", err);
-  }
-});
-
-// Load transactions for user as sender or receiver
-async function loadTransactions(userId) {
-  const container = document.getElementById("transactionBody");
-  container.innerHTML = `<div class="activity-item">Loading...</div>`;
-
-  try {
-    const toQuery = query(collection(db, "transactions"), where("to", "==", userId));
-    const fromQuery = query(collection(db, "transactions"), where("from", "==", userId));
-
-    const [toSnap, fromSnap] = await Promise.all([
-      getDocs(toQuery),
-      getDocs(fromQuery)
-    ]);
-
-    const transactions = [];
-
-    toSnap.forEach((doc) => {
-      const data = doc.data();
-      transactions.push({ ...data, direction: "in", id: doc.id });
     });
 
-    fromSnap.forEach((doc) => {
-      const data = doc.data();
-      transactions.push({ ...data, direction: "out", id: doc.id });
-    });
-
-    if (transactions.length === 0) {
-      container.innerHTML = `<div class="activity-item">No recent activity.</div>`;
+    if (res.status === 401) {
+      localStorage.clear();
+      window.location.href = "cardholder-login.html";
       return;
     }
 
-    // Sort newest first
-    transactions.sort((a, b) => {
-      return b.timestamp?.toDate() - a.timestamp?.toDate();
+    const user = await res.json();
+
+    cardholderNameEl.textContent = `${user.first_name || ""} ${user.last_name || ""}`;
+    cardholderEmailEl.textContent = user.email || "-";
+
+    // 🔁 Fetch wallet details
+    const walletRes = await fetch(`/api/wallets/${user.id}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
 
-    container.innerHTML = "";
+    const wallet = await walletRes.json();
+    walletIdEl.textContent = wallet.id || "N/A";
+    walletBalanceEl.textContent = `$${(wallet.balance || 0).toFixed(2)}`;
 
-    transactions.forEach((tx) => {
-      const date = tx.timestamp?.toDate().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric"
-      }) || "-";
+    // 🎛️ Role-based button visibility
+    const role = user.role?.toLowerCase();
+    const showButtons = role === "vendor" || (role === "cardholder" && user.on_assistance !== true);
+    sendReceiveButtons.classList.toggle("hidden", !showButtons);
 
-      const name = tx.direction === "in" ? tx.fromName : tx.toName;
-      const sign = tx.direction === "in" ? "+" : "–";
-      const amountClass = tx.direction === "in" ? "in" : "out";
-
-      const item = document.createElement("div");
-      item.className = "activity-item";
-
-      item.innerHTML = `
-        <div class="activity-details">
-          <div class="activity-name">${name || "Unknown"}</div>
-          <div class="activity-meta">${date} • ${tx.category || "Payment"}</div>
-        </div>
-        <div class="activity-amount ${amountClass}">${sign} $${Math.abs(tx.amount || 0).toFixed(2)}</div>
-      `;
-
-      container.appendChild(item);
-    });
+    // 📄 Load activity (placeholder)
+    transactionBody.innerHTML = `<div class="activity-item">Activity loading not implemented yet.</div>`;
 
   } catch (err) {
-    console.error("Failed to load transactions:", err);
-    container.innerHTML = `<div class="activity-item">Error loading activity.</div>`;
+    console.error("Failed to load cardholder data:", err);
+    transactionBody.innerHTML = `<div class="activity-item">Error loading data.</div>`;
   }
-}
+})();
 
-// Logout
-logoutBtn.addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
+// 🔌 Logout
+logoutBtn?.addEventListener("click", () => {
+  localStorage.clear();
+  window.location.href = "cardholder-login.html";
 });
