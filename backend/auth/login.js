@@ -34,6 +34,8 @@ module.exports = async function (req, res) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
+    await pool.query("UPDATE users SET force_signed_out = false WHERE id = $1", [user.id]);
+
     const token = jwt.sign(
       {
         userId: user.id,
