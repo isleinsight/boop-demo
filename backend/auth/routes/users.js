@@ -11,8 +11,6 @@ const isValidUUID = (str) =>
 
 // ✅ Create user
 router.post("/", authenticateToken, async (req, res) => {
-  const adminId = req.user.id;
-  const adminType = req.user.type;
   const {
     email,
     password,
@@ -32,23 +30,16 @@ router.post("/", authenticateToken, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const result = await client.query(
-      `INSERT INTO users (email, password_hash, first_name, middle_name, last_name, role, type, on_assistance)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO users (
+         email, password_hash, first_name, middle_name, last_name, role, type, on_assistance
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [email, hashedPassword, first_name, middle_name || null, last_name, role, type, on_assistance]
     );
 
     const user = result.rows[0];
 
-await logAdminAction({
-  performed_by: req.user.id,
-  target_user_id: user.id,
-  action: "create_user",
-  type: req.user.type,
-  new_email: user.email,
-  status: "completed"
-});
-
+    // 💳 Wallet
     if (rolesWithWallet.includes(role)) {
       const walletRes = await client.query(
         `INSERT INTO wallets (user_id, id, status)
@@ -61,6 +52,7 @@ await logAdminAction({
       user.wallet_id = walletId;
     }
 
+    // 🏢 Vendor
     if (role === "vendor" && vendor) {
       await client.query(
         `INSERT INTO vendors (user_id, business_name, phone, category, approved, wallet_id)
@@ -69,11 +61,13 @@ await logAdminAction({
       );
     }
 
+    // 🎓 Student
     if (role === "student" && student) {
       const { school_name, grade_level, expiry_date } = student;
       if (!school_name || !expiry_date) {
         throw new Error("Missing required student fields");
       }
+
       await client.query(
         `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
          VALUES ($1, $2, $3, $4)`,
@@ -81,14 +75,37 @@ await logAdminAction({
       );
     }
 
+    // ✅ Log creation
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "create_user",
+      target_user_id: user.id,
+      new_email: user.email,
+      type: req.user.type,
+      status: "completed"
+    });
+
     await client.query("COMMIT");
     res.status(201).json({ message: "User created", id: user.id, role: user.role });
+
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Error creating user:", err);
+
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "create_user",
+      target_user_id: null,
+      new_email: email,
+      type: req.user.type,
+      status: "failed",
+      error_message: err.message
+    });
+
     if (err.code === "23505") {
       return res.status(400).json({ message: "Email already exists" });
     }
+
     res.status(500).json({ message: "Failed to create user" });
   } finally {
     client.release();
@@ -179,14 +196,25 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Update user
+// ✅ Update user (with suspend/unsuspend tracking)
 router.patch("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
   }
 
-  const fields = ["first_name", "middle_name", "last_name", "email", "role", "type", "status", "on_assistance", "deleted_at", "performed_by"];
+  const fields = [
+    "first_name",
+    "middle_name",
+    "last_name",
+    "email",
+    "role",
+    "type",
+    "status",
+    "on_assistance",
+    "deleted_at",
+    "performed_by"
+  ];
   const updates = [];
   const values = [];
 
@@ -209,14 +237,26 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 
     if (req.body.status === "suspended" || req.body.status === "active") {
       await pool.query(`UPDATE wallets SET status = $1 WHERE user_id = $2`, [req.body.status, id]);
-    }
 
-    // 📝 Log update action
-    await pool.query(
-  `INSERT INTO admin_actions (performed_by, action, target_user_id, type)
-   VALUES ($1, 'update', $2, $3)`,
-  [req.user.id, id, req.user.type]
-);
+      const actionLabel = req.body.status === "suspended" ? "suspend" : "unsuspend";
+
+      await logAdminAction({
+        performed_by: req.user.id,
+        action: actionLabel,
+        target_user_id: id,
+        type: req.user.type,
+        status: "completed"
+      });
+    } else {
+      // For all other non-suspend changes
+      await logAdminAction({
+        performed_by: req.user.id,
+        action: "update",
+        target_user_id: id,
+        type: req.user.type,
+        status: "completed"
+      });
+    }
 
     res.json({ message: "User updated" });
   } catch (err) {
@@ -225,7 +265,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ Delete user
+// ✅ Delete user (soft-delete)
 router.delete("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   if (!isValidUUID(id)) {
@@ -235,18 +275,17 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   try {
     await pool.query(`UPDATE wallets SET status = 'archived' WHERE user_id = $1`, [id]);
     await pool.query(
-      `UPDATE users
-       SET deleted_at = NOW(), status = 'suspended'
-       WHERE id = $1`,
+      `UPDATE users SET deleted_at = NOW(), status = 'suspended' WHERE id = $1`,
       [id]
     );
 
-    // 📝 Log deletion
-    await pool.query(
-  `INSERT INTO admin_actions (admin_id, action, target_user_id, type, performed_by)
-   VALUES ($1, 'delete', $2, $3, $4)`,
-  [req.user.id, id, req.user.type, req.user.id]
-);
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "delete",
+      target_user_id: id,
+      type: req.user.type,
+      status: "completed"
+    });
 
     res.json({ message: "User soft-deleted" });
   } catch (err) {
@@ -258,7 +297,9 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 // ✅ Restore user
 router.patch("/:id/restore", authenticateToken, async (req, res) => {
   const { id } = req.params;
-  if (!isValidUUID(id)) return res.status(400).json({ message: "Invalid user ID" });
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
 
   try {
     await pool.query(
@@ -266,14 +307,18 @@ router.patch("/:id/restore", authenticateToken, async (req, res) => {
       [id]
     );
 
-    await pool.query(`UPDATE wallets SET status = 'active' WHERE user_id = $1`, [id]);
-
-    // 📝 Log restore action
     await pool.query(
-  `INSERT INTO admin_actions (performed_by, action, target_user_id, type)
-   VALUES ($1, 'restore', $2, $3)`,
-  [req.user.id, id, req.user.type]
-);
+      `UPDATE wallets SET status = 'active' WHERE user_id = $1`,
+      [id]
+    );
+
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "restore",
+      target_user_id: id,
+      type: req.user.type,
+      status: "completed"
+    });
 
     res.json({ message: "User restored" });
   } catch (err) {
@@ -281,6 +326,8 @@ router.patch("/:id/restore", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Restore failed" });
   }
 });
+
+
 
 // ✅ Get user by ID
 router.get("/:id", async (req, res) => {
