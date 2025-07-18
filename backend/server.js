@@ -20,7 +20,11 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // ✅ Auth routes
 const authRoutes = require('./auth/auth');
-app.use('/auth', authRoutes); // routes like /auth/login, /auth/signup
+app.use('/auth', authRoutes); // handles /auth/signup, etc.
+
+// ✅ Direct login route if not routed via auth/auth.js
+const loginHandler = require('./login');
+app.post('/login', loginHandler); // handles /login
 
 // ✅ API routes
 const usersRoute = require('./auth/routes/users');
@@ -28,7 +32,6 @@ const cardsRoute = require('./auth/routes/cards');
 const walletRoutes = require('./auth/routes/wallets'); 
 const vendorsRoute = require('./auth/routes/vendors');
 const userStudentsRoute = require('./auth/routes/userStudents');
-
 
 app.use('/api/users', usersRoute);
 app.use('/api/cards', cardsRoute);
