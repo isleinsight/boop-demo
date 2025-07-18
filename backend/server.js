@@ -1,5 +1,4 @@
 // backend/server.js
-const authenticateToken = require('./auth/middleware/authMiddleware');
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const express = require('express');
@@ -7,6 +6,7 @@ const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
 const { exec } = require('child_process');
+const authenticateToken = require('./auth/middleware/authMiddleware');
 
 dotenv.config();
 
@@ -20,24 +20,22 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // ✅ Auth routes
 const authRoutes = require('./auth/auth');
-app.use('/auth', authRoutes); // handles /auth/signup, etc.
+app.use('/auth', authRoutes); // handles /auth/signup, /auth/login (if routed there)
 
-// ✅ Direct login route if not routed via auth/auth.js
-const loginHandler = require('./login');
-app.post('/login', loginHandler); // handles /login
+// ✅ Direct login route (optional if not using /auth/login)
+try {
+  const loginHandler = require('./auth/routes/login');
+  app.post('/login', loginHandler); // allows /login directly
+} catch (err) {
+  console.warn("⚠️ Login handler not found at ./auth/routes/login");
+}
 
 // ✅ API routes
-const usersRoute = require('./auth/routes/users');
-const cardsRoute = require('./auth/routes/cards');
-const walletRoutes = require('./auth/routes/wallets'); 
-const vendorsRoute = require('./auth/routes/vendors');
-const userStudentsRoute = require('./auth/routes/userStudents');
-
-app.use('/api/users', usersRoute);
-app.use('/api/cards', cardsRoute);
-app.use('/api/wallets', walletRoutes); 
-app.use('/api/vendors', vendorsRoute);
-app.use('/api/user-students', userStudentsRoute);
+app.use('/api/users', require('./auth/routes/users'));
+app.use('/api/cards', require('./auth/routes/cards'));
+app.use('/api/wallets', require('./auth/routes/wallets')); 
+app.use('/api/vendors', require('./auth/routes/vendors'));
+app.use('/api/user-students', require('./auth/routes/userStudents'));
 
 // ✅ /api/me - current logged-in user info
 app.get('/api/me', authenticateToken, (req, res) => {
@@ -69,8 +67,7 @@ app.post('/webhook', (req, res) => {
 });
 
 // ✅ Optional webhook logic
-const webhookRoutes = require('./webhook-handler');
-app.use('/webhook', webhookRoutes);
+app.use('/webhook', require('./webhook-handler'));
 
 // ✅ Catch 404s
 app.use((req, res) => {
