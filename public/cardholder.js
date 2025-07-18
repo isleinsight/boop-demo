@@ -19,33 +19,17 @@ if (!token) {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (res.status === 401) {
-      // Force sign-out or invalid token
-      console.warn("⛔ Unauthorized or force signed out");
-      localStorage.clear();
-      window.location.href = "cardholder-login.html";
-      return;
-    }
+    if (!res.ok) throw new Error("Unauthorized");
 
     const user = await res.json();
 
     if (user.force_signed_out) {
-      console.warn("⛔ User has been force signed out");
-      localStorage.clear();
-      window.location.href = "cardholder-login.html";
+      console.warn("⛔ User has been force signed out (initial)");
+      redirectToLogin();
       return;
     }
 
-    // 👇 Your existing logic continues here...
-    // e.g. populate UI, fetch wallet, etc.
-
-  } catch (err) {
-    console.error("🔥 Error fetching user info:", err);
-    localStorage.clear();
-    window.location.href = "cardholder-login.html";
-  }
-})();
-
+    // ✅ Render UI
     cardholderNameEl.textContent = `${user.first_name || ""} ${user.last_name || ""}`;
     cardholderEmailEl.textContent = user.email || "-";
 
@@ -62,32 +46,32 @@ if (!token) {
     sendReceiveButtons.classList.toggle("hidden", !showButtons);
 
     transactionBody.innerHTML = `<div class="activity-item">Activity loading not implemented yet.</div>`;
+
   } catch (err) {
-    console.error("🚫 Session invalid:", err);
+    console.error("🔥 Error fetching user info:", err);
     redirectToLogin();
   }
 })();
 
-// 🔁 Auto-logout if force_signed_out is triggered mid-session
+// 🔁 Auto-check every 10s for force_signed_out mid-session
 setInterval(async () => {
   try {
     const res = await fetch("/api/me", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     if (!res.ok) throw new Error("Unauthorized");
 
     const user = await res.json();
     if (user.force_signed_out) {
-      console.warn("🛑 Mid-session force logout");
+      console.warn("🛑 Mid-session force logout triggered");
       redirectToLogin();
     }
   } catch (err) {
+    console.error("🔁 Polling error:", err);
     redirectToLogin();
   }
-}, 10000); // Check every 10 seconds
+}, 10000);
 
 function redirectToLogin() {
   localStorage.clear();
