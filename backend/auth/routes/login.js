@@ -48,7 +48,7 @@ router.post('/', async (req, res) => {
     }
 
     const user = result.rows[0];
-    logDebug('✅ User loaded', user);
+    logDebug('✅ User loaded', { id: user.id, role: user.role });
 
     if (!user.id) {
       logDebug('❗ WARNING: user.id is missing!');
@@ -83,8 +83,8 @@ router.post('/', async (req, res) => {
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
     logDebug('🔐 Token created', tokenPayload);
-    logDebug('🧪 JWT string', token);
 
+    // ✅ Insert session directly using known user ID and token
     try {
       const insertResult = await pool.query(
         `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
@@ -104,7 +104,6 @@ router.post('/', async (req, res) => {
         email: user.email,
         role: user.role,
         type: user.type,
-        force_signed_out: user.force_signed_out, // 👈 included here
         name: `${user.first_name} ${user.last_name}`
       }
     });
