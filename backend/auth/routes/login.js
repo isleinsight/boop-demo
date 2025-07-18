@@ -1,4 +1,3 @@
-// backend/auth/routes/login.js
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
@@ -8,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../../db');
 
-// 🧠 Debug log path
+// 🧠 Log to login-debug.log
 const logFile = path.join(__dirname, '../../../login-debug.log');
 function logDebug(message, data = null) {
   const timestamp = new Date().toISOString();
@@ -51,7 +50,8 @@ router.post('/', async (req, res) => {
     logDebug('✅ User loaded', { id: user.id, role: user.role });
 
     if (!user.id) {
-      logDebug('❗ WARNING: user.id is missing!');
+      logDebug('❗ Missing user.id!');
+      return res.status(500).json({ message: 'User ID missing' });
     }
 
     if (typeof user.password_hash !== 'string') {
@@ -68,23 +68,23 @@ router.post('/', async (req, res) => {
 
     const allowedRoles = roleMap[audience];
     if (!allowedRoles.includes(user.role)) {
-      logDebug('❌ Unauthorized role for this audience', { userRole: user.role, audience });
+      logDebug('❌ Unauthorized role for audience', { userRole: user.role, audience });
       return res.status(403).json({ message: 'Unauthorized role for this login' });
     }
 
     await pool.query('UPDATE users SET force_signed_out = false WHERE id = $1', [user.id]);
 
     const tokenPayload = {
-      userId: user.id,
-      role: user.role,
+      id: user.id, // Ensure `id` exists in payload
       email: user.email,
+      role: user.role,
       type: user.type
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
-    logDebug('🔐 Token created', tokenPayload);
+    logDebug('🔐 JWT created', tokenPayload);
 
-    // ✅ Insert session directly using known user ID and token
+    logDebug('🪵 Preparing to insert JWT session');
     try {
       const insertResult = await pool.query(
         `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
@@ -109,7 +109,7 @@ router.post('/', async (req, res) => {
     });
 
   } catch (err) {
-    logDebug('🔥 Unhandled login error', { message: err.message, stack: err.stack });
+    logDebug('🔥 Login error', { message: err.message, stack: err.stack });
     res.status(500).json({ message: 'Server error during login' });
   }
 });
