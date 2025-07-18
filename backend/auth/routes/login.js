@@ -1,13 +1,15 @@
+// backend/auth/routes/login.js
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
+const path = require('path');
 const pool = require('../../db');
 
-// 🧠 Logs to login-debug.log with timestamp
-const logFile = './login-debug.log';
+// 🧠 Debug log path
+const logFile = path.join(__dirname, '../../../login-debug.log');
 function logDebug(message, data = null) {
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${message}` + (data ? ` ${JSON.stringify(data)} ` : '') + '\n';
@@ -46,7 +48,11 @@ router.post('/', async (req, res) => {
     }
 
     const user = result.rows[0];
-    logDebug('✅ User found', { id: user.id, role: user.role });
+    logDebug('✅ User loaded', user);
+
+    if (!user.id) {
+      logDebug('❗ WARNING: user.id is missing!');
+    }
 
     if (typeof user.password_hash !== 'string') {
       logDebug('❌ Invalid password hash type', typeof user.password_hash);
@@ -54,7 +60,7 @@ router.post('/', async (req, res) => {
     }
 
     const match = await bcrypt.compare(password, user.password_hash);
-    logDebug('🔍 Password match result', match);
+    logDebug('🔍 Password match', { result: match });
 
     if (!match) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
@@ -62,7 +68,7 @@ router.post('/', async (req, res) => {
 
     const allowedRoles = roleMap[audience];
     if (!allowedRoles.includes(user.role)) {
-      logDebug('❌ Unauthorized role for this audience', { role: user.role, audience });
+      logDebug('❌ Unauthorized role for this audience', { userRole: user.role, audience });
       return res.status(403).json({ message: 'Unauthorized role for this login' });
     }
 
@@ -77,7 +83,6 @@ router.post('/', async (req, res) => {
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
     logDebug('🔐 Token created', tokenPayload);
-    logDebug('🧪 JWT string', token);
 
     try {
       const insertResult = await pool.query(
@@ -87,7 +92,7 @@ router.post('/', async (req, res) => {
       );
       logDebug('✅ Session inserted into jwt_sessions', insertResult.rows[0]);
     } catch (err) {
-      logDebug('❌ Failed to insert session', err.message);
+      logDebug('❌ Failed to insert session', { message: err.message, stack: err.stack });
     }
 
     res.status(200).json({
@@ -103,7 +108,7 @@ router.post('/', async (req, res) => {
     });
 
   } catch (err) {
-    logDebug('🔥 Unhandled login error', err.message);
+    logDebug('🔥 Unhandled login error', { message: err.message, stack: err.stack });
     res.status(500).json({ message: 'Server error during login' });
   }
 });
