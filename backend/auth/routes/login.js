@@ -83,6 +83,7 @@ router.post('/', async (req, res) => {
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
     logDebug('🔐 Token created', tokenPayload);
+    logDebug('🧪 JWT string', token);
 
     try {
       const insertResult = await pool.query(
@@ -103,6 +104,7 @@ router.post('/', async (req, res) => {
         email: user.email,
         role: user.role,
         type: user.type,
+        force_signed_out: user.force_signed_out, // 👈 included here
         name: `${user.first_name} ${user.last_name}`
       }
     });
