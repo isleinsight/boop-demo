@@ -44,7 +44,11 @@ async function authenticateToken(req, res, next) {
     }
 
     console.log(`✅ Authenticated user: ${userId}`);
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      id: decoded.userId || decoded.id // 🔁 Normalize ID for downstream
+    };
+
     next();
 
   } catch (err) {
