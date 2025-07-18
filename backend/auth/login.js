@@ -66,6 +66,13 @@ module.exports = async function (req, res) {
       { expiresIn: '2h' }
     );
 
+    // ✅ Save token to jwt_sessions
+    await pool.query(
+      `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
+       VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours')`,
+      [user.id, token]
+    );
+
     res.status(200).json({
       message: 'Login successful',
       token,
