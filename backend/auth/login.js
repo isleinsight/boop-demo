@@ -54,7 +54,7 @@ module.exports = async function (req, res) {
 
     // ✅ Reset force sign-out flag
     await pool.query("UPDATE users SET force_signed_out = false WHERE id = $1", [user.id]);
-
+console.log("👤 Creating token for user ID:", user.id);
     const token = jwt.sign(
       {
         userId: user.id,
