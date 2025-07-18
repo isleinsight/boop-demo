@@ -7,29 +7,25 @@ const walletIdEl = document.getElementById("walletId");
 const walletBalanceEl = document.getElementById("walletBalance");
 const transactionBody = document.getElementById("transactionBody");
 const sendReceiveButtons = document.getElementById("sendReceiveButtons");
+const errorDisplay = document.getElementById("errorMessage"); // <-- Add this div in HTML
 
 if (!token) {
   redirectToLogin();
 }
 
-// 🔐 Fetch user info and check force_signed_out
 (async () => {
   try {
     const res = await fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!res.ok) throw new Error("Unauthorized");
-
     const user = await res.json();
 
-    if (user.force_signed_out) {
-      console.warn("⛔ User has been force signed out (initial)");
-      redirectToLogin();
+    if (!res.ok || user.force_signed_out) {
+      showError("Session expired or access denied.");
       return;
     }
 
-    // ✅ Render UI
     cardholderNameEl.textContent = `${user.first_name || ""} ${user.last_name || ""}`;
     cardholderEmailEl.textContent = user.email || "-";
 
@@ -38,6 +34,7 @@ if (!token) {
     });
 
     const wallet = await walletRes.json();
+
     walletIdEl.textContent = wallet.id || "N/A";
     walletBalanceEl.textContent = `$${(wallet.balance || 0).toFixed(2)}`;
 
@@ -49,33 +46,36 @@ if (!token) {
 
   } catch (err) {
     console.error("🔥 Error fetching user info:", err);
-    redirectToLogin();
+    showError("Unable to fetch your profile. Try reloading.");
   }
 })();
 
-// 🔁 Auto-check every 10s for force_signed_out mid-session
+// ⏱ Periodic check for force logout
 setInterval(async () => {
   try {
     const res = await fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!res.ok) throw new Error("Unauthorized");
-
     const user = await res.json();
-    if (user.force_signed_out) {
-      console.warn("🛑 Mid-session force logout triggered");
-      redirectToLogin();
+    if (!res.ok || user.force_signed_out) {
+      showError("You've been signed out by an admin.");
     }
   } catch (err) {
     console.error("🔁 Polling error:", err);
-    redirectToLogin();
+    showError("Session check failed.");
   }
 }, 10000);
 
 function redirectToLogin() {
   localStorage.clear();
   window.location.href = "cardholder-login.html";
+}
+
+function showError(msg) {
+  const el = errorDisplay || document.getElementById("errorMessage");
+  if (el) el.textContent = msg;
+  console.warn("⚠️", msg);
 }
 
 logoutBtn?.addEventListener("click", () => {
