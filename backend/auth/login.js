@@ -46,37 +46,37 @@ module.exports = async function (req, res) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
-    // ❌ BLOCK unauthorized role for this login target
     const allowedRoles = roleMap[audience];
     if (!allowedRoles.includes(user.role)) {
       return res.status(403).json({ message: "Unauthorized role for this login" });
     }
 
-    // ✅ Reset force sign-out flag
     await pool.query("UPDATE users SET force_signed_out = false WHERE id = $1", [user.id]);
-console.log("👤 Creating token for user ID:", user.id);
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-        email: user.email,
-        type: user.type,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '2h' }
-    );
 
-    // ✅ Save token to jwt_sessions, with error logging
-try {
-  const result = await pool.query(
-    `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
-     VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
-    [user.id, token]
-  );
-  console.log('✅ Session inserted:', result.rows[0]);
-} catch (err) {
-  console.error('❌ Failed to insert session:', err.message);
-}
+    // ✅ Token creation
+    const tokenPayload = {
+      userId: user.id,
+      role: user.role,
+      email: user.email,
+      type: user.type,
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
+
+    console.log("🔐 Token created for user ID:", user.id);
+    console.log("📦 Token payload:", tokenPayload);
+
+    // ✅ Save session
+    try {
+      const sessionInsert = await pool.query(
+        `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
+         VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
+        [user.id, token]
+      );
+      console.log('✅ Session inserted:', sessionInsert.rows[0]);
+    } catch (err) {
+      console.error('❌ Failed to insert session into jwt_sessions:', err.message);
+    }
 
     res.status(200).json({
       message: 'Login successful',
