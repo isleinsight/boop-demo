@@ -66,12 +66,17 @@ module.exports = async function (req, res) {
       { expiresIn: '2h' }
     );
 
-    // ✅ Save token to jwt_sessions
-    await pool.query(
-      `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
-       VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours')`,
-      [user.id, token]
-    );
+    // ✅ Save token to jwt_sessions, with error logging
+try {
+  const result = await pool.query(
+    `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
+     VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
+    [user.id, token]
+  );
+  console.log('✅ Session inserted:', result.rows[0]);
+} catch (err) {
+  console.error('❌ Failed to insert session:', err.message);
+}
 
     res.status(200).json({
       message: 'Login successful',
