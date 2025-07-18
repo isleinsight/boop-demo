@@ -4,11 +4,8 @@ require('dotenv').config({ path: __dirname + '/.env' });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const dotenv = require('dotenv');
 const { exec } = require('child_process');
 const authenticateToken = require('./auth/middleware/authMiddleware');
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,20 +17,16 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // ✅ Auth routes
 const authRoutes = require('./auth/auth');
-app.use('/auth', authRoutes); // handles /auth/signup, /auth/login (if routed there)
+app.use('/auth', authRoutes); // handles /auth/signup, etc.
 
-// ✅ Direct login route (optional if not using /auth/login)
-try {
-  const loginHandler = require('./auth/routes/login');
-  app.post('/login', loginHandler); // allows /login directly
-} catch (err) {
-  console.warn("⚠️ Login handler not found at ./auth/routes/login");
-}
+// ✅ Login route (mounted as /login)
+const loginRoute = require('./auth/routes/login');
+app.use('/login', loginRoute); // handles POST /login
 
 // ✅ API routes
 app.use('/api/users', require('./auth/routes/users'));
 app.use('/api/cards', require('./auth/routes/cards'));
-app.use('/api/wallets', require('./auth/routes/wallets')); 
+app.use('/api/wallets', require('./auth/routes/wallets'));
 app.use('/api/vendors', require('./auth/routes/vendors'));
 app.use('/api/user-students', require('./auth/routes/userStudents'));
 
