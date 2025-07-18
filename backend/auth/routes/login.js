@@ -1,19 +1,20 @@
-// backend/login.js
+const express = require('express');
+const router = express.Router();
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
-const pool = require('./db');
+const pool = require('../../db');
 
 // 🧠 Logs to login-debug.log with timestamp
 const logFile = './login-debug.log';
 function logDebug(message, data = null) {
   const timestamp = new Date().toISOString();
-  const entry = `[${timestamp}] ${message}` + (data ? ` ${JSON.stringify(data)}` : '') + '\n';
+  const entry = `[${timestamp}] ${message}` + (data ? ` ${JSON.stringify(data)} ` : '') + '\n';
   fs.appendFileSync(logFile, entry);
 }
 
-module.exports = async function (req, res) {
+router.post('/', async (req, res) => {
   const { email, password, audience } = req.body;
 
   if (!email || !password) {
@@ -105,4 +106,6 @@ module.exports = async function (req, res) {
     logDebug('🔥 Unhandled login error', err.message);
     res.status(500).json({ message: 'Server error during login' });
   }
-};
+});
+
+module.exports = router;
