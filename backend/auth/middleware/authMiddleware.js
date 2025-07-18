@@ -14,45 +14,44 @@ async function authenticateToken(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
-    console.log(`🔐 Token decoded for user ID: ${userId}`);
+    console.log(`🔐 Token decoded:`, decoded);
 
-    // ✅ 1. Check if token exists in jwt_sessions and not expired
+    // 1️⃣ Check session in jwt_sessions
     const sessionRes = await pool.query(
       `SELECT * FROM jwt_sessions WHERE jwt_token = $1 AND expires_at > NOW()`,
       [token]
     );
 
     if (sessionRes.rows.length === 0) {
-      console.warn("❌ Token is not in jwt_sessions or expired");
+      console.warn("❌ Session not found or expired for token");
       return res.status(401).json({ message: "Session is invalid or expired" });
     }
 
-    // ✅ 2. Check if user is force signed out
+    // 2️⃣ Check force_signed_out flag
     const userRes = await pool.query(
-      `SELECT force_signed_out FROM users WHERE id = $1`,
+      `SELECT id, force_signed_out FROM users WHERE id = $1`,
       [userId]
     );
 
     if (userRes.rows.length === 0) {
-      console.warn("❌ User not found in DB for ID:", userId);
+      console.warn(`❌ User not found in DB: ${userId}`);
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (userRes.rows[0].force_signed_out) {
-      console.warn(`⛔ User ${userId} is forcibly signed out`);
+    const user = userRes.rows[0];
+
+    if (user.force_signed_out) {
+      console.warn(`⛔ User forcibly signed out: ${userId}`);
       return res.status(403).json({ message: "User is forcibly signed out" });
     }
 
+    // ✅ Attach user payload
+    req.user = decoded;
     console.log(`✅ Authenticated user: ${userId}`);
-    req.user = {
-      ...decoded,
-      id: decoded.userId || decoded.id // 🔁 Normalize ID for downstream
-    };
-
     next();
 
   } catch (err) {
-    console.error("🔥 Auth error:", err.message);
+    console.error("🔥 JWT middleware error:", err.message);
     return res.status(403).json({ message: "Invalid or expired token" });
   }
 }
