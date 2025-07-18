@@ -1,15 +1,12 @@
 // backend/server.js
-const authenticateToken = require('./auth/middleware/authMiddleware');
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const dotenv = require('dotenv');
 const { exec } = require('child_process');
 
-dotenv.config();
-
+const authenticateToken = require('./auth/middleware/authMiddleware');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -18,18 +15,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// ✅ Auth routes
+// ✅ Routes
 const authRoutes = require('./auth/auth');
-app.use('/auth', authRoutes); // routes like /auth/login, /auth/signup
-
-// ✅ API routes
 const usersRoute = require('./auth/routes/users');
 const cardsRoute = require('./auth/routes/cards');
 const walletRoutes = require('./auth/routes/wallets'); 
 const vendorsRoute = require('./auth/routes/vendors');
 const userStudentsRoute = require('./auth/routes/userStudents');
+const webhookRoutes = require('./webhook-handler');
+const loginHandler = require('./login'); // ✅ Added login.js route
 
+// ✅ Auth route group (like /auth/login)
+app.use('/auth', authRoutes);
 
+// ✅ Direct POST login route (e.g. /login)
+app.post('/login', loginHandler); // ✅ Added this route
+
+// ✅ API routes
 app.use('/api/users', usersRoute);
 app.use('/api/cards', cardsRoute);
 app.use('/api/wallets', walletRoutes); 
@@ -66,10 +68,9 @@ app.post('/webhook', (req, res) => {
 });
 
 // ✅ Optional webhook logic
-const webhookRoutes = require('./webhook-handler');
 app.use('/webhook', webhookRoutes);
 
-// ✅ Catch 404s
+// ✅ 404 fallback
 app.use((req, res) => {
   res.status(404).json({ error: "Not Found" });
 });
