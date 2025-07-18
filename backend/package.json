@@ -4,7 +4,8 @@
   "description": "Backend for BOOP NFC system",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "cleanup:sessions": "node backend/auth/cleanupSessions.js"
   },
   "dependencies": {
     "express": "^4.18.2",
