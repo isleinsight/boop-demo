@@ -38,7 +38,7 @@ app.use('/api/vendors', require('./auth/routes/vendors'));
 app.use('/api/user-students', require('./auth/routes/userStudents'));
 
 // ✅ Session insert route (NEW)
-const sessionRoute = require('./routes/sessions');
+const sessionRoute = require('./auth/routes/sessions');
 app.use('/api/sessions', sessionRoute); // handles POST /api/sessions
 
 // ✅ /api/me - current logged-in user info
