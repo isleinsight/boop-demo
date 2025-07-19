@@ -23,7 +23,7 @@ app.use('/auth', authRoutes); // handles /auth/signup, etc.
 
 // ✅ Login route (mounted as /login)
 const loginRoute = require('./auth/routes/login');
-app.use('/login', loginRoute); // handles POST /login
+app.use('/login', loginRoute);
 console.log("✅ Login route mounted at /login");
 
 // ✅ Logout
@@ -37,6 +37,9 @@ app.use('/api/wallets', require('./auth/routes/wallets'));
 app.use('/api/vendors', require('./auth/routes/vendors'));
 app.use('/api/user-students', require('./auth/routes/userStudents'));
 
+// ✅ Session insert route (NEW)
+const sessionRoute = require('./routes/sessions');
+app.use('/api/sessions', sessionRoute); // handles POST /api/sessions
 
 // ✅ /api/me - current logged-in user info
 app.get('/api/me', authenticateToken, (req, res) => {
