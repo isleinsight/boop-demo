@@ -1,3 +1,5 @@
+// public/js/cardholder-login.js
+
 const token = localStorage.getItem("boop_jwt");
 
 const logoutBtn = document.getElementById("logoutBtn");
@@ -32,6 +34,21 @@ if (!token) {
       return;
     }
 
+    // 🔥 POST session record
+    try {
+      await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          status: "online"
+        })
+      });
+      console.log("✅ Session recorded for:", user.email);
+    } catch (sessionErr) {
+      console.error("❌ Failed to record session:", sessionErr);
+    }
+
     cardholderNameEl.textContent = `${user.first_name || ""} ${user.last_name || ""}`;
     cardholderEmailEl.textContent = user.email || "-";
 
@@ -56,6 +73,7 @@ if (!token) {
   }
 })();
 
+// ⏱ Force logout checker
 setInterval(async () => {
   try {
     const res = await fetch("/api/me", {
@@ -63,6 +81,7 @@ setInterval(async () => {
     });
 
     const user = await res.json();
+
     if (!res.ok) {
       showError("⚠️ Session invalid.");
       console.warn("🔁 Polling failed:", res.status);
@@ -88,4 +107,3 @@ logoutBtn?.addEventListener("click", () => {
   localStorage.clear();
   window.location.href = "cardholder-login.html";
 });
-
