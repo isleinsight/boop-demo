@@ -10,6 +10,8 @@ const authenticateToken = require('./auth/middleware/authMiddleware');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+console.log("🔧 server.js is initializing...");
+
 // ✅ Middleware
 app.use(cors());
 app.use(express.json());
