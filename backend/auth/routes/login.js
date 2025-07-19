@@ -100,18 +100,20 @@ console.log('🛰️ Received login request at:', req.originalUrl);
       logDebug('❗ Invalid session insert: missing userId or token', { userId, token });
     }
 
-    logDebug('📦 Attempting session insert', { userId, token });
+    logDebug('📥 Attempting session insert', { userId: user.id });
 
-    try {
-      const insertResult = await pool.query(
-        `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
-         VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
-        [userId, token]
-      );
-      logDebug("✅ Session inserted", insertResult.rows[0]);
-    } catch (insertErr) {
-      logDebug("❌ Session insert failed", { message: insertErr.message, stack: insertErr.stack });
-    }
+try {
+  const insertResult = await pool.query(
+    `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
+     VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
+    [user.id, token]
+  );
+
+  logDebug('✅ Session inserted', insertResult.rows[0]);
+
+} catch (err) {
+  logDebug('❌ Insert failed', { message: err.message, stack: err.stack });
+}
 
     // 🎉 Final response
     res.status(200).json({
