@@ -34,19 +34,33 @@ if (!token) {
       return;
     }
 
+    const decoded = parseJwt(token);
+    const expiresAt = new Date(decoded.exp * 1000).toISOString();
+    const userId = user.id || decoded.userId || decoded.id;
+
     // 🔥 POST session record
     try {
-      await fetch("/api/sessions", {
+      const sessionRes = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: user.email,
-          status: "online"
+          status: "online",
+          jwt_token: token,
+          expires_at: expiresAt,
+          user_id: userId
         })
       });
-      console.log("✅ Session recorded for:", user.email);
+
+      const sessionData = await sessionRes.json();
+
+      if (sessionRes.ok) {
+        console.log("✅ Session recorded:", sessionData.message);
+      } else {
+        console.warn("⚠️ Failed to record session:", sessionData.message);
+      }
     } catch (sessionErr) {
-      console.error("❌ Failed to record session:", sessionErr);
+      console.error("❌ Session recording error:", sessionErr);
     }
 
     cardholderNameEl.textContent = `${user.first_name || ""} ${user.last_name || ""}`;
@@ -107,3 +121,15 @@ logoutBtn?.addEventListener("click", () => {
   localStorage.clear();
   window.location.href = "cardholder-login.html";
 });
+
+// 🔍 Decode JWT payload safely
+function parseJwt(token) {
+  try {
+    const base64Payload = token.split(".")[1];
+    const decodedPayload = atob(base64Payload);
+    return JSON.parse(decodedPayload);
+  } catch (err) {
+    console.error("❌ Failed to decode token:", err);
+    return {};
+  }
+}
