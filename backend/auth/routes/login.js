@@ -6,8 +6,11 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const pool = require('../../db');
 
+// 📢 Basic route load notification
+console.log('✅ Login route file loaded');
+
 router.post('/', async (req, res) => {
-  console.log("🛰️ Login route hit");
+  console.log('🛰️ Received login request');
 
   const { email, password, audience } = req.body;
 
@@ -33,68 +36,65 @@ router.post('/', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      console.log("❌ No matching user found");
-      return res.status(401).json({ message: 'Invalid credentials' });
+      console.warn('❌ User not found or inactive:', email);
+      return res.status(401).json({ message: 'Invalid credentials (user not found)' });
     }
 
     const user = result.rows[0];
-    console.log("✅ Found user:", user.id);
+    console.log('✅ User found in DB:', user.email);
 
-    if (typeof user.password_hash !== 'string') {
-      return res.status(500).json({ message: 'Server error (corrupt password)' });
+    if (!user.id || typeof user.password_hash !== 'string') {
+      console.error('⚠️ Invalid user record:', user.id);
+      return res.status(500).json({ message: 'Server error: bad user data' });
     }
 
     const match = await bcrypt.compare(password, user.password_hash);
+    console.log('🔑 Password match result:', match);
+
     if (!match) {
-      console.log("❌ Incorrect password");
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
     const allowedRoles = roleMap[audience];
     if (!allowedRoles.includes(user.role)) {
+      console.warn('🚫 Unauthorized role for this audience:', user.role);
       return res.status(403).json({ message: 'Unauthorized role for this login' });
     }
 
+    // ✅ Clear force_signed_out if needed
     await pool.query('UPDATE users SET force_signed_out = false WHERE id = $1', [user.id]);
 
+    // 🎟️ Create JWT payload
     const tokenPayload = {
-      userId: user.id,
-      role: user.role,
+      id: user.id,
       email: user.email,
+      role: user.role,
       type: user.type
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
+    console.log('🔐 Token generated:', tokenPayload);
 
-    // 🧠 Insert or update pre-session row
+    // 💾 UPSERT the session token
     try {
-      const existingSession = await pool.query(
-        'SELECT id FROM jwt_sessions WHERE user_id = $1',
-        [user.id]
-      );
+      const upsertQuery = `
+        INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
+        VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours')
+        ON CONFLICT (user_id)
+        DO UPDATE SET
+          jwt_token = EXCLUDED.jwt_token,
+          created_at = NOW(),
+          expires_at = NOW() + INTERVAL '2 hours';
+      `;
 
-      if (existingSession.rows.length > 0) {
-        console.log("🔁 Updating existing session");
-        await pool.query(
-          `UPDATE jwt_sessions
-           SET jwt_token = $1, created_at = NOW(), expires_at = NOW() + INTERVAL '2 hours', is_online = true
-           WHERE user_id = $2`,
-          [token, user.id]
-        );
-      } else {
-        console.log("🆕 Inserting new session row");
-        await pool.query(
-          `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at, is_online)
-           VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours', true)`,
-          [user.id, token]
-        );
-      }
-
-    } catch (err) {
-      console.error("🔥 Session write failed:", err.message);
+      await pool.query(upsertQuery, [user.id, token]);
+      console.log('✅ Session inserted or updated successfully for user:', user.email);
+    } catch (insertErr) {
+      console.error('❌ Failed to upsert session:', insertErr.message);
     }
 
-    return res.status(200).json({
+    // 🎉 Respond with success
+    res.status(200).json({
       message: 'Login successful',
       token,
       user: {
@@ -102,13 +102,13 @@ router.post('/', async (req, res) => {
         email: user.email,
         role: user.role,
         type: user.type,
-        name: `${user.first_name} ${user.last_name}`
+        name: `${user.first_name || ''} ${user.last_name || ''}`.trim()
       }
     });
 
   } catch (err) {
-    console.error("🔥 Login route error:", err.message);
-    res.status(500).json({ message: 'Server error during login' });
+    console.error('🔥 Login route error:', err.message);
+    res.status(500).json({ message: 'Internal server error during login' });
   }
 });
 
