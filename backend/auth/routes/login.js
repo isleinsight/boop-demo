@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../../db');
 
-// 📄 Debug log file path
+// 🔍 Debug logging setup
 const logFile = path.join(__dirname, '../../../login-debug.log');
 function logDebug(message, data = null) {
   const timestamp = new Date().toISOString();
@@ -75,8 +75,10 @@ router.post('/', async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized role for this login' });
     }
 
+    // Mark user as logged in
     await pool.query('UPDATE users SET force_signed_out = false WHERE id = $1', [user.id]);
 
+    // ✅ Prepare token and session
     const tokenPayload = {
       userId: user.id,
       role: user.role,
@@ -87,17 +89,28 @@ router.post('/', async (req, res) => {
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
     logDebug('🔐 Token created', tokenPayload);
 
-    try {
-  const insertResult = await pool.query(
-    `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
-     VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
-    [user.id, token]
-  );
-  console.log("✅ Session inserted", insertResult.rows[0]);
-} catch (err) {
-  console.error("❌ Insert failed", err.message);
-}
+    // 🧩 Break out payload for safety
+    const { userId } = tokenPayload;
 
+    // 🛠️ Insert session into table
+    if (!userId || !token) {
+      logDebug('❗ Invalid session insert: missing userId or token', { userId, token });
+    }
+
+    logDebug('📦 Attempting session insert', { userId, token });
+
+    try {
+      const insertResult = await pool.query(
+        `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
+         VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
+        [userId, token]
+      );
+      logDebug("✅ Session inserted", insertResult.rows[0]);
+    } catch (insertErr) {
+      logDebug("❌ Session insert failed", { message: insertErr.message, stack: insertErr.stack });
+    }
+
+    // 🎉 Final response
     res.status(200).json({
       message: 'Login successful',
       token,
