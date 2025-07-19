@@ -6,14 +6,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const pool = require('../../db');
 
-console.log('🚨 Login route loaded');
-
 router.post('/', async (req, res) => {
-  console.log('📥 Login request received');
-
   const { email, password, audience } = req.body;
-  console.log('📨 Credentials:', { email, audience });
-
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required.' });
   }
@@ -36,23 +30,18 @@ router.post('/', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      console.log('❌ User not found or inactive');
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid credentials (user not found)' });
     }
 
     const user = result.rows[0];
-    console.log('✅ User found:', { id: user.id, email: user.email, role: user.role });
-
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
-      console.log('❌ Password mismatch');
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
     const allowedRoles = roleMap[audience];
     if (!allowedRoles.includes(user.role)) {
-      console.log('❌ Unauthorized role');
-      return res.status(403).json({ message: 'Unauthorized role' });
+      return res.status(403).json({ message: 'Unauthorized role for this login' });
     }
 
     await pool.query('UPDATE users SET force_signed_out = false WHERE id = $1', [user.id]);
@@ -65,24 +54,18 @@ router.post('/', async (req, res) => {
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
-    console.log('🔐 Token created:', token);
-    console.log('📦 Token payload:', tokenPayload);
 
-    // 🔄 Session insert
-    try {
-      console.log('🧪 Attempting session insert:', { user_id: user.id, token });
-
-      const insertResult = await pool.query(
-        `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
-         VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
-        [user.id, token]
-      );
-
-      console.log('✅ Session inserted:', insertResult.rows[0]);
-
-    } catch (insertErr) {
-      console.error('❌ Session insert failed:', insertErr);
-    }
+    // 🔄 Replace or upsert session
+    await pool.query(
+      `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at, online)
+       VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours', true)
+       ON CONFLICT (user_id) DO UPDATE
+       SET jwt_token = EXCLUDED.jwt_token,
+           created_at = NOW(),
+           expires_at = NOW() + INTERVAL '2 hours',
+           online = true`,
+      [user.id, token]
+    );
 
     return res.status(200).json({
       message: 'Login successful',
@@ -95,8 +78,9 @@ router.post('/', async (req, res) => {
         name: `${user.first_name} ${user.last_name}`
       }
     });
+
   } catch (err) {
-    console.error('🔥 Login error:', err);
+    console.error('🔥 Login error:', err.message);
     return res.status(500).json({ message: 'Server error during login' });
   }
 });
