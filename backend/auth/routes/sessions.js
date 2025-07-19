@@ -4,22 +4,28 @@ const router = express.Router();
 const pool = require('../../db');
 
 router.post('/', async (req, res) => {
-  const { email, status } = req.body;
+  const { email, status = 'online', jwt_token } = req.body;
 
   console.log("📥 Incoming session record attempt:");
   console.log("📧 Email:", email);
   console.log("📊 Status:", status);
+  console.log("🔐 JWT Token:", jwt_token);
 
-  if (!email) {
-    console.warn("⚠️ Email is missing from session POST body");
-    return res.status(400).json({ message: "Email is required" });
+  if (!email || !jwt_token) {
+    console.warn("⚠️ Missing required session data (email or jwt_token)");
+    return res.status(400).json({ message: "Email and token are required" });
   }
 
   try {
     await pool.query(
-      `INSERT INTO sessions (email, status, last_seen)
-       VALUES ($1, $2, NOW())`,
-      [email, status || 'online']
+      `INSERT INTO sessions (email, status, jwt_token, created_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (email)
+       DO UPDATE SET
+         status = EXCLUDED.status,
+         jwt_token = EXCLUDED.jwt_token,
+         created_at = NOW()`,
+      [email, status, jwt_token]
     );
 
     console.log("✅ Session successfully recorded for:", email);
