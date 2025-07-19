@@ -19,6 +19,9 @@ function logDebug(message, data = null) {
 logDebug('🚨 Login route file loaded');
 
 router.post('/', async (req, res) => {
+
+console.log('🛰️ Received login request at:', req.originalUrl);
+  
   const { email, password, audience } = req.body;
 
   if (!email || !password) {
