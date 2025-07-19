@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../../db');
-const authenticateToken = require('../middleware/authMiddleware');
+
 
 router.post('/', async (req, res) => {
   const { email, status } = req.body;
