@@ -92,6 +92,9 @@ console.log('🛰️ Received login request at:', req.originalUrl);
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
     logDebug('🔐 Token created', tokenPayload);
 
+    logDebug('🎯 Token ready, about to insert session', { userId: user.id, token });
+console.log('🎯 Token ready, about to insert session');
+
     // 🧩 Break out payload for safety
     const { userId } = tokenPayload;
 
@@ -101,6 +104,9 @@ console.log('🛰️ Received login request at:', req.originalUrl);
     }
 
     logDebug('📥 Attempting session insert', { userId: user.id });
+
+    console.log('📌 Inserting session into jwt_sessions...');
+logDebug('📌 Inserting session into jwt_sessions...');
 
 try {
   const insertResult = await pool.query(
