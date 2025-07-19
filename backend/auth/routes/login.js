@@ -1,3 +1,5 @@
+logDebug('🚨 Login route file loaded');
+
 // backend/auth/routes/login.js
 const express = require('express');
 const router = express.Router();
