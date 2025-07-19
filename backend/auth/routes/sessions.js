@@ -1,8 +1,8 @@
-// backend/routes/sessions.js
+// backend/auth/routes/sessions.js
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
-const authenticateToken = require('../auth/middleware/authMiddleware');
+const pool = require('../../db');
+const authenticateToken = require('../middleware/authMiddleware');
 
 router.post('/', authenticateToken, async (req, res) => {
   const { email, status } = req.body;
@@ -16,7 +16,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     res.status(201).json({ message: 'Session recorded' });
   } catch (err) {
-    console.error('🔥 Failed to insert session:', err.message);
+    console.error("🔥 Failed to insert session:", err.message);
     res.status(500).json({ message: 'Session insert failed' });
   }
 });
