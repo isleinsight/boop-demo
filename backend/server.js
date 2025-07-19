@@ -22,6 +22,7 @@ app.use('/auth', authRoutes); // handles /auth/signup, etc.
 // ✅ Login route (mounted as /login)
 const loginRoute = require('./auth/routes/login');
 app.use('/login', loginRoute); // handles POST /login
+console.log("✅ Login route mounted at /login");
 
 // ✅ API routes
 app.use('/api/users', require('./auth/routes/users'));
