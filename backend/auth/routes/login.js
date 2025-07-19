@@ -1,3 +1,4 @@
+// backend/auth/routes/login.js
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
@@ -7,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../../db');
 
-// 🔍 Log file setup
+// Debug logging to file
 const logFile = path.join(__dirname, '../../../login-debug.log');
 function logDebug(message, data = null) {
   const timestamp = new Date().toISOString();
@@ -15,14 +16,17 @@ function logDebug(message, data = null) {
   fs.appendFileSync(logFile, entry);
 }
 
+// 🚨 File loaded
 logDebug('🚨 Login route file loaded');
+console.log('🚨 Login route file loaded');
 
 router.post('/', async (req, res) => {
-  console.log('🛰️ Received login request at:', req.originalUrl);
-
+  console.log('📡 Received login request at:', req.originalUrl);
   const { email, password, audience } = req.body;
+  console.log('📨 Login payload:', { email, audience });
 
   if (!email || !password) {
+    console.log('❌ Missing email or password');
     return res.status(400).json({ message: 'Email and password are required.' });
   }
 
@@ -34,46 +38,39 @@ router.post('/', async (req, res) => {
   };
 
   if (!audience || !roleMap[audience]) {
+    console.log('❌ Invalid audience:', audience);
     return res.status(400).json({ message: 'Missing or invalid login audience' });
   }
 
   try {
-    logDebug('🔑 Login attempt', { email, audience });
-
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1 AND status = $2',
       [email, 'active']
     );
 
     if (result.rows.length === 0) {
-      logDebug('❌ User not found or inactive');
+      console.log('❌ No active user found for:', email);
       return res.status(401).json({ message: 'Invalid credentials (user not found)' });
     }
 
     const user = result.rows[0];
-    logDebug('✅ User found', { id: user.id, email: user.email, role: user.role });
+    console.log('✅ User found:', { id: user.id, email: user.email, role: user.role });
 
-    if (!user.id) {
-      logDebug('⚠️ Missing user ID!');
-      return res.status(500).json({ message: 'User ID missing from record' });
-    }
+    const match = await bcrypt.compare(password, user.password_hash);
+    console.log('🔐 Password match result:', match);
 
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    logDebug('🔍 Password match', { match: isPasswordValid });
-
-    if (!isPasswordValid) {
+    if (!match) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
     const allowedRoles = roleMap[audience];
     if (!allowedRoles.includes(user.role)) {
-      logDebug('❌ Unauthorized role', { userRole: user.role, audience });
+      console.log('❌ Role not allowed:', { userRole: user.role, allowedRoles });
       return res.status(403).json({ message: 'Unauthorized role for this login' });
     }
 
     await pool.query('UPDATE users SET force_signed_out = false WHERE id = $1', [user.id]);
 
-    // 🎟️ Generate token
     const tokenPayload = {
       userId: user.id,
       role: user.role,
@@ -82,26 +79,24 @@ router.post('/', async (req, res) => {
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
-    logDebug('🔐 Token created', tokenPayload);
 
-    // 🗃️ Attempt session insert
-    logDebug('📥 Preparing to insert session', { userId: user.id, token });
+    console.log('🔐 JWT created:', token);
+    console.log('📦 Token payload:', tokenPayload);
 
+    // Attempt to insert session
     try {
+      console.log('📥 Attempting to insert session for user:', user.id);
       const insertResult = await pool.query(
         `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
          VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
         [user.id, token]
       );
-      logDebug('✅ Session inserted', insertResult.rows[0]);
       console.log('✅ Session inserted:', insertResult.rows[0]);
     } catch (insertErr) {
-      logDebug('❌ Session insert failed', { message: insertErr.message, stack: insertErr.stack });
-      console.error('❌ Session insert error:', insertErr);
+      console.error('❌ Failed to insert session:', insertErr);
     }
 
-    // 🎉 Respond to client
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Login successful',
       token,
       user: {
@@ -114,9 +109,8 @@ router.post('/', async (req, res) => {
     });
 
   } catch (err) {
-    logDebug('🔥 Login route crash', { message: err.message, stack: err.stack });
-    console.error('🔥 Login fatal error:', err);
-    res.status(500).json({ message: 'Internal server error during login' });
+    console.error('🔥 Login route failure:', err);
+    return res.status(500).json({ message: 'Server error during login' });
   }
 });
 
