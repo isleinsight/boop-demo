@@ -1,5 +1,3 @@
-logDebug('🚨 Login route file loaded');
-
 // backend/auth/routes/login.js
 const express = require('express');
 const router = express.Router();
@@ -17,6 +15,8 @@ function logDebug(message, data = null) {
   const entry = `[${timestamp}] ${message}` + (data ? ` ${JSON.stringify(data)} ` : '') + '\n';
   fs.appendFileSync(logFile, entry);
 }
+
+logDebug('🚨 Login route file loaded');
 
 router.post('/', async (req, res) => {
   const { email, password, audience } = req.body;
