@@ -88,16 +88,16 @@ router.post('/', async (req, res) => {
     logDebug('🔐 Token created', tokenPayload);
 
     try {
-      const insertResult = await pool.query(
-        `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
-         VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
-        [user.id, token]
-      );
-      logDebug('✅ Session inserted', insertResult.rows[0]);
-    } catch (insertErr) {
-      logDebug('❌ Session insert failed', { message: insertErr.message, stack: insertErr.stack });
-      return res.status(500).json({ message: 'Failed to store session token' });
-    }
+      try {
+  const insertResult = await pool.query(
+    `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
+     VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
+    [user.id, token]
+  );
+  console.log("✅ Session inserted", insertResult.rows[0]);
+} catch (err) {
+  console.error("❌ Insert failed", err.message);
+}
 
     res.status(200).json({
       message: 'Login successful',
