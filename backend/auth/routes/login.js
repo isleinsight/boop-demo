@@ -1,3 +1,4 @@
+// backend/auth/routes/login.js
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
@@ -7,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../../db');
 
-// 🧠 Log to login-debug.log
+// 📄 Debug log file path
 const logFile = path.join(__dirname, '../../../login-debug.log');
 function logDebug(message, data = null) {
   const timestamp = new Date().toISOString();
@@ -47,11 +48,11 @@ router.post('/', async (req, res) => {
     }
 
     const user = result.rows[0];
-    logDebug('✅ User loaded', { id: user.id, role: user.role });
+    logDebug('✅ User found', { id: user.id, email: user.email, role: user.role });
 
     if (!user.id) {
-      logDebug('❗ Missing user.id!');
-      return res.status(500).json({ message: 'User ID missing' });
+      logDebug('⚠️ WARNING: Missing user ID!');
+      return res.status(500).json({ message: 'User ID missing from record' });
     }
 
     if (typeof user.password_hash !== 'string') {
@@ -68,32 +69,32 @@ router.post('/', async (req, res) => {
 
     const allowedRoles = roleMap[audience];
     if (!allowedRoles.includes(user.role)) {
-      logDebug('❌ Unauthorized role for audience', { userRole: user.role, audience });
+      logDebug('❌ Unauthorized role', { userRole: user.role, audience });
       return res.status(403).json({ message: 'Unauthorized role for this login' });
     }
 
     await pool.query('UPDATE users SET force_signed_out = false WHERE id = $1', [user.id]);
 
     const tokenPayload = {
-      id: user.id, // Ensure `id` exists in payload
-      email: user.email,
+      userId: user.id,
       role: user.role,
+      email: user.email,
       type: user.type
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
-    logDebug('🔐 JWT created', tokenPayload);
+    logDebug('🔐 Token created', tokenPayload);
 
-    logDebug('🪵 Preparing to insert JWT session');
     try {
       const insertResult = await pool.query(
         `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
          VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
         [user.id, token]
       );
-      logDebug('✅ Session inserted into jwt_sessions', insertResult.rows[0]);
-    } catch (err) {
-      logDebug('❌ Failed to insert session', { message: err.message, stack: err.stack });
+      logDebug('✅ Session inserted', insertResult.rows[0]);
+    } catch (insertErr) {
+      logDebug('❌ Session insert failed', { message: insertErr.message, stack: insertErr.stack });
+      return res.status(500).json({ message: 'Failed to store session token' });
     }
 
     res.status(200).json({
@@ -109,7 +110,7 @@ router.post('/', async (req, res) => {
     });
 
   } catch (err) {
-    logDebug('🔥 Login error', { message: err.message, stack: err.stack });
+    logDebug('🔥 Unhandled login error', { message: err.message, stack: err.stack });
     res.status(500).json({ message: 'Server error during login' });
   }
 });
