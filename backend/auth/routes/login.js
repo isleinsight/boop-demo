@@ -1,4 +1,3 @@
-// backend/auth/routes/login.js
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
@@ -8,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../../db');
 
-// 🔍 Debug logging setup
+// 🔍 Log file setup
 const logFile = path.join(__dirname, '../../../login-debug.log');
 function logDebug(message, data = null) {
   const timestamp = new Date().toISOString();
@@ -19,9 +18,8 @@ function logDebug(message, data = null) {
 logDebug('🚨 Login route file loaded');
 
 router.post('/', async (req, res) => {
+  console.log('🛰️ Received login request at:', req.originalUrl);
 
-console.log('🛰️ Received login request at:', req.originalUrl);
-  
   const { email, password, audience } = req.body;
 
   if (!email || !password) {
@@ -56,19 +54,14 @@ console.log('🛰️ Received login request at:', req.originalUrl);
     logDebug('✅ User found', { id: user.id, email: user.email, role: user.role });
 
     if (!user.id) {
-      logDebug('⚠️ WARNING: Missing user ID!');
+      logDebug('⚠️ Missing user ID!');
       return res.status(500).json({ message: 'User ID missing from record' });
     }
 
-    if (typeof user.password_hash !== 'string') {
-      logDebug('❌ Invalid password hash type', typeof user.password_hash);
-      return res.status(500).json({ message: 'Password hash corrupted' });
-    }
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    logDebug('🔍 Password match', { match: isPasswordValid });
 
-    const match = await bcrypt.compare(password, user.password_hash);
-    logDebug('🔍 Password match', { result: match });
-
-    if (!match) {
+    if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
 
@@ -78,10 +71,9 @@ console.log('🛰️ Received login request at:', req.originalUrl);
       return res.status(403).json({ message: 'Unauthorized role for this login' });
     }
 
-    // Mark user as logged in
     await pool.query('UPDATE users SET force_signed_out = false WHERE id = $1', [user.id]);
 
-    // ✅ Prepare token and session
+    // 🎟️ Generate token
     const tokenPayload = {
       userId: user.id,
       role: user.role,
@@ -92,36 +84,23 @@ console.log('🛰️ Received login request at:', req.originalUrl);
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
     logDebug('🔐 Token created', tokenPayload);
 
-    logDebug('🎯 Token ready, about to insert session', { userId: user.id, token });
-console.log('🎯 Token ready, about to insert session');
+    // 🗃️ Attempt session insert
+    logDebug('📥 Preparing to insert session', { userId: user.id, token });
 
-    // 🧩 Break out payload for safety
-    const { userId } = tokenPayload;
-
-    // 🛠️ Insert session into table
-    if (!userId || !token) {
-      logDebug('❗ Invalid session insert: missing userId or token', { userId, token });
+    try {
+      const insertResult = await pool.query(
+        `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
+         VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
+        [user.id, token]
+      );
+      logDebug('✅ Session inserted', insertResult.rows[0]);
+      console.log('✅ Session inserted:', insertResult.rows[0]);
+    } catch (insertErr) {
+      logDebug('❌ Session insert failed', { message: insertErr.message, stack: insertErr.stack });
+      console.error('❌ Session insert error:', insertErr);
     }
 
-    logDebug('📥 Attempting session insert', { userId: user.id });
-
-    console.log('📌 Inserting session into jwt_sessions...');
-logDebug('📌 Inserting session into jwt_sessions...');
-
-try {
-  const insertResult = await pool.query(
-    `INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
-     VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours') RETURNING *`,
-    [user.id, token]
-  );
-
-  logDebug('✅ Session inserted', insertResult.rows[0]);
-
-} catch (err) {
-  logDebug('❌ Insert failed', { message: err.message, stack: err.stack });
-}
-
-    // 🎉 Final response
+    // 🎉 Respond to client
     res.status(200).json({
       message: 'Login successful',
       token,
@@ -135,8 +114,9 @@ try {
     });
 
   } catch (err) {
-    logDebug('🔥 Unhandled login error', { message: err.message, stack: err.stack });
-    res.status(500).json({ message: 'Server error during login' });
+    logDebug('🔥 Login route crash', { message: err.message, stack: err.stack });
+    console.error('🔥 Login fatal error:', err);
+    res.status(500).json({ message: 'Internal server error during login' });
   }
 });
 
