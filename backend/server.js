@@ -1,115 +1,87 @@
-// backend/auth/routes/login.js
+// backend/server.js
+require('dotenv').config({ path: __dirname + '/.env' });
+
 const express = require('express');
-const router = express.Router();
-require('dotenv').config();
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const pool = require('../../db');
+const cors = require('cors');
+const path = require('path');
+const { exec } = require('child_process');
+const authenticateToken = require('./auth/middleware/authMiddleware');
 
-// 📢 Basic route load notification
-console.log('✅ Login route file loaded');
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-router.post('/', async (req, res) => {
-  console.log('🛰️ Received login request');
+console.log("🔧 server.js is initializing...");
 
-  const { email, password, audience } = req.body;
+// ✅ Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required.' });
-  }
+// ✅ Auth routes
+const authRoutes = require('./auth/auth');
+app.use('/auth', authRoutes); // handles /auth/signup, etc.
 
-  const roleMap = {
-    admin: ['admin', 'super_admin'],
-    cardholder: ['cardholder', 'student', 'senior'],
-    parent: ['parent'],
-    vendor: ['vendor']
-  };
+// ✅ Login route (mounted as /login)
+const loginRoute = require('./auth/routes/login');
+app.use('/login', loginRoute); // handles POST /login
+console.log("✅ Login route mounted at /login");
 
-  if (!audience || !roleMap[audience]) {
-    return res.status(400).json({ message: 'Missing or invalid login audience' });
-  }
+// ✅ Logout
+const logoutRoute = require('./auth/routes/logout');
+app.use('/logout', logoutRoute);
 
-  try {
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1 AND status = $2',
-      [email, 'active']
-    );
+// ✅ API routes
+app.use('/api/users', require('./auth/routes/users'));
+app.use('/api/cards', require('./auth/routes/cards'));
+app.use('/api/wallets', require('./auth/routes/wallets'));
+app.use('/api/vendors', require('./auth/routes/vendors'));
+app.use('/api/user-students', require('./auth/routes/userStudents'));
 
-    if (result.rows.length === 0) {
-      console.warn('❌ User not found or inactive:', email);
-      return res.status(401).json({ message: 'Invalid credentials (user not found)' });
-    }
 
-    const user = result.rows[0];
-    console.log('✅ User found in DB:', user.email);
-
-    if (!user.id || typeof user.password_hash !== 'string') {
-      console.error('⚠️ Invalid user record:', user.id);
-      return res.status(500).json({ message: 'Server error: bad user data' });
-    }
-
-    const match = await bcrypt.compare(password, user.password_hash);
-    console.log('🔑 Password match result:', match);
-
-    if (!match) {
-      return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
-    }
-
-    const allowedRoles = roleMap[audience];
-    if (!allowedRoles.includes(user.role)) {
-      console.warn('🚫 Unauthorized role for this audience:', user.role);
-      return res.status(403).json({ message: 'Unauthorized role for this login' });
-    }
-
-    // ✅ Clear force_signed_out if needed
-    await pool.query('UPDATE users SET force_signed_out = false WHERE id = $1', [user.id]);
-
-    // 🎟️ Create JWT payload
-    const tokenPayload = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      type: user.type
-    };
-
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
-    console.log('🔐 Token generated:', tokenPayload);
-
-    // 💾 UPSERT the session token
-    try {
-      const upsertQuery = `
-        INSERT INTO jwt_sessions (user_id, jwt_token, created_at, expires_at)
-        VALUES ($1, $2, NOW(), NOW() + INTERVAL '2 hours')
-        ON CONFLICT (user_id)
-        DO UPDATE SET
-          jwt_token = EXCLUDED.jwt_token,
-          created_at = NOW(),
-          expires_at = NOW() + INTERVAL '2 hours';
-      `;
-
-      await pool.query(upsertQuery, [user.id, token]);
-      console.log('✅ Session inserted or updated successfully for user:', user.email);
-    } catch (insertErr) {
-      console.error('❌ Failed to upsert session:', insertErr.message);
-    }
-
-    // 🎉 Respond with success
-    res.status(200).json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        type: user.type,
-        name: `${user.first_name || ''} ${user.last_name || ''}`.trim()
-      }
-    });
-
-  } catch (err) {
-    console.error('🔥 Login route error:', err.message);
-    res.status(500).json({ message: 'Internal server error during login' });
-  }
+// ✅ /api/me - current logged-in user info
+app.get('/api/me', authenticateToken, (req, res) => {
+  const { id, userId, email, role, type } = req.user;
+  res.json({
+    id: userId || id,
+    email,
+    role,
+    type
+  });
 });
 
-module.exports = router;
+// ✅ Health check
+app.get('/health', (req, res) => {
+  res.send('OK');
+});
+
+// ✅ GitHub webhook endpoint
+app.post('/webhook', (req, res) => {
+  console.log('🔔 GitHub Webhook triggered');
+  exec('cd ~/boop-demo && git pull && pm2 restart all', (err, stdout, stderr) => {
+    if (err) {
+      console.error('❌ Webhook git pull failed:', stderr);
+      return res.status(500).send('Git pull failed');
+    }
+    console.log('✅ Webhook git pull success:\n', stdout);
+    res.status(200).send('Git pull and restart complete');
+  });
+});
+
+// ✅ Optional webhook logic
+app.use('/webhook', require('./webhook-handler'));
+
+// ✅ Catch 404s
+app.use((req, res) => {
+  res.status(404).json({ error: "Not Found" });
+});
+
+// ✅ Global error handler
+app.use((err, req, res, next) => {
+  console.error("🔥 Unhandled server error:", err);
+  res.status(500).json({ error: "Internal Server Error" });
+});
+
+// ✅ Start the server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
