@@ -7,10 +7,10 @@ const walletIdEl = document.getElementById("walletId");
 const walletBalanceEl = document.getElementById("walletBalance");
 const transactionBody = document.getElementById("transactionBody");
 const sendReceiveButtons = document.getElementById("sendReceiveButtons");
-const errorDisplay = document.getElementById("errorMessage"); // <-- Add this div in HTML
+const errorDisplay = document.getElementById("errorMessage");
 
 if (!token) {
-  redirectToLogin();
+  showError("No token found. Not redirecting for now.");
 }
 
 (async () => {
@@ -21,8 +21,14 @@ if (!token) {
 
     const user = await res.json();
 
-    if (!res.ok || user.force_signed_out) {
-      showError("Session expired or access denied.");
+    if (!res.ok) {
+      showError("⚠️ Could not fetch profile.");
+      console.warn("⛔ Invalid response from /api/me:", res.status);
+      return;
+    }
+
+    if (user.force_signed_out) {
+      showError("⚠️ You’ve been signed out by admin.");
       return;
     }
 
@@ -46,11 +52,10 @@ if (!token) {
 
   } catch (err) {
     console.error("🔥 Error fetching user info:", err);
-    showError("Unable to fetch your profile. Try reloading.");
+    showError("Unable to fetch your profile. Not redirecting.");
   }
 })();
 
-// ⏱ Periodic check for force logout
 setInterval(async () => {
   try {
     const res = await fetch("/api/me", {
@@ -58,19 +63,20 @@ setInterval(async () => {
     });
 
     const user = await res.json();
-    if (!res.ok || user.force_signed_out) {
-      showError("You've been signed out by an admin.");
+    if (!res.ok) {
+      showError("⚠️ Session invalid.");
+      console.warn("🔁 Polling failed:", res.status);
+      return;
+    }
+
+    if (user.force_signed_out) {
+      showError("⚠️ You’ve been signed out by admin.");
     }
   } catch (err) {
     console.error("🔁 Polling error:", err);
     showError("Session check failed.");
   }
 }, 10000);
-
-function redirectToLogin() {
-  localStorage.clear();
-  window.location.href = "cardholder-login.html";
-}
 
 function showError(msg) {
   const el = errorDisplay || document.getElementById("errorMessage");
@@ -82,3 +88,4 @@ logoutBtn?.addEventListener("click", () => {
   localStorage.clear();
   window.location.href = "cardholder-login.html";
 });
+
