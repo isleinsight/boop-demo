@@ -15,17 +15,22 @@ if (!token) {
   showError("No token found. Not redirecting for now.");
 }
 
+function decodeJWT(token) {
+  const payload = token.split('.')[1];
+  const decoded = atob(payload);
+  return JSON.parse(decoded);
+}
+
 (async () => {
   try {
-    const res = await fetch("/api/me", {
+    const userRes = await fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    const user = await res.json();
+    const user = await userRes.json();
 
-    if (!res.ok) {
+    if (!userRes.ok) {
       showError("⚠️ Could not fetch profile.");
-      console.warn("⛔ Invalid response from /api/me:", res.status);
       return;
     }
 
@@ -34,33 +39,29 @@ if (!token) {
       return;
     }
 
-    const decoded = parseJwt(token);
-    const expiresAt = new Date(decoded.exp * 1000).toISOString();
-    const userId = user.id || decoded.userId || decoded.id;
+    // 🔓 Decode token to extract exp + id
+    const decoded = decodeJWT(token);
+    const expiresAt = new Date(decoded.exp * 1000).toISOString(); // convert exp to ISO
+    const userId = decoded.id;
 
-    // 🔥 POST session record
+    // 📨 Record session with full data
     try {
       const sessionRes = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: user.email,
-          status: "online",
+          user_id: userId,
           jwt_token: token,
           expires_at: expiresAt,
-          user_id: userId
+          status: "online"
         })
       });
 
-      const sessionData = await sessionRes.json();
-
-      if (sessionRes.ok) {
-        console.log("✅ Session recorded:", sessionData.message);
-      } else {
-        console.warn("⚠️ Failed to record session:", sessionData.message);
-      }
+      const sessionResult = await sessionRes.json();
+      console.log("📬 Session record response:", sessionResult);
     } catch (sessionErr) {
-      console.error("❌ Session recording error:", sessionErr);
+      console.error("❌ Failed to record session:", sessionErr);
     }
 
     cardholderNameEl.textContent = `${user.first_name || ""} ${user.last_name || ""}`;
@@ -80,10 +81,9 @@ if (!token) {
     sendReceiveButtons.classList.toggle("hidden", !showButtons);
 
     transactionBody.innerHTML = `<div class="activity-item">Activity loading not implemented yet.</div>`;
-
   } catch (err) {
     console.error("🔥 Error fetching user info:", err);
-    showError("Unable to fetch your profile. Not redirecting.");
+    showError("Unable to fetch your profile.");
   }
 })();
 
@@ -98,7 +98,6 @@ setInterval(async () => {
 
     if (!res.ok) {
       showError("⚠️ Session invalid.");
-      console.warn("🔁 Polling failed:", res.status);
       return;
     }
 
@@ -121,15 +120,3 @@ logoutBtn?.addEventListener("click", () => {
   localStorage.clear();
   window.location.href = "cardholder-login.html";
 });
-
-// 🔍 Decode JWT payload safely
-function parseJwt(token) {
-  try {
-    const base64Payload = token.split(".")[1];
-    const decodedPayload = atob(base64Payload);
-    return JSON.parse(decodedPayload);
-  } catch (err) {
-    console.error("❌ Failed to decode token:", err);
-    return {};
-  }
-}
