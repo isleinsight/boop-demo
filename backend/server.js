@@ -26,12 +26,17 @@ const loginRoute = require('./auth/routes/login');
 app.use('/login', loginRoute); // handles POST /login
 console.log("✅ Login route mounted at /login");
 
+// ✅ Logout
+const logoutRoute = require('./auth/routes/logout');
+app.use('/logout', logoutRoute);
+
 // ✅ API routes
 app.use('/api/users', require('./auth/routes/users'));
 app.use('/api/cards', require('./auth/routes/cards'));
 app.use('/api/wallets', require('./auth/routes/wallets'));
 app.use('/api/vendors', require('./auth/routes/vendors'));
 app.use('/api/user-students', require('./auth/routes/userStudents'));
+
 
 // ✅ /api/me - current logged-in user info
 app.get('/api/me', authenticateToken, (req, res) => {
