@@ -1,3 +1,4 @@
+// backend/auth/routes/login.js
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
@@ -12,24 +13,27 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // 🔍 Check user
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1 AND status = $2',
-      [email, 'active']
-    );
+    // 🔍 Check user (regardless of status)
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
     const user = result.rows[0];
-    const match = await bcrypt.compare(password, user.password_hash);
 
+    // ❌ Check if suspended
+    if (user.status === 'suspended') {
+      return res.status(403).json({ message: 'This account is suspended.' });
+    }
+
+    // 🔐 Check password
+    const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
-    // 🔐 Create token
+    // ✅ Create JWT
     const tokenPayload = {
       id: user.id,
       email: user.email,
@@ -37,11 +41,9 @@ router.post('/', async (req, res) => {
       type: user.type
     };
 
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-      expiresIn: '2h'
-    });
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
 
-    // 💾 Write session row
+    // 🧠 Upsert session row
     await pool.query(`
       INSERT INTO sessions (email, user_id, jwt_token, created_at, expires_at, status)
       VALUES ($1, $2, $3, NOW(), NOW() + INTERVAL '2 hours', 'online')
@@ -52,7 +54,7 @@ router.post('/', async (req, res) => {
         status = 'online'
     `, [user.email, user.id, token]);
 
-    // ✅ Respond
+    // 🚀 Response
     res.status(200).json({
       message: 'Login successful',
       token,
