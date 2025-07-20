@@ -1,4 +1,5 @@
 //view-users.js
+ document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
   const userTableBody = document.getElementById("userTableBody");
   const searchInput = document.getElementById("searchInput");
@@ -38,41 +39,27 @@
 }
 
   async function fetchUsers() {
-  try {
-    const search = encodeURIComponent(searchInput.value);
-    const role = encodeURIComponent(roleFilter.value);
-    const status = encodeURIComponent(statusFilter.value);
-    const query = `?page=${currentPage}&perPage=${perPage}&search=${search}&role=${role}&status=${status}`;
 
-    const res = await fetch(`/api/users${query}`, {
-      headers: { "Authorization": `Bearer ${token}` }
-    });
+    try {
+      const search = encodeURIComponent(searchInput.value);
+      const role = encodeURIComponent(roleFilter.value);
+      const status = encodeURIComponent(statusFilter.value);
+      const query = `?page=${currentPage}&perPage=${perPage}&search=${search}&role=${role}&status=${status}`;
 
-    if (!res.ok) {
-      console.error("❌ /api/users returned non-OK:", res.status);
-      userTableBody.innerHTML = `<tr><td colspan="7">Failed to load users.</td></tr>`;
-      return;
-    }
-
-    const data = await res.json();
-
-    if (!Array.isArray(data.users)) {
-      console.warn("⚠️ Invalid user list returned:", data);
-      userTableBody.innerHTML = `<tr><td colspan="7">No users available.</td></tr>`;
-      return;
-    }
-
-    allUsers = data.users || [];
-    totalPages = data.totalPages || 1;
-    totalUsersCount = data.total || 0;
-
-    render(); // Only call if users fetched cleanly
-
-  } catch (e) {
-    console.error("🔥 Error fetching users:", e);
-    userTableBody.innerHTML = `<tr><td colspan="7">Error fetching users.</td></tr>`;
+      const res = await fetch(`/api/users${query}`, {
+  headers: {
+    "Authorization": `Bearer ${token}`
   }
-}
+});
+      const data = await res.json();
+      allUsers = data.users || [];
+      totalPages = data.totalPages || 1;
+      totalUsersCount = data.total || 0; // ✅ store total count from API
+      render();
+    } catch (e) {
+      console.error("Error fetching users:", e);
+    }
+  }
 
   function createDropdown(user) {
     const select = document.createElement("select");
@@ -113,42 +100,26 @@
   }
 
   async function performAction(user, action) {
-  const token = localStorage.getItem("boop_jwt");
-
+  const token = localStorage.getItem("boop_jwt"); // ✅ Add this line
   try {
     if (action === "delete") {
-      await fetch(`/api/users/${user.id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
+  await fetch(`/api/users/${user.id}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
 
     } else if (action === "suspend" || action === "unsuspend") {
       const newStatus = action === "suspend" ? "suspended" : "active";
-
-      // 👇 Update user status
-      const statusRes = await fetch(`/api/users/${user.id}`, {
+      await fetch(`/api/users/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${token}` // ✅ Required here too
         },
         body: JSON.stringify({ status: newStatus }),
       });
-
-      if (!statusRes.ok) throw new Error(`Status update failed`);
-
-      // 👇 Force sign-out only if suspending
-      if (newStatus === "suspended") {
-        const signoutRes = await fetch(`/api/users/${user.id}/signout`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!signoutRes.ok) throw new Error(`Force sign-out failed`);
-      }
-
     } else if (action === "signout") {
       await fetch(`/api/users/${user.id}/signout`, {
         method: "POST",
@@ -156,7 +127,6 @@
           "Authorization": `Bearer ${token}`
         }
       });
-
     } else if (action === "restore") {
       await fetch(`/api/users/${user.id}/restore`, {
         method: "PATCH",
@@ -166,11 +136,10 @@
       });
     }
 
-    // ✅ Refresh the UI after successful change
-    await fetchUsers();
+    fetchUsers(); // Refresh table
   } catch (err) {
-    console.error(`❌ ${action} failed:`, err);
-    alert(`❌ ${action.charAt(0).toUpperCase() + action.slice(1)} failed.`);
+    console.error("❌ Action failed:", err);
+    alert("Action failed.");
   }
 }
 
