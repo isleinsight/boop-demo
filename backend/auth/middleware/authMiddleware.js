@@ -1,4 +1,4 @@
-// backend/auth/middleware/authMiddleware.js
+// middleware/authMiddleware.js
 const jwt = require("jsonwebtoken");
 const pool = require("../../db");
 
@@ -6,35 +6,26 @@ async function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) {
-    console.warn("🚫 No token provided");
-    return res.status(401).json({ message: "Missing token" });
-  }
+  if (!token) return res.status(401).json({ message: "No token provided" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userEmail = decoded.email;
+    const email = decoded.email;
 
-    console.log("🔐 Token decoded for:", userEmail);
-
-    // 🔍 Check session in DB
-    const result = await pool.query(
-      "SELECT * FROM sessions WHERE email = $1 AND status = 'online'",
-      [userEmail]
+    // 🔐 Require matching session row with token + email
+    const sessionCheck = await pool.query(
+      `SELECT * FROM sessions WHERE email = $1 AND jwt_token = $2`,
+      [email, token]
     );
 
-    if (result.rows.length === 0) {
-      console.warn(`❌ No active session found for ${userEmail}`);
-      return res.status(403).json({ message: "Session expired or revoked" });
+    if (sessionCheck.rows.length === 0) {
+      return res.status(403).json({ message: "Session not found or revoked" });
     }
 
-    // ✅ Allow through
     req.user = decoded;
     next();
-
   } catch (err) {
-    console.error("🔥 JWT error:", err.message);
-    return res.status(403).json({ message: "Invalid token" });
+    return res.status(403).json({ message: "Invalid or expired token" });
   }
 }
 
