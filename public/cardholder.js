@@ -34,10 +34,13 @@ function decodeJWT(token) {
       return;
     }
 
-    if (user.force_signed_out) {
-      showError("⚠️ You’ve been signed out by admin.");
-      return;
-    }
+if (user.force_signed_out) {
+  showError("⚠️ You’ve been signed out by admin.");
+  setTimeout(() => {
+    localStorage.clear();
+    window.location.href = "cardholder-login.html";
+  }, 2000); // wait 2 seconds so the message is visible
+}
 
     // 🔓 Decode token to extract exp + id
     const decoded = decodeJWT(token);
