@@ -1,3 +1,25 @@
+<script>
+  // 🔒 IMMEDIATE redirect for unauthorized users
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  const allowedRoles = ["cardholder", "student", "senior"];
+
+  if (!user || !allowedRoles.includes(user.role?.toLowerCase())) {
+    window.location.href = "cardholder-login.html"; // Boot them out
+  }
+
+  // ✅ DOM logic after authorization confirmed
+  document.addEventListener("DOMContentLoaded", () => {
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        localStorage.removeItem("boop_jwt");
+        window.location.href = "cardholder-login.html";
+      });
+    }
+  });
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
