@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", async () => {
+//view-users.js
   const token = localStorage.getItem("boop_jwt");
   const userTableBody = document.getElementById("userTableBody");
   const searchInput = document.getElementById("searchInput");
@@ -103,9 +103,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     if (action === "delete") {
-      const input = prompt("Type DELETE to confirm.");
-      if (input !== "DELETE") return;
-
       await fetch(`/api/users/${user.id}`, {
         method: "DELETE",
         headers: {
@@ -116,28 +113,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (action === "suspend" || action === "unsuspend") {
       const newStatus = action === "suspend" ? "suspended" : "active";
 
-      // Update user status
-      const patchRes = await fetch(`/api/users/${user.id}`, {
+      // 👇 Update user status
+      const statusRes = await fetch(`/api/users/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus }),
       });
 
-      if (!patchRes.ok) {
-        throw new Error(`Failed to ${action} user`);
-      }
+      if (!statusRes.ok) throw new Error(`Status update failed`);
 
-      // 🔒 Also force sign-out if suspending
-      if (action === "suspend") {
-        await fetch(`/api/users/${user.id}/signout`, {
+      // 👇 Force sign-out only if suspending
+      if (newStatus === "suspended") {
+        const signoutRes = await fetch(`/api/users/${user.id}/signout`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
+          headers: { "Authorization": `Bearer ${token}` }
         });
+
+        if (!signoutRes.ok) throw new Error(`Force sign-out failed`);
       }
 
     } else if (action === "signout") {
@@ -157,10 +152,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    await fetchUsers(); // Refresh table after action
+    // ✅ Refresh the UI after successful change
+    await fetchUsers();
   } catch (err) {
     console.error(`❌ ${action} failed:`, err);
-    alert(`Failed to perform ${action} on user.`);
+    alert(`❌ ${action.charAt(0).toUpperCase() + action.slice(1)} failed.`);
   }
 }
 
