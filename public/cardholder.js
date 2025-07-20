@@ -1,6 +1,5 @@
-// public/js/cardholder-login.js
-
 const token = localStorage.getItem("boop_jwt");
+const user = JSON.parse(localStorage.getItem("boopUser"));
 
 const logoutBtn = document.getElementById("logoutBtn");
 const cardholderNameEl = document.getElementById("cardholderName");
@@ -11,115 +10,87 @@ const transactionBody = document.getElementById("transactionBody");
 const sendReceiveButtons = document.getElementById("sendReceiveButtons");
 const errorDisplay = document.getElementById("errorMessage");
 
-if (!token) {
-  showError("No token found. Redirecting...");
-  localStorage.clear();
+// 🚪 Boot unauthorized users
+const allowedRoles = ["cardholder", "student", "senior"];
+if (!user || !allowedRoles.includes(user.role?.toLowerCase())) {
   window.location.href = "cardholder-login.html";
 }
 
-function decodeJWT(token) {
-  const payload = token.split('.')[1];
-  const decoded = atob(payload);
-  return JSON.parse(decoded);
+if (!token) {
+  forceRedirect("No token found. Please log in again.");
 }
 
 (async () => {
   try {
-    const userRes = await fetch("/api/me", {
+    const res = await fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    const user = await userRes.json();
+    const currentUser = await res.json();
 
-    if (!userRes.ok || !user.email) {
+    if (!res.ok || !currentUser.email) {
       forceRedirect("⚠️ Session invalid or expired.");
       return;
     }
 
-    if (user.force_signed_out) {
+    if (currentUser.force_signed_out) {
       forceRedirect("⚠️ You’ve been signed out by admin.");
       return;
     }
 
-    // 🔓 Decode token to extract exp + id
-    const decoded = decodeJWT(token);
-    const expiresAt = new Date(decoded.exp * 1000).toISOString(); // convert exp to ISO
-    const userId = decoded.id;
+    // 🧾 Display user info
+    cardholderNameEl.textContent = `${currentUser.first_name || ""} ${currentUser.last_name || ""}`;
+    cardholderEmailEl.textContent = currentUser.email || "-";
 
-    // 📨 Record session with full data
-    try {
-      const sessionRes = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          user_id: userId,
-          jwt_token: token,
-          expires_at: expiresAt,
-          status: "online"
-        })
-      });
-
-      const sessionResult = await sessionRes.json();
-      console.log("📬 Session record response:", sessionResult);
-    } catch (sessionErr) {
-      console.error("❌ Failed to record session:", sessionErr);
-    }
-
-    cardholderNameEl.textContent = `${user.first_name || ""} ${user.last_name || ""}`;
-    cardholderEmailEl.textContent = user.email || "-";
-
-    const walletRes = await fetch(`/api/wallets/${user.id}`, {
+    const walletRes = await fetch(`/api/wallets/${currentUser.id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     const wallet = await walletRes.json();
-
     walletIdEl.textContent = wallet.id || "N/A";
     walletBalanceEl.textContent = `$${(wallet.balance || 0).toFixed(2)}`;
 
-    const role = user.role?.toLowerCase();
-    const showButtons = role === "vendor" || (role === "cardholder" && user.on_assistance !== true);
+    const role = currentUser.role?.toLowerCase();
+    const showButtons = role === "vendor" || (role === "cardholder" && currentUser.on_assistance !== true);
     sendReceiveButtons.classList.toggle("hidden", !showButtons);
 
     transactionBody.innerHTML = `<div class="activity-item">Activity loading not implemented yet.</div>`;
+
   } catch (err) {
     console.error("🔥 Error fetching user info:", err);
-    showError("Unable to fetch your profile.");
+    forceRedirect("Unable to fetch your profile.");
   }
 })();
 
-// ⏱ Force logout checker
+// 🕵️‍♂️ Background session checker
 setInterval(async () => {
   try {
     const res = await fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    const user = await res.json();
-
-    if (!res.ok || !user.email || user.force_signed_out) {
+    const currentUser = await res.json();
+    if (!res.ok || !currentUser.email || currentUser.force_signed_out) {
       forceRedirect("⚠️ You’ve been logged out.");
     }
   } catch (err) {
-    console.error("🔁 Polling error:", err);
-    forceRedirect("⚠️ Lost connection. Please sign in again.");
+    forceRedirect("⚠️ Session check failed.");
   }
 }, 10000);
 
-// 🧠 Error display + redirect
-function showError(msg) {
-  const el = errorDisplay || document.getElementById("errorMessage");
-  if (el) el.textContent = msg;
-  console.warn("⚠️", msg);
-}
-
-function forceRedirect(message) {
-  showError(message);
+// 💥 Force redirect + message
+function forceRedirect(msg) {
+  showError(msg);
   setTimeout(() => {
     localStorage.clear();
     window.location.href = "cardholder-login.html";
   }, 1500);
+}
+
+function showError(msg) {
+  const el = errorDisplay || document.getElementById("errorMessage");
+  if (el) el.textContent = msg;
+  console.warn("⚠️", msg);
 }
 
 logoutBtn?.addEventListener("click", () => {
