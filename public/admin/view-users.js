@@ -99,34 +99,55 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function performAction(user, action) {
-  const token = localStorage.getItem("boop_jwt"); // ✅ Add this line
+  const token = localStorage.getItem("boop_jwt");
+
   try {
     if (action === "delete") {
-  await fetch(`/api/users/${user.id}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${token}`
-    }
-  });
+      const input = prompt("Type DELETE to confirm.");
+      if (input !== "DELETE") return;
+
+      await fetch(`/api/users/${user.id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
 
     } else if (action === "suspend" || action === "unsuspend") {
       const newStatus = action === "suspend" ? "suspended" : "active";
-      await fetch(`/api/users/${user.id}`, {
+
+      // Update user status
+      const patchRes = await fetch(`/api/users/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` // ✅ Required here too
+          "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus })
       });
+
+      if (!patchRes.ok) {
+        throw new Error(`Failed to ${action} user`);
+      }
+
+      // 🔒 Also force sign-out if suspending
+      if (action === "suspend") {
+        await fetch(`/api/users/${user.id}/signout`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+      }
+
     } else if (action === "signout") {
-  await fetch(`/api/sessions/${user.email}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${token}`
-    }
-  });
-}
+      await fetch(`/api/users/${user.id}/signout`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
     } else if (action === "restore") {
       await fetch(`/api/users/${user.id}/restore`, {
         method: "PATCH",
@@ -136,10 +157,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    fetchUsers(); // Refresh table
+    await fetchUsers(); // Refresh table after action
   } catch (err) {
-    console.error("❌ Action failed:", err);
-    alert("Action failed.");
+    console.error(`❌ ${action} failed:`, err);
+    alert(`Failed to perform ${action} on user.`);
   }
 }
 
