@@ -29,6 +29,28 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       localStorage.setItem("boop_jwt", data.token);
       localStorage.setItem("boopUser", JSON.stringify(data.user));
 
+      // ✅ ⏺ Record session
+      try {
+        const sessionRes = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: data.user.email,
+            status: "online",
+            jwt_token: data.token
+          })
+        });
+
+        if (!sessionRes.ok) {
+          console.warn("⚠️ Session insert failed:", await sessionRes.text());
+        } else {
+          console.log("✅ Session inserted for:", data.user.email);
+        }
+
+      } catch (sessionErr) {
+        console.error("🔥 Session recording error:", sessionErr);
+      }
+
       // ✅ Frontend check for extra security
       const allowedRoles = {
         cardholder: ["cardholder", "student", "senior"],
