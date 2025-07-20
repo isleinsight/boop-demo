@@ -120,12 +120,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         body: JSON.stringify({ status: newStatus }),
       });
     } else if (action === "signout") {
-      await fetch(`/api/users/${user.id}/signout`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
+  await fetch(`/api/sessions/${user.email}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+}
     } else if (action === "restore") {
       await fetch(`/api/users/${user.id}/restore`, {
         method: "PATCH",
