@@ -20,26 +20,22 @@
   let currentPage = 1;
   const perPage = 10;
   let totalPages = 1;
-  let totalUsersCount = 0; // ✅ Needed for total across all pages
-
-  let sortKey = null;
-  let sortOrder = 'asc';
+  let totalUsersCount = 0;
 
   try {
-  const res = await fetch("/api/me", {
-    headers: {
-      "Authorization": `Bearer ${token}`
-    }
-  });
-  const meData = await res.json();
-  currentUser = meData; // ✅ Save full user object for later use
-  currentUserEmail = meData.email;
-} catch (err) {
-  console.error("Could not fetch current user email");
-}
+    const res = await fetch("/api/me", {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    const meData = await res.json();
+    currentUser = meData;
+    currentUserEmail = meData.email;
+  } catch (err) {
+    console.error("Could not fetch current user email");
+  }
 
   async function fetchUsers() {
-
     try {
       const search = encodeURIComponent(searchInput.value);
       const role = encodeURIComponent(roleFilter.value);
@@ -47,14 +43,14 @@
       const query = `?page=${currentPage}&perPage=${perPage}&search=${search}&role=${role}&status=${status}`;
 
       const res = await fetch(`/api/users${query}`, {
-  headers: {
-    "Authorization": `Bearer ${token}`
-  }
-});
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
       const data = await res.json();
       allUsers = data.users || [];
       totalPages = data.totalPages || 1;
-      totalUsersCount = data.total || 0; // ✅ store total count from API
+      totalUsersCount = data.total || 0;
       render();
     } catch (e) {
       console.error("Error fetching users:", e);
@@ -68,16 +64,14 @@
       <option value="action">Action</option>
       <option value="view">View Profile</option>
       ${user.deleted_at
-  ? '<option value="restore">Restore</option>'
-  : `
+        ? '<option value="restore">Restore</option>'
+        : `
       ${user.status === "suspended"
-        ? '<option value="unsuspend">Unsuspend</option>'
-        : '<option value="suspend">Suspend</option>'}
+          ? '<option value="unsuspend">Unsuspend</option>'
+          : '<option value="suspend">Suspend</option>'}
       <option value="signout">Force Sign-out</option>
       <option value="delete">Delete</option>
-    `
-}
-    `;
+    `}`;
     select.addEventListener("change", async () => {
       const action = select.value;
       select.value = "action";
@@ -100,67 +94,63 @@
   }
 
   async function performAction(user, action) {
-  const token = localStorage.getItem("boop_jwt");
+    try {
+      if (action === "delete") {
+        await fetch(`/api/users/${user.id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+      } else if (action === "suspend" || action === "unsuspend") {
+        const newStatus = action === "suspend" ? "suspended" : "active";
 
-  try {
-    if (action === "delete") {
-      await fetch(`/api/users/${user.id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
+        const res = await fetch(`/api/users/${user.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert("❌ Failed to update status: " + (err.message || res.status));
+          return;
         }
-      });
-    } else if (action === "suspend" || action === "unsuspend") {
-      const newStatus = action === "suspend" ? "suspended" : "active";
 
-      const res = await fetch(`/api/users/${user.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
+        console.log(`✅ User ${user.email} status updated to ${newStatus}`);
+      } else if (action === "signout") {
+        const res = await fetch(`/api/users/${user.id}/signout`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
 
-      if (!res.ok) {
-        const err = await res.json();
-        alert("❌ Failed to update status: " + (err.message || res.status));
-        return;
+        if (!res.ok) {
+          const err = await res.json();
+          alert("❌ Force sign-out failed: " + (err.message || res.status));
+          return;
+        }
+
+        console.log(`✅ Forced sign-out for ${user.email}`);
+      } else if (action === "restore") {
+        await fetch(`/api/users/${user.id}/restore`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
       }
 
-      console.log(`✅ User ${user.email} status updated to ${newStatus}`);
-    } else if (action === "signout") {
-      const res = await fetch(`/api/users/${user.id}/signout`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        alert("❌ Force sign-out failed: " + (err.message || res.status));
-        return;
-      }
-
-      console.log(`✅ Forced sign-out for ${user.email}`);
-    } else if (action === "restore") {
-      await fetch(`/api/users/${user.id}/restore`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
+      await fetchUsers();
+    } catch (err) {
+      console.error("❌ Action failed:", err);
+      alert("Action failed. Check console.");
     }
-
-    // ✅ Always refresh the table after action
-    fetchUsers();
-
-  } catch (err) {
-    console.error("❌ Action failed:", err);
-    alert("Action failed. Check console.");
   }
-}
 
   function render() {
     userTableBody.innerHTML = "";
@@ -190,7 +180,6 @@
       userTableBody.appendChild(row);
     });
 
-    // ✅ TOTAL users for entire result set, not just this page
     userCount.textContent = `Total Users: ${totalUsersCount}`;
     paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     prevBtn.style.display = currentPage > 1 ? "inline-block" : "none";
@@ -269,19 +258,17 @@
     if (confirmText !== "DELETE") return;
 
     try {
-      const token = localStorage.getItem("boop_jwt");
-
-await Promise.all(ids.map(id =>
-  fetch(`/api/users/${id}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ uid: currentUser?.id }) // ✅ Track admin who performed it
-  })
-));
-      fetchUsers(); // Refresh after delete
+      await Promise.all(ids.map(id =>
+        fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uid: currentUser?.id })
+        })
+      ));
+      fetchUsers();
     } catch (e) {
       console.error("Bulk delete failed:", e);
       alert("Bulk delete failed.");
