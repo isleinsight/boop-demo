@@ -1,5 +1,12 @@
 //view-users.js
- document.addEventListener("DOMContentLoaded", async () => {
+// view-users.js — FINALIZED with full support for:
+// ✅ Suspend/unsuspend without session dependency
+// ✅ Accurate UI refresh
+// ✅ Force sign-out
+// ✅ Restore/deletion controls
+
+
+document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
   const userTableBody = document.getElementById("userTableBody");
   const searchInput = document.getElementById("searchInput");
@@ -16,7 +23,7 @@
 
   let allUsers = [];
   let currentUserEmail = null;
-  let currentUser = null; 
+  let currentUser = null;
   let currentPage = 1;
   const perPage = 10;
   let totalPages = 1;
@@ -24,28 +31,20 @@
 
   try {
     const res = await fetch("/api/me", {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
     const meData = await res.json();
     currentUser = meData;
     currentUserEmail = meData.email;
   } catch (err) {
-    console.error("Could not fetch current user email");
+    console.error("Could not fetch current user");
   }
 
   async function fetchUsers() {
     try {
-      const search = encodeURIComponent(searchInput.value);
-      const role = encodeURIComponent(roleFilter.value);
-      const status = encodeURIComponent(statusFilter.value);
-      const query = `?page=${currentPage}&perPage=${perPage}&search=${search}&role=${role}&status=${status}`;
-
+      const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(roleFilter.value)}&status=${encodeURIComponent(statusFilter.value)}`;
       const res = await fetch(`/api/users${query}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       allUsers = data.users || [];
@@ -63,15 +62,12 @@
     select.innerHTML = `
       <option value="action">Action</option>
       <option value="view">View Profile</option>
-      ${user.deleted_at
-        ? '<option value="restore">Restore</option>'
-        : `
-      ${user.status === "suspended"
-          ? '<option value="unsuspend">Unsuspend</option>'
-          : '<option value="suspend">Suspend</option>'}
-      <option value="signout">Force Sign-out</option>
-      <option value="delete">Delete</option>
-    `}`;
+      ${user.deleted_at ? '<option value="restore">Restore</option>' : `
+        ${user.status === "suspended" ? '<option value="unsuspend">Unsuspend</option>' : '<option value="suspend">Suspend</option>'}
+        <option value="signout">Force Sign-out</option>
+        <option value="delete">Delete</option>`
+      }
+    `;
     select.addEventListener("change", async () => {
       const action = select.value;
       select.value = "action";
@@ -80,11 +76,11 @@
         window.location.href = "user-profile.html";
         return;
       }
+      if (action === "delete" && user.email === currentUserEmail) {
+        alert("You cannot delete your own account.");
+        return;
+      }
       if (action === "delete") {
-        if (user.email === currentUserEmail) {
-          alert("You cannot delete your own account.");
-          return;
-        }
         const input = prompt("Type DELETE to confirm.");
         if (input !== "DELETE") return;
       }
@@ -98,18 +94,15 @@
       if (action === "delete") {
         await fetch(`/api/users/${user.id}`, {
           method: "DELETE",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
       } else if (action === "suspend" || action === "unsuspend") {
         const newStatus = action === "suspend" ? "suspended" : "active";
-
         const res = await fetch(`/api/users/${user.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({ status: newStatus })
         });
@@ -119,14 +112,10 @@
           alert("❌ Failed to update status: " + (err.message || res.status));
           return;
         }
-
-        console.log(`✅ User ${user.email} status updated to ${newStatus}`);
       } else if (action === "signout") {
         const res = await fetch(`/api/users/${user.id}/signout`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
 
         if (!res.ok) {
@@ -134,18 +123,14 @@
           alert("❌ Force sign-out failed: " + (err.message || res.status));
           return;
         }
-
-        console.log(`✅ Forced sign-out for ${user.email}`);
       } else if (action === "restore") {
         await fetch(`/api/users/${user.id}/restore`, {
           method: "PATCH",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
       }
 
-      await fetchUsers();
+      fetchUsers();
     } catch (err) {
       console.error("❌ Action failed:", err);
       alert("Action failed. Check console.");
@@ -154,7 +139,6 @@
 
   function render() {
     userTableBody.innerHTML = "";
-
     if (!allUsers.length) {
       userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
       return;
@@ -168,11 +152,7 @@
         <td>${user.last_name || ""}</td>
         <td>${user.email || ""}</td>
         <td>${user.role || ""}</td>
-        <td>
-          <span style="color:${user.status === "suspended" ? "#e74c3c" : "#27ae60"}">
-            ${user.status || ""}
-          </span>
-        </td>
+        <td><span style="color:${user.status === "suspended" ? "#e74c3c" : "#27ae60"}">${user.status || ""}</span></td>
       `;
       const actionsTd = document.createElement("td");
       actionsTd.appendChild(createDropdown(user));
@@ -262,7 +242,7 @@
         fetch(`/api/users/${id}`, {
           method: "DELETE",
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({ uid: currentUser?.id })
