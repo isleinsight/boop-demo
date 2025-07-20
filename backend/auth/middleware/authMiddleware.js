@@ -1,32 +1,28 @@
-// middleware/authMiddleware.js
-const jwt = require("jsonwebtoken");
+const express = require("express");
+const router = express.Router();
 const pool = require("../../db");
 
-async function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+// ⛔ DO NOT include authenticateToken here
 
-  if (!token) return res.status(401).json({ message: "No token provided" });
+router.post("/", async (req, res) => {
+  const { email, user_id, jwt_token, expires_at, status } = req.body;
+
+  if (!email || !user_id || !jwt_token || !expires_at || !status) {
+    return res.status(400).json({ message: "Missing session data" });
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const email = decoded.email;
-
-    // 🔐 Require matching session row with token + email
-    const sessionCheck = await pool.query(
-      `SELECT * FROM sessions WHERE email = $1 AND jwt_token = $2`,
-      [email, token]
+    await pool.query(
+      `INSERT INTO sessions (email, user_id, jwt_token, expires_at, status)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [email, user_id, jwt_token, expires_at, status]
     );
 
-    if (sessionCheck.rows.length === 0) {
-      return res.status(403).json({ message: "Session not found or revoked" });
-    }
-
-    req.user = decoded;
-    next();
+    res.status(201).json({ message: "Session recorded" });
   } catch (err) {
-    return res.status(403).json({ message: "Invalid or expired token" });
+    console.error("❌ Failed to insert session:", err.message);
+    res.status(500).json({ message: "Failed to create session" });
   }
-}
+});
 
-module.exports = authenticateToken;
+module.exports = router;
