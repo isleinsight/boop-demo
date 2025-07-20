@@ -38,27 +38,41 @@
 }
 
   async function fetchUsers() {
+  try {
+    const search = encodeURIComponent(searchInput.value);
+    const role = encodeURIComponent(roleFilter.value);
+    const status = encodeURIComponent(statusFilter.value);
+    const query = `?page=${currentPage}&perPage=${perPage}&search=${search}&role=${role}&status=${status}`;
 
-    try {
-      const search = encodeURIComponent(searchInput.value);
-      const role = encodeURIComponent(roleFilter.value);
-      const status = encodeURIComponent(statusFilter.value);
-      const query = `?page=${currentPage}&perPage=${perPage}&search=${search}&role=${role}&status=${status}`;
+    const res = await fetch(`/api/users${query}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
 
-      const res = await fetch(`/api/users${query}`, {
-  headers: {
-    "Authorization": `Bearer ${token}`
-  }
-});
-      const data = await res.json();
-      allUsers = data.users || [];
-      totalPages = data.totalPages || 1;
-      totalUsersCount = data.total || 0; // ✅ store total count from API
-      render();
-    } catch (e) {
-      console.error("Error fetching users:", e);
+    if (!res.ok) {
+      console.error("❌ /api/users returned non-OK:", res.status);
+      userTableBody.innerHTML = `<tr><td colspan="7">Failed to load users.</td></tr>`;
+      return;
     }
+
+    const data = await res.json();
+
+    if (!Array.isArray(data.users)) {
+      console.warn("⚠️ Invalid user list returned:", data);
+      userTableBody.innerHTML = `<tr><td colspan="7">No users available.</td></tr>`;
+      return;
+    }
+
+    allUsers = data.users || [];
+    totalPages = data.totalPages || 1;
+    totalUsersCount = data.total || 0;
+
+    render(); // Only call if users fetched cleanly
+
+  } catch (e) {
+    console.error("🔥 Error fetching users:", e);
+    userTableBody.innerHTML = `<tr><td colspan="7">Error fetching users.</td></tr>`;
   }
+}
 
   function createDropdown(user) {
     const select = document.createElement("select");
