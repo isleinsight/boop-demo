@@ -1,10 +1,19 @@
 <script>
-  // 🔒 IMMEDIATE redirect for unauthorized users
+  // 🔒 Immediate check from localStorage
   const user = JSON.parse(localStorage.getItem("boopUser"));
   const allowedRoles = ["cardholder", "student", "senior"];
 
-  if (!user || !allowedRoles.includes(user.role?.toLowerCase())) {
-    window.location.href = "cardholder-login.html"; // Boot them out
+  const isUnauthorized =
+    !user ||
+    !allowedRoles.includes(user.role?.toLowerCase()) ||
+    user.force_signed_out === true ||
+    user.status === "suspended";
+
+  if (isUnauthorized) {
+    // Clear session and boot them out
+    localStorage.removeItem("boopUser");
+    localStorage.removeItem("boop_jwt");
+    window.location.href = "cardholder-login.html";
   }
 
   // ✅ DOM logic after authorization confirmed
