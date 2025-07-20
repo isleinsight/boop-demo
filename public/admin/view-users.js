@@ -100,33 +100,50 @@
   }
 
   async function performAction(user, action) {
-  const token = localStorage.getItem("boop_jwt"); // ✅ Add this line
+  const token = localStorage.getItem("boop_jwt");
+
   try {
     if (action === "delete") {
-  await fetch(`/api/users/${user.id}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${token}`
-    }
-  });
-
+      await fetch(`/api/users/${user.id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
     } else if (action === "suspend" || action === "unsuspend") {
       const newStatus = action === "suspend" ? "suspended" : "active";
-      await fetch(`/api/users/${user.id}`, {
+
+      const res = await fetch(`/api/users/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` // ✅ Required here too
+          "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus })
       });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert("❌ Failed to update status: " + (err.message || res.status));
+        return;
+      }
+
+      console.log(`✅ User ${user.email} status updated to ${newStatus}`);
     } else if (action === "signout") {
-      await fetch(`/api/users/${user.id}/signout`, {
+      const res = await fetch(`/api/users/${user.id}/signout`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
         }
       });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert("❌ Force sign-out failed: " + (err.message || res.status));
+        return;
+      }
+
+      console.log(`✅ Forced sign-out for ${user.email}`);
     } else if (action === "restore") {
       await fetch(`/api/users/${user.id}/restore`, {
         method: "PATCH",
@@ -136,10 +153,12 @@
       });
     }
 
-    fetchUsers(); // Refresh table
+    // ✅ Always refresh the table after action
+    fetchUsers();
+
   } catch (err) {
     console.error("❌ Action failed:", err);
-    alert("Action failed.");
+    alert("Action failed. Check console.");
   }
 }
 
