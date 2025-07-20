@@ -2,8 +2,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const form = e.target;
-  const expectedRole = form.dataset.role;     // e.g. "cardholder", "parent", etc
-  const redirectTo = form.dataset.redirect;   // e.g. "cardholder.html", etc
+  const expectedRole = form.dataset.role;     // e.g. "cardholder"
+  const redirectTo = form.dataset.redirect;   // e.g. "cardholder.html"
 
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -16,7 +16,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       body: JSON.stringify({
         email,
         password,
-        audience: expectedRole  // 👈 REQUIRED for backend role verification
+        audience: expectedRole
       })
     });
 
@@ -25,33 +25,28 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     if (res.ok) {
       const role = data.user.role;
 
-      // ✅ Save token and user
+      // ✅ Save token + user info
       localStorage.setItem("boop_jwt", data.token);
       localStorage.setItem("boopUser", JSON.stringify(data.user));
 
-      // ✅ ⏺ Record session
-      try {
-        const sessionRes = await fetch("/api/sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: data.user.email,
-            status: "online",
-            jwt_token: data.token
-          })
-        });
+      // ✅ Decode token
+      const payload = JSON.parse(atob(data.token.split('.')[1]));
+      const expiresAt = new Date(payload.exp * 1000).toISOString();
 
-        if (!sessionRes.ok) {
-          console.warn("⚠️ Session insert failed:", await sessionRes.text());
-        } else {
-          console.log("✅ Session inserted for:", data.user.email);
-        }
+      // 📨 Post session record
+      await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: data.user.email,
+          user_id: data.user.id,
+          jwt_token: data.token,
+          expires_at: expiresAt,
+          status: "online"
+        })
+      });
 
-      } catch (sessionErr) {
-        console.error("🔥 Session recording error:", sessionErr);
-      }
-
-      // ✅ Frontend check for extra security
+      // ✅ Role check + redirect
       const allowedRoles = {
         cardholder: ["cardholder", "student", "senior"],
         parent: ["parent"],
