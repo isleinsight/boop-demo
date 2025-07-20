@@ -12,7 +12,9 @@ const sendReceiveButtons = document.getElementById("sendReceiveButtons");
 const errorDisplay = document.getElementById("errorMessage");
 
 if (!token) {
-  showError("No token found. Not redirecting for now.");
+  showError("No token found. Redirecting...");
+  localStorage.clear();
+  window.location.href = "cardholder-login.html";
 }
 
 function decodeJWT(token) {
@@ -29,18 +31,15 @@ function decodeJWT(token) {
 
     const user = await userRes.json();
 
-    if (!userRes.ok) {
-      showError("⚠️ Could not fetch profile.");
+    if (!userRes.ok || !user.email) {
+      forceRedirect("⚠️ Session invalid or expired.");
       return;
     }
 
-if (user.force_signed_out) {
-  showError("⚠️ You’ve been signed out by admin.");
-  setTimeout(() => {
-    localStorage.clear();
-    window.location.href = "cardholder-login.html";
-  }, 2000); // wait 2 seconds so the message is visible
-}
+    if (user.force_signed_out) {
+      forceRedirect("⚠️ You’ve been signed out by admin.");
+      return;
+    }
 
     // 🔓 Decode token to extract exp + id
     const decoded = decodeJWT(token);
@@ -99,24 +98,28 @@ setInterval(async () => {
 
     const user = await res.json();
 
-    if (!res.ok) {
-      showError("⚠️ Session invalid.");
-      return;
-    }
-
-    if (user.force_signed_out) {
-      showError("⚠️ You’ve been signed out by admin.");
+    if (!res.ok || !user.email || user.force_signed_out) {
+      forceRedirect("⚠️ You’ve been logged out.");
     }
   } catch (err) {
     console.error("🔁 Polling error:", err);
-    showError("Session check failed.");
+    forceRedirect("⚠️ Lost connection. Please sign in again.");
   }
 }, 10000);
 
+// 🧠 Error display + redirect
 function showError(msg) {
   const el = errorDisplay || document.getElementById("errorMessage");
   if (el) el.textContent = msg;
   console.warn("⚠️", msg);
+}
+
+function forceRedirect(message) {
+  showError(message);
+  setTimeout(() => {
+    localStorage.clear();
+    window.location.href = "cardholder-login.html";
+  }, 1500);
 }
 
 logoutBtn?.addEventListener("click", () => {
