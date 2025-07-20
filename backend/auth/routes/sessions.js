@@ -3,27 +3,46 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../db');
 
+// ✅ Insert or update a session
 router.post('/', async (req, res) => {
-  const { email, status, jwt_token } = req.body;
+  const { email, jwt_token, status, expires_at } = req.body;
 
   if (!email || !jwt_token) {
-    return res.status(400).json({ message: "Missing email or token" });
+    return res.status(400).json({ message: "Email and JWT token are required" });
   }
 
   try {
-    await pool.query(
-      `INSERT INTO sessions (email, status, last_seen, jwt_token)
-       VALUES ($1, $2, NOW(), $3)
-       ON CONFLICT (email)
-       DO UPDATE SET status = $2, last_seen = NOW(), jwt_token = $3`,
-      [email, status || 'online', jwt_token]
-    );
+    await pool.query(`
+      INSERT INTO sessions (email, jwt_token, status, expires_at, last_seen)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (email) DO UPDATE
+        SET jwt_token = EXCLUDED.jwt_token,
+            status = EXCLUDED.status,
+            expires_at = EXCLUDED.expires_at,
+            last_seen = NOW()
+    `, [email, jwt_token, status || 'online', expires_at]);
 
-    console.log("✅ Session recorded:", email);
-    res.status(201).json({ message: 'Session recorded' });
+    res.status(201).json({ message: "Session recorded or updated" });
   } catch (err) {
-    console.error("❌ Failed to insert session:", err.message);
-    res.status(500).json({ message: 'Insert failed' });
+    console.error("🔥 Failed to upsert session:", err);
+    res.status(500).json({ message: "Session insert/update failed" });
+  }
+});
+
+// ❌ Delete session by email
+router.delete('/:email', async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const result = await pool.query(`DELETE FROM sessions WHERE email = $1`, [email]);
+    if (result.rowCount > 0) {
+      res.json({ message: `Session for ${email} deleted` });
+    } else {
+      res.status(404).json({ message: "Session not found" });
+    }
+  } catch (err) {
+    console.error("🔥 Failed to delete session:", err);
+    res.status(500).json({ message: "Session deletion failed" });
   }
 });
 
