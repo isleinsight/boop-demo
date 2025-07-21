@@ -380,7 +380,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/:id/signout", async (req, res) => {
+router.post("/:id/signout", authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -402,14 +402,14 @@ router.post("/:id/signout", async (req, res) => {
       console.warn("⚠️ Could not delete session for signout:", err.message);
     }
 
-// 4. Log admin action (safe fallback)
-await logAdminAction({
-  performed_by: req.user?.id || null,
-  action: "signout",
-  target_user_id: id,
-  type: req.user?.type || "system",
-  status: "completed"
-});
+    // 4. Log admin action
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "signout",
+      target_user_id: id,
+      type: req.user.type,
+      status: "completed"
+    });
 
     res.status(200).json({ message: "User has been force signed out." });
   } catch (err) {
