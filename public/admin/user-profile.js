@@ -1,4 +1,32 @@
 document.addEventListener("DOMContentLoaded", () => {
+
+  // 🔐 Check if current user is force signed out
+  (async () => {
+    try {
+      const token = localStorage.getItem("boop_jwt");
+      if (!token) return;
+
+      const meRes = await fetch("/api/me", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.force_signed_out) {
+          alert("You've been signed out.");
+          localStorage.clear(); // optional: clear session
+          window.location.href = "index.html";
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("⚠️ Sign-out check failed", err);
+    }
+  })();
+
+
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
   const saveBtn = document.getElementById("saveProfileBtn");
