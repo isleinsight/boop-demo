@@ -137,24 +137,23 @@
   </div>
 
   <script type="module" src="user-profile.js"></script>
-  <script>
-    // Role-based protection: Only allow admins
-    const user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || user.role !== "admin") {
-      window.location.href = "login.html"; // Redirect non-admins to login
-    }
+<script>
+  // user is already declared in the top script, just reuse it
+  if (!user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log("admin.js has loaded!");
-      const logoutBtn = document.getElementById("logoutBtn");
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          localStorage.removeItem("boopUser");
-          window.location.href = "login.html";
-        });
-      }
-    });
-  </script>
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("admin.js has loaded!");
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+  });
+</script>
 </body>
 </html>
