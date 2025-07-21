@@ -98,13 +98,8 @@ userInfo.innerHTML = `
 
 document.getElementById("editAssistance").value = user.on_assistance ? "true" : "false";
 
-const dropdown = document.createElement("select");
-dropdown.innerHTML = `
-  <option value="">Actions</option>
-  <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">${user.status === "suspended" ? "Unsuspend" : "Suspend"}</option>
-  <option value="signout">Force Sign-out</option>
-  <option value="delete">Delete</option>
-`;
+      // ✅ dropdown
+
 const dropdown = document.createElement("select");
 dropdown.innerHTML = `
   <option value="">Actions</option>
@@ -119,6 +114,10 @@ dropdown.addEventListener("change", async () => {
   if (!action) return;
 
   const token = localStorage.getItem("boop_jwt");
+  if (!token) {
+    alert("Missing token. Please log in again.");
+    return;
+  }
 
   if (action === "delete") {
     const confirmDelete = prompt("Type DELETE to confirm.");
@@ -126,9 +125,11 @@ dropdown.addEventListener("change", async () => {
   }
 
   try {
+    let res;
+
     if (action === "suspend" || action === "unsuspend") {
       const newStatus = action === "suspend" ? "suspended" : "active";
-      const res = await fetch(`/api/users/${currentUserId}`, {
+      res = await fetch(`/api/users/${currentUserId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -137,21 +138,28 @@ dropdown.addEventListener("change", async () => {
         body: JSON.stringify({ status: newStatus })
       });
 
-      if (!res.ok) throw new Error("Failed to update status");
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to update status");
+      }
 
       alert(`User status updated to ${newStatus}.`);
 
     } else if (action === "signout") {
-      const res = await fetch(`/api/users/${currentUserId}/signout`, {
+      res = await fetch(`/api/users/${currentUserId}/signout`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (!res.ok) throw new Error("Force sign-out failed");
-      alert("Sign-out initiated.");
-      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Force sign-out failed");
+      }
+
+      alert("User has been signed out.");
+
     } else if (action === "delete") {
-      const res = await fetch(`/api/users/${currentUserId}`, {
+      res = await fetch(`/api/users/${currentUserId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -160,7 +168,10 @@ dropdown.addEventListener("change", async () => {
         body: JSON.stringify({ uid: currentUserId })
       });
 
-      if (!res.ok) throw new Error("User deletion failed");
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "User deletion failed");
+      }
 
       alert("User deleted.");
       window.location.href = "view-users.html";
@@ -168,9 +179,10 @@ dropdown.addEventListener("change", async () => {
     }
 
     await loadUserProfile();
+
   } catch (err) {
     console.error("❌ Action failed:", err);
-    alert("Action failed. Check console.");
+    alert("❌ Action failed: " + err.message);
   }
 });
 
