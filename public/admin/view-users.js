@@ -97,21 +97,50 @@ document.addEventListener("DOMContentLoaded", async () => {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else if (action === "suspend" || action === "unsuspend") {
-        const newStatus = action === "suspend" ? "suspended" : "active";
-        const res = await fetch(`/api/users/${user.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ status: newStatus })
-        });
+  const newStatus = action === "suspend" ? "suspended" : "active";
 
-        if (!res.ok) {
-          const err = await res.json();
-          alert("❌ Failed to update status: " + (err.message || res.status));
-          return;
+  try {
+    // Update user status
+    const res = await fetch(`/api/users/${user.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert("❌ Failed to update status: " + (err.message || res.status));
+      return;
+    }
+
+    // Revoke session if suspended
+    if (newStatus === "suspended") {
+      const sessionRes = await fetch(`/api/sessions/${user.email}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
         }
+      });
+
+      if (!sessionRes.ok) {
+        const err = await sessionRes.json();
+        console.warn("⚠️ Session revoke failed: " + (err.message || sessionRes.status));
+      } else {
+        console.log(`🛑 Session for ${user.email} revoked`);
+      }
+    }
+
+    showToast(`✅ User ${action}ed successfully`);
+    fetchUsers(); // Refresh table
+
+  } catch (err) {
+    console.error("Error:", err);
+    alert("❌ Error: " + err.message);
+  }
+}
       } else if (action === "signout") {
         const res = await fetch(`/api/users/${user.id}/signout`, {
           method: "POST",
