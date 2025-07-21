@@ -133,39 +133,44 @@ nav {
 <script>
 (async () => {
   const token = localStorage.getItem("boop_jwt");
-  if (!token) return;
+  const boopUser = JSON.parse(localStorage.getItem("boopUser") || "{}");
+  const email = boopUser.email;
 
-  try {
-    const res = await fetch("/api/me", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` }
-    });
+  if (!token || !email) return;
 
-    if (!res.ok) {
-      console.warn("🔒 Not authorized");
-      return;
-    }
+  async function checkForceSignOut() {
+    try {
+      const res = await fetch(`/api/sessions/force-check/${email}`);
+      const data = await res.json();
 
-    const user = await res.json();
+      if (res.ok && data.force_signed_out) {
+        alert("⚠️ You have been signed out by an administrator.");
+        localStorage.clear();
 
-    // ⛔ If backend signals this user was signed out by admin
-    if (user.force_signed_out) {
-      alert("You have been signed out by an administrator.");
-      localStorage.clear();
+        // 🧹 Optionally delete the session row
+        try {
+          await fetch(`/api/sessions/${email}`, { method: "DELETE" });
+        } catch (err) {
+          console.warn("🧹 Failed to delete session:", err);
+        }
 
-      // Optionally, send request to remove from sessions table
-      try {
-        await fetch(`/api/sessions/${user.email}`, { method: "DELETE" });
-      } catch (err) {
-        console.warn("🧹 Session cleanup failed:", err);
+        // ✅ Clear force_signed_out flag
+        try {
+          await fetch(`/api/sessions/force-clear/${email}`, { method: "PATCH" });
+        } catch (err) {
+          console.warn("🧼 Failed to clear force_signed_out:", err);
+        }
+
+        window.location.href = "login.html";
       }
 
-      window.location.href = "login.html";
+    } catch (err) {
+      console.error("❌ Force sign-out check failed:", err);
     }
-
-  } catch (err) {
-    console.error("Force sign-out check failed:", err);
   }
+
+  // 🔁 Poll every 10 seconds
+  setInterval(checkForceSignOut, 10000);
 })();
 </script>
 
