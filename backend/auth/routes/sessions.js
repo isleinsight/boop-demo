@@ -28,17 +28,19 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ❌ Delete session by email
+// ✅ Graceful: Delete session by email
 router.delete('/:email', async (req, res) => {
   const { email } = req.params;
 
   try {
     const result = await pool.query(`DELETE FROM sessions WHERE email = $1`, [email]);
-    if (result.rowCount > 0) {
-      res.json({ message: `Session for ${email} deleted` });
-    } else {
-      res.status(404).json({ message: "Session not found" });
-    }
+
+    // ✅ Always return 200 for frontend safety
+    res.status(200).json({
+      message: result.rowCount > 0
+        ? `Session for ${email} deleted`
+        : `No session found for ${email} (already signed out)`
+    });
   } catch (err) {
     console.error("🔥 Failed to delete session:", err);
     res.status(500).json({ message: "Session deletion failed" });
