@@ -1,61 +1,3 @@
-<script>
-  // 🔒 Immediate check from localStorage
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  const allowedRoles = ["cardholder", "student", "senior"];
-
-  const isUnauthorized =
-    !user ||
-    !allowedRoles.includes(user.role?.toLowerCase()) ||
-    user.force_signed_out === true ||
-    user.status === "suspended";
-
-  if (isUnauthorized) {
-    // Clear session and boot them out
-    localStorage.removeItem("boopUser");
-    localStorage.removeItem("boop_jwt");
-    window.location.href = "cardholder-login.html";
-  }
-
-  // ✅ DOM logic after authorization confirmed
-  document.addEventListener("DOMContentLoaded", () => {
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        localStorage.removeItem("boopUser");
-        localStorage.removeItem("boop_jwt");
-        window.location.href = "cardholder-login.html";
-      });
-    }
-  });
-
-  setInterval(async () => {
-  const token = localStorage.getItem("boop_jwt");
-
-  if (!token) return;
-
-  try {
-    const res = await fetch("/api/me", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    if (!res.ok) {
-      // Session invalid (suspended or deleted)
-      localStorage.removeItem("boopUser");
-      localStorage.removeItem("boop_jwt");
-      localStorage.removeItem("admin_id");
-
-      alert("You’ve been signed out. Your session is no longer valid.");
-      window.location.href = "/login.html";
-    }
-
-  } catch (err) {
-    console.error("Session check failed:", err);
-  }
-}, 30000); // every 30 seconds
-</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -187,3 +129,42 @@ nav {
   <div class="activity-item">Loading...</div>
 </div>
 <script type="module" src="cardholder.js"></script>
+
+    <script>
+(async () => {
+  const token = localStorage.getItem("boop_jwt");
+  if (!token) return;
+
+  try {
+    const res = await fetch("/api/me", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      console.warn("🔒 Not authorized");
+      return;
+    }
+
+    const user = await res.json();
+
+    // ⛔ If backend signals this user was signed out by admin
+    if (user.force_signed_out) {
+      alert("You have been signed out by an administrator.");
+      localStorage.clear();
+
+      // Optionally, send request to remove from sessions table
+      try {
+        await fetch(`/api/sessions/${user.email}`, { method: "DELETE" });
+      } catch (err) {
+        console.warn("🧹 Session cleanup failed:", err);
+      }
+
+      window.location.href = "login.html";
+    }
+
+  } catch (err) {
+    console.error("Force sign-out check failed:", err);
+  }
+})();
+</script>
