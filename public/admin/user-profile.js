@@ -473,7 +473,8 @@ saveBtn.onclick = async () => {
 };
 
 
-      ////
+    
+      
 
     } catch (err) {
       console.error("❌ Failed to load user:", err);
@@ -488,5 +489,43 @@ saveBtn.onclick = async () => {
     });
   });
 isEditMode = false;
+
+// ✅ Check if current user has been force signed out
+(async () => {
+  const token = localStorage.getItem("boop_jwt");
+  if (!token) return;
+
+  try {
+    const res = await fetch("/api/me", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+
+    const user = await res.json();
+
+    if (user.force_signed_out) {
+      alert("You have been signed out by an administrator.");
+      localStorage.clear();
+
+      try {
+        const sessionRes = await fetch(`/api/sessions/${user.email}`, { method: "DELETE" });
+
+        // ignore 404 (session already gone)
+        if (sessionRes.status !== 200 && sessionRes.status !== 404) {
+          console.warn("🧹 Session deletion failed:", await sessionRes.text());
+        }
+      } catch (err) {
+        console.warn("🧹 Session cleanup failed:", err);
+      }
+
+      window.location.href = "login.html";
+    }
+  } catch (err) {
+    console.error("Force sign-out check failed:", err);
+  }
+})();
+  
   loadUserProfile();
 });
