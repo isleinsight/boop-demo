@@ -1,20 +1,5 @@
 <script>
-  // 🔒 Auth check at top
-  let user;
-  try {
-    user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || typeof user !== "object" || user.role !== "admin") {
-      throw new Error("Not authorized");
-    }
-  } catch (err) {
-    localStorage.removeItem("boopUser");
-    window.location.href = "login.html";
-  }
 
-  // ✅ DOM logic after authorization confirmed
-  document.addEventListener("DOMContentLoaded", () => {
-    // your logic below...
-  });
 </script>
 <!DOCTYPE html>
 <html lang="en">
