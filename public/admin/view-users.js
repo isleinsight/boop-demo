@@ -1,32 +1,5 @@
 //view-users.js
 
-setInterval(async () => {
-  const token = localStorage.getItem("boop_jwt");
-
-  if (!token) return;
-
-  try {
-    const res = await fetch("/api/me", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    if (!res.ok) {
-      // Session invalid (suspended or deleted)
-      localStorage.removeItem("boopUser");
-      localStorage.removeItem("boop_jwt");
-      localStorage.removeItem("admin_id");
-
-      alert("You’ve been signed out. Your session is no longer valid.");
-      window.location.href = "/login.html";
-    }
-
-  } catch (err) {
-    console.error("Session check failed:", err);
-  }
-}, 30000); // every 30 seconds
-
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
   const userTableBody = document.getElementById("userTableBody");
