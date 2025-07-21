@@ -45,4 +45,42 @@ router.delete('/:email', async (req, res) => {
   }
 });
 
+// ✅ GET: Check if user has been force signed out
+router.get('/force-check/:email', async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT force_signed_out FROM users WHERE email = $1`,
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { force_signed_out } = result.rows[0];
+    res.status(200).json({ force_signed_out });
+  } catch (err) {
+    console.error("❌ Error checking force sign-out:", err);
+    res.status(500).json({ message: "Failed to check sign-out status" });
+  }
+});
+
+// ✅ PATCH: Clear force_signed_out after logout
+router.patch('/force-clear/:email', async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    await pool.query(
+      `UPDATE users SET force_signed_out = false WHERE email = $1`,
+      [email]
+    );
+    res.status(200).json({ message: "Force sign-out cleared." });
+  } catch (err) {
+    console.error("❌ Error clearing force sign-out:", err);
+    res.status(500).json({ message: "Failed to clear sign-out flag" });
+  }
+});
+
 module.exports = router;
