@@ -110,13 +110,23 @@ dropdown.innerHTML = `
 dropdown.addEventListener("change", async () => {
   const action = dropdown.value;
   dropdown.value = "";
-
   if (!action) return;
 
   const token = localStorage.getItem("boop_jwt");
   if (!token) {
-    alert("Missing token. Please log in again.");
+    alert("Missing token.");
     return;
+  }
+
+  // ✅ Load current user info for email (like View Users does)
+  let adminUser = null;
+  try {
+    const meRes = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    adminUser = await meRes.json();
+  } catch (e) {
+    console.warn("Failed to fetch current admin");
   }
 
   if (action === "delete") {
@@ -145,6 +155,13 @@ dropdown.addEventListener("change", async () => {
 
       alert(`User status updated to ${newStatus}.`);
 
+      if (newStatus === "suspended") {
+        await fetch(`/api/users/${currentUserId}/signout`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
     } else if (action === "signout") {
       res = await fetch(`/api/users/${currentUserId}/signout`, {
         method: "POST",
@@ -156,7 +173,7 @@ dropdown.addEventListener("change", async () => {
         throw new Error(err.message || "Force sign-out failed");
       }
 
-      alert("User has been signed out.");
+      alert("✅ User signed out.");
 
     } else if (action === "delete") {
       res = await fetch(`/api/users/${currentUserId}`, {
@@ -165,7 +182,7 @@ dropdown.addEventListener("change", async () => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ uid: currentUserId })
+        body: JSON.stringify({ uid: adminUser?.id }) // Just in case the backend checks this
       });
 
       if (!res.ok) {
