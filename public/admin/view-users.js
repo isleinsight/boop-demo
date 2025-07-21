@@ -1,10 +1,4 @@
 //view-users.js
-// view-users.js — FINALIZED with full support for:
-// ✅ Suspend/unsuspend without session dependency
-// ✅ Accurate UI refresh
-// ✅ Force sign-out
-// ✅ Restore/deletion controls
-
 
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
@@ -21,23 +15,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   const paginationInfo = document.getElementById("paginationInfo");
   const userCount = document.getElementById("userCount");
 
-  let allUsers = [];
-  let currentUserEmail = null;
-  let currentUser = null;
-  let currentPage = 1;
+  let allUsers = [], currentUser = null, currentUserEmail = null;
+  let currentPage = 1, totalPages = 1, totalUsersCount = 0;
   const perPage = 10;
-  let totalPages = 1;
-  let totalUsersCount = 0;
 
   try {
     const res = await fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` }
     });
-    const meData = await res.json();
-    currentUser = meData;
-    currentUserEmail = meData.email;
-  } catch (err) {
-    console.error("Could not fetch current user");
+    const me = await res.json();
+    currentUser = me;
+    currentUserEmail = me.email;
+  } catch {
+    console.error("⚠️ Failed to fetch current user.");
   }
 
   async function fetchUsers() {
@@ -50,94 +40,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       allUsers = data.users || [];
       totalPages = data.totalPages || 1;
       totalUsersCount = data.total || 0;
-      render();
-    } catch (e) {
-      console.error("Error fetching users:", e);
-    }
-  }
-
-  function createDropdown(user) {
-    const select = document.createElement("select");
-    select.classList.add("btnEdit");
-    select.innerHTML = `
-      <option value="action">Action</option>
-      <option value="view">View Profile</option>
-      ${user.deleted_at ? '<option value="restore">Restore</option>' : `
-        ${user.status === "suspended" ? '<option value="unsuspend">Unsuspend</option>' : '<option value="suspend">Suspend</option>'}
-        <option value="signout">Force Sign-out</option>
-        <option value="delete">Delete</option>`
-      }
-    `;
-    select.addEventListener("change", async () => {
-      const action = select.value;
-      select.value = "action";
-      if (action === "view") {
-        localStorage.setItem("selectedUserId", user.id);
-        window.location.href = "user-profile.html";
-        return;
-      }
-      if (action === "delete" && user.email === currentUserEmail) {
-        alert("You cannot delete your own account.");
-        return;
-      }
-      if (action === "delete") {
-        const input = prompt("Type DELETE to confirm.");
-        if (input !== "DELETE") return;
-      }
-      await performAction(user, action);
-    });
-    return select;
-  }
-
-  async function performAction(user, action) {
-    try {
-      if (action === "delete") {
-        await fetch(`/api/users/${user.id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } else if (action === "suspend" || action === "unsuspend") {
-        const newStatus = action === "suspend" ? "suspended" : "active";
-        const res = await fetch(`/api/users/${user.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ status: newStatus })
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          alert("❌ Failed to update status: " + (err.message || res.status));
-          return;
-        }
-      } else if (action === "signout") {
-        const res = await fetch(`/api/users/${user.id}/signout`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          alert("❌ Force sign-out failed: " + (err.message || res.status));
-          return;
-        }
-      } else if (action === "restore") {
-        await fetch(`/api/users/${user.id}/restore`, {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-
-      fetchUsers();
+      renderUsers();
     } catch (err) {
-      console.error("❌ Action failed:", err);
-      alert("Action failed. Check console.");
+      console.error("❌ Error loading users:", err);
     }
   }
 
-  function render() {
+  function renderUsers() {
     userTableBody.innerHTML = "";
     if (!allUsers.length) {
       userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
@@ -155,7 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td><span style="color:${user.status === "suspended" ? "#e74c3c" : "#27ae60"}">${user.status || ""}</span></td>
       `;
       const actionsTd = document.createElement("td");
-      actionsTd.appendChild(createDropdown(user));
+      actionsTd.appendChild(createActionDropdown(user));
       row.appendChild(actionsTd);
       userTableBody.appendChild(row);
     });
@@ -164,9 +73,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     prevBtn.style.display = currentPage > 1 ? "inline-block" : "none";
     nextBtn.style.display = currentPage < totalPages ? "inline-block" : "none";
-
-    attachCheckboxListeners();
     updateDeleteButtonVisibility();
+    attachCheckboxListeners();
+  }
+
+  function createActionDropdown(user) {
+    const select = document.createElement("select");
+    select.classList.add("btnEdit");
+    select.innerHTML = `
+      <option value="action">Action</option>
+      <option value="view">View Profile</option>
+      ${user.deleted_at ? '<option value="restore">Restore</option>' : `
+        ${user.status === "suspended" ? '<option value="unsuspend">Unsuspend</option>' : '<option value="suspend">Suspend</option>'}
+        <option value="signout">Force Sign-out</option>
+        <option value="delete">Delete</option>`}
+    `;
+    select.addEventListener("change", async () => {
+      const action = select.value;
+      select.value = "action";
+      if (action === "view") {
+        localStorage.setItem("selectedUserId", user.id);
+        window.location.href = "user-profile.html";
+        return;
+      }
+      if (action === "delete" && user.email === currentUserEmail) {
+        alert("❌ You cannot delete your own account.");
+        return;
+      }
+      if (action === "delete") {
+        const confirm = prompt("Type DELETE to confirm.");
+        if (confirm !== "DELETE") return;
+      }
+      await performAction(user, action);
+    });
+    return select;
+  }
+
+  async function performAction(user, action) {
+    try {
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      };
+
+      if (action === "suspend" || action === "unsuspend") {
+        const newStatus = action === "suspend" ? "suspended" : "active";
+        const res = await fetch(`/api/users/${user.id}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ status: newStatus })
+        });
+        if (!res.ok) throw await res.json();
+      } else if (action === "signout") {
+        const res = await fetch(`/api/users/${user.id}/signout`, { method: "POST", headers });
+        if (!res.ok) throw await res.json();
+      } else if (action === "restore") {
+        await fetch(`/api/users/${user.id}/restore`, { method: "PATCH", headers });
+      } else if (action === "delete") {
+        await fetch(`/api/users/${user.id}`, { method: "DELETE", headers });
+      }
+
+      fetchUsers();
+    } catch (err) {
+      console.error("❌ Action failed:", err);
+      alert("❌ " + (err.message || "Action failed"));
+    }
   }
 
   function attachCheckboxListeners() {
@@ -179,6 +150,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     const checked = document.querySelectorAll(".user-checkbox:checked").length;
     deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
   }
+
+  selectAll.addEventListener("change", () => {
+    const all = selectAll.checked;
+    document.querySelectorAll(".user-checkbox").forEach(cb => (cb.checked = all));
+    updateDeleteButtonVisibility();
+  });
+
+  deleteSelectedBtn.addEventListener("click", async () => {
+    const selected = [...document.querySelectorAll(".user-checkbox:checked")];
+    const ids = selected.map(cb => cb.dataset.id);
+    const emails = selected.map(cb => cb.dataset.email);
+
+    if (emails.includes(currentUserEmail)) {
+      alert("You cannot delete your own account.");
+      return;
+    }
+
+    const confirmText = prompt("Type DELETE to confirm deletion.");
+    if (confirmText !== "DELETE") return;
+
+    try {
+      await Promise.all(ids.map(id =>
+        fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uid: currentUser?.id })
+        })
+      ));
+      fetchUsers();
+    } catch (err) {
+      console.error("❌ Bulk delete failed:", err);
+      alert("❌ Bulk delete failed.");
+    }
+  });
 
   searchBtn.addEventListener("click", () => {
     currentPage = 1;
@@ -217,54 +225,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  selectAll.addEventListener("change", () => {
-    document.querySelectorAll(".user-checkbox").forEach(cb => {
-      cb.checked = selectAll.checked;
-    });
-    updateDeleteButtonVisibility();
-  });
-
-  deleteSelectedBtn.addEventListener("click", async () => {
-    const selected = [...document.querySelectorAll(".user-checkbox:checked")];
-    const ids = selected.map(cb => cb.dataset.id);
-    const emails = selected.map(cb => cb.dataset.email);
-
-    if (emails.includes(currentUserEmail)) {
-      alert("You cannot delete your own account.");
-      return;
-    }
-
-    const confirmText = prompt("Type DELETE to confirm deletion of selected users.");
-    if (confirmText !== "DELETE") return;
-
-    try {
-      await Promise.all(ids.map(id =>
-        fetch(`/api/users/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ uid: currentUser?.id })
-        })
-      ));
-      fetchUsers();
-    } catch (e) {
-      console.error("Bulk delete failed:", e);
-      alert("Bulk delete failed.");
-    }
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST" })
+      .then(() => window.location.href = "login.html")
+      .catch(() => alert("Logout failed."));
   });
 
   fetchUsers();
-});
-
-const logoutBtn = document.getElementById("logoutBtn");
-logoutBtn?.addEventListener("click", () => {
-  fetch("/api/logout", { method: "POST" })
-    .then(() => {
-      window.location.href = "login.html";
-    })
-    .catch(() => {
-      alert("Logout failed.");
-    });
 });
