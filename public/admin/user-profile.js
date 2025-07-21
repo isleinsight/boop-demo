@@ -105,9 +105,20 @@ dropdown.innerHTML = `
   <option value="signout">Force Sign-out</option>
   <option value="delete">Delete</option>
 `;
+const dropdown = document.createElement("select");
+dropdown.innerHTML = `
+  <option value="">Actions</option>
+  <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">${user.status === "suspended" ? "Unsuspend" : "Suspend"}</option>
+  <option value="signout">Force Sign-out</option>
+  <option value="delete">Delete</option>
+`;
 dropdown.addEventListener("change", async () => {
   const action = dropdown.value;
   dropdown.value = "";
+
+  if (!action) return;
+
+  const token = localStorage.getItem("boop_jwt");
 
   if (action === "delete") {
     const confirmDelete = prompt("Type DELETE to confirm.");
@@ -116,18 +127,41 @@ dropdown.addEventListener("change", async () => {
 
   try {
     if (action === "suspend" || action === "unsuspend") {
-      const status = action === "suspend" ? "suspended" : "active";
-      await fetch(`/api/users/${currentUserId}`, {
+      const newStatus = action === "suspend" ? "suspended" : "active";
+      const res = await fetch(`/api/users/${currentUserId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
       });
-      alert(`User ${status}.`);
+
+      if (!res.ok) throw new Error("Failed to update status");
+
+      alert(`User status updated to ${newStatus}.`);
+
     } else if (action === "signout") {
-      await fetch(`/api/users/${currentUserId}/signout`, { method: "POST" });
-      alert("Sign-out requested.");
+      const res = await fetch(`/api/users/${currentUserId}/signout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error("Force sign-out failed");
+      alert("Sign-out initiated.");
+      
     } else if (action === "delete") {
-      await fetch(`/api/users/${currentUserId}`, { method: "DELETE" });
+      const res = await fetch(`/api/users/${currentUserId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ uid: currentUserId })
+      });
+
+      if (!res.ok) throw new Error("User deletion failed");
+
       alert("User deleted.");
       window.location.href = "view-users.html";
       return;
@@ -136,9 +170,10 @@ dropdown.addEventListener("change", async () => {
     await loadUserProfile();
   } catch (err) {
     console.error("❌ Action failed:", err);
-    alert("Action failed.");
+    alert("Action failed. Check console.");
   }
 });
+
 userInfo.appendChild(dropdown);
 
 // === Student View ===
