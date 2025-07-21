@@ -380,7 +380,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/:id/signout", authenticateToken, async (req, res) => {
+router.post("/:id/signout", async (req, res) => {
   const { id } = req.params;
 
   try {
