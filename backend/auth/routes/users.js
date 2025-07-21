@@ -384,10 +384,25 @@ router.post("/:id/signout", authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
-    // ✅ Set force_signed_out = true
+    // 1. Fetch the user's email
+    const userRes = await pool.query(`SELECT email FROM users WHERE id = $1`, [id]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { email } = userRes.rows[0];
+
+    // 2. Set force_signed_out = true
     await pool.query(`UPDATE users SET force_signed_out = true WHERE id = $1`, [id]);
 
-    // ✅ Log the sign-out action to admin_actions
+    // 3. Delete their session if it exists
+    try {
+      await pool.query(`DELETE FROM sessions WHERE email = $1`, [email]);
+    } catch (err) {
+      console.warn("⚠️ Could not delete session for signout:", err.message);
+    }
+
+    // 4. Log admin action
     await logAdminAction({
       performed_by: req.user.id,
       action: "signout",
@@ -396,7 +411,7 @@ router.post("/:id/signout", authenticateToken, async (req, res) => {
       status: "completed"
     });
 
-    res.status(200).json({ message: "User has been signed out successfully." });
+    res.status(200).json({ message: "User has been force signed out." });
   } catch (err) {
     console.error("❌ Failed to sign out user:", err);
     res.status(500).json({ message: "Failed to force sign-out" });
