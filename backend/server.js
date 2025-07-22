@@ -19,27 +19,20 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // ✅ Auth routes
 const authRoutes = require('./auth/auth');
-app.use('/auth', authRoutes); // handles /auth/signup, etc.
+app.use('/auth', authRoutes);
 
-// ✅ Login route (mounted as /login)
-const loginRoute = require('./auth/routes/login');
-app.use('/login', loginRoute);
-console.log("✅ Login route mounted at /login");
+// ✅ Login + Logout
+app.use('/login', require('./auth/routes/login'));
+app.use('/logout', require('./auth/routes/logout'));
 
-// ✅ Logout
-const logoutRoute = require('./auth/routes/logout');
-app.use('/logout', logoutRoute);
-
-// ✅ API routes
+// ✅ Core API routes
 app.use('/api/users', require('./auth/routes/users'));
 app.use('/api/cards', require('./auth/routes/cards'));
 app.use('/api/wallets', require('./auth/routes/wallets'));
 app.use('/api/vendors', require('./auth/routes/vendors'));
 app.use('/api/user-students', require('./auth/routes/userStudents'));
-
-// ✅ Session insert route (NEW)
-const sessionRoute = require('./auth/routes/sessions');
-app.use('/api/sessions', sessionRoute); // handles POST /api/sessions
+app.use('/api/sessions', require('./auth/routes/sessions'));
+app.use('/api/transactions', require('./routes/transactions')); // 🆕 Transactions route added
 
 // ✅ /api/me - current logged-in user info
 app.get('/api/me', authenticateToken, (req, res) => {
@@ -70,7 +63,7 @@ app.post('/webhook', (req, res) => {
   });
 });
 
-// ✅ Optional webhook logic
+// ✅ Optional additional webhook logic
 app.use('/webhook', require('./webhook-handler'));
 
 // ✅ Catch 404s
