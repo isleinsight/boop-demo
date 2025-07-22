@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../db");
+const pool = require("../../db");
 const authenticateToken = require("../middleware/authMiddleware");
 
 // ✅ Get all transactions (with filters & pagination)
