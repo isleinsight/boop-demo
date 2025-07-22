@@ -32,12 +32,12 @@ router.post("/", async (req, res) => {
     for (const card of existing.rows) {
       if (card.type === type) {
         console.warn(`⚠️ Wallet already has a ${type} card`);
-        return res.status(409).json({ error: `This wallet already has a ${type} card.` });
+        return res.status(409).json({ message: `User already has a ${type} card.` });
       }
 
       if (exclusiveGroup.includes(card.type) && exclusiveGroup.includes(type)) {
         console.warn("⚠️ Conflict between spending and assistance cards");
-        return res.status(409).json({ error: `Cannot assign both spending and assistance cards.` });
+        return res.status(409).json({ message: `User cannot have both spending and assistance cards.` });
       }
     }
 
