@@ -32,8 +32,7 @@ app.use('/api/wallets', require('./auth/routes/wallets'));
 app.use('/api/vendors', require('./auth/routes/vendors'));
 app.use('/api/user-students', require('./auth/routes/userStudents'));
 app.use('/api/sessions', require('./auth/routes/sessions'));
-app.use('/api/transactions', require('./routes/transactions')); // 🆕 Transactions route added
-
+app.use('/api/transactions', require('./auth/routes/transactions')); 
 // ✅ /api/me - current logged-in user info
 app.get('/api/me', authenticateToken, (req, res) => {
   const { id, userId, email, role, type } = req.user;
