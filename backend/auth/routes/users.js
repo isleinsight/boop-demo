@@ -115,7 +115,7 @@ router.post("/", authenticateToken, async (req, res) => {
 
 // ✅ Get users (with autocomplete or pagination, now including deleted filter)
 router.get("/", async (req, res) => {
-  const { search, role, status, page, perPage } = req.query;
+  const { search, role, status, page, perPage, assistanceOnly } = req.query;
   const isAutocomplete = !page && !perPage;
 
   try {
@@ -142,6 +142,11 @@ router.get("/", async (req, res) => {
       whereClauses.push(`role = $${values.length + 1}`);
       values.push(role);
     }
+
+    // ✅ Assistance-only filter
+if (assistanceOnly === 'true') {
+  whereClauses.push(`on_assistance = true`);
+}
 
     // ⛔ Skip adding "status = deleted" — it's not a real status in DB
     if (status && status !== "deleted") {
