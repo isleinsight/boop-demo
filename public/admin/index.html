@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Dashboard - BOOP Admin</title>
+  <title>Dashboard - BOOP Accounts</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="../assets/styles.css" />
-   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <style>
     .loginContainer {
       max-width: 600px;
@@ -58,7 +58,7 @@
 </head>
 <body>
   
-   <!-- Top Nav -->
+  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -67,15 +67,15 @@
       <div class="nav-right">
         <a href="index.html">Dashboard</a>
         <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Add</a>
+          <a href="#" class="dropbtn" style="color: white;">Accounts</a>
           <div class="dropdown-content">
-            <a href="add-user.html">Add User</a>
-            <a href="assign-card.html">Assign Card</a>
-            <a href="assign-transit-card.html">Transit Card</a>
-            <a href="assign-student.html">Assign Student</a>
+            <a href="add-funds.html">Add Funds</a>
+            <a href="transfer.html">Transfer</a>
+            <a href="reports.html">Reports</a>
           </div>
         </div>
         <a href="view-users.html">View Users</a>
+        <a href="transactions.html">Transactions</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
     </div>
@@ -83,43 +83,42 @@
 
   <!-- Main Content -->
   <div class="loginContainer">
-    <h1>BOOP Admin Dashboard</h1>
-    <p>Welcome to your secure dashboard. From here you can manage users, review system activity, and perform administrative tasks.</p>
+    <h1>BOOP Accounts Dashboard</h1>
+    <p>Welcome to your secure accounts dashboard. From here you can manage funds, view transactions, and run reports.</p>
 
     <!-- Action Buttons -->
     <div class="dashboard-buttons-wrapper">
       <div class="dashboard-buttons">
-        <a href="add-user.html">Add New User</a>
-        <a href="assign-card.html">Assign Card</a>
-        <a href="assign-transit-card.html">Transit Card</a>
+        <a href="add-funds.html">Add Funds</a>
+        <a href="transfer.html">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reports.html">Reports</a>
         <a href="view-users.html">View Users</a>
       </div>
     </div>
   </div>
 
   <!-- Auth Script -->
-<script>
-  // Role-based protection: Only allow admins
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  if (!user || user.role !== "admin") {
-    window.location.href = "login.html"; // Redirect non-admins to login
-  }
-
-  // DOM loaded logic
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("admin.js has loaded!");
-
-
-    // Logout logic
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        localStorage.removeItem("boopUser");
-        window.location.href = "login.html";
-      });
+  <script>
+    // Restrict access to admin accounts only
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || user.role !== "admin" || user.type !== "accounts") {
+      window.location.href = "login.html";
     }
-  });
-</script>
+
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("✅ accounts.js has loaded");
+
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          localStorage.removeItem("boopUser");
+          localStorage.removeItem("boop_jwt");
+          window.location.href = "login.html";
+        });
+      }
+    });
+  </script>
 </body>
 </html>
