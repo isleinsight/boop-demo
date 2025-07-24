@@ -3,6 +3,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
   const saveBtn = document.getElementById("saveProfileBtn");
+  const currentAdmin = JSON.parse(localStorage.getItem("boopUser"));
+if (currentAdmin?.role === "admin" && ["viewer", "accountant"].includes(currentAdmin?.type)) {
+  if (editBtn) editBtn.style.display = "none";
+}
   const logoutBtn = document.getElementById("logoutBtn");
   const parentSection = document.getElementById("parentSection");
   const studentInfoSection = document.getElementById("studentInfoSection");
