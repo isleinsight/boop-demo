@@ -35,7 +35,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function fetchUsers() {
     try {
-      const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(roleFilter.value)}&status=${encodeURIComponent(statusFilter.value)}`;
+      let role = roleFilter.value;
+let assistanceOnly = false;
+
+if (role === "cardholder_assistance") {
+  role = "cardholder";
+  assistanceOnly = true;
+}
+
+const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(statusFilter.value)}${assistanceOnly ? '&assistanceOnly=true' : ''}`;
       const res = await fetch(`/api/users${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
