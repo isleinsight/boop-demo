@@ -203,7 +203,7 @@
 
     // 🔒 Protect route
     const user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || user.role !== "accountant") {
+    if (!user || user.role !== "admin") {
       window.location.href = "../login.html";
     }
 
