@@ -23,7 +23,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const { token, user } = data;
 
     // 🔒 Restrict to only Admins with type = "accounts"
-    if (user.role !== "admin" || user.type !== "accounts") {
+    if (user.role !== "admin" || user.type !== "accountant") {
       statusEl.style.color = 'red';
       statusEl.textContent = "Access denied. This login is for Accounts Admins only.";
       return;
