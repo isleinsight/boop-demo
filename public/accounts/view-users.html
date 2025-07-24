@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>View Users - BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+     <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+</head>
+<body>
+        <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <div class="nav-dropdown">
+          <a href="#" class="dropbtn" style="color: white;">Add</a>
+          <div class="dropdown-content">
+            <a href="add-user.html">Add User</a>
+            <a href="assign-card.html">Assign Card</a>
+            <a href="assign-transit-card.html">Transit Card</a>
+            <a href="assign-student.html">Assign Student</a>
+          </div>
+        </div>
+        <a href="view-users.html">View Users</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+  
+<div class="table-scroll-wrapper">
+  <div class="container">
+    <!-- Top bar -->
+    <div class="top-bar">
+      <h3>View Users</h3>
+      <span id="userCount">Total Users: 0</span>
+    </div>
+
+
+
+    <!-- Unified search + filter bar -->
+    <div class="search-filter-bar">
+      <input type="text" id="searchInput" placeholder="Search by name or email" />
+      <button id="searchBtn">Search</button>
+      <button id="clearSearchBtn">Clear</button>
+
+      <label for="roleFilter" class="filter-label">Filter by Role:</label>
+      <select id="roleFilter">
+        <option value="">All Roles</option>
+        <option value="admin">Admin</option>
+        <option value="vendor">Vendor</option>
+        <option value="cardholder">Cardholder</option>
+        <option value="parent">Parent</option>
+        <option value="student">Student</option>
+        <option value="senior">Senior</option>
+      </select>
+
+      <label for="statusFilter" class="filter-label">Filter by Status:</label>
+      <select id="statusFilter">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="suspended">Suspended</option>
+        <option value="deleted">Deleted</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <table>
+  <thead>
+  <tr>
+    <th><input type="checkbox" id="selectAllCheckbox" /></th>
+    <th class="sortable" data-sort="firstName">First Name <span class="arrow"></span></th>
+    <th class="sortable" data-sort="lastName">Last Name <span class="arrow"></span></th>
+    <th class="sortable" data-sort="email">Email <span class="arrow"></span></th>
+    <th>Role</th>
+    <th>Status</th>
+    <th>Actions</th>
+  </tr>
+</thead>
+      <tbody id="userTableBody">
+        <!-- Injected by JS -->
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+<div class="pagination">
+  <button id="prevBtn" style="color: black;">Previous</button>
+  <span id="paginationInfo">Page 1</span>
+  <button id="nextBtn" style="color: black;">Next</button>
+</div>
+
+    <!-- Delete Selected -->
+    <div id="deleteSelectedContainer">
+      <button id="deleteSelectedBtn" style="display: none; background-color: #c0392b; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer;">
+        Delete Selected
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <p id="modalMessage"></p>
+      <input type="text" id="modalInput" placeholder="Type DELETE to confirm" style="display: none;" />
+      <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+        <button id="confirmModalBtn">Confirm</button>
+        <button id="cancelModalBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <script type="module" src="view-users.js"></script>
+  
+</body>
+</html>
