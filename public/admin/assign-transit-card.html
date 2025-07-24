@@ -63,6 +63,7 @@
   </div>
 </nav>
 
+
 <div class="container-small">
   <h3>Assign Transit Card</h3>
 
@@ -109,12 +110,6 @@
     </select>
   </div>
 
-  <!-- Price Display -->
-  <div class="input-group">
-    <label for="productPrice">Cost (BMD)</label>
-    <input type="text" id="productPrice" readonly />
-  </div>
-
   <!-- Assign Button -->
   <button id="assignBtn">Assign Transit Card</button>
   <div class="status" id="status"></div>
@@ -135,7 +130,6 @@ const statusEl = document.getElementById("status");
 let selectedUser = null;
 
 const productOptions = {
-  const transitProducts = {
   token: [
     { label: "3 Zone Token – Adult", value: "3_zone_token_adult" },
     { label: "3 Zone Token – Child", value: "3_zone_token_child" },
@@ -158,7 +152,6 @@ const productOptions = {
     { label: "30 Day Pass – Senior", value: "30_day_pass_senior" }
   ]
 };
-};
 
 generateBtn.addEventListener("click", () => {
   uidEl.value = crypto.randomUUID().slice(0, 12).replace(/-/g, "").toUpperCase();
@@ -166,7 +159,7 @@ generateBtn.addEventListener("click", () => {
 
 passType.addEventListener("change", () => {
   const type = passType.value;
-  productSelect.innerHTML = `<option value="">Select a transit item</option>`;
+  productSelect.innerHTML = `<option value="">-- Select a product --</option>`;
   if (productOptions[type]) {
     productOptions[type].forEach(opt => {
       const option = document.createElement("option");
@@ -277,6 +270,5 @@ assignBtn.addEventListener("click", async () => {
   }
 });
 </script>
-
 </body>
 </html>
