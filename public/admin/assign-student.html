@@ -1,9 +1,13 @@
 <script>
-  // 🔒 Auth check at top
+  // 🔒 Auth check at top with admin type restrictions
   let user;
   try {
     user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || typeof user !== "object" || user.role !== "admin") {
+    if (
+      !user ||
+      user.role !== "admin" ||
+      ["viewer", "accountant"].includes(user.type)
+    ) {
       throw new Error("Not authorized");
     }
   } catch (err) {
