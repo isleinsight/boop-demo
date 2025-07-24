@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 🚫 Restrict access to viewer and support types
 if (["viewer", "support"].includes(currentUserType)) {
   alert("You do not have permission to access this page.");
-  window.location.href = "index.html"; // 👈 redirect to dashboard or another safe page
+  window.location.href = "login.html"; // 👈 redirect to dashboard or another safe page
   return;
 }
 
