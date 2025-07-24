@@ -272,9 +272,15 @@
 <script>
   // 🔒 IMMEDIATE redirect for unauthorized users
   const user = JSON.parse(localStorage.getItem("boopUser"));
-  if (!user || user.role !== "admin") {
-    window.location.href = "login.html"; // Boot them out
-  }
+
+if (
+  !user ||
+  user.role !== "admin" ||
+  ["viewer", "support", "accountant"].includes(user.type)
+) {
+  alert("🚫 You do not have permission to access this page.");
+  window.location.href = "login.html"; // Or redirect somewhere safer if needed
+}
 
   // ✅ DOM logic after authorization confirmed
   document.addEventListener("DOMContentLoaded", () => {
