@@ -8,13 +8,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // 🚫 Restrict access to viewer and support types
-if (["viewer", "support"].includes(currentUserType)) {
-  alert("You do not have permission to access this page.");
-  window.location.href = "login.html"; // 👈 redirect to dashboard or another safe page
-  return;
-}
-
   const form = document.getElementById("addUserForm");
   const roleSelect = document.getElementById("role");
   const adminTypeContainer = document.getElementById("adminTypeContainer");
@@ -52,6 +45,13 @@ if (["viewer", "support"].includes(currentUserType)) {
 
     const user = await res.json();
     currentUserType = user.type;
+
+   if (["viewer", "support"].includes(currentUserType)) {
+  alert("You do not have permission to access this page.");
+  window.location.href = "login.html";
+  return;
+}
+    
   } catch (e) {
     console.error("Failed to fetch current user info:", e);
   }
