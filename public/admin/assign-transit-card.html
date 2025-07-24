@@ -270,5 +270,30 @@ assignBtn.addEventListener("click", async () => {
   }
 });
 </script>
+
+<script>
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+
+  if (
+    !user ||
+    user.role !== "admin" ||
+    ["viewer", "support", "accountant"].includes(user.type)
+  ) {
+    alert("🚫 You do not have permission to access this page.");
+    window.location.href = "login.html";
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+  });
+</script>
+  
 </body>
 </html>
