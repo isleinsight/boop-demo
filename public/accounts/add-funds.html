@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Add Funds – BOOP Accounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+    }
+
+    .container-small {
+      max-width: 500px;
+      background: white;
+      margin: 50px auto;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #2f80ed;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+    }
+
+    button:hover {
+      background: #1c6fd8;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      color: #333;
+    }
+
+    #userSuggestions div {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    #userSuggestions div:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <a href="view-users.html">View Users</a>
+        <a href="add-funds.html" class="active">Add Funds</a>
+        <a href="transfer.html">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reports.html">Reports</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Form -->
+  <div class="container-small">
+    <h3>Add Funds</h3>
+
+    <div class="input-group">
+      <label for="userSearch">Search User</label>
+      <input type="text" id="userSearch" placeholder="Type name or email..." autocomplete="off" />
+      <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+    </div>
+
+    <div class="input-group">
+      <label for="amount">Amount (BMD)</label>
+      <input type="number" id="amount" min="1" placeholder="Enter amount..." />
+    </div>
+
+    <div class="input-group">
+      <label for="note">Reason / Note</label>
+      <textarea id="note" rows="3" placeholder="Optional note..."></textarea>
+    </div>
+
+    <button id="addFundsBtn">Add Funds</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script type="module">
+    const userSearch = document.getElementById("userSearch");
+    const suggestions = document.getElementById("userSuggestions");
+    const amount = document.getElementById("amount");
+    const note = document.getElementById("note");
+    const addFundsBtn = document.getElementById("addFundsBtn");
+    const statusEl = document.getElementById("status");
+
+    let selectedUser = null;
+
+    // 🔍 User Autocomplete
+    userSearch.addEventListener("input", async () => {
+      const query = userSearch.value.trim();
+      if (query.length < 2) {
+        suggestions.style.display = "none";
+        return;
+      }
+
+      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
+      const users = await res.json();
+
+      if (!users.length) {
+        suggestions.innerHTML = "<div>No results found</div>";
+      } else {
+        suggestions.innerHTML = users.map(u => `
+          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+            ${u.first_name} ${u.last_name} (${u.email})
+          </div>
+        `).join("");
+      }
+
+      suggestions.style.display = "block";
+    });
+
+    // 👤 Select user
+    suggestions.addEventListener("click", (e) => {
+      const item = e.target.closest(".user-suggestion");
+      if (!item) return;
+      selectedUser = {
+        id: item.dataset.id,
+        wallet_id: item.dataset.wallet
+      };
+      userSearch.value = item.textContent;
+      suggestions.style.display = "none";
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!suggestions.contains(e.target) && e.target !== userSearch) {
+        suggestions.style.display = "none";
+      }
+    });
+
+    // 💸 Add Funds
+    addFundsBtn.addEventListener("click", async () => {
+      const admin = JSON.parse(localStorage.getItem("boopUser"));
+
+      if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value)) {
+        statusEl.textContent = "Please complete all required fields.";
+        statusEl.style.color = "red";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/transactions/add-funds", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet_id: selectedUser.wallet_id,
+            amount: parseFloat(amount.value),
+            note: note.value,
+            added_by: admin.id
+          })
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          statusEl.textContent = "✅ Funds added successfully!";
+          statusEl.style.color = "green";
+          amount.value = "";
+          note.value = "";
+          userSearch.value = "";
+          selectedUser = null;
+        } else {
+          statusEl.textContent = `❌ ${result.error || "Failed to add funds."}`;
+          statusEl.style.color = "red";
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "❌ Server error occurred.";
+        statusEl.style.color = "red";
+      }
+    });
+
+    // 🔒 Protect route
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || user.role !== "accountant") {
+      window.location.href = "../login.html";
+    }
+
+    // 🔓 Log out
+    document.getElementById("logoutBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      localStorage.removeItem("boopUser");
+      window.location.href = "../login.html";
+    });
+  </script>
+</body>
+</html>
