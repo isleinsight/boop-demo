@@ -135,19 +135,29 @@ const statusEl = document.getElementById("status");
 let selectedUser = null;
 
 const productOptions = {
+  const transitProducts = {
   token: [
     { label: "3 Zone Token – Adult", value: "3_zone_token_adult" },
-    { label: "14 Zone Token – Motorcycle", value: "14_zone_token_motorcycle" }
+    { label: "3 Zone Token – Child", value: "3_zone_token_child" },
+    { label: "14 Zone Token – Motorcycle", value: "14_zone_token_motorcycle" },
+    { label: "14 Zone Token – Student", value: "14_zone_token_student" }
   ],
   ticket: [
-    { label: "3 Zone Tickets (Booklet)", value: "3_zone_ticket_booklet" },
-    { label: "All Zone Tickets – Child", value: "all_zone_ticket_child" }
+    { label: "1 Zone Ticket", value: "1_zone_ticket" },
+    { label: "2 Zone Ticket", value: "2_zone_ticket" },
+    { label: "3 Zone Ticket", value: "3_zone_ticket" },
+    { label: "14 Zone Ticket", value: "14_zone_ticket" },
+    { label: "All Zone Ticket – Child", value: "all_zone_ticket_child" }
   ],
   pass: [
     { label: "1 Day Pass – Adult", value: "1_day_pass_adult" },
+    { label: "3 Day Visitor Pass", value: "3_day_visitor_pass" },
     { label: "7 Day Pass – Child", value: "7_day_pass_child" },
-    { label: "Monthly Pass – Adult", value: "monthly_pass_adult" }
+    { label: "30 Day Pass – Adult", value: "30_day_pass_adult" },
+    { label: "30 Day Pass – Student", value: "30_day_pass_student" },
+    { label: "30 Day Pass – Senior", value: "30_day_pass_senior" }
   ]
+};
 };
 
 generateBtn.addEventListener("click", () => {
