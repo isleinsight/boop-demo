@@ -2,33 +2,123 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>BOOP Login</title>
+  <title>Dashboard - BOOP Accounts</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="../assets/styles.css" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <style>
+    .loginContainer {
+      max-width: 600px;
+      text-align: center;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      font-size: 1.8em;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 1em;
+      color: #333;
+      margin-bottom: 30px;
+    }
+
+    .dashboard-buttons-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-buttons a {
+      padding: 10px 20px;
+      background-color: #2f80ed;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.95em;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    .dashboard-buttons a:hover {
+      background-color: #1c60b3;
+    }
+  </style>
 </head>
 <body>
+  
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <div class="nav-dropdown">
+          <a href="#" class="dropbtn" style="color: white;">Accounts</a>
+          <div class="dropdown-content">
+            <a href="add-funds.html">Add Funds</a>
+            <a href="transfer.html">Transfer</a>
+            <a href="reports.html">Reports</a>
+          </div>
+        </div>
+        <a href="view-users.html">View Users</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
 
-<!-- Navbar with Logo -->
-<nav>
-  <div class="nav-container">
-    <div class="nav-left">
-      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+  <!-- Main Content -->
+  <div class="loginContainer">
+    <h1>BOOP Accounts Dashboard</h1>
+    <p>Welcome to your secure accounts dashboard. From here you can manage funds, view transactions, and run reports.</p>
+
+    <!-- Action Buttons -->
+    <div class="dashboard-buttons-wrapper">
+      <div class="dashboard-buttons">
+        <a href="add-funds.html">Add Funds</a>
+        <a href="transfer.html">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reports.html">Reports</a>
+        <a href="view-users.html">View Users</a>
+      </div>
     </div>
   </div>
-</nav>
 
-<div class="loginContainer" style="margin-top: 30px;">
-  <h1>Admin Login</h1>
-  <form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required />
-    <input type="password" id="password" placeholder="Password" required />
-    <button type="submit">Login</button>
-  </form>
-  <p id="loginStatus" style="color: red;"></p>
-</div>
+  <!-- Auth Script -->
+  <script>
+    // Restrict access to admin accounts only
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || user.role !== "admin" || user.type !== "accounts") {
+      window.location.href = "login.html";
+    }
 
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("✅ accounts.js has loaded");
 
-<script type="module" src="./login-handler.js"></script>
-
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          localStorage.removeItem("boopUser");
+          localStorage.removeItem("boop_jwt");
+          window.location.href = "login.html";
+        });
+      }
+    });
+  </script>
 </body>
 </html>
