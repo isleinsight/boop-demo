@@ -42,71 +42,83 @@
 <body>
 
   <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      <div class="nav-right">
-        <a href="index.html">Dashboard</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Add</a>
-          <div class="dropdown-content">
-            <a href="add-user.html">Add User</a>
-            <a href="assign-card.html">Assign Card</a>
-            <a href="assign-transit-card.html">Transit Card</a>
-            <a href="assign-student.html">Assign Student</a>
-          </div>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+    </div>
+    <div class="nav-right">
+      <a href="index.html">Dashboard</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn" style="color: white;">Add</a>
+        <div class="dropdown-content">
+          <a href="add-user.html">Add User</a>
+          <a href="assign-card.html">Assign Card</a>
+          <a href="assign-transit-card.html">Transit Card</a>
+          <a href="assign-student.html">Assign Student</a>
         </div>
-        <a href="view-users.html">View Users</a>
-        <a href="#" id="logoutBtn">Log Out</a>
       </div>
+      <a href="view-users.html">View Users</a>
+      <a href="#" id="logoutBtn">Log Out</a>
     </div>
-  </nav>
-
-  <div class="container-small">
-    <h3>Assign Transit Card</h3>
-
-    <div class="input-group">
-      <label>Card UID</label>
-      <input type="text" id="cardUID" placeholder="Auto-generated" readonly />
-      <button type="button" id="generateUIDBtn">Generate</button>
-    </div>
-
-    <div class="input-group">
-      <label for="userTypeSelect">User Type</label>
-      <select id="userTypeSelect">
-        <option value="">-- Select user type --</option>
-        <option value="existing">Assign to Existing User</option>
-        <option value="temporary">Temporary User</option>
-      </select>
-    </div>
-
-    <div class="input-group" id="userSearchGroup" style="display: none;">
-      <label for="userSearch">Search User</label>
-      <input type="text" id="userSearch" placeholder="Search name or email..." autocomplete="off" />
-      <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
-    </div>
-
-    <div class="input-group">
-      <label for="passType">Transit Product</label>
-      <select id="passType">
-        <option value="">-- Select Type --</option>
-        <option value="token">Tokens</option>
-        <option value="ticket">Tickets</option>
-        <option value="pass">Passes</option>
-      </select>
-    </div>
-
-    <div class="input-group">
-      <label for="productSelect">Choose Product</label>
-      <select id="productSelect">
-        <option value="">Select a transit item</option>
-      </select>
-    </div>
-
-    <button id="assignBtn">Assign Transit Card</button>
-    <div class="status" id="status"></div>
   </div>
+</nav>
+
+<div class="container-small">
+  <h3>Assign Transit Card</h3>
+
+  <!-- Card UID -->
+  <div class="input-group">
+    <label>Card UID</label>
+    <input type="text" id="cardUID" placeholder="Auto-generated" readonly />
+    <button type="button" id="generateUIDBtn">Generate</button>
+  </div>
+
+  <!-- User Type -->
+  <div class="input-group">
+    <label for="userTypeSelect">User Type</label>
+    <select id="userTypeSelect">
+      <option value="">-- Select user type --</option>
+      <option value="existing">Assign to Existing User</option>
+      <option value="temporary">Temporary User</option>
+    </select>
+  </div>
+
+  <!-- Search User -->
+  <div class="input-group" id="userSearchGroup" style="display: none;">
+    <label for="userSearch">Search User</label>
+    <input type="text" id="userSearch" placeholder="Search name or email..." autocomplete="off" />
+    <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+  </div>
+
+  <!-- Transit Category -->
+  <div class="input-group">
+    <label for="passType">Transit Category</label>
+    <select id="passType">
+      <option value="">-- Select Category --</option>
+      <option value="token">Tokens</option>
+      <option value="ticket">Tickets</option>
+      <option value="pass">Passes</option>
+    </select>
+  </div>
+
+  <!-- Product Select -->
+  <div class="input-group">
+    <label for="productSelect">Transit Product</label>
+    <select id="productSelect">
+      <option value="">-- Select a product --</option>
+    </select>
+  </div>
+
+  <!-- Price Display -->
+  <div class="input-group">
+    <label for="productPrice">Cost (BMD)</label>
+    <input type="text" id="productPrice" readonly />
+  </div>
+
+  <!-- Assign Button -->
+  <button id="assignBtn">Assign Transit Card</button>
+  <div class="status" id="status"></div>
+</div>
 
 <script type="module">
 const uidEl = document.getElementById("cardUID");
