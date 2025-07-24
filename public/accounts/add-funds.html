@@ -125,7 +125,7 @@
         return;
       }
 
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true`);
+      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`);
       const users = await res.json();
 
       if (!users.length) {
