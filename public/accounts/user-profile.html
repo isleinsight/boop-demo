@@ -11,10 +11,16 @@
     window.location.href = "login.html";
   }
 
-  // ✅ DOM logic after authorization confirmed
+
   document.addEventListener("DOMContentLoaded", () => {
-    // your logic below...
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    const manageLink = document.getElementById("manageTreasuryLink");
+
+    if (user?.type === "treasury") {
+      manageLink.style.display = "block";
+    }
   });
+
 </script>
 <!DOCTYPE html>
 <html lang="en">
