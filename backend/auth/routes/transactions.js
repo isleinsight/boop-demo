@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const pool = require('../../db');
-const authMiddleware = require("../auth/middleware"); // if you use auth
+const authMiddleware = require("../auth/middleware/authMiddleware");
 
 // POST /api/transactions/add-funds
 router.post("/add-funds", authMiddleware, async (req, res) => {
