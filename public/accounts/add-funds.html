@@ -114,29 +114,130 @@
 
 <script type="module">
   document.addEventListener("DOMContentLoaded", () => {
-    // 🔐 Session protection: allow only admin + type accountant
+    // 🛡️ Restrict to accountant admins only
     const user = JSON.parse(localStorage.getItem("boopUser"));
     if (!user || user.role !== "admin" || user.type !== "accountant") {
-      localStorage.clear(); // ensure all remnants are cleared
-      window.location.href = "login.html"; // relative to current Accounts folder
+      localStorage.clear();
+      window.location.href = "login.html"; // in the same Accounts folder
       return;
     }
 
-    // 🔓 Logout handler
+    const userSearch = document.getElementById("userSearch");
+    const suggestions = document.getElementById("userSuggestions");
+    const amount = document.getElementById("amount");
+    const note = document.getElementById("note");
+    const addFundsBtn = document.getElementById("addFundsBtn");
+    const statusEl = document.getElementById("status");
     const logoutBtn = document.getElementById("logoutBtn");
+
+    let selectedUser = null;
+
+    // 🔍 Search users with wallet
+    userSearch.addEventListener("input", async () => {
+      const query = userSearch.value.trim();
+      if (query.length < 2) {
+        suggestions.style.display = "none";
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`);
+        const users = await res.json();
+
+        if (!users.length) {
+          suggestions.innerHTML = "<div>No results found</div>";
+        } else {
+          suggestions.innerHTML = users.map(u => `
+            <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+              ${u.first_name} ${u.last_name} (${u.email})
+            </div>
+          `).join("");
+        }
+
+        suggestions.style.display = "block";
+      } catch (err) {
+        console.error("User search error:", err);
+        suggestions.innerHTML = "<div>Error loading suggestions</div>";
+        suggestions.style.display = "block";
+      }
+    });
+
+    // 👤 Select from search
+    suggestions.addEventListener("click", (e) => {
+      const item = e.target.closest(".user-suggestion");
+      if (!item) return;
+      selectedUser = {
+        id: item.dataset.id,
+        wallet_id: item.dataset.wallet
+      };
+      userSearch.value = item.textContent;
+      suggestions.style.display = "none";
+    });
+
+    // 🧼 Close dropdown if clicked outside
+    document.addEventListener("click", (e) => {
+      if (!suggestions.contains(e.target) && e.target !== userSearch) {
+        suggestions.style.display = "none";
+      }
+    });
+
+    // 💸 Add Funds
+    addFundsBtn.addEventListener("click", async () => {
+      const admin = JSON.parse(localStorage.getItem("boopUser"));
+
+      if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value)) {
+        statusEl.textContent = "Please complete all required fields.";
+        statusEl.style.color = "red";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/transactions/add-funds", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet_id: selectedUser.wallet_id,
+            amount: parseFloat(amount.value),
+            note: note.value,
+            added_by: admin.id
+          })
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          statusEl.textContent = "✅ Funds added successfully!";
+          statusEl.style.color = "green";
+          amount.value = "";
+          note.value = "";
+          userSearch.value = "";
+          selectedUser = null;
+        } else {
+          statusEl.textContent = `❌ ${result.error || "Failed to add funds."}`;
+          statusEl.style.color = "red";
+        }
+      } catch (err) {
+        console.error("Add funds error:", err);
+        statusEl.textContent = "❌ Server error occurred.";
+        statusEl.style.color = "red";
+      }
+    });
+
+    // 🔓 Logout handler
     if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
+      logoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
-
-        // 🧼 Optional: notify backend session logout
-        fetch("/api/logout", { method: "POST" }).catch(console.warn);
-
-        localStorage.clear(); // 🔄 fully clear session
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } catch (err) {
+          console.warn("Logout API error:", err);
+        }
+        localStorage.clear();
         window.location.href = "login.html";
       });
     }
 
-    console.log("✅ Auth script initialized for accountant");
+    console.log("✅ Accountant script ready.");
   });
 </script>
 </body>
