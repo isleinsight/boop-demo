@@ -219,11 +219,17 @@ if (!user || user.role !== "admin" || user.type !== "accountant") {
     }
 
     // 🔓 Log out
-    document.getElementById("logoutBtn").addEventListener("click", (e) => {
+    document.addEventListener("DOMContentLoaded", () => {
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", (e) => {
       e.preventDefault();
       localStorage.removeItem("boopUser");
+      localStorage.removeItem("boop_jwt"); // optional: clear token
       window.location.href = "../login.html";
     });
+  }
+});
   </script>
 </body>
 </html>
