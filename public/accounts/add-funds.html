@@ -114,112 +114,29 @@
 
 <script type="module">
   document.addEventListener("DOMContentLoaded", () => {
+    // 🔐 Session protection: allow only admin + type accountant
     const user = JSON.parse(localStorage.getItem("boopUser"));
-
-    // 🔒 Protect route (accountant only)
     if (!user || user.role !== "admin" || user.type !== "accountant") {
-      return window.location.href = "../login.html";
+      localStorage.clear(); // ensure all remnants are cleared
+      window.location.href = "login.html"; // relative to current Accounts folder
+      return;
     }
 
-    // 🔓 Logout logic
+    // 🔓 Logout handler
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", (e) => {
         e.preventDefault();
-        localStorage.removeItem("boopUser");
-        localStorage.removeItem("boop_jwt");
-        window.location.href = "../login.html";
+
+        // 🧼 Optional: notify backend session logout
+        fetch("/api/logout", { method: "POST" }).catch(console.warn);
+
+        localStorage.clear(); // 🔄 fully clear session
+        window.location.href = "login.html";
       });
     }
 
-    // 💰 Fund logic
-    const userSearch = document.getElementById("userSearch");
-    const suggestions = document.getElementById("userSuggestions");
-    const amount = document.getElementById("amount");
-    const note = document.getElementById("note");
-    const addFundsBtn = document.getElementById("addFundsBtn");
-    const statusEl = document.getElementById("status");
-
-    let selectedUser = null;
-
-    userSearch.addEventListener("input", async () => {
-      const query = userSearch.value.trim();
-      if (query.length < 2) {
-        suggestions.style.display = "none";
-        return;
-      }
-
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`);
-      const users = await res.json();
-
-      if (!users.length) {
-        suggestions.innerHTML = "<div>No results found</div>";
-      } else {
-        suggestions.innerHTML = users.map(u => `
-          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-            ${u.first_name} ${u.last_name} (${u.email})
-          </div>
-        `).join("");
-      }
-
-      suggestions.style.display = "block";
-    });
-
-    suggestions.addEventListener("click", (e) => {
-      const item = e.target.closest(".user-suggestion");
-      if (!item) return;
-      selectedUser = {
-        id: item.dataset.id,
-        wallet_id: item.dataset.wallet
-      };
-      userSearch.value = item.textContent;
-      suggestions.style.display = "none";
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!suggestions.contains(e.target) && e.target !== userSearch) {
-        suggestions.style.display = "none";
-      }
-    });
-
-    addFundsBtn.addEventListener("click", async () => {
-      if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value)) {
-        statusEl.textContent = "Please complete all required fields.";
-        statusEl.style.color = "red";
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/transactions/add-funds", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet_id: selectedUser.wallet_id,
-            amount: parseFloat(amount.value),
-            note: note.value,
-            added_by: user.id
-          })
-        });
-
-        const result = await res.json();
-
-        if (res.ok) {
-          statusEl.textContent = "✅ Funds added successfully!";
-          statusEl.style.color = "green";
-          amount.value = "";
-          note.value = "";
-          userSearch.value = "";
-          selectedUser = null;
-        } else {
-          statusEl.textContent = `❌ ${result.error || "Failed to add funds."}`;
-          statusEl.style.color = "red";
-        }
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "❌ Server error occurred.";
-        statusEl.style.color = "red";
-      }
-    });
+    console.log("✅ Auth script initialized for accountant");
   });
 </script>
 </body>
