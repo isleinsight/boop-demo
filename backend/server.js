@@ -33,6 +33,8 @@ app.use('/api/vendors', require('./auth/routes/vendors'));
 app.use('/api/user-students', require('./auth/routes/userStudents'));
 app.use('/api/sessions', require('./auth/routes/sessions'));
 app.use('/api/transactions', require('./auth/routes/transactions')); 
+app.use("/api/treasury", require("./auth/routes/treasury"));
+
 // ✅ /api/me - current logged-in user info
 app.get('/api/me', authenticateToken, (req, res) => {
   const { id, userId, email, role, type } = req.user;
