@@ -115,7 +115,7 @@ router.post("/", authenticateToken, async (req, res) => {
 
 // ✅ Get users (with autocomplete or pagination, now including deleted filter)
 router.get("/", async (req, res) => {
-  const { search, role, status, page, perPage, assistanceOnly } = req.query;
+  const { search, role, status, page, perPage, assistanceOnly, type } = req.query;
   const isAutocomplete = !page && !perPage;
 
   try {
@@ -143,6 +143,11 @@ router.get("/", async (req, res) => {
       values.push(role);
     }
 
+    if (type) {
+  whereClauses.push(`type = $${values.length + 1}`);
+  values.push(type);
+}
+    
     // ✅ Assistance-only filter
 if (assistanceOnly === 'true') {
   whereClauses.push(`on_assistance = true`);
