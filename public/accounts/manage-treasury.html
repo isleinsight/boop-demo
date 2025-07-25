@@ -60,15 +60,17 @@
 
 <script type="module">
   document.addEventListener("DOMContentLoaded", async () => {
+    // ✅ Auth check
     const user = JSON.parse(localStorage.getItem("boopUser"));
     if (!user || user.role !== "admin" || user.type !== "treasury") {
       localStorage.clear();
       return window.location.href = "login.html";
     }
 
+    // ✅ Treasury wallet UUIDs
     const wallets = {
-      "Treasury HSBC": "WALLET_UUID_HSBC",       // 🔁 Replace with real UUIDs
-      "Treasury Butterfield": "WALLET_UUID_BUTTERFIELD"
+      "Treasury HSBC": "151e28cf-4709-48be-8b38-007c0d079e21",
+      "Treasury Butterfield": "5d456e13-639e-4408-970c-e6bdea61585a"
     };
 
     const walletSelect = document.getElementById("walletSelect");
@@ -77,6 +79,7 @@
     const statusMsg = document.getElementById("statusMsg");
     const logoutBtn = document.getElementById("logoutBtn");
 
+    // 🏦 Populate dropdown
     Object.entries(wallets).forEach(([label, id]) => {
       const opt = document.createElement("option");
       opt.value = id;
@@ -84,6 +87,7 @@
       walletSelect.appendChild(opt);
     });
 
+    // 🔁 Fetch data on selection
     walletSelect.addEventListener("change", async () => {
       const walletId = walletSelect.value;
       balanceDisplay.textContent = "--";
