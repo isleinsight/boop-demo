@@ -1,3 +1,13 @@
+<script type="module">
+  document.addEventListener("DOMContentLoaded", () => {
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    const manageLink = document.getElementById("manageTreasuryLink");
+
+    if (user?.type === "treasury") {
+      manageLink.style.display = "block";
+    }
+  });
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,7 +90,7 @@
             <a href="add-funds.html">Add Funds</a>
             <a href="transfer.html">Transfer</a>
             <a href="reports.html">Reports</a>
-            <a href="manage-treasury.html">Manage Treasury</a>
+            <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
           </div>
         </div>
         <a href="view-users.html">View Users</a>
