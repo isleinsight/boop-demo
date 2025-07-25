@@ -117,6 +117,12 @@
 
     let selectedUser = null;
 
+    // 🔒 Restrict to only accountant-type admins
+const user = JSON.parse(localStorage.getItem("boopUser"));
+if (!user || user.role !== "admin" || user.type !== "accountant") {
+  window.location.href = "../login.html";
+}
+
     // 🔍 User Autocomplete
     userSearch.addEventListener("input", async () => {
       const query = userSearch.value.trim();
