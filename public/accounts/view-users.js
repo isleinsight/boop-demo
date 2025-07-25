@@ -29,7 +29,7 @@ try {
   });
   const meData = await res.json();
 
-  if (!meData || meData.role !== "admin" || meData.type !== "accountant") {
+  if (!meData || meData.role !== "admin" || !["accountant", "treasury"].includes(meData.type)) {
     throw new Error("Not authorized");
   }
 
