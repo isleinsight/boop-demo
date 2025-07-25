@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transactions – BOOP Accounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f5f7fa;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+
+    .status {
+      color: red;
+      text-align: center;
+    }
+
+    .nav-right a.active {
+      font-weight: bold;
+      color: #2f80ed;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <a href="view-users.html">View Users</a>
+        <a href="add-funds.html">Add Funds</a>
+        <a href="transfer.html">Transfer</a>
+        <a href="transactions.html" class="active">Transactions</a>
+        <a href="reports.html">Reports</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container">
+    <h2>Recent Transactions</h2>
+    <table id="transactionsTable">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Type</th>
+          <th>Amount (BMD)</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="transactionsBody">
+        <tr><td colspan="5" class="status">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || user.role !== "admin" || user.type !== "accountant") {
+      window.location.href = "../login.html";
+    }
+
+    const tbody = document.getElementById("transactionsBody");
+
+    async function loadTransactions() {
+      try {
+        const res = await fetch("/api/transactions/recent", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("boop_jwt")}`
+          }
+        });
+        const data = await res.json();
+
+        if (!res.ok || !Array.isArray(data)) {
+          throw new Error(data.message || "Failed to load transactions.");
+        }
+
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="status">No transactions found.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.map(tx => `
+          <tr>
+            <td>${tx.user_name || 'N/A'}</td>
+            <td>${tx.user_email || 'N/A'}</td>
+            <td>${tx.type || '-'}</td>
+            <td>${(tx.amount || 0).toFixed(2)}</td>
+            <td>${new Date(tx.created_at).toLocaleString()}</td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="status">❌ ${err.message}</td></tr>`;
+      }
+    }
+
+    // 🔁 Refresh on load
+    document.addEventListener("DOMContentLoaded", () => {
+      loadTransactions();
+
+      // Optional auto-refresh every 60 seconds
+      setInterval(loadTransactions, 60000);
+
+      const logoutBtn = document.getElementById("logoutBtn");
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        localStorage.removeItem("boop_jwt");
+        window.location.href = "../login.html";
+      });
+    });
+  </script>
+
+</body>
+</html>
