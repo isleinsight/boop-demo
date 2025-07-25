@@ -102,7 +102,7 @@
   <script>
     // Restrict access to admin accounts only
     const user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || user.role !== "admin" || user.type !== "accounts") {
+    if (!user || user.role !== "admin" || user.type !== "accountant") {
       window.location.href = "login.html";
     }
 
