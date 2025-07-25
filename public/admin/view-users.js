@@ -22,16 +22,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentUserEmail = null;
   let currentUser = null;
 
-  try {
-    const res = await fetch("/api/me", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const meData = await res.json();
-    currentUser = meData;
-    currentUserEmail = meData.email;
-  } catch {
-    console.warn("🔒 Could not fetch current user");
+  // ✅ Restrict access to only accountant-type admins
+try {
+  const res = await fetch("/api/me", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const meData = await res.json();
+
+  if (!meData || meData.role !== "admin") {
+    throw new Error("Not authorized");
   }
+
+  currentUser = meData;
+  currentUserEmail = meData.email;
+} catch (err) {
+  console.warn("🔒 Not authorized or error fetching user:", err);
+  localStorage.removeItem("boop_jwt");
+  localStorage.removeItem("boopUser");
+  window.location.href = "login.html";
+  return;
+}
 
   async function fetchUsers() {
     try {
