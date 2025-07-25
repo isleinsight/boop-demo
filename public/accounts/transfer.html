@@ -134,7 +134,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       // 🔒 Permission check
       const user = JSON.parse(localStorage.getItem("boopUser"));
-      if (!user || user.role !== "admin" || user.type !== "accountant") {
+      if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
         localStorage.clear();
         window.location.href = "login.html";
         return;
