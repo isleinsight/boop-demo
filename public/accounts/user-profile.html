@@ -1,0 +1,158 @@
+<script>
+  // 🔒 Auth check at top
+  let user;
+  try {
+    user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || typeof user !== "object" || user.role !== "admin") {
+      throw new Error("Not authorized");
+    }
+  } catch (err) {
+    localStorage.removeItem("boopUser");
+    window.location.href = "login.html";
+  }
+
+  // ✅ DOM logic after authorization confirmed
+  document.addEventListener("DOMContentLoaded", () => {
+    // your logic below...
+  });
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>User Profile - BOOP Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+
+  <style>
+    .user-details-grid {
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .remove-student-wrapper {
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <div class="nav-dropdown">
+          <a href="#" class="dropbtn" style="color: white;">Add</a>
+          <div class="dropdown-content">
+            <a href="add-user.html">Add User</a>
+            <a href="assign-card.html">Assign Card</a>
+            <a href="assign-student.html">Assign Student</a>
+          </div>
+        </div>
+        <a href="view-users.html">View Users</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="profile-container user-profile-page">
+    <a href="view-users.html" class="back-button">← Back to Users</a>
+    <h2>User Profile</h2>
+
+    <div style="margin-top: 20px; margin-bottom: 20px;">
+      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+      <button id="saveProfileBtn" style="display:none;" class="btnEdit">Save Changes</button>
+    </div>
+
+    <div class="user-details-grid" id="userInfo"></div>
+
+    <!-- Vendor Info -->
+    <div id="vendorSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Vendor Information</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">Business Name</span>
+          <span class="value" id="vendorBusiness">-</span>
+          <input type="text" id="editBusiness" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Category</span>
+          <span class="value" id="vendorCategory">-</span>
+          <input type="text" id="editCategory" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Phone</span>
+          <span class="value" id="vendorPhone">-</span>
+          <input type="text" id="editPhone" style="display: none; width: 100%;" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Parent Info -->
+    <div id="parentSection" style="display:none;">
+      <h3>Parent</h3>
+      <div class="user-details-grid">
+        <div><span class="label">Name</span><span class="value" id="parentName">-</span></div>
+        <div><span class="label">Email</span><span class="value" id="parentEmail">-</span></div>
+      </div>
+    </div>
+
+    <!-- Student Info -->
+    <div id="studentInfoSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Student Info</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">School Name</span>
+          <span class="value" id="studentSchoolName">-</span>
+          <input type="text" id="editSchoolName" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Grade Level</span>
+          <span class="value" id="studentGradeLevel">-</span>
+          <input type="text" id="editGradeLevel" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Expiry Date</span>
+          <span class="value" id="studentExpiryDate">-</span>
+          <input type="date" id="editExpiryDate" style="display: none; width: 100%;" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="section-title">Transaction History</div>
+    <table class="transaction-table" id="transactionTable">
+      <thead>
+        <tr><th>Timestamp</th><th>Amount</th><th>From</th><th>To</th><th>Category</th><th>Transaction ID</th><th>Status</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script type="module" src="user-profile.js"></script>
+<script>
+  // user is already declared in the top script, just reuse it
+  if (!user || user.role !== "admin") {
+    window.location.href = "login.html";
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("admin.js has loaded!");
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+  });
+</script>
+</body>
+</html>
