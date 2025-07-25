@@ -112,7 +112,27 @@
     <div class="status" id="status"></div>
   </div>
 
-  <script type="module">
+<script type="module">
+  document.addEventListener("DOMContentLoaded", () => {
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+
+    // 🔒 Protect route (accountant only)
+    if (!user || user.role !== "admin" || user.type !== "accountant") {
+      return window.location.href = "../login.html";
+    }
+
+    // 🔓 Logout logic
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        localStorage.removeItem("boop_jwt");
+        window.location.href = "../login.html";
+      });
+    }
+
+    // 💰 Fund logic
     const userSearch = document.getElementById("userSearch");
     const suggestions = document.getElementById("userSuggestions");
     const amount = document.getElementById("amount");
@@ -122,13 +142,6 @@
 
     let selectedUser = null;
 
-    // 🔒 Restrict to only accountant-type admins
-const user = JSON.parse(localStorage.getItem("boopUser"));
-if (!user || user.role !== "admin" || user.type !== "accountant") {
-  window.location.href = "../login.html";
-}
-
-    // 🔍 User Autocomplete
     userSearch.addEventListener("input", async () => {
       const query = userSearch.value.trim();
       if (query.length < 2) {
@@ -152,7 +165,6 @@ if (!user || user.role !== "admin" || user.type !== "accountant") {
       suggestions.style.display = "block";
     });
 
-    // 👤 Select user
     suggestions.addEventListener("click", (e) => {
       const item = e.target.closest(".user-suggestion");
       if (!item) return;
@@ -170,10 +182,7 @@ if (!user || user.role !== "admin" || user.type !== "accountant") {
       }
     });
 
-    // 💸 Add Funds
     addFundsBtn.addEventListener("click", async () => {
-      const admin = JSON.parse(localStorage.getItem("boopUser"));
-
       if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value)) {
         statusEl.textContent = "Please complete all required fields.";
         statusEl.style.color = "red";
@@ -188,7 +197,7 @@ if (!user || user.role !== "admin" || user.type !== "accountant") {
             wallet_id: selectedUser.wallet_id,
             amount: parseFloat(amount.value),
             note: note.value,
-            added_by: admin.id
+            added_by: user.id
           })
         });
 
@@ -211,20 +220,7 @@ if (!user || user.role !== "admin" || user.type !== "accountant") {
         statusEl.style.color = "red";
       }
     });
-
-
-    // 🔓 Log out
-    document.addEventListener("DOMContentLoaded", () => {
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      localStorage.removeItem("boopUser");
-      localStorage.removeItem("boop_jwt"); // optional: clear token
-      window.location.href = "login.html";
-    });
-  }
-});
-  </script>
+  });
+</script>
 </body>
 </html>
