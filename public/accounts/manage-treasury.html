@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manage Treasury – BOOP Accounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+    }
+    .container {
+      max-width: 900px;
+      background: white;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .section {
+      margin-bottom: 40px;
+    }
+    select, input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #2f80ed;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1c6fd8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    .status {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <a href="manage-treasury.html" class="active">Manage Treasury</a>
+        <a href="view-users.html">View Users</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>Manage Treasury Accounts</h2>
+
+    <div class="section">
+      <label for="treasurySelect">Select Treasury Account:</label>
+      <select id="treasurySelect">
+        <option value="">Loading...</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <h3>Current Balance</h3>
+      <div id="balanceDisplay">—</div>
+    </div>
+
+    <div class="section">
+      <h3>Add / Deduct Funds</h3>
+      <div>
+        <label for="amountInput">Amount (positive to add, negative to deduct)</label>
+        <input type="number" id="amountInput" placeholder="Enter amount..." />
+      </div>
+      <div style="margin-top: 12px;">
+        <label for="noteInput">Note (optional)</label>
+        <textarea id="noteInput" rows="3" placeholder="Enter note..."></textarea>
+      </div>
+      <button style="margin-top: 12px;" id="submitBtn">Submit Adjustment</button>
+      <div class="status" id="statusBox"></div>
+    </div>
+
+    <div class="section">
+      <h3>Transaction History</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Amount</th>
+            <th>To</th>
+            <th>From</th>
+            <th>Note</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody id="txTableBody">
+          <tr><td colspan="6">No data yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module">
+    const treasurySelect = document.getElementById("treasurySelect");
+    const balanceDisplay = document.getElementById("balanceDisplay");
+    const amountInput = document.getElementById("amountInput");
+    const noteInput = document.getElementById("noteInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusBox = document.getElementById("statusBox");
+    const txTableBody = document.getElementById("txTableBody");
+
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || user.role !== "admin" || user.type !== "treasury") {
+      window.location.href = "login.html";
+    }
+
+    async function fetchTreasuryAccounts() {
+      const res = await fetch('/api/users?type=treasury');
+      const accounts = await res.json();
+      treasurySelect.innerHTML = accounts.map(u =>
+        `<option value="${u.wallet_id}" data-id="${u.id}">${u.first_name} ${u.last_name} (${u.email})</option>`
+      ).join("");
+      loadWalletData(treasurySelect.value);
+    }
+
+    treasurySelect.addEventListener("change", () => {
+      const selected = treasurySelect.value;
+      if (selected) loadWalletData(selected);
+    });
+
+    async function loadWalletData(wallet_id) {
+      if (!wallet_id) return;
+      const res = await fetch(`/api/treasury/balance/${wallet_id}`);
+      const data = await res.json();
+      balanceDisplay.textContent = `$${data.balance?.toFixed(2) || '0.00'}`;
+      loadTransactionHistory(wallet_id);
+    }
+
+    async function loadTransactionHistory(wallet_id) {
+      const res = await fetch(`/api/transactions/by-wallet/${wallet_id}`);
+      const txs = await res.json();
+      if (!txs.length) {
+        txTableBody.innerHTML = "<tr><td colspan='6'>No transactions yet.</td></tr>";
+        return;
+      }
+
+      txTableBody.innerHTML = txs.map(tx => `
+        <tr>
+          <td>${new Date(tx.timestamp).toLocaleString()}</td>
+          <td>${tx.amount}</td>
+          <td>${tx.to || '-'}</td>
+          <td>${tx.from || '-'}</td>
+          <td>${tx.note || '-'}</td>
+          <td>${tx.category || '-'}</td>
+        </tr>
+      `).join("");
+    }
+
+    submitBtn.addEventListener("click", async () => {
+      const amount = parseFloat(amountInput.value);
+      const note = noteInput.value.trim();
+      const wallet_id = treasurySelect.value;
+      const added_by = user.id;
+
+      if (!wallet_id || isNaN(amount)) {
+        statusBox.textContent = "Enter a valid amount and select account.";
+        statusBox.style.color = "red";
+        return;
+      }
+
+      const res = await fetch('/api/treasury/adjust', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet_id, amount, note, added_by })
+      });
+
+      if (res.ok) {
+        statusBox.textContent = "✅ Adjustment successful";
+        statusBox.style.color = "green";
+        amountInput.value = "";
+        noteInput.value = "";
+        loadWalletData(wallet_id);
+      } else {
+        const err = await res.json();
+        statusBox.textContent = "❌ " + (err.error || "Failed to adjust");
+        statusBox.style.color = "red";
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "login.html";
+    });
+
+    fetchTreasuryAccounts();
+  </script>
+</body>
+</html>
