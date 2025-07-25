@@ -221,7 +221,7 @@ if (!user || user.role !== "admin" || user.type !== "accountant") {
       e.preventDefault();
       localStorage.removeItem("boopUser");
       localStorage.removeItem("boop_jwt"); // optional: clear token
-      window.location.href = "../login.html";
+      window.location.href = "./login.html";
     });
   }
 });
