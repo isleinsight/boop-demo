@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const pool = require('../../db');
 const authMiddleware = require("../middleware/auth"); // if you use auth
 
 // POST /api/transactions/add-funds
