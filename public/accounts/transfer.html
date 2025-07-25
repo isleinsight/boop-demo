@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transfer – BOOP Accounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+    }
+
+    .container-small {
+      max-width: 520px;
+      background: white;
+      margin: 50px auto;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #2f80ed;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+    }
+
+    button:hover {
+      background: #1c6fd8;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    #senderSuggestions div,
+    #recipientSuggestions div {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    #senderSuggestions div:hover,
+    #recipientSuggestions div:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <a href="view-users.html">View Users</a>
+        <a href="add-funds.html">Add Funds</a>
+        <a href="transfer.html" class="active">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reports.html">Reports</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Transfer Form -->
+  <div class="container-small">
+    <h3>Transfer Funds</h3>
+
+    <div class="input-group">
+      <label for="senderSearch">Sender</label>
+      <input type="text" id="senderSearch" placeholder="Search sender..." autocomplete="off" />
+      <div id="senderSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+    </div>
+
+    <div class="input-group">
+      <label for="recipientSearch">Recipient</label>
+      <input type="text" id="recipientSearch" placeholder="Search recipient..." autocomplete="off" />
+      <div id="recipientSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+    </div>
+
+    <div class="input-group">
+      <label for="amount">Amount (BMD)</label>
+      <input type="number" id="amount" min="1" placeholder="Enter amount..." />
+    </div>
+
+    <div class="input-group">
+      <label for="note">Note</label>
+      <textarea id="note" rows="3" placeholder="Optional note..."></textarea>
+    </div>
+
+    <button id="transferBtn">Transfer</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script type="module">
+    document.addEventListener("DOMContentLoaded", () => {
+      // 🔒 Permission check
+      const user = JSON.parse(localStorage.getItem("boopUser"));
+      if (!user || user.role !== "admin" || user.type !== "accountant") {
+        localStorage.clear();
+        window.location.href = "login.html";
+        return;
+      }
+
+      const senderSearch = document.getElementById("senderSearch");
+      const recipientSearch = document.getElementById("recipientSearch");
+      const senderSuggestions = document.getElementById("senderSuggestions");
+      const recipientSuggestions = document.getElementById("recipientSuggestions");
+      const amount = document.getElementById("amount");
+      const note = document.getElementById("note");
+      const transferBtn = document.getElementById("transferBtn");
+      const statusEl = document.getElementById("status");
+
+      let sender = null;
+      let recipient = null;
+
+      async function fetchSuggestions(query, container, setter) {
+        if (query.length < 2) {
+          container.style.display = "none";
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`);
+          const users = await res.json();
+          if (!users.length) {
+            container.innerHTML = "<div>No results</div>";
+          } else {
+            container.innerHTML = users.map(u => `
+              <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+                ${u.first_name} ${u.last_name} (${u.email})
+              </div>
+            `).join("");
+          }
+          container.style.display = "block";
+        } catch (err) {
+          console.error("❌ Error:", err);
+          container.innerHTML = "<div>Server error</div>";
+          container.style.display = "block";
+        }
+      }
+
+      senderSearch.addEventListener("input", () => fetchSuggestions(senderSearch.value, senderSuggestions, "sender"));
+      recipientSearch.addEventListener("input", () => fetchSuggestions(recipientSearch.value, recipientSuggestions, "recipient"));
+
+      senderSuggestions.addEventListener("click", e => {
+        const item = e.target.closest(".user-suggestion");
+        if (!item) return;
+        sender = { id: item.dataset.id, wallet_id: item.dataset.wallet };
+        senderSearch.value = item.textContent;
+        senderSuggestions.style.display = "none";
+      });
+
+      recipientSuggestions.addEventListener("click", e => {
+        const item = e.target.closest(".user-suggestion");
+        if (!item) return;
+        recipient = { id: item.dataset.id, wallet_id: item.dataset.wallet };
+        recipientSearch.value = item.textContent;
+        recipientSuggestions.style.display = "none";
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!senderSuggestions.contains(e.target) && e.target !== senderSearch)
+          senderSuggestions.style.display = "none";
+        if (!recipientSuggestions.contains(e.target) && e.target !== recipientSearch)
+          recipientSuggestions.style.display = "none";
+      });
+
+      transferBtn.addEventListener("click", async () => {
+        if (!sender || !recipient || !amount.value || isNaN(amount.value)) {
+          statusEl.textContent = "Please fill out all required fields.";
+          statusEl.style.color = "red";
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/transactions/transfer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from_wallet: sender.wallet_id,
+              to_wallet: recipient.wallet_id,
+              amount: parseFloat(amount.value),
+              note: note.value,
+              transferred_by: user.id
+            })
+          });
+
+          const result = await res.json();
+
+          if (res.ok) {
+            statusEl.textContent = "✅ Transfer successful!";
+            statusEl.style.color = "green";
+            senderSearch.value = recipientSearch.value = amount.value = note.value = "";
+            sender = recipient = null;
+          } else {
+            statusEl.textContent = `❌ ${result.error || "Transfer failed."}`;
+            statusEl.style.color = "red";
+          }
+        } catch (err) {
+          console.error("Transfer error:", err);
+          statusEl.textContent = "❌ Server error occurred.";
+          statusEl.style.color = "red";
+        }
+      });
+
+      // 🔓 Log out
+      const logoutBtn = document.getElementById("logoutBtn");
+      logoutBtn?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } catch (err) {
+          console.warn("Logout error:", err);
+        }
+        localStorage.clear();
+        window.location.href = "login.html";
+      });
+    });
+  </script>
+</body>
+</html>
