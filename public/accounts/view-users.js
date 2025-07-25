@@ -1,183 +1,237 @@
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+//view-users.js
 
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+document.addEventListener("DOMContentLoaded", async () => {
+  const token = localStorage.getItem("boop_jwt");
+  const userTableBody = document.getElementById("userTableBody");
+  const searchInput = document.getElementById("searchInput");
+  const searchBtn = document.getElementById("searchBtn");
+  const clearSearchBtn = document.getElementById("clearSearchBtn");
+  const roleFilter = document.getElementById("roleFilter");
+  const statusFilter = document.getElementById("statusFilter");
+  const selectAll = document.getElementById("selectAllCheckbox");
+  const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+  const prevBtn = document.getElementById("prevBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const paginationInfo = document.getElementById("paginationInfo");
+  const userCount = document.getElementById("userCount");
 
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  deleteDoc,
-  doc,
-  addDoc,
-  updateDoc,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-  authDomain: "boop-becff.firebaseapp.com",
-  projectId: "boop-becff",
-  storageBucket: "boop-becff.appspot.com",
-  messagingSenderId: "570567453336",
-  appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// Request Admin Action
-async function requestAdminAction(uid, action) {
-  const user = auth.currentUser;
-  if (!user) {
-    alert("Not authenticated.");
-    return;
-  }
-
-  if (action === "forceSignout") {
-    try {
-      await updateDoc(doc(db, "users", uid), { forceSignout: true });
-      alert("✅ Force Sign Out triggered.");
-    } catch (error) {
-      console.error("Error triggering forceSignout:", error);
-      alert("❌ Failed to trigger force sign out.");
-    }
-    return;
-  }
-
-  const actionsRef = collection(db, "adminActions");
-  const payload = {
-    uid: uid,
-    action: action,
-    requestedBy: user.uid,
-    timestamp: new Date(),
-    status: "pending"
-  };
+  let currentPage = 1;
+  const perPage = 10;
+  let totalPages = 1;
+  let allUsers = [];
+  let currentUserEmail = null;
+  let currentUser = null;
 
   try {
-    await addDoc(actionsRef, payload);
-    alert(`✅ ${action} request sent. It may take a moment to process.`);
-  } catch (error) {
-    console.error("Error submitting admin action:", error);
-    alert("❌ Failed to send admin action.");
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const meData = await res.json();
+    currentUser = meData;
+    currentUserEmail = meData.email;
+  } catch {
+    console.warn("🔒 Could not fetch current user");
   }
+
+  async function fetchUsers() {
+    try {
+      let role = roleFilter.value;
+let assistanceOnly = false;
+
+if (role === "cardholder_assistance") {
+  role = "cardholder";
+  assistanceOnly = true;
 }
 
-let allUsers = [];
-let filteredUsers = [];
-let currentPage = 1;
-const rowsPerPage = 10;
+const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(statusFilter.value)}${assistanceOnly ? '&assistanceOnly=true' : ''}`;
+      const res = await fetch(`/api/users${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      allUsers = data.users || [];
+      totalPages = data.totalPages || 1;
+      render();
+      userCount.textContent = `Total Users: ${data.total}`;
+      paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    } catch (err) {
+      console.error("⚠️ Error loading users:", err);
+    }
+  }
 
-const tableBody = document.getElementById("userTableBody");
+  async function performAction(user, action) {
+    try {
+      if (action === "delete") {
+        if (user.email === currentUserEmail) return alert("You cannot delete your own account.");
+        const confirmText = prompt("Type DELETE to confirm.");
+        if (confirmText !== "DELETE") return;
 
-function renderTable(users) {
-  const start = (currentPage - 1) * rowsPerPage;
-  const paginatedUsers = users.slice(start, start + rowsPerPage);
-  tableBody.innerHTML = "";
-
-  paginatedUsers.forEach((user) => {
-    const row = document.createElement("tr");
-    const isSuspended = user.suspended === true;
-
-    row.innerHTML = `
-      <td>${user.firstName || ""}</td>
-      <td>${user.lastName || ""}</td>
-      <td>${user.email || ""}</td>
-      <td>${user.role || ""}</td>
-      <td>
-        ${
-          isSuspended
-            ? `<span class="badge badge-danger">Suspended</span> 
-               <button class="btn btn-sm btn-success reinstate-btn" data-id="${user.id}">Reinstate</button>`
-            : `<div class="dropdown">
-                <button class="action-btn">Actions ▼</button>
-                <div class="dropdown-content">
-                  <a href="user-profile.html?uid=${user.id}">View Profile</a>
-                  <a href="#" class="request-delete" data-id="${user.id}">Delete</a>
-                  <a href="#" class="admin-action" data-id="${user.id}" data-action="suspend">Suspend</a>
-                  <a href="#" class="admin-action" data-id="${user.id}" data-action="forceSignout">Force Sign Out</a>
-                </div>
-              </div>`
-        }
-      </td>
-    `;
-    tableBody.appendChild(row);
-  });
-
-  // Delete
-  document.querySelectorAll(".request-delete").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const uid = btn.getAttribute("data-id");
-      const confirm1 = confirm("Are you sure you want to delete this user?");
-      if (!confirm1) return;
-      const confirm2 = prompt("Type DELETE to confirm:");
-      if (confirm2 !== "DELETE") return alert("Cancelled.");
-      await deleteDoc(doc(db, "users", uid));
-      await requestAdminAction(uid, "delete");
-      loadUsers();
-    });
-  });
-
-  // Admin Actions
-  document.querySelectorAll(".admin-action").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const uid = btn.getAttribute("data-id");
-      const action = btn.getAttribute("data-action");
-      if (!confirm(`Are you sure you want to ${action} this user?`)) return;
-      await requestAdminAction(uid, action);
-    });
-  });
-
-  // Reinstate
-  document.querySelectorAll(".reinstate-btn").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      const uid = btn.getAttribute("data-id");
-      if (!confirm("Reinstate this user?")) return;
-      await requestAdminAction(uid, "unsuspend");
-      loadUsers();
-    });
-  });
-}
-
-function loadUsers() {
-  getDocs(collection(db, "users")).then((snapshot) => {
-    allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    filteredUsers = [...allUsers];
-    renderTable(filteredUsers);
-  });
-}
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loadUsers();
-
-    // Listen for forceSignout flag
-    const userRef = doc(db, "users", user.uid);
-    onSnapshot(userRef, async (docSnap) => {
-      if (docSnap.exists() && docSnap.data().forceSignout) {
-        alert("⚠️ You have been signed out by an admin.");
-        await updateDoc(userRef, { forceSignout: false });
-        await signOut(auth);
-        window.location.href = "index.html";
+        await fetch(`/api/users/${user.id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        });
       }
+
+      else if (action === "suspend" || action === "unsuspend") {
+        const newStatus = action === "suspend" ? "suspended" : "active";
+        const res = await fetch(`/api/users/${user.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          return alert("❌ Failed to update status: " + (err.message || res.status));
+        }
+
+        if (newStatus === "suspended") {
+          await fetch(`/api/users/${user.id}/signout`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        }
+      }
+
+      else if (action === "signout") {
+        const res = await fetch(`/api/users/${user.id}/signout`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          return alert("❌ Force sign-out failed: " + (err.message || res.status));
+        }
+        alert("✅ User signed out.");
+      }
+
+      else if (action === "restore") {
+        await fetch(`/api/users/${user.id}/restore`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
+      await fetchUsers();
+    } catch (err) {
+      console.error("❌ performAction failed:", err);
+      alert("Action failed. Check console.");
+    }
+  }
+
+  function createDropdown(user) {
+    const select = document.createElement("select");
+    select.classList.add("btnEdit");
+    select.innerHTML = `
+      <option value="action">Action</option>
+      <option value="view">View Profile</option>
+      ${user.deleted_at ? '<option value="restore">Restore</option>' : `
+        ${user.status === "suspended" ? '<option value="unsuspend">Unsuspend</option>' : '<option value="suspend">Suspend</option>'}
+        <option value="signout">Force Sign-out</option>
+        <option value="delete">Delete</option>`}
+    `;
+    select.addEventListener("change", async () => {
+      const action = select.value;
+      select.value = "action";
+      if (action === "view") {
+        localStorage.setItem("selectedUserId", user.id);
+        return (window.location.href = "user-profile.html");
+      }
+      await performAction(user, action);
+    });
+    return select;
+  }
+
+  function render() {
+    userTableBody.innerHTML = "";
+    if (!allUsers.length) {
+      userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
+      return;
+    }
+
+    allUsers.forEach(user => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input type="checkbox" class="user-checkbox" data-id="${user.id}" data-email="${user.email}" /></td>
+        <td>${user.first_name || ""}</td>
+        <td>${user.last_name || ""}</td>
+        <td>${user.email || ""}</td>
+        <td>${user.role || ""}</td>
+        <td><span style="color:${user.status === "suspended" ? "#e74c3c" : "#27ae60"}">${user.status}</span></td>
+      `;
+      const td = document.createElement("td");
+      td.appendChild(createDropdown(user));
+      row.appendChild(td);
+      userTableBody.appendChild(row);
     });
 
-  } else {
-    window.location.href = "index.html";
+    attachCheckboxListeners();
+    updateDeleteButtonVisibility();
+
+    prevBtn.style.display = currentPage > 1 ? "inline-block" : "none";
+    nextBtn.style.display = currentPage < totalPages ? "inline-block" : "none";
   }
+
+  function attachCheckboxListeners() {
+    document.querySelectorAll(".user-checkbox").forEach(cb => {
+      cb.addEventListener("change", updateDeleteButtonVisibility);
+    });
+  }
+
+  function updateDeleteButtonVisibility() {
+    const checked = document.querySelectorAll(".user-checkbox:checked").length;
+    deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
+  }
+
+  searchBtn.addEventListener("click", () => { currentPage = 1; fetchUsers(); });
+  clearSearchBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    roleFilter.value = "";
+    statusFilter.value = "";
+    currentPage = 1;
+    fetchUsers();
+  });
+
+  roleFilter.addEventListener("change", () => { currentPage = 1; fetchUsers(); });
+  statusFilter.addEventListener("change", () => { currentPage = 1; fetchUsers(); });
+  prevBtn.addEventListener("click", () => { if (currentPage > 1) currentPage--; fetchUsers(); });
+  nextBtn.addEventListener("click", () => { if (currentPage < totalPages) currentPage++; fetchUsers(); });
+
+  selectAll.addEventListener("change", () => {
+    document.querySelectorAll(".user-checkbox").forEach(cb => cb.checked = selectAll.checked);
+    updateDeleteButtonVisibility();
+  });
+
+  deleteSelectedBtn.addEventListener("click", async () => {
+    const selected = [...document.querySelectorAll(".user-checkbox:checked")];
+    const ids = selected.map(cb => cb.dataset.id);
+    const emails = selected.map(cb => cb.dataset.email);
+    if (emails.includes(currentUserEmail)) return alert("You cannot delete your own account.");
+    const confirmText = prompt("Type DELETE to confirm deletion.");
+    if (confirmText !== "DELETE") return;
+
+    try {
+      await Promise.all(ids.map(id =>
+        fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+        })
+      ));
+      fetchUsers();
+    } catch (err) {
+      console.error("⚠️ Bulk delete failed:", err);
+      alert("Delete failed.");
+    }
+  });
+
+  fetchUsers();
 });
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
+const logoutBtn = document.getElementById("logoutBtn");
+logoutBtn?.addEventListener("click", () => {
+  fetch("/api/logout", { method: "POST" })
+    .then(() => window.location.href = "login.html")
+    .catch(() => alert("Logout failed."));
 });
