@@ -143,9 +143,9 @@
 
     async function loadBalance() {
       try {
-        const res = await fetch(`/api/treasury/balance/${treasuryWalletId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(`/api/treasury/balance`, {
+  headers: { Authorization: `Bearer ${token}` }
+});
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Balance fetch failed");
         balanceDisplay.textContent = parseFloat(data.balance || 0).toFixed(2);
