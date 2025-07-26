@@ -1,86 +1,63 @@
-// backend/auth/routes/treasury.js
-
 const express = require("express");
 const router = express.Router();
-const pool = require("../../db");
-const authenticateToken = require("../middleware/authMiddleware");
+const db = require("../../db"); // adjust if your db connection path is different
+const auth = require("../../middleware/auth"); // your auth middleware
 
-// 🔐 Middleware: Only treasury admins
-function isTreasuryAdmin(req, res, next) {
-  const { role, type } = req.user;
-  if (role === "admin" && type === "treasury") return next();
-  return res.status(403).json({ error: "Access denied" });
+// 🧠 Assumes there is ONE treasury wallet (created ahead of time)
+const TREASURY_WALLET_ID = "replace-this-with-your-wallet-id"; // or fetch dynamically
+
+// Middleware: only 'admin' + 'treasury/accountant' allowed
+function requireTreasuryAdmin(req, res, next) {
+  const user = req.user;
+  if (!user || user.role !== "admin" || !["treasury", "accountant"].includes(user.type)) {
+    return res.status(403).json({ message: "Unauthorized access" });
+  }
+  next();
 }
 
-// ✅ GET /api/treasury/balance
-router.get("/balance", authenticateToken, isTreasuryAdmin, async (req, res) => {
+// GET /api/treasury/balance
+router.get("/balance", auth, requireTreasuryAdmin, async (req, res) => {
   try {
-    // Step 1: Get wallet for this user
-    const userId = req.user.id;
-    const walletResult = await pool.query(
-      "SELECT id FROM wallets WHERE user_id = $1 LIMIT 1",
-      [userId]
-    );
-
-    if (walletResult.rows.length === 0) {
-      return res.status(404).json({ error: "Wallet not found for user" });
-    }
-
-    const walletId = walletResult.rows[0].id;
-
-    // Step 2: Fetch balance from transactions table
-    const result = await pool.query(
-      `SELECT COALESCE(SUM(amount), 0) AS balance FROM transactions WHERE wallet_id = $1`,
-      [walletId]
-    );
-
-    const balance = result.rows[0].balance;
-    res.json({ balance, wallet_id: walletId });
+    const { rows } = await db.query("SELECT balance_cents FROM wallets WHERE id = $1", [TREASURY_WALLET_ID]);
+    if (!rows.length) return res.status(404).json({ message: "Treasury wallet not found" });
+    res.json({ balance_cents: rows[0].balance_cents });
   } catch (err) {
-    console.error("❌ Failed to get treasury balance:", err);
-    res.status(500).json({ error: "Failed to get balance" });
+    console.error("Error fetching treasury balance:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// ✅ POST /api/treasury/adjust
-router.post("/adjust", authenticateToken, isTreasuryAdmin, async (req, res) => {
-  const { amount, note } = req.body;
+// POST /api/treasury/adjust
+router.post("/adjust", auth, requireTreasuryAdmin, async (req, res) => {
+  const { amount_cents, type, note } = req.body;
+  const adminId = req.user?.id;
 
-  if (isNaN(amount) || !note || note.trim() === "") {
-    return res.status(400).json({ error: "Invalid input" });
+  if (!amount_cents || !["credit", "debit"].includes(type) || !note) {
+    return res.status(400).json({ message: "Invalid input" });
   }
 
-  const client = await pool.connect();
+  const operator = type === "credit" ? "+" : "-";
+
   try {
-    await client.query("BEGIN");
+    await db.query("BEGIN");
 
-    // Get wallet again for this user
-    const walletResult = await client.query(
-      "SELECT id FROM wallets WHERE user_id = $1 LIMIT 1",
-      [req.user.id]
-    );
+    await db.query(`
+      UPDATE wallets
+      SET balance_cents = balance_cents ${operator} $1
+      WHERE id = $2
+    `, [amount_cents, TREASURY_WALLET_ID]);
 
-    if (walletResult.rows.length === 0) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Wallet not found" });
-    }
+    await db.query(`
+      INSERT INTO treasury_transactions (wallet_id, amount_cents, type, note, performed_by)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [TREASURY_WALLET_ID, amount_cents, type, note, adminId]);
 
-    const walletId = walletResult.rows[0].id;
-
-    await client.query(
-      `INSERT INTO transactions (wallet_id, amount, type, note, category, status, created_by)
-       VALUES ($1, $2, 'adjustment', $3, 'treasury', 'approved', $4)`,
-      [walletId, amount, note.trim(), req.user.id]
-    );
-
-    await client.query("COMMIT");
-    res.json({ message: "Adjustment recorded", wallet_id: walletId });
+    await db.query("COMMIT");
+    res.json({ success: true });
   } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("❌ Treasury adjustment failed:", err);
-    res.status(500).json({ error: "Adjustment failed" });
-  } finally {
-    client.release();
+    await db.query("ROLLBACK");
+    console.error("Error adjusting treasury:", err);
+    res.status(500).json({ message: "Failed to adjust balance" });
   }
 });
 
