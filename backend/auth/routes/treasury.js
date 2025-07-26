@@ -31,6 +31,29 @@ router.post("/adjust", authenticateToken, async (req, res) => {
       throw new Error("Wallet not found");
     }
 
+    // GET /api/treasury/balance/:walletId
+router.get("/balance/:walletId", authenticateToken, async (req, res) => {
+  const { walletId } = req.params;
+
+  try {
+    const result = await db.query(
+      `SELECT balance FROM wallets WHERE id = $1`,
+      [walletId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Wallet not found" });
+    }
+
+    const balance = result.rows[0].balance || 0;
+    res.json({ balance });
+  } catch (err) {
+    console.error("❌ Failed to fetch wallet balance:", err.message);
+    res.status(500).json({ message: "Failed to fetch balance" });
+  }
+});
+    
+
     // ✅ Insert transaction
     const insertTxn = await client.query(
       `INSERT INTO transactions (
