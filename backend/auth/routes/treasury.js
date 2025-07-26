@@ -36,7 +36,7 @@ router.get("/balance", auth, requireTreasuryAdmin, async (req, res) => {
 // ✅ POST /api/treasury/adjust
 router.post("/adjust", auth, requireTreasuryAdmin, async (req, res) => {
   const { amount_cents, type, note } = req.body;
-  const performedBy = req.user?.id;
+  const performedBy = (req.user && req.user.id) || null;
 
   if (!amount_cents || !["credit", "debit"].includes(type) || !note) {
     return res.status(400).json({ message: "Missing or invalid fields" });
