@@ -119,12 +119,13 @@
 <!-- JS -->
 <script type="module">
   document.addEventListener("DOMContentLoaded", async () => {
-    const user = JSON.parse(localStorage.getItem("boopUser"));
     const token = localStorage.getItem("boopToken");
 
-    if (!user || user.role !== "admin" || user.type !== "treasury") {
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
       localStorage.clear();
-      return window.location.href = "login.html";
+      window.location.href = "login.html"; // in the same Accounts folder
+      return;
     }
 
     const treasuryWalletId = user.wallet_id;
