@@ -34,7 +34,7 @@ router.post("/update-balance/:walletId", authenticateToken, async (req, res) => 
   console.log("  📌 Wallet ID:", walletId);
   console.log("  💰 Amount:", amount);
   console.log("  📝 Note:", note);
-  console.log("👤 Performed By:", user?.email || "Unknown");
+  
 
   // 🔒 Validation
   if (!walletId || typeof amount !== "number" || !user?.id) {
