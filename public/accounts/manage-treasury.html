@@ -117,168 +117,99 @@
 </div>
 
 <!-- JS -->
-<script type="module">
-  document.addEventListener("DOMContentLoaded", async () => {
-    const user = JSON.parse(localStorage.getItem("boopUser"));
-    const token = localStorage.getItem("boopToken");
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const balanceEl = document.getElementById("walletBalance");
+  const adjustmentForm = document.getElementById("adjustmentForm");
+  const amountInput = document.getElementById("adjustAmount");
+  const noteInput = document.getElementById("adjustNote");
+
+  const token = localStorage.getItem("boopToken");
+
+  async function fetchCurrentUser() {
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch current user");
+    return await res.json();
+  }
+
+  async function loadWalletBalance(walletId) {
+    try {
+      const res = await fetch(`/api/treasury/balance/${walletId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch balance");
+      const data = await res.json();
+      balanceEl.textContent = `$${parseFloat(data.balance || 0).toFixed(2)}`;
+    } catch (err) {
+      console.error("❌ Error loading balance:", err);
+      balanceEl.textContent = "Error loading";
+    }
+  }
+
+  async function adjustWallet(walletId, amount, note) {
+    const res = await fetch("/api/treasury/adjust", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        wallet_id: walletId,
+        amount: parseFloat(amount),
+        note: note.trim()
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Adjustment failed");
+    }
+    return await res.json();
+  }
+
+  try {
+    const user = await fetchCurrentUser();
 
     if (!user || user.role !== "admin" || user.type !== "treasury") {
-      localStorage.clear();
-      return window.location.href = "login.html";
+      alert("Access denied");
+      return (window.location.href = "login.html");
     }
 
-    const treasuryWalletId = user.wallet_id;
-    const balanceDisplay = document.getElementById("balanceDisplay");
-    const txnTable = document.getElementById("txnTable");
-    const statusMsg = document.getElementById("statusMsg");
-    const logoutBtn = document.getElementById("logoutBtn");
+    const walletId = user.wallet_id;
+    if (!walletId) throw new Error("Missing wallet ID");
 
-    const adjustBtn = document.getElementById("adjustBtn");
-    const adjustAmount = document.getElementById("adjustAmount");
-    const adjustNote = document.getElementById("adjustNote");
-    const adjustType = document.getElementById("adjustType");
+    // ✅ Load wallet balance on page load
+    await loadWalletBalance(walletId);
 
-    const transferBtn = document.getElementById("transferBtn");
-    const recipientEmail = document.getElementById("recipientEmail");
-    const transferAmount = document.getElementById("transferAmount");
-    const transferNote = document.getElementById("transferNote");
-    const transferStatusMsg = document.getElementById("transferStatusMsg");
+    // ✅ Handle adjustment submission
+    adjustmentForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const amount = parseFloat(amountInput.value);
+      const note = noteInput.value;
 
-    async function loadBalanceAndTransactions() {
-      balanceDisplay.textContent = "--";
-      txnTable.innerHTML = "";
-      statusMsg.textContent = "";
-
-      try {
-        const res = await fetch(`/api/treasury/balance/${treasuryWalletId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to load balance");
-        balanceDisplay.textContent = (data.balance || 0).toFixed(2);
-      } catch (err) {
-        statusMsg.textContent = "Error loading balance.";
-        console.error(err);
+      if (!note || isNaN(amount) || amount === 0) {
+        return alert("Enter a valid amount and note.");
       }
 
       try {
-        const txnRes = await fetch(`/api/transactions?wallet_id=${treasuryWalletId}&limit=10`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const txns = await txnRes.json();
-
-        if (!Array.isArray(txns)) {
-          statusMsg.textContent = "Failed to load transactions.";
-          return;
-        }
-
-        txnTable.innerHTML = txns.map(txn => `
-          <tr>
-            <td>${new Date(txn.timestamp).toLocaleDateString()}</td>
-            <td>${txn.amount.toFixed(2)}</td>
-            <td>${txn.from_wallet_id === treasuryWalletId ? 'Debit' : 'Credit'}</td>
-            <td>${txn.to_email || txn.from_email || '—'}</td>
-            <td>${txn.note || ''}</td>
-          </tr>
-        `).join("");
+        await adjustWallet(walletId, amount, note);
+        alert("Adjustment successful.");
+        amountInput.value = "";
+        noteInput.value = "";
+        await loadWalletBalance(walletId); // refresh balance
       } catch (err) {
-        console.error("Failed loading transactions", err);
-      }
-    }
-
-    adjustBtn.addEventListener("click", async () => {
-      const amount = parseFloat(adjustAmount.value);
-      const note = adjustNote.value.trim();
-      const action = adjustType.value;
-
-      if (isNaN(amount) || amount <= 0) {
-        statusMsg.textContent = "Please enter a valid amount.";
-        statusMsg.style.color = "red";
-        return;
-      }
-
-      const adjAmount = action === "add" ? amount : -amount;
-
-      try {
-        const res = await fetch("/api/treasury/adjust", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            wallet_id: treasuryWalletId,
-            amount: adjAmount,
-            note
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Adjustment failed");
-
-        statusMsg.textContent = "✅ Balance updated successfully.";
-        statusMsg.style.color = "green";
-        adjustAmount.value = "";
-        adjustNote.value = "";
-        loadBalanceAndTransactions();
-      } catch (err) {
-        statusMsg.textContent = "❌ " + err.message;
-        statusMsg.style.color = "red";
-        console.error("Error adjusting balance:", err);
+        console.error("❌ Adjustment error:", err);
+        alert(err.message);
       }
     });
-
-    transferBtn.addEventListener("click", async () => {
-      const toEmail = recipientEmail.value.trim();
-      const amount = parseFloat(transferAmount.value);
-      const note = transferNote.value.trim();
-
-      if (!toEmail || isNaN(amount) || amount <= 0) {
-        transferStatusMsg.textContent = "Please enter valid recipient and amount.";
-        transferStatusMsg.style.color = "red";
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/treasury/transfer-to-user", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            from_wallet_id: treasuryWalletId,
-            to_email: toEmail,
-            amount,
-            note,
-            performed_by: user.id
-          })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.message || "Transfer failed");
-
-        transferStatusMsg.textContent = "✅ Funds transferred successfully.";
-        transferStatusMsg.style.color = "green";
-        recipientEmail.value = "";
-        transferAmount.value = "";
-        transferNote.value = "";
-        loadBalanceAndTransactions();
-      } catch (err) {
-        transferStatusMsg.textContent = "❌ " + err.message;
-        transferStatusMsg.style.color = "red";
-        console.error("Transfer error:", err);
-      }
-    });
-
-    logoutBtn?.addEventListener("click", () => {
-      localStorage.clear();
-      window.location.href = "login.html";
-    });
-
-    loadBalanceAndTransactions();
-  });
+  } catch (err) {
+    console.error("❌ Error loading treasury page:", err);
+    alert("There was a problem loading this page.");
+    window.location.href = "login.html";
+  }
+});
 </script>
 </body>
 </html>
