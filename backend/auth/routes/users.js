@@ -1,9 +1,13 @@
-const authenticateToken = require("../middleware/authMiddleware");
-const logAdminAction = require("../middleware/log-admin-action");
 const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
 const bcrypt = require("bcrypt");
+
+const {
+  authenticateToken
+} = require("../middleware/authMiddleware"); // ✅ THIS IS THE FIX
+
+const logAdminAction = require("../middleware/log-admin-action");
 
 const rolesWithWallet = ["cardholder", "student", "senior", "vendor"];
 const isValidUUID = (str) =>
