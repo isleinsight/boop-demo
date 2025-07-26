@@ -12,6 +12,9 @@ function isTreasuryAdmin(req, res, next) {
   return res.status(403).json({ error: "Access denied" });
 }
 
+console.log("🧠 User loaded from localStorage:", user);
+console.log("💳 Wallet ID:", user.wallet_id);
+
 // ✅ GET /api/treasury/balance/:wallet_id
 router.get("/balance/:wallet_id", authenticateToken, isTreasuryAdmin, async (req, res) => {
   const { wallet_id } = req.params;
