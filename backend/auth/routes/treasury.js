@@ -37,7 +37,7 @@ router.post("/update-balance/:walletId", authenticateToken, async (req, res) => 
   
 
   // 🔒 Validation
-  if (!walletId || typeof amount !== "number" || !user?.id) {
+  if (!wallet_id || typeof amount !== "number" || !user || !user.id) {
     console.warn("❗ Invalid input or missing user");
     return res.status(400).json({ message: "Missing or invalid input fields." });
   }
