@@ -123,185 +123,196 @@
 
   <!-- JS -->
   <script type="module">
-    document.addEventListener("DOMContentLoaded", async () => {
-      const user = JSON.parse(localStorage.getItem("boopUser"));
-      const token = localStorage.getItem("boopToken");
+  document.addEventListener("DOMContentLoaded", async () => {
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    const token = localStorage.getItem("boopToken");
 
-      if (!user || user.role !== "admin" || user.type !== "treasury") {
-        localStorage.clear();
-        return window.location.href = "login.html";
-      }
+    if (!user || user.role !== "admin" || user.type !== "treasury") {
+      localStorage.clear();
+      return window.location.href = "login.html";
+    }
 
-      const wallets = {
-        "Treasury HSBC": "e72bf747-14af-453e-b0b5-96c4cb41c481",
-        "Treasury Butterfield": "a588fb7b-bf3e-43bc-b04c-4c216a80720c"
-      };
+    const walletSelect = document.getElementById("walletSelect");
+    const balanceDisplay = document.getElementById("balanceDisplay");
+    const txnTable = document.getElementById("txnTable");
+    const statusMsg = document.getElementById("statusMsg");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-      const walletSelect = document.getElementById("walletSelect");
-      const balanceDisplay = document.getElementById("balanceDisplay");
-      const txnTable = document.getElementById("txnTable");
-      const statusMsg = document.getElementById("statusMsg");
-      const logoutBtn = document.getElementById("logoutBtn");
+    const adjustBtn = document.getElementById("adjustBtn");
+    const adjustAmount = document.getElementById("adjustAmount");
+    const adjustNote = document.getElementById("adjustNote");
+    const adjustType = document.getElementById("adjustType");
 
-      const adjustBtn = document.getElementById("adjustBtn");
-      const adjustAmount = document.getElementById("adjustAmount");
-      const adjustNote = document.getElementById("adjustNote");
-      const adjustType = document.getElementById("adjustType");
+    const transferBtn = document.getElementById("transferBtn");
+    const recipientEmail = document.getElementById("recipientEmail");
+    const transferAmount = document.getElementById("transferAmount");
+    const transferNote = document.getElementById("transferNote");
+    const transferStatusMsg = document.getElementById("transferStatusMsg");
 
-      const transferBtn = document.getElementById("transferBtn");
-      const recipientEmail = document.getElementById("recipientEmail");
-      const transferAmount = document.getElementById("transferAmount");
-      const transferNote = document.getElementById("transferNote");
-      const transferStatusMsg = document.getElementById("transferStatusMsg");
+    // Load treasury wallets from secure backend
+    try {
+      const res = await fetch("/api/treasury/wallets", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-      Object.entries(wallets).forEach(([label, id]) => {
+      const wallets = await res.json();
+      if (!Array.isArray(wallets)) throw new Error("Invalid wallet data");
+
+      wallets.forEach(wallet => {
         const opt = document.createElement("option");
-        opt.value = id;
-        opt.textContent = label;
+        opt.value = wallet.id;
+        opt.textContent = wallet.name;
         walletSelect.appendChild(opt);
       });
 
-      walletSelect.addEventListener("change", async () => {
-        const walletId = walletSelect.value;
-        balanceDisplay.textContent = "--";
-        txnTable.innerHTML = "";
-        statusMsg.textContent = "";
+      if (wallets.length > 0) {
+        walletSelect.value = wallets[0].id;
+        walletSelect.dispatchEvent(new Event("change"));
+      }
+    } catch (err) {
+      console.error("❌ Failed to load treasury wallets", err);
+      statusMsg.textContent = "Error loading treasury wallets.";
+    }
 
-        if (!walletId) return;
+    walletSelect.addEventListener("change", async () => {
+      const walletId = walletSelect.value;
+      balanceDisplay.textContent = "--";
+      txnTable.innerHTML = "";
+      statusMsg.textContent = "";
 
-        try {
-          const res = await fetch(`/api/treasury/balance/${walletId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.message || "Failed to load balance");
-          balanceDisplay.textContent = data.balance.toFixed(2);
-        } catch (err) {
-          statusMsg.textContent = "Error loading balance.";
-          console.error(err);
-        }
+      if (!walletId) return;
 
-        try {
-          const txnRes = await fetch(`/api/transactions?wallet_id=${walletId}&limit=10`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const txns = await txnRes.json();
+      try {
+        const res = await fetch(`/api/treasury/balance/${walletId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to load balance");
 
-          if (!Array.isArray(txns)) {
-            statusMsg.textContent = "Failed to load transactions.";
-            return;
-          }
+        balanceDisplay.textContent = (data.balance || 0).toFixed(2);
+      } catch (err) {
+        statusMsg.textContent = "Error loading balance.";
+        console.error(err);
+      }
 
-          txnTable.innerHTML = txns.map(txn => `
-            <tr>
-              <td>${new Date(txn.timestamp).toLocaleDateString()}</td>
-              <td>${txn.amount.toFixed(2)}</td>
-              <td>${txn.from_wallet_id === walletId ? 'Debit' : 'Credit'}</td>
-              <td>${txn.to_email || txn.from_email || '—'}</td>
-              <td>${txn.note || ''}</td>
-            </tr>
-          `).join("");
-        } catch (err) {
-          console.error("Failed loading transactions", err);
-        }
-      });
+      try {
+        const txnRes = await fetch(`/api/transactions?wallet_id=${walletId}&limit=10`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const txns = await txnRes.json();
 
-      adjustBtn.addEventListener("click", async () => {
-        const walletId = walletSelect.value;
-        const amount = parseFloat(adjustAmount.value);
-        const note = adjustNote.value.trim();
-        const action = adjustType.value;
-
-        if (!walletId || isNaN(amount) || amount <= 0) {
-          statusMsg.textContent = "Please enter a valid amount.";
-          statusMsg.style.color = "red";
+        if (!Array.isArray(txns)) {
+          statusMsg.textContent = "Failed to load transactions.";
           return;
         }
 
-        try {
-          const res = await fetch("/api/treasury/update-balance", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              wallet_id: walletId,
-              amount,
-              note,
-              action,
-              performed_by: user.id
-            })
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) throw new Error(data.message || "Adjustment failed");
-
-          statusMsg.textContent = "✅ Balance updated successfully.";
-          statusMsg.style.color = "green";
-          adjustAmount.value = "";
-          adjustNote.value = "";
-          walletSelect.dispatchEvent(new Event("change"));
-        } catch (err) {
-          statusMsg.textContent = "❌ " + err.message;
-          statusMsg.style.color = "red";
-          console.error("Error adjusting balance:", err);
-        }
-      });
-
-      transferBtn.addEventListener("click", async () => {
-        const toEmail = recipientEmail.value.trim();
-        const amount = parseFloat(transferAmount.value);
-        const note = transferNote.value.trim();
-        const fromWalletId = walletSelect.value;
-
-        if (!toEmail || isNaN(amount) || amount <= 0) {
-          transferStatusMsg.textContent = "Please enter valid recipient and amount.";
-          transferStatusMsg.style.color = "red";
-          return;
-        }
-
-        try {
-          const res = await fetch("/api/treasury/transfer-to-user", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              from_wallet_id: fromWalletId,
-              to_email: toEmail,
-              amount,
-              note,
-              performed_by: user.id
-            })
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) throw new Error(data.message || "Transfer failed");
-
-          transferStatusMsg.textContent = "✅ Funds transferred successfully.";
-          transferStatusMsg.style.color = "green";
-          recipientEmail.value = "";
-          transferAmount.value = "";
-          transferNote.value = "";
-          walletSelect.dispatchEvent(new Event("change"));
-        } catch (err) {
-          transferStatusMsg.textContent = "❌ " + err.message;
-          transferStatusMsg.style.color = "red";
-          console.error("Transfer error:", err);
-        }
-      });
-
-      walletSelect.dispatchEvent(new Event("change"));
-
-      logoutBtn?.addEventListener("click", () => {
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
+        txnTable.innerHTML = txns.map(txn => `
+          <tr>
+            <td>${new Date(txn.timestamp).toLocaleDateString()}</td>
+            <td>${txn.amount.toFixed(2)}</td>
+            <td>${txn.from_wallet_id === walletId ? 'Debit' : 'Credit'}</td>
+            <td>${txn.to_email || txn.from_email || '—'}</td>
+            <td>${txn.note || ''}</td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        console.error("Failed loading transactions", err);
+      }
     });
-  </script>
+
+    adjustBtn.addEventListener("click", async () => {
+      const walletId = walletSelect.value;
+      const amount = parseFloat(adjustAmount.value);
+      const note = adjustNote.value.trim();
+      const action = adjustType.value;
+
+      if (!walletId || isNaN(amount) || amount <= 0) {
+        statusMsg.textContent = "Please enter a valid amount.";
+        statusMsg.style.color = "red";
+        return;
+      }
+
+      const adjAmount = action === "add" ? amount : -amount;
+
+      try {
+        const res = await fetch("/api/treasury/adjust", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            wallet_id: walletId,
+            amount: adjAmount,
+            note
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Adjustment failed");
+
+        statusMsg.textContent = "✅ Balance updated successfully.";
+        statusMsg.style.color = "green";
+        adjustAmount.value = "";
+        adjustNote.value = "";
+        walletSelect.dispatchEvent(new Event("change"));
+      } catch (err) {
+        statusMsg.textContent = "❌ " + err.message;
+        statusMsg.style.color = "red";
+        console.error("Error adjusting balance:", err);
+      }
+    });
+
+    transferBtn.addEventListener("click", async () => {
+      const toEmail = recipientEmail.value.trim();
+      const amount = parseFloat(transferAmount.value);
+      const note = transferNote.value.trim();
+      const fromWalletId = walletSelect.value;
+
+      if (!toEmail || isNaN(amount) || amount <= 0) {
+        transferStatusMsg.textContent = "Please enter valid recipient and amount.";
+        transferStatusMsg.style.color = "red";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/treasury/transfer-to-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            from_wallet_id: fromWalletId,
+            to_email: toEmail,
+            amount,
+            note,
+            performed_by: user.id
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || "Transfer failed");
+
+        transferStatusMsg.textContent = "✅ Funds transferred successfully.";
+        transferStatusMsg.style.color = "green";
+        recipientEmail.value = "";
+        transferAmount.value = "";
+        transferNote.value = "";
+        walletSelect.dispatchEvent(new Event("change"));
+      } catch (err) {
+        transferStatusMsg.textContent = "❌ " + err.message;
+        transferStatusMsg.style.color = "red";
+        console.error("Transfer error:", err);
+      }
+    });
+
+    logoutBtn?.addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "login.html";
+    });
+  });
+</script>
 </body>
 </html>
