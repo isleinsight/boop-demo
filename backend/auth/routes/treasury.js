@@ -14,7 +14,7 @@ router.post("/adjust", authenticateToken, async (req, res) => {
   console.log("  📝 Note:", note);
   console.log("👤 Performed By:", user && user.email ? user.email : "Unknown");
 
-  if (!wallet_id || typeof amount !== "number" || !user?.id) {
+  if (!wallet_id || typeof amount !== "number" || !user || !user.id) {
     console.warn("❗ Invalid input or missing user");
     return res.status(400).json({ message: "Missing required fields." });
   }
