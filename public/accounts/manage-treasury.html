@@ -119,7 +119,7 @@
 <!-- JS -->
 <script type="module">
   document.addEventListener("DOMContentLoaded", async () => {
-    const token = localStorage.getItem("boopToken");
+    const token = localStorage.getItem("boop_jwt");
 
     const user = JSON.parse(localStorage.getItem("boopUser"));
     if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
