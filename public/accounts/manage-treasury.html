@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
   <style>
     .container { max-width: 900px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 0 12px rgba(0,0,0,0.1); }
-    .treasury-select, .input-group { margin-bottom: 20px; }
+    .input-group { margin-bottom: 20px; }
     .treasury-info { font-size: 1.3rem; margin-bottom: 30px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 10px; border-bottom: 1px solid #ddd; }
@@ -30,99 +30,94 @@
 </head>
 <body>
 
-  <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      <div class="nav-right">
-        <a href="index.html">Dashboard</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Accounts</a>
-          <div class="dropdown-content">
-            <a href="add-funds.html">Add Funds</a>
-            <a href="transfer.html">Transfer</a>
-            <a href="reports.html">Reports</a>
-            <a href="manage-treasury.html">Manage Treasury</a>
-          </div>
+<!-- Top Nav -->
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+    </div>
+    <div class="nav-right">
+      <a href="index.html">Dashboard</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn" style="color: white;">Accounts</a>
+        <div class="dropdown-content">
+          <a href="add-funds.html">Add Funds</a>
+          <a href="transfer.html">Transfer</a>
+          <a href="reports.html">Reports</a>
+          <a href="manage-treasury.html">Manage Treasury</a>
         </div>
-        <a href="view-users.html">View Users</a>
-        <a href="transactions.html">Transactions</a>
-        <a href="#" id="logoutBtn">Log Out</a>
       </div>
+      <a href="view-users.html">View Users</a>
+      <a href="transactions.html">Transactions</a>
+      <a href="#" id="logoutBtn">Log Out</a>
     </div>
-  </nav>
+  </div>
+</nav>
 
-  <!-- Treasury Manager -->
-  <div class="container">
-    <h2>Manage Treasury</h2>
+<!-- Treasury Manager -->
+<div class="container">
+  <h2>Manage Treasury Wallet</h2>
 
-    <div class="treasury-select">
-      <label for="walletSelect">Choose Treasury Account:</label>
-      <select id="walletSelect"></select>
-    </div>
-
-    <div class="treasury-info">
-      <strong>Current Balance:</strong> <span id="balanceDisplay">--</span> BMD
-    </div>
-
-    <h3>Adjust Balance</h3>
-    <div class="input-group">
-      <label for="adjustAmount">Amount (BMD)</label>
-      <input type="number" id="adjustAmount" min="0.01" step="0.01" placeholder="Enter amount..." />
-    </div>
-
-    <div class="input-group">
-      <label for="adjustNote">Note</label>
-      <textarea id="adjustNote" rows="2" placeholder="Describe why you're adjusting..."></textarea>
-    </div>
-
-    <div class="input-group">
-      <label for="adjustType">Action</label>
-      <select id="adjustType">
-        <option value="add">Add Funds</option>
-        <option value="subtract">Subtract Funds</option>
-      </select>
-    </div>
-
-    <button id="adjustBtn">Submit Adjustment</button>
-
-    <div class="status" id="statusMsg"></div>
-
-    <h3 style="margin-top: 40px;">Transfer to Assistance User</h3>
-    <div class="input-group">
-      <label for="recipientEmail">User Email</label>
-      <input type="email" id="recipientEmail" placeholder="Enter user email" />
-    </div>
-
-    <div class="input-group">
-      <label for="transferAmount">Amount (BMD)</label>
-      <input type="number" id="transferAmount" min="0.01" step="0.01" placeholder="Enter amount..." />
-    </div>
-
-    <div class="input-group">
-      <label for="transferNote">Note</label>
-      <textarea id="transferNote" rows="2" placeholder="Transfer reason..."></textarea>
-    </div>
-
-    <button id="transferBtn">Send Funds</button>
-
-    <div class="status" id="transferStatusMsg"></div>
-
-    <h3 style="margin-top: 40px;">Recent Activity</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th><th>Amount</th><th>Type</th><th>To/From</th><th>Note</th>
-        </tr>
-      </thead>
-      <tbody id="txnTable"></tbody>
-    </table>
+  <div class="treasury-info">
+    <strong>Current Balance:</strong> <span id="balanceDisplay">--</span> BMD
   </div>
 
-  <!-- JS -->
-  <script type="module">
+  <h3>Adjust Balance</h3>
+  <div class="input-group">
+    <label for="adjustAmount">Amount (BMD)</label>
+    <input type="number" id="adjustAmount" min="0.01" step="0.01" placeholder="Enter amount..." />
+  </div>
+
+  <div class="input-group">
+    <label for="adjustNote">Note</label>
+    <textarea id="adjustNote" rows="2" placeholder="Describe why you're adjusting..."></textarea>
+  </div>
+
+  <div class="input-group">
+    <label for="adjustType">Action</label>
+    <select id="adjustType">
+      <option value="add">Add Funds</option>
+      <option value="subtract">Subtract Funds</option>
+    </select>
+  </div>
+
+  <button id="adjustBtn">Submit Adjustment</button>
+
+  <div class="status" id="statusMsg"></div>
+
+  <h3 style="margin-top: 40px;">Transfer to Assistance User</h3>
+  <div class="input-group">
+    <label for="recipientEmail">User Email</label>
+    <input type="email" id="recipientEmail" placeholder="Enter user email" />
+  </div>
+
+  <div class="input-group">
+    <label for="transferAmount">Amount (BMD)</label>
+    <input type="number" id="transferAmount" min="0.01" step="0.01" placeholder="Enter amount..." />
+  </div>
+
+  <div class="input-group">
+    <label for="transferNote">Note</label>
+    <textarea id="transferNote" rows="2" placeholder="Transfer reason..."></textarea>
+  </div>
+
+  <button id="transferBtn">Send Funds</button>
+
+  <div class="status" id="transferStatusMsg"></div>
+
+  <h3 style="margin-top: 40px;">Recent Activity</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th><th>Amount</th><th>Type</th><th>To/From</th><th>Note</th>
+      </tr>
+    </thead>
+    <tbody id="txnTable"></tbody>
+  </table>
+</div>
+
+<!-- JS -->
+<script type="module">
   document.addEventListener("DOMContentLoaded", async () => {
     const user = JSON.parse(localStorage.getItem("boopUser"));
     const token = localStorage.getItem("boopToken");
@@ -132,7 +127,7 @@
       return window.location.href = "login.html";
     }
 
-    const walletSelect = document.getElementById("walletSelect");
+    const treasuryWalletId = user.wallet_id;
     const balanceDisplay = document.getElementById("balanceDisplay");
     const txnTable = document.getElementById("txnTable");
     const statusMsg = document.getElementById("statusMsg");
@@ -149,46 +144,17 @@
     const transferNote = document.getElementById("transferNote");
     const transferStatusMsg = document.getElementById("transferStatusMsg");
 
-    // Load treasury wallets from secure backend
-    try {
-      const res = await fetch("/api/treasury/wallets", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const wallets = await res.json();
-      if (!Array.isArray(wallets)) throw new Error("Invalid wallet data");
-
-      wallets.forEach(wallet => {
-        const opt = document.createElement("option");
-        opt.value = wallet.id;
-        opt.textContent = wallet.name;
-        walletSelect.appendChild(opt);
-      });
-
-      if (wallets.length > 0) {
-        walletSelect.value = wallets[0].id;
-        walletSelect.dispatchEvent(new Event("change"));
-      }
-    } catch (err) {
-      console.error("❌ Failed to load treasury wallets", err);
-      statusMsg.textContent = "Error loading treasury wallets.";
-    }
-
-    walletSelect.addEventListener("change", async () => {
-      const walletId = walletSelect.value;
+    async function loadBalanceAndTransactions() {
       balanceDisplay.textContent = "--";
       txnTable.innerHTML = "";
       statusMsg.textContent = "";
 
-      if (!walletId) return;
-
       try {
-        const res = await fetch(`/api/treasury/balance/${walletId}`, {
+        const res = await fetch(`/api/treasury/balance/${treasuryWalletId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to load balance");
-
         balanceDisplay.textContent = (data.balance || 0).toFixed(2);
       } catch (err) {
         statusMsg.textContent = "Error loading balance.";
@@ -196,7 +162,7 @@
       }
 
       try {
-        const txnRes = await fetch(`/api/transactions?wallet_id=${walletId}&limit=10`, {
+        const txnRes = await fetch(`/api/transactions?wallet_id=${treasuryWalletId}&limit=10`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const txns = await txnRes.json();
@@ -210,7 +176,7 @@
           <tr>
             <td>${new Date(txn.timestamp).toLocaleDateString()}</td>
             <td>${txn.amount.toFixed(2)}</td>
-            <td>${txn.from_wallet_id === walletId ? 'Debit' : 'Credit'}</td>
+            <td>${txn.from_wallet_id === treasuryWalletId ? 'Debit' : 'Credit'}</td>
             <td>${txn.to_email || txn.from_email || '—'}</td>
             <td>${txn.note || ''}</td>
           </tr>
@@ -218,15 +184,14 @@
       } catch (err) {
         console.error("Failed loading transactions", err);
       }
-    });
+    }
 
     adjustBtn.addEventListener("click", async () => {
-      const walletId = walletSelect.value;
       const amount = parseFloat(adjustAmount.value);
       const note = adjustNote.value.trim();
       const action = adjustType.value;
 
-      if (!walletId || isNaN(amount) || amount <= 0) {
+      if (isNaN(amount) || amount <= 0) {
         statusMsg.textContent = "Please enter a valid amount.";
         statusMsg.style.color = "red";
         return;
@@ -242,7 +207,7 @@
             Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
-            wallet_id: walletId,
+            wallet_id: treasuryWalletId,
             amount: adjAmount,
             note
           })
@@ -255,7 +220,7 @@
         statusMsg.style.color = "green";
         adjustAmount.value = "";
         adjustNote.value = "";
-        walletSelect.dispatchEvent(new Event("change"));
+        loadBalanceAndTransactions();
       } catch (err) {
         statusMsg.textContent = "❌ " + err.message;
         statusMsg.style.color = "red";
@@ -267,7 +232,6 @@
       const toEmail = recipientEmail.value.trim();
       const amount = parseFloat(transferAmount.value);
       const note = transferNote.value.trim();
-      const fromWalletId = walletSelect.value;
 
       if (!toEmail || isNaN(amount) || amount <= 0) {
         transferStatusMsg.textContent = "Please enter valid recipient and amount.";
@@ -283,7 +247,7 @@
             Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
-            from_wallet_id: fromWalletId,
+            from_wallet_id: treasuryWalletId,
             to_email: toEmail,
             amount,
             note,
@@ -300,7 +264,7 @@
         recipientEmail.value = "";
         transferAmount.value = "";
         transferNote.value = "";
-        walletSelect.dispatchEvent(new Event("change"));
+        loadBalanceAndTransactions();
       } catch (err) {
         transferStatusMsg.textContent = "❌ " + err.message;
         transferStatusMsg.style.color = "red";
@@ -312,6 +276,8 @@
       localStorage.clear();
       window.location.href = "login.html";
     });
+
+    loadBalanceAndTransactions();
   });
 </script>
 </body>
