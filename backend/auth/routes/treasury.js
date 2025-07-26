@@ -12,7 +12,7 @@ router.post("/adjust", authenticateToken, async (req, res) => {
   console.log("  📌 Wallet ID:", wallet_id);
   console.log("  💰 Amount:", amount);
   console.log("  📝 Note:", note);
-  console.log("  👤 Performed By:", user?.email || "Unknown");
+  console.log("👤 Performed By:", user && user.email ? user.email : "Unknown");
 
   if (!wallet_id || typeof amount !== "number" || !user?.id) {
     console.warn("❗ Invalid input or missing user");
