@@ -124,7 +124,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const amountInput = document.getElementById("adjustAmount");
   const noteInput = document.getElementById("adjustNote");
 
-  const token = localStorage.getItem("boopToken");
+  const token = localStorage.getItem("boop_jwt"); 
 
   async function fetchCurrentUser() {
     const res = await fetch("/api/me", {
