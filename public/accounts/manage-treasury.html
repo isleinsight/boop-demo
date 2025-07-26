@@ -129,6 +129,22 @@
 
     const treasuryWalletId = user.wallet_id;
     const balanceDisplay = document.getElementById("balanceDisplay");
+
+    async function fetchAndShowBalance(walletId) {
+  try {
+    const res = await fetch(`/api/treasury/balance/${walletId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch wallet balance");
+    const data = await res.json();
+    balanceDisplay.textContent = parseFloat(data.balance || 0).toFixed(2);
+  } catch (err) {
+    console.error("❌ Error loading wallet balance:", err);
+    balanceDisplay.textContent = "--";
+  }
+}
+    
     const txnTable = document.getElementById("txnTable");
     const statusMsg = document.getElementById("statusMsg");
     const logoutBtn = document.getElementById("logoutBtn");
