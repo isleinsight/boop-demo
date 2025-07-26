@@ -102,126 +102,139 @@
   </div>
 
   <!-- JS -->
-  <script type="module">
-    document.addEventListener("DOMContentLoaded", async () => {
-      const user = JSON.parse(localStorage.getItem("boopUser"));
-      if (!user || user.role !== "admin" || user.type !== "treasury") {
-        localStorage.clear();
-        return window.location.href = "login.html";
+<script type="module">
+  document.addEventListener("DOMContentLoaded", async () => {
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    const token = localStorage.getItem("boopToken");
+
+    if (!user || user.role !== "admin" || user.type !== "treasury") {
+      localStorage.clear();
+      return window.location.href = "login.html";
+    }
+
+    const wallets = {
+      "Treasury HSBC": "e72bf747-14af-453e-b0b5-96c4cb41c481",
+      "Treasury Butterfield": "a588fb7b-bf3e-43bc-b04c-4c216a80720c"
+    };
+
+    const walletSelect = document.getElementById("walletSelect");
+    const balanceDisplay = document.getElementById("balanceDisplay");
+    const txnTable = document.getElementById("txnTable");
+    const statusMsg = document.getElementById("statusMsg");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    const adjustBtn = document.getElementById("adjustBtn");
+    const adjustAmount = document.getElementById("adjustAmount");
+    const adjustNote = document.getElementById("adjustNote");
+    const adjustType = document.getElementById("adjustType");
+
+    Object.entries(wallets).forEach(([label, id]) => {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = label;
+      walletSelect.appendChild(opt);
+    });
+
+    walletSelect.addEventListener("change", async () => {
+      const walletId = walletSelect.value;
+      balanceDisplay.textContent = "--";
+      txnTable.innerHTML = "";
+      statusMsg.textContent = "";
+
+      if (!walletId) return;
+
+      try {
+        const res = await fetch(`/api/treasury/balance/${walletId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to load balance");
+        balanceDisplay.textContent = data.balance.toFixed(2);
+      } catch (err) {
+        statusMsg.textContent = "Error loading balance.";
+        console.error(err);
       }
 
-      const wallets = {
-  "Treasury HSBC": "e72bf747-14af-453e-b0b5-96c4cb41c481",
-  "Treasury Butterfield": "a588fb7b-bf3e-43bc-b04c-4c216a80720c"
-};
-
-      const walletSelect = document.getElementById("walletSelect");
-      const balanceDisplay = document.getElementById("balanceDisplay");
-      const txnTable = document.getElementById("txnTable");
-      const statusMsg = document.getElementById("statusMsg");
-      const logoutBtn = document.getElementById("logoutBtn");
-
-      const adjustBtn = document.getElementById("adjustBtn");
-      const adjustAmount = document.getElementById("adjustAmount");
-      const adjustNote = document.getElementById("adjustNote");
-      const adjustType = document.getElementById("adjustType");
-
-      Object.entries(wallets).forEach(([label, id]) => {
-        const opt = document.createElement("option");
-        opt.value = id;
-        opt.textContent = label;
-        walletSelect.appendChild(opt);
-      });
-
-      walletSelect.addEventListener("change", async () => {
-        const walletId = walletSelect.value;
-        balanceDisplay.textContent = "--";
-        txnTable.innerHTML = "";
-        statusMsg.textContent = "";
-
-        if (!walletId) return;
-
-        try {
-          const res = await fetch(`/api/treasury/balance/${walletId}`);
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.message || "Failed to load balance");
-          balanceDisplay.textContent = data.balance.toFixed(2);
-        } catch (err) {
-          statusMsg.textContent = "Error loading balance.";
-          console.error(err);
-        }
-
-        try {
-          const txnRes = await fetch(`/api/transactions?wallet_id=${walletId}&limit=10`);
-          const txns = await txnRes.json();
-
-          if (!Array.isArray(txns)) {
-            statusMsg.textContent = "Failed to load transactions.";
-            return;
+      try {
+        const txnRes = await fetch(`/api/transactions?wallet_id=${walletId}&limit=10`, {
+          headers: {
+            Authorization: `Bearer ${token}`
           }
+        });
+        const txns = await txnRes.json();
 
-          txnTable.innerHTML = txns.map(txn => `
-            <tr>
-              <td>${new Date(txn.timestamp).toLocaleDateString()}</td>
-              <td>${txn.amount.toFixed(2)}</td>
-              <td>${txn.from_wallet_id === walletId ? 'Debit' : 'Credit'}</td>
-              <td>${txn.to_email || txn.from_email || '—'}</td>
-              <td>${txn.note || ''}</td>
-            </tr>
-          `).join("");
-        } catch (err) {
-          console.error("Failed loading transactions", err);
-        }
-      });
-
-      adjustBtn.addEventListener("click", async () => {
-        const walletId = walletSelect.value;
-        const amount = parseFloat(adjustAmount.value);
-        const note = adjustNote.value.trim();
-        const action = adjustType.value;
-
-        if (!walletId || isNaN(amount) || amount <= 0) {
-          statusMsg.textContent = "Please enter a valid amount.";
-          statusMsg.style.color = "red";
+        if (!Array.isArray(txns)) {
+          statusMsg.textContent = "Failed to load transactions.";
           return;
         }
 
-        try {
-          const res = await fetch("/api/treasury/update-balance", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              wallet_id: walletId,
-              amount,
-              note,
-              action,
-              performed_by: user.id
-            })
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) throw new Error(data.message || "Adjustment failed");
-
-          statusMsg.textContent = "✅ Balance updated successfully.";
-          statusMsg.style.color = "green";
-          adjustAmount.value = "";
-          adjustNote.value = "";
-          walletSelect.dispatchEvent(new Event("change"));
-        } catch (err) {
-          statusMsg.textContent = "❌ " + err.message;
-          statusMsg.style.color = "red";
-          console.error("Error adjusting balance:", err);
-        }
-      });
-
-      walletSelect.dispatchEvent(new Event("change"));
-
-      logoutBtn?.addEventListener("click", () => {
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
+        txnTable.innerHTML = txns.map(txn => `
+          <tr>
+            <td>${new Date(txn.timestamp).toLocaleDateString()}</td>
+            <td>${txn.amount.toFixed(2)}</td>
+            <td>${txn.from_wallet_id === walletId ? 'Debit' : 'Credit'}</td>
+            <td>${txn.to_email || txn.from_email || '—'}</td>
+            <td>${txn.note || ''}</td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        console.error("Failed loading transactions", err);
+      }
     });
-  </script>
+
+    adjustBtn.addEventListener("click", async () => {
+      const walletId = walletSelect.value;
+      const amount = parseFloat(adjustAmount.value);
+      const note = adjustNote.value.trim();
+      const action = adjustType.value;
+
+      if (!walletId || isNaN(amount) || amount <= 0) {
+        statusMsg.textContent = "Please enter a valid amount.";
+        statusMsg.style.color = "red";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/treasury/update-balance", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            wallet_id: walletId,
+            amount,
+            note,
+            action,
+            performed_by: user.id
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || "Adjustment failed");
+
+        statusMsg.textContent = "✅ Balance updated successfully.";
+        statusMsg.style.color = "green";
+        adjustAmount.value = "";
+        adjustNote.value = "";
+        walletSelect.dispatchEvent(new Event("change"));
+      } catch (err) {
+        statusMsg.textContent = "❌ " + err.message;
+        statusMsg.style.color = "red";
+        console.error("Error adjusting balance:", err);
+      }
+    });
+
+    walletSelect.dispatchEvent(new Event("change"));
+
+    logoutBtn?.addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "login.html";
+    });
+  });
+</script>
 </body>
 </html>
