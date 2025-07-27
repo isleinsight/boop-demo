@@ -87,6 +87,32 @@ router.post(
 );
 
 
+function requireAdminWithTypes(...allowedTypes) {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!user || user.role !== "admin" || !allowedTypes.includes(user.type)) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    next();
+  };
+}
+
+function requireAnyAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+
+function requireTreasuryAdmin(req, res, next) {
+  const user = req.user;
+  if (!user || user.role !== "admin" || !["treasury", "accountant"].includes(user.type)) {
+    return res.status(403).json({ message: "Unauthorized" });
+  }
+  next();
+}
+
+
 
 // Add this to module.exports
 module.exports = {
