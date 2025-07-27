@@ -7,6 +7,23 @@ const router = express.Router();
 const db = require("../../db");
 const { v4: uuidv4 } = require("uuid");
 
+
+
+const TREASURY_WALLET_ID = process.env.TREASURY_WALLET_ID;
+
+if (!TREASURY_WALLET_ID) {
+  console.error("🚨 Missing TREASURY_WALLET_ID in .env");
+}
+
+// backend/routes/treasury.js
+
+require("dotenv").config();
+
+const express = require("express");
+const router = express.Router();
+const db = require("../../db");
+const { v4: uuidv4 } = require("uuid");
+
 const {
   authenticateToken,
   requireTreasuryAdmin,
