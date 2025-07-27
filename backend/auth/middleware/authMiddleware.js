@@ -87,6 +87,8 @@ router.post(
 );
 
 
+// backend/middleware/authMiddleware.js
+
 function requireAdminWithTypes(...allowedTypes) {
   return (req, res, next) => {
     const user = req.user;
@@ -112,12 +114,20 @@ function requireTreasuryAdmin(req, res, next) {
   next();
 }
 
+// Example token middleware (adjust as needed)
+function authenticateToken(req, res, next) {
+  // token validation logic goes here
+  req.user = {
+    id: "example-user-id",
+    role: "admin",
+    type: "treasury"
+  };
+  next();
+}
 
-
-// Add this to module.exports
 module.exports = {
   authenticateToken,
   requireAdminWithTypes,
   requireAnyAuth,
-  requireTreasuryAdmin, // ✅ Add this line
+  requireTreasuryAdmin,
 };
