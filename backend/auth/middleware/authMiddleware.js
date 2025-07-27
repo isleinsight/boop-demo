@@ -11,7 +11,6 @@ async function authenticateToken(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const email = decoded.email;
 
-    // 🔐 Require matching session row with token + email
     const sessionCheck = await pool.query(
       `SELECT * FROM sessions WHERE email = $1 AND jwt_token = $2`,
       [email, token]
@@ -28,4 +27,17 @@ async function authenticateToken(req, res, next) {
   }
 }
 
-module.exports = authenticateToken;
+// ✅ Treasury admin middleware
+function requireTreasuryAdmin(req, res, next) {
+  const user = req.user;
+  if (!user || user.role !== "admin" || !["treasury", "accountant"].includes(user.type)) {
+    return res.status(403).json({ message: "Unauthorized" });
+  }
+  next();
+}
+
+// ✅ Export both
+module.exports = {
+  authenticateToken,
+  requireTreasuryAdmin,
+};
