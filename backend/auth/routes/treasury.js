@@ -7,14 +7,14 @@ const { v4: uuidv4 } = require("uuid");
 
 const {
   authenticateToken,
-  requireTreasuryAdmin, // ✅ imported from middleware
+  requireTreasuryAdmin, // ✅ correctly imported
 } = require("../middleware/authMiddleware");
 
-// 🔐 Wallet ID should be secured via environment
+// 🔐 Ensure wallet ID is provided
 const TREASURY_WALLET_ID = process.env.TREASURY_WALLET_ID;
 
 if (!TREASURY_WALLET_ID) {
-  console.error("🚨 Missing TREASURY_WALLET_ID in .env");
+  console.error("🚨 Missing TREASURY_WALLET_ID in environment");
 }
 
 // ✅ GET /api/treasury/balance
@@ -50,7 +50,11 @@ router.post(
     const { amount_cents, type, note } = req.body;
     const performedBy = req.user && req.user.id;
 
-    if (!amount_cents || !["credit", "debit"].includes(type) || !note) {
+    if (
+      typeof amount_cents !== "number" ||
+      !["credit", "debit"].includes(type) ||
+      typeof note !== "string"
+    ) {
       return res.status(400).json({ message: "Invalid request payload" });
     }
 
@@ -59,7 +63,7 @@ router.post(
     try {
       await db.query("BEGIN");
 
-      // 🔄 Update treasury balance
+      // 💸 Update wallet
       await db.query(
         `UPDATE wallets
          SET balance_cents = balance_cents ${operator} $1
@@ -67,7 +71,7 @@ router.post(
         [amount_cents, TREASURY_WALLET_ID]
       );
 
-      // 🧾 Log the transaction
+      // 🧾 Log transaction
       const txnId = uuidv4();
       await db.query(
         `INSERT INTO treasury_transactions 
