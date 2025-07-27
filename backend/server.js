@@ -5,7 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { exec } = require('child_process');
-const { authenticateToken } = require('./auth/middleware/authMiddleware'); // ✅ FIXED: proper destructuring
+const { authenticateToken } = require('./auth/middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,23 +17,24 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// ✅ Auth routes
-const authRoutes = require('./auth/auth');
-app.use('/auth', authRoutes);
+// ✅ Routes (ONE AT A TIME)
+try {
+  // const authRoutes = require('./auth/auth');
+  // app.use('/auth', authRoutes);
 
-// ✅ Login + Logout
-app.use('/login', require('./auth/routes/login'));
-app.use('/logout', require('./auth/routes/logout'));
-
-// ✅ Core API routes
-app.use('/api/users', require('./auth/routes/users'));
-app.use('/api/cards', require('./auth/routes/cards'));
-app.use('/api/wallets', require('./auth/routes/wallets'));
-app.use('/api/vendors', require('./auth/routes/vendors'));
-app.use('/api/user-students', require('./auth/routes/userStudents'));
-app.use('/api/sessions', require('./auth/routes/sessions'));
-app.use('/api/transactions', require('./auth/routes/transactions')); 
-app.use("/api/treasury", require("./auth/routes/treasury"));
+  // app.use('/login', require('./auth/routes/login'));
+  // app.use('/logout', require('./auth/routes/logout'));
+  // app.use('/api/users', require('./auth/routes/users'));
+  // app.use('/api/cards', require('./auth/routes/cards'));
+  // app.use('/api/wallets', require('./auth/routes/wallets'));
+  // app.use('/api/vendors', require('./auth/routes/vendors'));
+  // app.use('/api/user-students', require('./auth/routes/userStudents'));
+  // app.use('/api/sessions', require('./auth/routes/sessions'));
+  // app.use('/api/transactions', require('./auth/routes/transactions'));
+  // app.use('/api/treasury', require('./auth/routes/treasury'));
+} catch (err) {
+  console.error("❌ Route load failure:", err.message);
+}
 
 // ✅ /api/me - current logged-in user info
 app.get('/api/me', authenticateToken, (req, res) => {
@@ -64,7 +65,6 @@ app.post('/webhook', (req, res) => {
   });
 });
 
-// ✅ Optional additional webhook logic
 app.use('/webhook', require('./webhook-handler'));
 
 // ✅ Catch 404s
@@ -78,7 +78,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-// ✅ Start the server
+// ✅ Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
