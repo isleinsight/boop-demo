@@ -47,7 +47,7 @@ router.post(
   requireAdminWithTypes("treasury", "accountant"),
   async (req, res) => {
     const { amount_cents, type, note } = req.body;
-    const performedBy = req.user?.id;
+    const performedBy = req.user && req.user.id;
 
     if (!amount_cents || !["credit", "debit"].includes(type) || !note) {
       return res.status(400).json({ message: "Invalid request payload" });
