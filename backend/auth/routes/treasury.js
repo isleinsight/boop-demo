@@ -7,17 +7,18 @@ const { v4: uuidv4 } = require("uuid");
 
 const {
   authenticateToken,
-  requireTreasuryAdmin, // ✅ correctly imported
+  requireTreasuryAdmin, // ✅ imported from middleware, NOT defined locally
 } = require("../middleware/authMiddleware");
 
-// 🔐 Ensure wallet ID is provided
+// ✅ Ensure wallet ID exists in environment
 const TREASURY_WALLET_ID = process.env.TREASURY_WALLET_ID;
-
 if (!TREASURY_WALLET_ID) {
-  console.error("🚨 Missing TREASURY_WALLET_ID in environment");
+  console.error("🚨 Missing TREASURY_WALLET_ID in your .env file");
 }
 
+// ==============================
 // ✅ GET /api/treasury/balance
+// ==============================
 router.get(
   "/balance",
   authenticateToken,
@@ -35,13 +36,15 @@ router.get(
 
       res.json({ balance_cents: rows[0].balance_cents });
     } catch (err) {
-      console.error("🔥 Error getting balance:", err);
+      console.error("🔥 Error getting treasury balance:", err);
       res.status(500).json({ message: "Failed to fetch balance" });
     }
   }
 );
 
+// ==============================
 // ✅ POST /api/treasury/adjust
+// ==============================
 router.post(
   "/adjust",
   authenticateToken,
@@ -50,11 +53,8 @@ router.post(
     const { amount_cents, type, note } = req.body;
     const performedBy = req.user && req.user.id;
 
-    if (
-      typeof amount_cents !== "number" ||
-      !["credit", "debit"].includes(type) ||
-      typeof note !== "string"
-    ) {
+    // 🔍 Validate input
+    if (!amount_cents || !["credit", "debit"].includes(type) || !note) {
       return res.status(400).json({ message: "Invalid request payload" });
     }
 
@@ -63,7 +63,7 @@ router.post(
     try {
       await db.query("BEGIN");
 
-      // 💸 Update wallet
+      // 💰 Update treasury wallet balance
       await db.query(
         `UPDATE wallets
          SET balance_cents = balance_cents ${operator} $1
@@ -71,7 +71,7 @@ router.post(
         [amount_cents, TREASURY_WALLET_ID]
       );
 
-      // 🧾 Log transaction
+      // 🧾 Record transaction in treasury_transactions
       const txnId = uuidv4();
       await db.query(
         `INSERT INTO treasury_transactions 
@@ -84,7 +84,7 @@ router.post(
       res.json({ success: true, txn_id: txnId });
     } catch (err) {
       await db.query("ROLLBACK");
-      console.error("🔥 Error adjusting balance:", err);
+      console.error("🔥 Error adjusting treasury balance:", err);
       res.status(500).json({ message: "Adjustment failed" });
     }
   }
