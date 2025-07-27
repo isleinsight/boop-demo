@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const pool = require("../../db");
 
+// 🔐 Main middleware: validates JWT and session
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -11,7 +12,7 @@ async function authenticateToken(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const email = decoded.email;
 
-    // 🔐 Require matching session row with token + email
+    // 🔎 Check active session match
     const sessionCheck = await pool.query(
       `SELECT * FROM sessions WHERE email = $1 AND jwt_token = $2`,
       [email, token]
@@ -28,4 +29,28 @@ async function authenticateToken(req, res, next) {
   }
 }
 
-module.exports = authenticateToken;
+// ✅ Optional role check
+function requireAdminWithTypes(...allowedTypes) {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!user || user.role !== "admin" || !allowedTypes.includes(user.type)) {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+    next();
+  };
+}
+
+// ✅ Optional general auth
+function requireAnyAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+
+// ✅ Export correctly
+module.exports = {
+  authenticateToken,
+  requireAdminWithTypes,
+  requireAnyAuth
+};
