@@ -22,9 +22,9 @@ try {
   // const authRoutes = require('./auth/auth');
   // app.use('/auth', authRoutes);
 
-  // app.use('/login', require('./auth/routes/login'));
-  // app.use('/logout', require('./auth/routes/logout'));
-  // app.use('/api/users', require('./auth/routes/users'));
+  app.use('/login', require('./auth/routes/login'));
+  app.use('/logout', require('./auth/routes/logout'));
+  app.use('/api/users', require('./auth/routes/users'));
   // app.use('/api/cards', require('./auth/routes/cards'));
   // app.use('/api/wallets', require('./auth/routes/wallets'));
   // app.use('/api/vendors', require('./auth/routes/vendors'));
