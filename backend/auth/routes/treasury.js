@@ -4,7 +4,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../../db");
 const { v4: uuidv4 } = require("uuid");
-const auth = require("../../middleware/authMiddleware"); // uses your custom token validator
+const auth = require("../middleware/authMiddleware"); // uses your custom token validator
 
 // ✅ Replace this with your actual wallet ID for treasury account
 const TREASURY_WALLET_ID = process.env.TREASURY_WALLET_ID;
