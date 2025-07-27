@@ -86,13 +86,6 @@ router.post(
   }
 );
 
-function requireTreasuryAdmin(req, res, next) {
-  const user = req.user;
-  if (!user || user.role !== "admin" || !["treasury", "accountant"].includes(user.type)) {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
-  next();
-}
 
 
 // Add this to module.exports
