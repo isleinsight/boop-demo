@@ -1,16 +1,11 @@
-// backend/auth/middleware/authMiddleware.js
-
 const jwt = require("jsonwebtoken");
 const pool = require("../../db");
 
-// ✅ Token authentication middleware
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) {
-    return res.status(401).json({ message: "No token provided" });
-  }
+  if (!token) return res.status(401).json({ message: "No token provided" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -32,21 +27,6 @@ async function authenticateToken(req, res, next) {
   }
 }
 
-// ✅ Treasury admin middleware
-function requireTreasuryAdmin(req, res, next) {
-  const user = req.user;
-  if (
-    !user ||
-    user.role !== "admin" ||
-    !["treasury", "accountant"].includes(user.type)
-  ) {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
-  next();
-}
-
-// ✅ Export both
 module.exports = {
-  authenticateToken,
-  requireTreasuryAdmin,
+  authenticateToken
 };
