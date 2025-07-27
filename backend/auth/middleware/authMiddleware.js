@@ -39,5 +39,4 @@ function requireTreasuryAdmin(req, res, next) {
 // ✅ Export both
 module.exports = {
   authenticateToken,
-  requireTreasuryAdmin,
 };
