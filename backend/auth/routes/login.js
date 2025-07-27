@@ -7,16 +7,20 @@ const pool = require('../../db');
 
 router.post('/', async (req, res) => {
   const { email, password } = req.body;
+  console.log("📨 Login attempt:", email); // DEBUG
 
   if (!email || !password) {
+    console.log("⛔ Missing credentials"); // DEBUG
     return res.status(400).json({ message: 'Email and password are required.' });
   }
 
   try {
     // 🔍 Check if user exists
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    console.log("🔍 DB result:", result.rows); // DEBUG
 
     if (result.rows.length === 0) {
+      console.log("❌ No account found with that email."); // DEBUG
       return res.status(404).json({ message: 'No account found with that email.' });
     }
 
@@ -24,12 +28,16 @@ router.post('/', async (req, res) => {
 
     // ❌ Check if suspended
     if (user.status === 'suspended') {
+      console.log("⛔ Account suspended"); // DEBUG
       return res.status(403).json({ message: 'This account has been suspended.' });
     }
 
     // 🔐 Check password
     const match = await bcrypt.compare(password, user.password_hash);
+    console.log("🔐 Password match:", match); // DEBUG
+
     if (!match) {
+      console.log("❌ Incorrect password"); // DEBUG
       return res.status(401).json({ message: 'Incorrect password.' });
     }
 
@@ -43,7 +51,7 @@ router.post('/', async (req, res) => {
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
 
-    // 🧠 Upsert session row
+    // 🧠 Upsert session
     try {
       await pool.query(`
         INSERT INTO sessions (email, user_id, jwt_token, created_at, expires_at, status)
@@ -55,13 +63,14 @@ router.post('/', async (req, res) => {
           status = 'online'
       `, [user.email, user.id, token]);
     } catch (sessionErr) {
-      console.error("❌ Session DB insert error:", sessionErr.message);
+      console.error("❌ Session insert error:", sessionErr.message);
       return res.status(500).json({
         message: 'Server misconfiguration — please contact support.'
       });
     }
 
-    // 🚀 Response
+    // 🚀 Success response
+    console.log("✅ Login successful"); // DEBUG
     res.status(200).json({
       message: 'Login successful',
       token,
