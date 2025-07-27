@@ -11,11 +11,11 @@ const {
 } = require("../middleware/authMiddleware");
 
 const TREASURY_WALLET_ID = process.env.TREASURY_WALLET_ID;
+
 if (!TREASURY_WALLET_ID) {
   console.error("🚨 Missing TREASURY_WALLET_ID in .env");
 }
 
-// ✅ GET /api/treasury/balance
 router.get(
   "/balance",
   authenticateToken,
@@ -39,7 +39,6 @@ router.get(
   }
 );
 
-// ✅ POST /api/treasury/adjust
 router.post(
   "/adjust",
   authenticateToken,
@@ -58,17 +57,15 @@ router.post(
       await db.query("BEGIN");
 
       await db.query(
-        `UPDATE wallets
-         SET balance_cents = balance_cents ${operator} $1
-         WHERE id = $2`,
+        `UPDATE wallets SET balance_cents = balance_cents ${operator} $1 WHERE id = $2`,
         [amount_cents, TREASURY_WALLET_ID]
       );
 
       const txnId = uuidv4();
       await db.query(
         `INSERT INTO treasury_transactions 
-         (id, wallet_id, amount_cents, type, note, performed_by, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        (id, wallet_id, amount_cents, type, note, performed_by, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
         [txnId, TREASURY_WALLET_ID, amount_cents, type, note, performedBy]
       );
 
