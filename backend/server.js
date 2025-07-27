@@ -5,7 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { exec } = require('child_process');
-const authenticateToken = require('./auth/middleware/authMiddleware');
+const { authenticateToken } = require('./auth/middleware/authMiddleware'); // ✅ FIXED: proper destructuring
 
 const app = express();
 const PORT = process.env.PORT || 3000;
