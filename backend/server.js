@@ -28,8 +28,8 @@ try {
   app.use('/api/cards', require('./auth/routes/cards'));
   app.use('/api/wallets', require('./auth/routes/wallets'));
   app.use('/api/vendors', require('./auth/routes/vendors'));
-  // app.use('/api/user-students', require('./auth/routes/userStudents'));
-  // app.use('/api/sessions', require('./auth/routes/sessions'));
+  app.use('/api/user-students', require('./auth/routes/userStudents'));
+  app.use('/api/sessions', require('./auth/routes/sessions'));
   // app.use('/api/transactions', require('./auth/routes/transactions'));
   app.use('/api/treasury', require('./auth/routes/treasury'));
 } catch (err) {
