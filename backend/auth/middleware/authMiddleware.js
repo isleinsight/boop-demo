@@ -7,21 +7,21 @@ const { v4: uuidv4 } = require("uuid");
 
 const {
   authenticateToken,
-  requireAdminWithTypes,
+  requireTreasuryAdmin, // ✅ imported from middleware
 } = require("../middleware/authMiddleware");
 
-// 🔐 Wallet ID should come from your environment for safety
+// 🔐 Wallet ID should be secured via environment
 const TREASURY_WALLET_ID = process.env.TREASURY_WALLET_ID;
 
 if (!TREASURY_WALLET_ID) {
-  console.error("🚨 Missing TREASURY_WALLET_ID in environment");
+  console.error("🚨 Missing TREASURY_WALLET_ID in .env");
 }
 
 // ✅ GET /api/treasury/balance
 router.get(
   "/balance",
   authenticateToken,
-  requireAdminWithTypes("treasury", "accountant"),
+  requireTreasuryAdmin,
   async (req, res) => {
     try {
       const { rows } = await db.query(
@@ -29,8 +29,9 @@ router.get(
         [TREASURY_WALLET_ID]
       );
 
-      if (!rows.length)
+      if (!rows.length) {
         return res.status(404).json({ message: "Treasury wallet not found" });
+      }
 
       res.json({ balance_cents: rows[0].balance_cents });
     } catch (err) {
@@ -44,7 +45,7 @@ router.get(
 router.post(
   "/adjust",
   authenticateToken,
-  requireAdminWithTypes("treasury", "accountant"),
+  requireTreasuryAdmin,
   async (req, res) => {
     const { amount_cents, type, note } = req.body;
     const performedBy = req.user && req.user.id;
@@ -58,7 +59,7 @@ router.post(
     try {
       await db.query("BEGIN");
 
-      // 🔄 Update balance
+      // 🔄 Update treasury balance
       await db.query(
         `UPDATE wallets
          SET balance_cents = balance_cents ${operator} $1
@@ -85,4 +86,18 @@ router.post(
   }
 );
 
-module.exports = router;
+function requireTreasuryAdmin(req, res, next) {
+  const user = req.user;
+  if (!user || user.role !== "admin" || !["treasury", "accountant"].includes(user.type)) {
+    return res.status(403).json({ message: "Unauthorized access" });
+  }
+  next();
+}
+
+// Add this to module.exports
+module.exports = {
+  authenticateToken,
+  requireAdminWithTypes,
+  requireAnyAuth,
+  requireTreasuryAdmin, // ✅ Add this line
+};
