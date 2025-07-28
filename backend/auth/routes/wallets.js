@@ -1,10 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../../db");
-const { authenticateToken } = require("../middleware/authMiddleware");
 
-// ✅ GET /api/wallets/user/:userId
-router.get("/user/:userId", authenticateToken, async (req, res) => {
+// ✅ GET /api/wallets/user/:userId — Fetch wallet by user ID
+router.get("/user/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
@@ -19,15 +18,20 @@ router.get("/user/:userId", authenticateToken, async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (err) {
-    console.error("❌ Wallet fetch error:", err);
+    console.error("❌ Error fetching wallet:", err);
     res.status(500).json({ error: "Failed to fetch wallet" });
   }
 });
 
-// ✅ PATCH /api/wallets/:walletId
-router.patch("/:walletId", authenticateToken, async (req, res) => {
+// ✅ PATCH /api/wallets/:walletId — Update wallet status
+router.patch("/:walletId", async (req, res) => {
   const { walletId } = req.params;
   const { status } = req.body;
+
+  const validStatuses = ["active", "suspended", "archived", "pending"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: "Invalid wallet status" });
+  }
 
   try {
     const result = await db.query(
@@ -39,10 +43,10 @@ router.patch("/:walletId", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Wallet not found" });
     }
 
-    res.json({ message: "Wallet updated", wallet: result.rows[0] });
+    res.json({ message: "Wallet status updated", wallet: result.rows[0] });
   } catch (err) {
-    console.error("❌ Wallet update error:", err);
-    res.status(500).json({ error: "Failed to update wallet" });
+    console.error("❌ Error updating wallet:", err);
+    res.status(500).json({ error: "Failed to update wallet status" });
   }
 });
 
