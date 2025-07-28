@@ -143,36 +143,30 @@ router.get("/", async (req, res) => {
     }
 
     if (search) {
-      whereClauses.push(`(
-        LOWER(first_name) LIKE $${values.length + 1} OR
-        LOWER(last_name) LIKE $${values.length + 1} OR
-        LOWER(email) LIKE $${values.length + 1}
-      )`);
       values.push(`%${search.toLowerCase()}%`);
+      const idx = values.length;
+      whereClauses.push(`(
+        LOWER(first_name) LIKE $${idx} OR
+        LOWER(last_name) LIKE $${idx} OR
+        LOWER(email) LIKE $${idx}
+      )`);
     }
 
     if (role) {
-      whereClauses.push(`role = $${values.length + 1}`);
       values.push(role);
+      whereClauses.push(`role = $${values.length}`);
     }
 
     if (type) {
-  whereClauses.push(`type = $${values.length + 1}`);
-  values.push(type);
-}
-    
-    // ✅ Assistance-only filter
-if (assistanceOnly === 'true') {
-  whereClauses.push(`on_assistance = true`);
-}
-
-    // ⛔ Skip adding "status = deleted" — it's not a real status in DB
-    if (status && status !== "deleted") {
-      whereClauses.push(`status = $${values.length + 1}`);
-      values.push(status);
+      values.push(type);
+      whereClauses.push(`type = $${values.length}`);
     }
 
-    const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
+    if (assistanceOnly === 'true') {
+      whereClauses.push("on_assistance = true");
+    }
+
+    const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     // 🔍 Autocomplete mode
     if (isAutocomplete) {
@@ -187,12 +181,13 @@ if (assistanceOnly === 'true') {
       return res.json(result.rows);
     }
 
-    // 📦 Pagination logic
+    // 📦 Pagination mode
     const limit = parseInt(perPage) || 10;
     const offset = ((parseInt(page) || 1) - 1) * limit;
 
     const result = await pool.query(
-      `SELECT * FROM users
+      `SELECT *
+       FROM users
        ${whereSQL}
        ORDER BY first_name ASC
        LIMIT $${values.length + 1}
@@ -254,10 +249,21 @@ router.patch("/:id", authenticateToken, async (req, res) => {
   }
 
   try {
+    // 💾 Update the user
+    values.push(id);
     await pool.query(
-      `UPDATE users SET ${updates.join(", ")} WHERE id = $${values.length + 1}`,
-      [...values, id]
+      `UPDATE users SET ${updates.join(", ")} WHERE id = $${values.length}`,
+      values
     );
+
+    // 🧾 Admin action logging
+    const baseLog = {
+      performed_by: req.user.id,
+      target_user_id: id,
+      type: req.user.type,
+      status: "completed",
+      completed_at: new Date()
+    };
 
     if (req.body.status === "suspended" || req.body.status === "active") {
       await pool.query(`UPDATE wallets SET status = $1 WHERE user_id = $2`, [req.body.status, id]);
@@ -265,20 +271,13 @@ router.patch("/:id", authenticateToken, async (req, res) => {
       const actionLabel = req.body.status === "suspended" ? "suspend" : "unsuspend";
 
       await logAdminAction({
-        performed_by: req.user.id,
-        action: actionLabel,
-        target_user_id: id,
-        type: req.user.type,
-        status: "completed"
+        ...baseLog,
+        action: actionLabel
       });
     } else {
-      // For all other non-suspend changes
       await logAdminAction({
-        performed_by: req.user.id,
-        action: "update",
-        target_user_id: id,
-        type: req.user.type,
-        status: "completed"
+        ...baseLog,
+        action: "update"
       });
     }
 
@@ -308,7 +307,8 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       action: "delete",
       target_user_id: id,
       type: req.user.type,
-      status: "completed"
+      status: "completed",
+      completed_at: new Date()
     });
 
     res.json({ message: "User soft-deleted" });
@@ -336,13 +336,13 @@ router.patch("/:id/restore", authenticateToken, async (req, res) => {
       [id]
     );
 
-    console.log("🧪 req.user contents:", req.user);
     await logAdminAction({
       performed_by: req.user.id,
       action: "restore",
       target_user_id: id,
       type: req.user.type,
-      status: "completed"
+      status: "completed",
+      completed_at: new Date()
     });
 
     res.json({ message: "User restored" });
