@@ -63,12 +63,12 @@ router.post('/adjust', authenticateToken, async (req, res) => {
       [newBalance, walletId]
     );
 
-    // Optional: insert into transaction log
+    // insert into transaction log
     await pool.query(
-      `INSERT INTO transactions (user_id, wallet_id, type, amount, note, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [userId, walletId, type, amount, note]
-    );
+  `INSERT INTO transactions (wallet_id, user_id, amount_cents, type, note)
+   VALUES ($1, $2, $3, $4, $5)`,
+  [walletId, userId, amountCents, 'credit', note] // or 'debit'
+);
 
     res.json({ message: 'Balance updated successfully.' });
   } catch (err) {
