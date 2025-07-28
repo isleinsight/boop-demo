@@ -20,7 +20,7 @@ router.get('/balance', authenticateToken, async (req, res) => {
 
     const { balance } = result.rows[0];
 
-    res.json({ balance: parseFloat(balance) });
+    res.json({ balance_cents: Math.round(parseFloat(balance) * 100) });
   } catch (err) {
     console.error('❌ Error fetching balance:', err.message);
     res.status(500).json({ message: 'Failed to retrieve balance' });
@@ -32,7 +32,12 @@ router.post('/adjust', authenticateToken, async (req, res) => {
   const { amount_cents, note, type } = req.body;
   const userId = req.user.id;
 
-  if (!amount_cents || !note || !['credit', 'debit'].includes(type)) {
+  if (
+    !amount_cents ||
+    typeof amount_cents !== 'number' ||
+    !note ||
+    !['credit', 'debit'].includes(type)
+  ) {
     return res.status(400).json({ message: 'Missing or invalid adjustment data.' });
   }
 
@@ -50,27 +55,29 @@ router.post('/adjust', authenticateToken, async (req, res) => {
 
     const { id: walletId, balance: currentBalance } = walletRes.rows[0];
 
-    let newBalance = type === 'credit'
-      ? parseFloat(currentBalance) + amount
-      : parseFloat(currentBalance) - amount;
+    let newBalance =
+      type === 'credit'
+        ? parseFloat(currentBalance) + amount
+        : parseFloat(currentBalance) - amount;
 
     if (newBalance < 0) {
       return res.status(400).json({ message: 'Insufficient funds.' });
     }
 
+    // Update balance
     await pool.query(
       'UPDATE wallets SET balance = $1 WHERE id = $2',
       [newBalance, walletId]
     );
 
-    // insert into transaction log
+    // Log transaction
     await pool.query(
-  `INSERT INTO transactions (wallet_id, user_id, amount_cents, type, note)
-   VALUES ($1, $2, $3, $4, $5)`,
-  [walletId, userId, amountCents, 'credit', note] // or 'debit'
-);
+      `INSERT INTO transactions (wallet_id, user_id, amount_cents, type, note)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [walletId, userId, amount_cents, type, note]
+    );
 
-    res.json({ message: 'Balance updated successfully.' });
+    res.status(200).json({ message: 'Balance updated successfully.' });
   } catch (err) {
     console.error('❌ Error submitting adjustment:', err.message);
     res.status(500).json({ message: 'Adjustment failed.' });
