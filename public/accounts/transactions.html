@@ -95,53 +95,52 @@
   </div>
 
   <script type="module">
-    const user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
-      window.location.href = "../login.html";
-    }
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
+    window.location.href = "../login.html";
+  }
 
-    const tbody = document.getElementById("transactionsBody");
+  const tbody = document.getElementById("transactionsBody");
+  const logoutBtn = document.getElementById("logoutBtn");
 
-    async function loadTransactions() {
-      try {
-        const res = await fetch("/api/transactions/recent", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("boop_jwt")}`
-          }
-        });
-        const data = await res.json();
-
-        if (!res.ok || !Array.isArray(data)) {
-          throw new Error(data.message || "Failed to load transactions.");
+  async function loadTransactions() {
+    try {
+      const res = await fetch("/api/transactions/recent", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("boop_jwt")}`
         }
+      });
+      const data = await res.json();
 
-        if (data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="status">No transactions found.</td></tr>`;
-          return;
-        }
-
-        tbody.innerHTML = data.map(tx => `
-          <tr>
-            <td>${tx.user_name || 'N/A'}</td>
-            <td>${tx.user_email || 'N/A'}</td>
-            <td>${tx.type || '-'}</td>
-            <td>${(tx.amount || 0).toFixed(2)}</td>
-            <td>${new Date(tx.created_at).toLocaleString()}</td>
-          </tr>
-        `).join("");
-      } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="status">❌ ${err.message}</td></tr>`;
+      if (!res.ok || !Array.isArray(data)) {
+        throw new Error(data.message || "Failed to load transactions.");
       }
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="status">No transactions found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map(tx => `
+        <tr>
+          <td>${tx.user_name || 'N/A'}</td>
+          <td>${tx.user_email || 'N/A'}</td>
+          <td>${tx.type || '-'}</td>
+          <td>${(tx.amount || 0).toFixed(2)}</td>
+          <td>${new Date(tx.created_at).toLocaleString()}</td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="5" class="status">❌ ${err.message}</td></tr>`;
     }
+  }
 
-    // 🔁 Refresh on load
-    document.addEventListener("DOMContentLoaded", () => {
-      loadTransactions();
+  // 🔁 Initial Load & Refresh
+  document.addEventListener("DOMContentLoaded", () => {
+    loadTransactions();
+    setInterval(loadTransactions, 60000); // Optional auto-refresh
 
-      // Optional auto-refresh every 60 seconds
-      setInterval(loadTransactions, 60000);
-
-      // 🔓 Logout handler
+    // 🔓 Logout handler
     if (logoutBtn) {
       logoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
@@ -154,8 +153,8 @@
         window.location.href = "login.html";
       });
     }
-    
-  </script>
+  });
+</script>
 
 </body>
 </html>
