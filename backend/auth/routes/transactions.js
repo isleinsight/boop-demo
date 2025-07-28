@@ -1,3 +1,4 @@
+// backend/auth/routes/transactions.js
 const express = require('express');
 const router = express.Router();
 const pool = require('../../db');
@@ -22,7 +23,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        u.name AS user_name,
+        u.first_name || ' ' || u.last_name AS user_name,
         u.email AS user_email
       FROM transactions t
       LEFT JOIN users u ON u.id = t.user_id
@@ -30,7 +31,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
       LIMIT 50
     `);
 
-    res.json(result.rows);
+    res.status(200).json(result.rows);
   } catch (err) {
     console.error('❌ Failed to load transactions:', err.message);
     res.status(500).json({ message: 'Failed to retrieve transactions.' });
@@ -56,7 +57,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
       LIMIT 50
     `, [userId]);
 
-    res.json(result.rows);
+    res.status(200).json(result.rows);
   } catch (err) {
     console.error('❌ Failed to load user transactions:', err.message);
     res.status(500).json({ message: 'Failed to retrieve your transactions.' });
