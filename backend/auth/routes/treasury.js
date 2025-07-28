@@ -84,4 +84,25 @@ router.post('/adjust', authenticateToken, async (req, res) => {
   }
 });
 
+// GET recent treasury transactions (latest 5)
+router.get('/recent', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const txRes = await pool.query(
+      `SELECT amount_cents, type, note, created_at
+       FROM transactions
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 5`,
+      [userId]
+    );
+
+    res.json(txRes.rows);
+  } catch (err) {
+    console.error('❌ Error fetching recent transactions:', err.message);
+    res.status(500).json({ message: 'Could not fetch recent transactions.' });
+  }
+});
+
 module.exports = router;
