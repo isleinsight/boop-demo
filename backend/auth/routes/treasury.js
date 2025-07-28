@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const logAdminAction = require('../middleware/log-admin-action');
 
 // GET treasury balance for current user
 router.get('/balance', authenticateToken, async (req, res) => {
@@ -77,9 +78,29 @@ router.post('/adjust', authenticateToken, async (req, res) => {
       [walletId, userId, amount_cents, type, note]
     );
 
+    // ✅ Admin Action Logging
+    await logAdminAction({
+      performed_by: req.user.id,
+      target_user_id: userId,
+      action: `wallet_${type}`,
+      type: req.user.type,
+      status: 'completed',
+      completed_at: new Date()
+    });
+
     res.status(200).json({ message: 'Balance updated successfully.' });
   } catch (err) {
     console.error('❌ Error submitting adjustment:', err.message);
+
+    await logAdminAction({
+      performed_by: req.user.id,
+      target_user_id: userId,
+      action: `wallet_${type}`,
+      type: req.user.type,
+      status: 'failed',
+      error_message: err.message
+    });
+
     res.status(500).json({ message: 'Adjustment failed.' });
   }
 });
