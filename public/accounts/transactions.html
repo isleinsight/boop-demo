@@ -47,11 +47,44 @@
       font-weight: bold;
       color: #2f80ed;
     }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 400px;
+    }
+
+    .close {
+      float: right;
+      font-size: 22px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: black;
+    }
   </style>
 </head>
 <body>
 
-    <!-- Top Nav -->
+  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -69,7 +102,7 @@
           </div>
         </div>
         <a href="view-users.html">View Users</a>
-        <a href="transactions.html">Transactions</a>
+        <a href="transactions.html" class="active">Transactions</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
     </div>
@@ -86,75 +119,92 @@
           <th>Type</th>
           <th>Amount (BMD)</th>
           <th>Time</th>
+          <th>Details</th>
         </tr>
       </thead>
       <tbody id="transactionsBody">
-        <tr><td colspan="5" class="status">Loading...</td></tr>
+        <tr><td colspan="6" class="status">Loading...</td></tr>
       </tbody>
     </table>
   </div>
 
+  <!-- Modal for Note -->
+  <div id="noteModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <p id="noteContent">No note.</p>
+    </div>
+  </div>
+
   <script type="module">
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
-    window.location.href = "../login.html";
-  }
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    const token = localStorage.getItem("boop_jwt");
+    const tbody = document.getElementById("transactionsBody");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const modal = document.getElementById("noteModal");
+    const noteContent = document.getElementById("noteContent");
+    const modalClose = modal.querySelector(".close");
 
-  const tbody = document.getElementById("transactionsBody");
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  async function loadTransactions() {
-    try {
-      const res = await fetch("/api/transactions/recent", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("boop_jwt")}`
-        }
-      });
-      const data = await res.json();
-
-      if (!res.ok || !Array.isArray(data)) {
-        throw new Error(data.message || "Failed to load transactions.");
-      }
-
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="status">No transactions found.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = data.map(tx => `
-        <tr>
-          <td>${tx.user_name || 'N/A'}</td>
-          <td>${tx.user_email || 'N/A'}</td>
-          <td>${tx.type || '-'}</td>
-          <td>${(tx.amount || 0).toFixed(2)}</td>
-          <td>${new Date(tx.created_at).toLocaleString()}</td>
-        </tr>
-      `).join("");
-    } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="5" class="status">❌ ${err.message}</td></tr>`;
+    if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
+      window.location.href = "../login.html";
     }
-  }
 
-  // 🔁 Initial Load & Refresh
-  document.addEventListener("DOMContentLoaded", () => {
-    loadTransactions();
-    setInterval(loadTransactions, 60000); // Optional auto-refresh
+    async function loadTransactions() {
+      try {
+        const res = await fetch("/api/transactions/recent", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
 
-    // 🔓 Logout handler
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try {
-          await fetch("/api/logout", { method: "POST" });
-        } catch (err) {
-          console.warn("Logout API error:", err);
+        if (!res.ok || !Array.isArray(data)) {
+          throw new Error(data.message || "Failed to load transactions.");
         }
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
-    }
-  });
-</script>
 
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="status">No transactions found.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.map(tx => `
+          <tr>
+            <td>${tx.user_name || 'N/A'}</td>
+            <td>${tx.user_email || 'N/A'}</td>
+            <td>${tx.type || '-'}</td>
+            <td>${(tx.amount_cents / 100).toFixed(2)}</td>
+            <td>${new Date(tx.created_at).toLocaleString()}</td>
+            <td><button onclick="showNoteModal(\`${tx.note || 'No note'}\`)">View</button></td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="status">❌ ${err.message}</td></tr>`;
+      }
+    }
+
+    window.showNoteModal = function(note) {
+      noteContent.textContent = note;
+      modal.style.display = "block";
+    };
+
+    modalClose.onclick = () => modal.style.display = "none";
+    window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadTransactions();
+      setInterval(loadTransactions, 60000);
+
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          try {
+            await fetch("/api/logout", { method: "POST" });
+          } catch (err) {
+            console.warn("Logout API error:", err);
+          }
+          localStorage.clear();
+          window.location.href = "login.html";
+        });
+      }
+    });
+  </script>
 </body>
 </html>
