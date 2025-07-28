@@ -166,98 +166,99 @@
   </div>
 
   <script type="module">
-    document.addEventListener("DOMContentLoaded", () => {
-      const user = JSON.parse(localStorage.getItem("boopUser"));
-      if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
-        window.location.href = "login.html";
-        return;
-      }
+  document.addEventListener("DOMContentLoaded", () => {
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
+      window.location.href = "login.html";
+      return;
+    }
 
-      const startDate = document.getElementById("startDate");
-      const endDate = document.getElementById("endDate");
-      const typeFilter = document.getElementById("typeFilter");
-      const filterBtn = document.getElementById("filterBtn");
-      const exportBtn = document.getElementById("exportBtn");
-      const tableBody = document.querySelector("#reportTable tbody");
-      const statusEl = document.getElementById("status");
+    const startDate = document.getElementById("startDate");
+    const endDate = document.getElementById("endDate");
+    const typeFilter = document.getElementById("typeFilter");
+    const filterBtn = document.getElementById("filterBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const tableBody = document.querySelector("#reportTable tbody");
+    const statusEl = document.getElementById("status");
 
-      let transactions = [];
+    let transactions = [];
 
-      async function fetchTransactions() {
-        let query = [];
-        if (startDate.value) query.push(`start=${startDate.value}`);
-        if (endDate.value) query.push(`end=${endDate.value}`);
-        if (typeFilter.value) query.push(`type=${typeFilter.value}`);
-        const queryStr = query.length ? `?${query.join("&")}` : "";
+    async function fetchTransactions() {
+      let query = [];
+      if (startDate.value) query.push(`start=${startDate.value}`);
+      if (endDate.value) query.push(`end=${endDate.value}`);
+      if (typeFilter.value) query.push(`type=${typeFilter.value}`);
+      const queryStr = query.length ? `?${query.join("&")}` : "";
 
-        try {
-          const res = await fetch(`/api/transactions${queryStr}`);
-          transactions = await res.json();
-
-          tableBody.innerHTML = "";
-          if (!transactions.length) {
-            tableBody.innerHTML = `<tr><td colspan="5">No records found.</td></tr>`;
-            return;
+      try {
+        const res = await fetch(`/api/transactions/report${queryStr}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("boop_jwt")}`
           }
+        });
+        transactions = await res.json();
 
-          transactions.forEach(tx => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${new Date(tx.created_at).toLocaleString()}</td>
-              <td>${tx.user_name || tx.performed_by || "—"}</td>
-              <td>${tx.type}</td>
-              <td>$${parseFloat(tx.amount).toFixed(2)}</td>
-              <td>${tx.note || ""}</td>
-            `;
-            tableBody.appendChild(row);
-          });
-        } catch (err) {
-          console.error("❌ Fetch failed:", err);
-          statusEl.textContent = "Failed to load transactions.";
-          statusEl.style.color = "red";
+        tableBody.innerHTML = "";
+        if (!transactions.length) {
+          tableBody.innerHTML = `<tr><td colspan="5">No records found.</td></tr>`;
+          return;
         }
+
+        transactions.forEach(tx => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${new Date(tx.created_at).toLocaleString()}</td>
+            <td>${tx.user_name || tx.performed_by || "—"}</td>
+            <td>${tx.type}</td>
+            <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
+            <td>${tx.note || ""}</td>
+          `;
+          tableBody.appendChild(row);
+        });
+      } catch (err) {
+        console.error("❌ Fetch failed:", err);
+        statusEl.textContent = "Failed to load transactions.";
+        statusEl.style.color = "red";
       }
+    }
 
-      function exportCSV() {
-        if (!transactions.length) return;
+    function exportCSV() {
+      if (!transactions.length) return;
 
-        const headers = ["Date", "User", "Type", "Amount", "Note"];
-        const rows = transactions.map(tx => [
-          new Date(tx.created_at).toISOString(),
-          tx.user_name || tx.performed_by || "",
-          tx.type,
-          parseFloat(tx.amount).toFixed(2),
-          tx.note?.replace(/,/g, "") || ""
-        ]);
+      const headers = ["Date", "User", "Type", "Amount", "Note"];
+      const rows = transactions.map(tx => [
+        new Date(tx.created_at).toISOString(),
+        tx.user_name || tx.performed_by || "",
+        tx.type,
+        (tx.amount_cents / 100).toFixed(2),
+        tx.note?.replace(/,/g, "") || ""
+      ]);
 
-        const csvContent = [headers, ...rows]
-          .map(row => row.join(","))
-          .join("\n");
+      const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "boop-transactions.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
-        const blob = new Blob([csvContent], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "boop-transactions.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+    filterBtn.addEventListener("click", fetchTransactions);
+    exportBtn.addEventListener("click", exportCSV);
 
-      filterBtn.addEventListener("click", fetchTransactions);
-      exportBtn.addEventListener("click", exportCSV);
-
-      document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try {
-          await fetch("/api/logout", { method: "POST" });
-        } catch {}
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
-
-      fetchTransactions(); // Initial load
+    document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } catch {}
+      localStorage.clear();
+      window.location.href = "login.html";
     });
-  </script>
+
+    fetchTransactions();
+  });
+</script>
 </body>
 </html>
