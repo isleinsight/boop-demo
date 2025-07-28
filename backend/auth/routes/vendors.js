@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../../db");
+const { authenticateToken } = require("../middleware/authMiddleware");
 
 // Block direct vendor creation
 router.post("/", (req, res) => {
@@ -8,7 +9,7 @@ router.post("/", (req, res) => {
 });
 
 // GET: Only active, non-deleted vendors
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT v.*, u.email, u.first_name, u.last_name
@@ -24,9 +25,10 @@ router.get("/", async (req, res) => {
 });
 
 // PATCH: Update vendor details
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { business_name, category, phone } = req.body;
+  const adminId = req.user?.id;
 
   try {
     const result = await db.query(
@@ -43,6 +45,13 @@ router.patch("/:id", async (req, res) => {
       return res.status(404).json({ error: "Vendor not found" });
     }
 
+    // ✅ Log admin action
+    await db.query(
+      `INSERT INTO admin_actions (action, status, performed_by, target_id, requested_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      ['update_vendor', 'completed', adminId, id]
+    );
+
     res.json({ message: "Vendor updated", vendor: result.rows[0] });
 
   } catch (err) {
@@ -52,8 +61,9 @@ router.patch("/:id", async (req, res) => {
 });
 
 // DELETE: Soft-delete vendor (set deleted_at and suspend status)
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
+  const adminId = req.user?.id;
 
   try {
     const result = await db.query(
@@ -68,6 +78,13 @@ router.delete("/:id", async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Vendor not found or already deleted" });
     }
+
+    // ✅ Log admin action
+    await db.query(
+      `INSERT INTO admin_actions (action, status, performed_by, target_id, requested_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      ['soft_delete_vendor', 'completed', adminId, id]
+    );
 
     res.json({ message: "Vendor soft-deleted", vendor_id: result.rows[0].id });
 
