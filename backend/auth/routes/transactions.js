@@ -1,73 +1,65 @@
-// auth/routes/transactions.js
-const express = require("express");
-const { authenticateToken } = require("../middleware/authMiddleware");
+const express = require('express');
 const router = express.Router();
-const pool = require("../../db");
-const { v4: uuidv4 } = require("uuid");
+const pool = require('../../db');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
-// 📥 Create a transaction
-router.post("/", authenticateToken, async (req, res) => {
-  const { wallet_id, amount_cents, type, method, description, reference_code, metadata } = req.body;
+// 🔍 GET /api/transactions/recent (Admin + Accountant access)
+router.get('/recent', authenticateToken, async (req, res) => {
+  const { role, type } = req.user;
 
-  if (!wallet_id || typeof amount_cents !== "number" || !type) {
-    return res.status(400).json({ message: "Missing required fields" });
+  // 🛡️ Authorization
+  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
+    return res.status(403).json({ message: 'Unauthorized' });
   }
-
-  if (!["adjustment_add", "adjustment_subtract"].includes(type)) {
-    return res.status(400).json({ message: "Invalid transaction type" });
-  }
-
-  const txId = uuidv4();
-  const userRes = await pool.query("SELECT user_id FROM wallets WHERE id = $1", [wallet_id]);
-
-  if (userRes.rows.length === 0) {
-    return res.status(404).json({ message: "Wallet not found" });
-  }
-
-  const user_id = userRes.rows[0].user_id;
 
   try {
-    await pool.query(
-      `INSERT INTO transactions (
-        id, user_id, amount_cents, currency, type, method,
-        description, category, reference_code, metadata, created_at, updated_at
-      ) VALUES (
-        $1, $2, $3, 'BMD', $4, $5, $6, 'admin_adjustment', $7, $8, NOW(), NOW()
-      )`,
-      [
-        txId,
-        user_id,
-        amount_cents,
-        type,
-        method || "admin_manual",
-        description || "",
-        reference_code || null,
-        metadata || {}
-      ]
-    );
+    const result = await pool.query(`
+      SELECT
+        t.id,
+        t.user_id,
+        t.wallet_id,
+        t.type,
+        t.amount_cents,
+        t.note,
+        t.created_at,
+        u.name AS user_name,
+        u.email AS user_email
+      FROM transactions t
+      LEFT JOIN users u ON u.id = t.user_id
+      ORDER BY t.created_at DESC
+      LIMIT 50
+    `);
 
-    res.status(201).json({ message: "Transaction created", transaction_id: txId });
+    res.json(result.rows);
   } catch (err) {
-    console.error("❌ Error inserting transaction:", err.message);
-    res.status(500).json({ message: "Failed to create transaction" });
+    console.error('❌ Failed to load transactions:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve transactions.' });
   }
 });
 
-// 📤 Get recent transactions
-router.get("/", authenticateToken, async (req, res) => {
-  const limit = parseInt(req.query.limit) || 10;
-  const offset = parseInt(req.query.offset) || 0;
+// 👤 GET /api/transactions/mine (User personal history)
+router.get('/mine', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
 
   try {
-    const tx = await pool.query(
-      `SELECT * FROM transactions ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
-      [limit, offset]
-    );
+    const result = await pool.query(`
+      SELECT
+        id,
+        wallet_id,
+        type,
+        amount_cents,
+        note,
+        created_at
+      FROM transactions
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT 50
+    `, [userId]);
 
-    res.json(tx.rows);
+    res.json(result.rows);
   } catch (err) {
-    console.error("❌ Error fetching transactions:", err.message);
-    res.status(500).json({ message: "Failed to get transactions" });
+    console.error('❌ Failed to load user transactions:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve your transactions.' });
   }
 });
 
