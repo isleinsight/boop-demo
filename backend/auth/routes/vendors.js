@@ -81,7 +81,8 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 
     // ✅ Log admin action
     await db.query(
-      `INSERT INTO admin_actions (action, status, performed_by, target_id, requested_at)
+        `INSERT INTO admin_actions (action, status, performed_by, target_user_id, requested_at)
+   VALUES ($1, $2, $3, $4, NOW())`
        VALUES ($1, $2, $3, $4, NOW())`,
       ['soft_delete_vendor', 'completed', adminId, id]
     );
