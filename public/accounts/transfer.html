@@ -12,71 +12,82 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Transfer – BOOP Accounts</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <title>Transfer Funds – BOOP Accounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="../assets/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
+      background-color: #f5f7fa;
     }
 
-    .container-small {
-      max-width: 520px;
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
       background: white;
-      margin: 50px auto;
-      padding: 30px 40px;
+      padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
 
-    .input-group {
-      margin-bottom: 20px;
-    }
-
-    input, textarea, button {
+    table {
       width: 100%;
-      padding: 10px;
-      font-size: 1rem;
-      box-sizing: border-box;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      background: #2f80ed;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      border: none;
-    }
-
-    button:hover {
-      background: #1c6fd8;
-    }
-
-    .status {
-      text-align: center;
+      border-collapse: collapse;
       margin-top: 20px;
     }
 
-    #senderSuggestions div,
-    #recipientSuggestions div {
-      padding: 8px 12px;
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
       border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background-color: #f0f0f0;
+    }
+
+    .status {
+      color: red;
+      text-align: center;
+    }
+
+    button {
+      padding: 6px 12px;
+      background-color: #2f80ed;
+      color: white;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
     }
 
-    #senderSuggestions div:hover,
-    #recipientSuggestions div:hover {
-      background-color: #f0f0f0;
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      min-width: 300px;
+      max-width: 90%;
+    }
+
+    .close {
+      float: right;
+      font-size: 20px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-    <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -84,176 +95,135 @@
       </div>
       <div class="nav-right">
         <a href="index.html">Dashboard</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Accounts</a>
-          <div class="dropdown-content">
-            <a href="add-funds.html">Add Funds</a>
-            <a href="transfer.html">Transfer</a>
-            <a href="reports.html">Reports</a>
-            <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
-          </div>
-        </div>
-        <a href="view-users.html">View Users</a>
+        <a href="add-funds.html">Add Funds</a>
+        <a href="transfer.html" class="active">Transfer</a>
+        <a href="reports.html">Reports</a>
+        <a href="manage-treasury.html">Manage Treasury</a>
         <a href="transactions.html">Transactions</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
     </div>
   </nav>
 
-  <!-- Main Transfer Form -->
-  <div class="container-small">
-    <h3>Transfer Funds</h3>
+  <div class="container">
+    <h2>Pending Transfer Requests</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Sender</th>
+          <th>Recipient</th>
+          <th>Bank</th>
+          <th>Amount</th>
+          <th>Requested At</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="pendingTransfers">
+        <tr><td colspan="6" class="status">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-    <div class="input-group">
-      <label for="senderSearch">Sender</label>
-      <input type="text" id="senderSearch" placeholder="Search sender..." autocomplete="off" />
-      <div id="senderSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+  <!-- Modal for confirmation -->
+  <div class="modal" id="confirmModal">
+    <div class="modal-content">
+      <span class="close" id="closeModal">&times;</span>
+      <h3>Enter Confirmation Number</h3>
+      <p id="modalRequestInfo"></p>
+      <input type="text" id="confirmationNumber" placeholder="Confirmation #"/>
+      <button id="completeTransfer">Complete Transfer</button>
     </div>
-
-    <div class="input-group">
-      <label for="recipientSearch">Recipient</label>
-      <input type="text" id="recipientSearch" placeholder="Search recipient..." autocomplete="off" />
-      <div id="recipientSuggestions" style="border: 1px solid #ccc; display: none;"></div>
-    </div>
-
-    <div class="input-group">
-      <label for="amount">Amount (BMD)</label>
-      <input type="number" id="amount" min="1" placeholder="Enter amount..." />
-    </div>
-
-    <div class="input-group">
-      <label for="note">Note</label>
-      <textarea id="note" rows="3" placeholder="Optional note..."></textarea>
-    </div>
-
-    <button id="transferBtn">Transfer</button>
-    <div class="status" id="status"></div>
   </div>
 
   <script type="module">
+    const token = localStorage.getItem("boop_jwt");
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    const tableBody = document.getElementById("pendingTransfers");
+    const modal = document.getElementById("confirmModal");
+    const closeModal = document.getElementById("closeModal");
+    const confirmBtn = document.getElementById("completeTransfer");
+    const confirmationInput = document.getElementById("confirmationNumber");
+    const modalInfo = document.getElementById("modalRequestInfo");
+
+    let selectedRequestId = null;
+
+    async function fetchPendingRequests() {
+      try {
+        const res = await fetch("/api/transfer-requests/pending", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (!Array.isArray(data)) throw new Error("Unexpected response");
+
+        tableBody.innerHTML = data.map(r => `
+          <tr>
+            <td>${r.sender_name}</td>
+            <td>${r.recipient_name}</td>
+            <td>${r.recipient_bank}</td>
+            <td>$${(r.amount_cents / 100).toFixed(2)}</td>
+            <td>${new Date(r.created_at).toLocaleString()}</td>
+            <td><button onclick="lockAndOpen(${r.id}, '${r.sender_name}', '${r.recipient_name}')">Work On</button></td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+        tableBody.innerHTML = `<tr><td colspan="6" class="status">Failed to load transfer requests.</td></tr>`;
+      }
+    }
+
+    window.lockAndOpen = async (id, sender, recipient) => {
+      try {
+        const res = await fetch(`/api/transfer-requests/${id}/lock`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          return alert(err.message || "Someone else is already working on this.");
+        }
+
+        selectedRequestId = id;
+        modalInfo.textContent = `Transfer from ${sender} to ${recipient}`;
+        modal.style.display = "flex";
+      } catch (err) {
+        alert("Could not lock request.");
+      }
+    };
+
+    confirmBtn.onclick = async () => {
+      const code = confirmationInput.value.trim();
+      if (!code) return alert("Confirmation number required");
+
+      try {
+        const res = await fetch(`/api/transfer-requests/${selectedRequestId}/complete`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ confirmation_number: code })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          return alert(err.message || "Could not complete request.");
+        }
+
+        modal.style.display = "none";
+        confirmationInput.value = "";
+        fetchPendingRequests();
+      } catch (err) {
+        alert("Error finalizing transfer.");
+      }
+    };
+
+    closeModal.onclick = () => modal.style.display = "none";
+    window.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
+
     document.addEventListener("DOMContentLoaded", () => {
-      // 🔒 Permission check
-      const user = JSON.parse(localStorage.getItem("boopUser"));
-      if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
-        localStorage.clear();
-        window.location.href = "login.html";
-        return;
-      }
-
-      const senderSearch = document.getElementById("senderSearch");
-      const recipientSearch = document.getElementById("recipientSearch");
-      const senderSuggestions = document.getElementById("senderSuggestions");
-      const recipientSuggestions = document.getElementById("recipientSuggestions");
-      const amount = document.getElementById("amount");
-      const note = document.getElementById("note");
-      const transferBtn = document.getElementById("transferBtn");
-      const statusEl = document.getElementById("status");
-
-      let sender = null;
-      let recipient = null;
-
-      async function fetchSuggestions(query, container, setter) {
-        if (query.length < 2) {
-          container.style.display = "none";
-          return;
-        }
-
-        try {
-          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`);
-          const users = await res.json();
-          if (!users.length) {
-            container.innerHTML = "<div>No results</div>";
-          } else {
-            container.innerHTML = users.map(u => `
-              <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-                ${u.first_name} ${u.last_name} (${u.email})
-              </div>
-            `).join("");
-          }
-          container.style.display = "block";
-        } catch (err) {
-          console.error("❌ Error:", err);
-          container.innerHTML = "<div>Server error</div>";
-          container.style.display = "block";
-        }
-      }
-
-      senderSearch.addEventListener("input", () => fetchSuggestions(senderSearch.value, senderSuggestions, "sender"));
-      recipientSearch.addEventListener("input", () => fetchSuggestions(recipientSearch.value, recipientSuggestions, "recipient"));
-
-      senderSuggestions.addEventListener("click", e => {
-        const item = e.target.closest(".user-suggestion");
-        if (!item) return;
-        sender = { id: item.dataset.id, wallet_id: item.dataset.wallet };
-        senderSearch.value = item.textContent;
-        senderSuggestions.style.display = "none";
-      });
-
-      recipientSuggestions.addEventListener("click", e => {
-        const item = e.target.closest(".user-suggestion");
-        if (!item) return;
-        recipient = { id: item.dataset.id, wallet_id: item.dataset.wallet };
-        recipientSearch.value = item.textContent;
-        recipientSuggestions.style.display = "none";
-      });
-
-      document.addEventListener("click", (e) => {
-        if (!senderSuggestions.contains(e.target) && e.target !== senderSearch)
-          senderSuggestions.style.display = "none";
-        if (!recipientSuggestions.contains(e.target) && e.target !== recipientSearch)
-          recipientSuggestions.style.display = "none";
-      });
-
-      transferBtn.addEventListener("click", async () => {
-        if (!sender || !recipient || !amount.value || isNaN(amount.value)) {
-          statusEl.textContent = "Please fill out all required fields.";
-          statusEl.style.color = "red";
-          return;
-        }
-
-        try {
-          const res = await fetch("/api/transactions/transfer", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              from_wallet: sender.wallet_id,
-              to_wallet: recipient.wallet_id,
-              amount: parseFloat(amount.value),
-              note: note.value,
-              transferred_by: user.id
-            })
-          });
-
-          const result = await res.json();
-
-          if (res.ok) {
-            statusEl.textContent = "✅ Transfer successful!";
-            statusEl.style.color = "green";
-            senderSearch.value = recipientSearch.value = amount.value = note.value = "";
-            sender = recipient = null;
-          } else {
-            statusEl.textContent = `❌ ${result.error || "Transfer failed."}`;
-            statusEl.style.color = "red";
-          }
-        } catch (err) {
-          console.error("Transfer error:", err);
-          statusEl.textContent = "❌ Server error occurred.";
-          statusEl.style.color = "red";
-        }
-      });
-
-      // 🔓 Log out
-      const logoutBtn = document.getElementById("logoutBtn");
-      logoutBtn?.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try {
-          await fetch("/api/logout", { method: "POST" });
-        } catch (err) {
-          console.warn("Logout error:", err);
-        }
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
+      fetchPendingRequests();
     });
   </script>
 </body>
