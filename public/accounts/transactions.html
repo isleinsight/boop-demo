@@ -141,14 +141,20 @@
       // Optional auto-refresh every 60 seconds
       setInterval(loadTransactions, 60000);
 
-      const logoutBtn = document.getElementById("logoutBtn");
-      logoutBtn.addEventListener("click", (e) => {
+      // 🔓 Logout handler
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
-        localStorage.removeItem("boopUser");
-        localStorage.removeItem("boop_jwt");
-        window.location.href = "../login.html";
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } catch (err) {
+          console.warn("Logout API error:", err);
+        }
+        localStorage.clear();
+        window.location.href = "login.html";
       });
-    });
+    }
+    
   </script>
 
 </body>
