@@ -113,8 +113,11 @@ router.delete("/:id", async (req, res) => {
 // 👨‍👩‍👧 PARENT RELATIONSHIP ROUTES
 // =========================
 
+const { authenticateToken } = require("../middleware/authMiddleware");
+const logAdminAction = require("../middleware/log-admin-action");
+
 // ✅ POST /api/students/:id/parents — Add a parent
-router.post("/:id/parents", async (req, res) => {
+router.post("/:id/parents", authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { parent_id } = req.body;
 
@@ -130,9 +133,27 @@ router.post("/:id/parents", async (req, res) => {
       [id, parent_id]
     );
 
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "link_parent",
+      target_user_id: parent_id,
+      type: req.user.type,
+      status: "completed"
+    });
+
     res.json({ message: "Parent linked to student" });
   } catch (err) {
     console.error("❌ Error linking parent:", err);
+
+    await logAdminAction({
+      performed_by: req.user?.id || null,
+      action: "link_parent",
+      target_user_id: parent_id,
+      type: req.user?.type || "unknown",
+      status: "failed",
+      error_message: err.message
+    });
+
     res.status(500).json({ message: "Linking failed" });
   }
 });
