@@ -108,5 +108,24 @@
   </div>
 
   <script type="module" src="treasury.js"></script>
+  <script>
+
+ // 🔓 Logout handler
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } catch (err) {
+          console.warn("Logout API error:", err);
+        }
+        localStorage.clear();
+        window.location.href = "login.html";
+      });
+    }
+    
+  </script>
+  
+  
 </body>
 </html>
