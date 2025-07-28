@@ -124,6 +124,7 @@ try {
 } finally {
   client.release();
 }
+  });
 
 // ✅ Get users (with autocomplete or pagination, now including deleted filter)
 router.get("/", async (req, res) => {
