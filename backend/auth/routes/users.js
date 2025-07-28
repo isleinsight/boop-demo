@@ -29,93 +29,101 @@ router.post("/", authenticateToken, async (req, res) => {
   } = req.body;
 
   const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
+try {
+  await client.query("BEGIN");
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const result = await client.query(
-      `INSERT INTO users (
-         email, password_hash, first_name, middle_name, last_name, role, type, on_assistance
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [email, hashedPassword, first_name, middle_name || null, last_name, role, type, on_assistance]
+  const hashedPassword = await bcrypt.hash(password, 12);
+  const result = await client.query(
+    `INSERT INTO users (
+       email, password_hash, first_name, middle_name, last_name, role, type, on_assistance
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING *`,
+    [email, hashedPassword, first_name, middle_name || null, last_name, role, type, on_assistance]
+  );
+
+  const user = result.rows[0];
+
+  // 💳 Wallet
+  if (rolesWithWallet.includes(role)) {
+    const walletRes = await client.query(
+      `INSERT INTO wallets (user_id, id, status)
+       VALUES ($1, gen_random_uuid(), 'active')
+       RETURNING id`,
+      [user.id]
     );
-
-    const user = result.rows[0];
-
-    // 💳 Wallet
-    if (rolesWithWallet.includes(role)) {
-      const walletRes = await client.query(
-        `INSERT INTO wallets (user_id, id, status)
-         VALUES ($1, gen_random_uuid(), 'active')
-         RETURNING id`,
-        [user.id]
-      );
-      const walletId = walletRes.rows[0].id;
-      await client.query(`UPDATE users SET wallet_id = $1 WHERE id = $2`, [walletId, user.id]);
-      user.wallet_id = walletId;
-    }
-
-    // 🏢 Vendor
-    if (role === "vendor" && vendor) {
-      await client.query(
-        `INSERT INTO vendors (user_id, business_name, phone, category, approved, wallet_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [user.id, vendor.name, vendor.phone, vendor.category, vendor.approved === true, user.wallet_id]
-      );
-    }
-
-    // 🎓 Student
-    if (role === "student" && student) {
-      const { school_name, grade_level, expiry_date } = student;
-      if (!school_name || !expiry_date) {
-        throw new Error("Missing required student fields");
-      }
-
-      await client.query(
-        `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
-         VALUES ($1, $2, $3, $4)`,
-        [user.id, school_name, grade_level || null, expiry_date]
-      );
-    }
-
-    // ✅ Log creation
-    console.log("🧪 [CREATE USER] req.user =", req.user);
-    await logAdminAction({
-      performed_by: req.user.id,
-      action: "create_user",
-      target_user_id: user.id,
-      new_email: user.email,
-      type: req.user.type,
-      status: "completed"
-    });
-
-    await client.query("COMMIT");
-    res.status(201).json({ message: "User created", id: user.id, role: user.role });
-
-  } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("❌ Error creating user:", err);
-
-    await logAdminAction({
-      performed_by: req.user.id,
-      action: "create_user",
-      target_user_id: null,
-      new_email: email,
-      type: req.user.type,
-      status: "failed",
-      error_message: err.message
-    });
-
-    if (err.code === "23505") {
-      return res.status(400).json({ message: "Email already exists" });
-    }
-
-    res.status(500).json({ message: "Failed to create user" });
-  } finally {
-    client.release();
+    const walletId = walletRes.rows[0].id;
+    await client.query(
+      `UPDATE users SET wallet_id = $1 WHERE id = $2`,
+      [walletId, user.id]
+    );
+    user.wallet_id = walletId;
   }
-});
+
+  // 🏢 Vendor
+  if (role === "vendor" && vendor) {
+    await client.query(
+      `INSERT INTO vendors (user_id, business_name, phone, category, approved, wallet_id)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [user.id, vendor.name, vendor.phone, vendor.category, vendor.approved === true, user.wallet_id]
+    );
+  }
+
+  // 🎓 Student
+  if (role === "student" && student) {
+    const { school_name, grade_level, expiry_date } = student;
+    if (!school_name || !expiry_date) {
+      throw new Error("Missing required student fields");
+    }
+
+    await client.query(
+      `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
+       VALUES ($1, $2, $3, $4)`,
+      [user.id, school_name, grade_level || null, expiry_date]
+    );
+  }
+
+  // ✅ Log admin action
+  await logAdminAction({
+    performed_by: req.user.id,
+    action: "create_user",
+    target_user_id: user.id,
+    new_email: user.email,
+    type: req.user.type,
+    status: "completed",
+    completed_at: true
+  });
+
+  await client.query("COMMIT");
+
+  res.status(201).json({
+    message: "User created",
+    id: user.id,
+    role: user.role
+  });
+
+} catch (err) {
+  await client.query("ROLLBACK");
+  console.error("❌ Error creating user:", err);
+
+  await logAdminAction({
+    performed_by: req.user.id,
+    action: "create_user",
+    target_user_id: null,
+    new_email: email,
+    type: req.user.type,
+    status: "failed",
+    error_message: err.message
+  });
+
+  if (err.code === "23505") {
+    return res.status(400).json({ message: "Email already exists" });
+  }
+
+  res.status(500).json({ message: "Failed to create user" });
+
+} finally {
+  client.release();
+}
 
 // ✅ Get users (with autocomplete or pagination, now including deleted filter)
 router.get("/", async (req, res) => {
