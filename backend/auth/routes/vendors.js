@@ -45,12 +45,12 @@ router.patch("/:id", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Vendor not found" });
     }
 
-    // ✅ Log admin action
-    await db.query(
-      `INSERT INTO admin_actions (action, status, performed_by, target_id, requested_at)
-       VALUES ($1, $2, $3, $4, NOW())`,
-      ['update_vendor', 'completed', adminId, id]
-    );
+// ✅ Log admin action
+await db.query(
+  `INSERT INTO admin_actions (action, status, performed_by, target_id, requested_at, completed_at)
+   VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+  ['update_vendor', 'completed', adminId, id]
+);
 
     res.json({ message: "Vendor updated", vendor: result.rows[0] });
 
@@ -79,13 +79,12 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Vendor not found or already deleted" });
     }
 
-    // ✅ Log admin action
-    await db.query(
-        `INSERT INTO admin_actions (action, status, performed_by, target_user_id, requested_at)
-   VALUES ($1, $2, $3, $4, NOW())`
-       VALUES ($1, $2, $3, $4, NOW())`,
-      ['soft_delete_vendor', 'completed', adminId, id]
-    );
+// ✅ Log admin action
+await db.query(
+  `INSERT INTO admin_actions (action, status, performed_by, target_id, requested_at, completed_at)
+   VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+  ['update_vendor', 'completed', adminId, id]
+);
 
     res.json({ message: "Vendor soft-deleted", vendor_id: result.rows[0].id });
 
