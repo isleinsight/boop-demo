@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Actions – BOOP Accounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 50px auto;
+      background: white;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.95em;
+    }
+
+    th {
+      background-color: #f0f4f8;
+      text-align: left;
+    }
+
+    .status-pending { color: orange; }
+    .status-completed { color: green; }
+    .status-error { color: red; }
+
+    .status-message {
+      margin-top: 20px;
+      font-weight: bold;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+    </div>
+    <div class="nav-right">
+      <a href="index.html">Dashboard</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn" style="color: white;">Accounts</a>
+        <div class="dropdown-content">
+          <a href="add-funds.html">Add Funds</a>
+          <a href="transfer.html">Transfer</a>
+          <a href="reports.html">Reports</a>
+          <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
+        </div>
+      </div>
+      <a href="view-users.html">View Users</a>
+      <a href="transactions.html">Transactions</a>
+      <a href="admin-actions.html">Admin Actions</a>
+      <a href="#" id="logoutBtn">Log Out</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h2>Recent Admin Actions</h2>
+
+  <table id="adminActionsTable">
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>Status</th>
+        <th>Performed By</th>
+        <th>Target</th>
+        <th>Requested At</th>
+        <th>Completed At</th>
+        <th>Error Message</th>
+      </tr>
+    </thead>
+    <tbody id="adminActionsBody">
+      <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
+    </tbody>
+  </table>
+
+  <div id="statusMessage" class="status-message"></div>
+</div>
+
+<script type="module">
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  const token = localStorage.getItem("boop_jwt");
+  const tbody = document.getElementById("adminActionsBody");
+  const statusMessage = document.getElementById("statusMessage");
+
+  if (!user || user.role !== "admin") {
+    window.location.href = "../login.html";
+  }
+
+  async function loadAdminActions() {
+    try {
+      const res = await fetch("/api/admin-actions", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok || !Array.isArray(data)) {
+        throw new Error(data.message || "Failed to load admin actions.");
+      }
+
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No admin actions found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map(action => `
+        <tr>
+          <td>${action.action}</td>
+          <td class="status-${action.status}">${action.status}</td>
+          <td>${action.performed_by_name || "—"}<br><small>${action.performed_by_email || ""}</small></td>
+          <td>${action.target_name || "—"}<br><small>${action.target_email || ""}</small></td>
+          <td>${new Date(action.requested_at).toLocaleString()}</td>
+          <td>${action.completed_at ? new Date(action.completed_at).toLocaleString() : "—"}</td>
+          <td>${action.error_message || ""}</td>
+        </tr>
+      `).join("");
+
+    } catch (err) {
+      console.error("❌", err);
+      statusMessage.textContent = "Failed to load admin actions.";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadAdminActions();
+
+    document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } catch {}
+      localStorage.clear();
+      window.location.href = "login.html";
+    });
+
+    if (user?.type === "treasury") {
+      document.getElementById("manageTreasuryLink").style.display = "block";
+    }
+  });
+</script>
+</body>
+</html>
