@@ -31,6 +31,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // 📄 Fetch and render the 5 most recent transactions
+  async function fetchRecentTransactions() {
+    try {
+      const res = await fetch("/api/treasury/recent", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      const txContainer = document.querySelector(".transaction-placeholder");
+      if (!Array.isArray(data) || data.length === 0) {
+        txContainer.textContent = "No transactions yet.";
+        return;
+      }
+
+      txContainer.innerHTML = "<strong>Recent Transactions:</strong><ul style='list-style:none;padding-left:0;'>";
+
+      data.forEach(tx => {
+        const dollars = (tx.amount_cents / 100).toFixed(2);
+        const sign = tx.type === "credit" ? "+" : "-";
+        const color = tx.type === "credit" ? "green" : "red";
+        txContainer.innerHTML += `<li style="color:${color}">${sign}$${dollars} — ${tx.note}</li>`;
+      });
+
+      txContainer.innerHTML += "</ul>";
+    } catch (err) {
+      console.error("❌ Failed to fetch recent transactions:", err);
+    }
+  }
+
   // 📨 Submit adjustment
   async function submitAdjustment() {
     const amount = parseFloat(amountInput.value);
@@ -67,6 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
       amountInput.value = "";
       noteInput.value = "";
       await fetchBalance();
+      await fetchRecentTransactions(); // 🔁 Refresh list after update
 
     } catch (err) {
       console.error("❌ Submit failed:", err);
@@ -84,4 +115,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initial load
   fetchBalance();
+  fetchRecentTransactions(); // ✅ Now included on load
 });
