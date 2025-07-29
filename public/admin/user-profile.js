@@ -408,17 +408,22 @@ editBtn.onclick = () => {
 saveBtn.onclick = async () => {
   try {
     // Update user base profile
-    await fetch(`/api/users/${currentUserId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        first_name: document.getElementById("editFirstName").value,
-        middle_name: document.getElementById("editMiddleName").value,
-        last_name: document.getElementById("editLastName").value,
-        email: document.getElementById("editEmail").value,
-        on_assistance: document.getElementById("editAssistance").value === "true"
-      })
-    });
+    const token = localStorage.getItem("boop_jwt");
+
+await fetch(`/api/users/${currentUserId}`, {
+  method: "PATCH",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    first_name: document.getElementById("editFirstName").value,
+    middle_name: document.getElementById("editMiddleName").value,
+    last_name: document.getElementById("editLastName").value,
+    email: document.getElementById("editEmail").value,
+    on_assistance: document.getElementById("editAssistance").value === "true"
+  })
+});
 
     // Conditionally update student
     if (currentUserData.role === "student") {
