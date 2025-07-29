@@ -137,10 +137,10 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at)
-       VALUES ($1, NULL, 'credit', $2, $3, NOW())`,
-      [wallet_id, Math.round(parseFloat(amount) * 100), note || null]
-    );
+  `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+   VALUES ($1, NULL, 'credit', $2, $3, NOW(), $4)`,
+  [wallet_id, Math.round(parseFloat(amount) * 100), note || null, adminId]
+);
 
     res.status(201).json({ success: true });
   } catch (err) {
