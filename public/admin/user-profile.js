@@ -408,51 +408,43 @@ editBtn.onclick = () => {
 saveBtn.onclick = async () => {
   try {
     // Update user base profile
-    const token = localStorage.getItem("boop_jwt");
-
-await fetch(`/api/users/${currentUserId}`, {
-  method: "PATCH",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    first_name: document.getElementById("editFirstName").value,
-    middle_name: document.getElementById("editMiddleName").value,
-    last_name: document.getElementById("editLastName").value,
-    email: document.getElementById("editEmail").value,
-    on_assistance: document.getElementById("editAssistance").value === "true"
-  })
-});
+    await fetch(`/api/users/${currentUserId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        first_name: document.getElementById("editFirstName").value,
+        middle_name: document.getElementById("editMiddleName").value,
+        last_name: document.getElementById("editLastName").value,
+        email: document.getElementById("editEmail").value,
+        on_assistance: document.getElementById("editAssistance").value === "true"
+      })
+    });
 
     // Conditionally update student
     if (currentUserData.role === "student") {
       await fetch(`/api/students/${currentUserId}`, {
-  method: "PATCH",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    school_name: document.getElementById("editSchool")?.value,
-    grade_level: document.getElementById("editGrade")?.value,
-    expiry_date: document.getElementById("editExpiry")?.value
-  })
-});
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          school_name: document.getElementById("editSchool")?.value,
+          grade_level: document.getElementById("editGrade")?.value,
+          expiry_date: document.getElementById("editExpiry")?.value
+        })
+      });
     }
 
-    await fetch(`/api/vendors/${currentUserId}`, {
-  method: "PATCH",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    business_name: document.getElementById("editVendorBusiness")?.value,
-    category: document.getElementById("editVendorCategory")?.value,
-    phone: document.getElementById("editVendorPhone")?.value
-  })
-});
+    // Conditionally update vendor
+    if (currentUserData.role === "vendor") {
+      await fetch(`/api/vendors/${currentUserId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_name: document.getElementById("editVendorBusiness")?.value,
+          category: document.getElementById("editVendorCategory")?.value,
+          phone: document.getElementById("editVendorPhone")?.value,
+
+        })
+      });
     }
 
     alert("Profile updated.");
