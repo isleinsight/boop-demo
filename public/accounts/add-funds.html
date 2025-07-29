@@ -144,6 +144,7 @@
 
     let selectedUser = null;
 
+    // 🔍 Search users with wallet
     userSearch.addEventListener("input", async () => {
       const query = userSearch.value.trim();
       if (query.length < 2) {
@@ -155,13 +156,15 @@
         const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`);
         const users = await res.json();
 
-        suggestions.innerHTML = users.length
-          ? users.map(u => `
-              <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-                ${u.first_name} ${u.last_name} (${u.email})
-              </div>
-            `).join("")
-          : "<div>No results found</div>";
+        if (!users.length) {
+          suggestions.innerHTML = "<div>No results found</div>";
+        } else {
+          suggestions.innerHTML = users.map(u => `
+            <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+              ${u.first_name} ${u.last_name} (${u.email})
+            </div>
+          `).join("");
+        }
 
         suggestions.style.display = "block";
       } catch (err) {
@@ -171,6 +174,7 @@
       }
     });
 
+    // 👤 Select from search
     suggestions.addEventListener("click", (e) => {
       const item = e.target.closest(".user-suggestion");
       if (!item) return;
@@ -182,14 +186,16 @@
       suggestions.style.display = "none";
     });
 
+    // 🧼 Close dropdown if clicked outside
     document.addEventListener("click", (e) => {
       if (!suggestions.contains(e.target) && e.target !== userSearch) {
         suggestions.style.display = "none";
       }
     });
 
+    // 💸 Add Funds
     addFundsBtn.addEventListener("click", async () => {
-      if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value)) {
+      if (!selectedUser?.wallet_id || !selectedUser?.id || !amount.value || isNaN(amount.value)) {
         statusEl.textContent = "Please complete all required fields.";
         statusEl.style.color = "red";
         return;
@@ -200,10 +206,11 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}` // ✅ FIXED HERE
+            Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
             wallet_id: selectedUser.wallet_id,
+            user_id: selectedUser.id,
             amount: parseFloat(amount.value),
             note: note.value,
             added_by: user.id
@@ -230,6 +237,7 @@
       }
     });
 
+    // 🔓 Logout handler
     if (logoutBtn) {
       logoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
