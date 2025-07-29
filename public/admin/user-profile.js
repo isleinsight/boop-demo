@@ -428,28 +428,31 @@ await fetch(`/api/users/${currentUserId}`, {
     // Conditionally update student
     if (currentUserData.role === "student") {
       await fetch(`/api/students/${currentUserId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          school_name: document.getElementById("editSchool")?.value,
-          grade_level: document.getElementById("editGrade")?.value,
-          expiry_date: document.getElementById("editExpiry")?.value
-        })
-      });
+  method: "PATCH",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    school_name: document.getElementById("editSchool")?.value,
+    grade_level: document.getElementById("editGrade")?.value,
+    expiry_date: document.getElementById("editExpiry")?.value
+  })
+});
     }
 
-    // Conditionally update vendor
-    if (currentUserData.role === "vendor") {
-      await fetch(`/api/vendors/${currentUserId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business_name: document.getElementById("editVendorBusiness")?.value,
-          category: document.getElementById("editVendorCategory")?.value,
-          phone: document.getElementById("editVendorPhone")?.value,
-
-        })
-      });
+    await fetch(`/api/vendors/${currentUserId}`, {
+  method: "PATCH",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    business_name: document.getElementById("editVendorBusiness")?.value,
+    category: document.getElementById("editVendorCategory")?.value,
+    phone: document.getElementById("editVendorPhone")?.value
+  })
+});
     }
 
     alert("Profile updated.");
