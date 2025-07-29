@@ -1,12 +1,20 @@
 <script>
-  // 🔒 IMMEDIATE redirect for unauthorized users
   const user = JSON.parse(localStorage.getItem("boopUser"));
-  if (!user || user.role !== "admin") {
-    window.location.href = "login.html"; // Boot them out
+  const allowedTypes = ["superadmin", "admin"];
+
+  const isAuthorized =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
+
+  if (!isAuthorized) {
+    window.location.href = "login.html"; // Redirect non-authorized users
   }
 
-  // ✅ DOM logic after authorization confirmed
   document.addEventListener("DOMContentLoaded", () => {
+    console.log("admin.js has loaded!");
+
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", (e) => {
