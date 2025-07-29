@@ -30,7 +30,7 @@ try {
 
   const meData = await res.json();
 
-  const allowedTypes = ["superadmin", "admin", "support"];
+  const allowedTypes = ["super_admin", "admin", "support"];
   const isAllowed = meData?.role === "admin" && allowedTypes.includes(meData?.type);
 
   if (!isAllowed) {
