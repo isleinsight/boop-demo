@@ -1,28 +1,3 @@
-<script>
-  // user is already declared in the top script, just reuse it
-  const allowedTypes = ["super_admin", "admin", "support"];
-  const isAllowed =
-    user &&
-    typeof user === "object" &&
-    user.role === "admin" &&
-    allowedTypes.includes(user.type);
-
-  if (!isAllowed) {
-    window.location.href = "login.html";
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("admin.js has loaded!");
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        localStorage.removeItem("boopUser");
-        window.location.href = "login.html";
-      });
-    }
-  });
-</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -98,27 +73,27 @@
 <body>
 
 <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      <div class="nav-right">
-        <a href="index.html">Dashboard</a>
-        <a href="admin-actions.html">Admin Actions</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Add</a>
-          <div class="dropdown-content">
-            <a href="add-user.html">Add User</a>
-            <a href="assign-card.html">Assign Card</a>
-            <a href="assign-student.html">Assign Student</a>
-          </div>
-        </div>
-        <a href="view-users.html">View Users</a>
-        <a href="#" id="logoutBtn">Log Out</a>
-      </div>
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
     </div>
-  </nav>
+    <div class="nav-right">
+      <a href="index.html">Dashboard</a>
+      <a href="admin-actions.html">Admin Actions</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn" style="color: white;">Add</a>
+        <div class="dropdown-content">
+          <a href="add-user.html">Add User</a>
+          <a href="assign-card.html">Assign Card</a>
+          <a href="assign-student.html">Assign Student</a>
+        </div>
+      </div>
+      <a href="view-users.html">View Users</a>
+      <a href="#" id="logoutBtn">Log Out</a>
+    </div>
+  </div>
+</nav>
 
 <!-- Page Content -->
 <div class="container-small">
@@ -137,134 +112,147 @@
 </div>
 
 <script>
-  const parentSearch = document.getElementById("parentSearch");
-  const studentSearch = document.getElementById("studentSearch");
-  const parentSuggestions = document.getElementById("parentSuggestions");
-  const studentSuggestions = document.getElementById("studentSuggestions");
-  const assignBtn = document.getElementById("assignBtn");
-  const statusMessage = document.getElementById("statusMessage");
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  const allowedTypes = ["super_admin", "admin", "support"];
+  const isAllowed =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
 
-  let selectedParent = null;
-  let selectedStudent = null;
+  if (!isAllowed) {
+    window.location.href = "login.html";
+  }
 
-  function setupSearch(inputEl, suggestionBox, role, onSelect) {
-    inputEl.addEventListener("input", async () => {
-      const query = inputEl.value.trim();
-      if (query.length < 2) {
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("✅ assign-student.js loaded!");
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+
+    const parentSearch = document.getElementById("parentSearch");
+    const studentSearch = document.getElementById("studentSearch");
+    const parentSuggestions = document.getElementById("parentSuggestions");
+    const studentSuggestions = document.getElementById("studentSuggestions");
+    const assignBtn = document.getElementById("assignBtn");
+    const statusMessage = document.getElementById("statusMessage");
+
+    let selectedParent = null;
+    let selectedStudent = null;
+
+    function setupSearch(inputEl, suggestionBox, role, onSelect) {
+      inputEl.addEventListener("input", async () => {
+        const query = inputEl.value.trim();
+        if (query.length < 2) {
+          suggestionBox.style.display = "none";
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&role=${role}`);
+          const users = await res.json();
+
+          if (!Array.isArray(users) || users.length === 0) {
+            suggestionBox.innerHTML = `<div class="suggestion-item">No results found</div>`;
+          } else {
+            suggestionBox.innerHTML = users.map(u => `
+              <div class="suggestion-item" data-id="${u.id}">
+                ${u.first_name} ${u.last_name} (${u.email})
+              </div>
+            `).join("");
+          }
+
+          suggestionBox.style.display = "block";
+        } catch (err) {
+          console.error("❌ Error fetching suggestions:", err);
+        }
+      });
+
+      suggestionBox.addEventListener("click", e => {
+        const item = e.target.closest(".suggestion-item");
+        if (!item || !item.dataset.id) return;
+        const id = item.dataset.id;
+        inputEl.value = item.textContent;
         suggestionBox.style.display = "none";
+        onSelect(id);
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!suggestionBox.contains(e.target) && e.target !== inputEl) {
+          suggestionBox.style.display = "none";
+        }
+      });
+    }
+
+    setupSearch(parentSearch, parentSuggestions, "parent", id => selectedParent = id);
+    setupSearch(studentSearch, studentSuggestions, "student", id => selectedStudent = id);
+
+    assignBtn.addEventListener("click", async () => {
+      if (!selectedParent || !selectedStudent) {
+        statusMessage.textContent = "Please select both a parent and a student.";
+        statusMessage.style.color = "red";
         return;
       }
 
       try {
-        const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&role=${role}`);
-        const users = await res.json();
+        const res = await fetch("/api/user-students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: selectedParent, student_id: selectedStudent })
+        });
 
-        if (!Array.isArray(users) || users.length === 0) {
-          suggestionBox.innerHTML = `<div class="suggestion-item">No results found</div>`;
-        } else {
-          suggestionBox.innerHTML = users.map(u => `
-            <div class="suggestion-item" data-id="${u.id}">
-              ${u.first_name} ${u.last_name} (${u.email})
-            </div>
-          `).join("");
+        if (!res.ok) throw new Error("Failed to assign student");
+
+        statusMessage.textContent = "✅ Student assigned successfully!";
+        statusMessage.style.color = "green";
+        parentSearch.value = "";
+        studentSearch.value = "";
+        selectedParent = null;
+        selectedStudent = null;
+
+        let anotherBtn = document.getElementById("assignAnotherBtn");
+        if (!anotherBtn) {
+          anotherBtn = document.createElement("button");
+          anotherBtn.id = "assignAnotherBtn";
+          anotherBtn.textContent = "Assign Another Student";
+          anotherBtn.style.marginTop = "12px";
+          anotherBtn.style.width = "100%";
+          anotherBtn.style.padding = "10px";
+          anotherBtn.style.fontSize = "1rem";
+          statusMessage.insertAdjacentElement("afterend", anotherBtn);
+
+          anotherBtn.addEventListener("click", () => {
+            parentSearch.value = "";
+            studentSearch.value = "";
+            selectedParent = null;
+            selectedStudent = null;
+            statusMessage.textContent = "";
+            anotherBtn.remove();
+          });
         }
 
-        suggestionBox.style.display = "block";
       } catch (err) {
-        console.error("❌ Error fetching suggestions:", err);
+        console.error("❌ Assignment failed:", err);
+        statusMessage.textContent = "❌ Failed to assign student.";
+        statusMessage.style.color = "red";
       }
     });
 
-    suggestionBox.addEventListener("click", e => {
-      const item = e.target.closest(".suggestion-item");
-      if (!item || !item.dataset.id) return;
-      const id = item.dataset.id;
-      inputEl.value = item.textContent;
-      suggestionBox.style.display = "none";
-      onSelect(id);
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!suggestionBox.contains(e.target) && e.target !== inputEl) {
-        suggestionBox.style.display = "none";
-      }
-    });
-  }
-
-  setupSearch(parentSearch, parentSuggestions, "parent", id => selectedParent = id);
-  setupSearch(studentSearch, studentSuggestions, "student", id => selectedStudent = id);
-
-  assignBtn.addEventListener("click", async () => {
-    if (!selectedParent || !selectedStudent) {
-      statusMessage.textContent = "Please select both a parent and a student.";
-      statusMessage.style.color = "red";
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/user-students", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: selectedParent, student_id: selectedStudent })
+    document.querySelectorAll("input").forEach(el => {
+      el.addEventListener("input", () => {
+        statusMessage.textContent = "";
+        const resetBtn = document.getElementById("assignAnotherBtn");
+        if (resetBtn) resetBtn.remove();
       });
-
-      if (!res.ok) throw new Error("Failed to assign student");
-
-      statusMessage.textContent = "✅ Student assigned successfully!";
-      statusMessage.style.color = "green";
-      parentSearch.value = "";
-      studentSearch.value = "";
-      selectedParent = null;
-      selectedStudent = null;
-
-      // ✅ Add button to assign another
-      let anotherBtn = document.getElementById("assignAnotherBtn");
-      if (!anotherBtn) {
-        anotherBtn = document.createElement("button");
-        anotherBtn.id = "assignAnotherBtn";
-        anotherBtn.textContent = "Assign Another Student";
-        anotherBtn.style.marginTop = "12px";
-        anotherBtn.style.width = "100%";
-        anotherBtn.style.padding = "10px";
-        anotherBtn.style.fontSize = "1rem";
-        statusMessage.insertAdjacentElement("afterend", anotherBtn);
-
-        anotherBtn.addEventListener("click", () => {
-          parentSearch.value = "";
-          studentSearch.value = "";
-          selectedParent = null;
-          selectedStudent = null;
-          statusMessage.textContent = "";
-          anotherBtn.remove();
-        });
-      }
-
-    } catch (err) {
-      console.error("❌ Assignment failed:", err);
-      statusMessage.textContent = "❌ Failed to assign student.";
-      statusMessage.style.color = "red";
-    }
-  });
-
-  // Clear status + button on new input
-  document.querySelectorAll("input").forEach(el => {
-    el.addEventListener("input", () => {
-      statusMessage.textContent = "";
-      const resetBtn = document.getElementById("assignAnotherBtn");
-      if (resetBtn) resetBtn.remove();
-    });
-  });
-
-  // Logout
-  document.getElementById("logoutBtn")?.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST" }).then(() => {
-      window.location.href = "login.html";
     });
   });
 </script>
-
-
-
 
 </body>
 </html>
