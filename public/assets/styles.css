@@ -836,9 +836,7 @@ select {
   transition: background 0.2s ease;
 }
 
-.nav-dropdown .dropdown-content a:hover {
-  background-color: #f4f4f4;
-}
+
 
 /* Show dropdown on hover or focus-within for touch devices */
 .nav-dropdown:hover .dropdown-content,
