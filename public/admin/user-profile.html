@@ -1,20 +1,23 @@
 <script>
   // 🔒 Auth check at top
   let user;
-  try {
-    user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || typeof user !== "object" || user.role !== "admin") {
-      throw new Error("Not authorized");
-    }
-  } catch (err) {
-    localStorage.removeItem("boopUser");
-    window.location.href = "login.html";
-  }
+try {
+  user = JSON.parse(localStorage.getItem("boopUser"));
 
-  // ✅ DOM logic after authorization confirmed
-  document.addEventListener("DOMContentLoaded", () => {
-    // your logic below...
-  });
+  const allowedTypes = ["superadmin", "admin", "support"];
+  const isAllowed =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
+
+  if (!isAllowed) {
+    throw new Error("Not authorized");
+  }
+} catch (err) {
+  localStorage.removeItem("boopUser");
+  window.location.href = "login.html";
+}
 </script>
 <!DOCTYPE html>
 <html lang="en">
@@ -140,7 +143,14 @@
   <script type="module" src="user-profile.js"></script>
 <script>
   // user is already declared in the top script, just reuse it
-  if (!user || user.role !== "admin") {
+  const allowedTypes = ["superadmin", "admin", "support"];
+  const isAllowed =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
+
+  if (!isAllowed) {
     window.location.href = "login.html";
   }
 
