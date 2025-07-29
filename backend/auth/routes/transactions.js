@@ -4,11 +4,10 @@ const router = express.Router();
 const pool = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// 🔍 GET /api/transactions/recent (Admin + Accountant access)
+// 🔍 GET /api/transactions/recent
 router.get('/recent', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
 
-  // 🛡️ Authorization
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ message: 'Unauthorized' });
   }
@@ -38,7 +37,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
   }
 });
 
-// 👤 GET /api/transactions/mine (User personal history)
+// 👤 GET /api/transactions/mine
 router.get('/mine', authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
@@ -64,17 +63,15 @@ router.get('/mine', authenticateToken, async (req, res) => {
   }
 });
 
-// 📊 GET /api/transactions/report – Filterable export-friendly route
+// 📊 GET /api/transactions/report
 router.get('/report', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
   const { start, end, type: filterType } = req.query;
 
-  // 🛡️ Authorization
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ message: 'Unauthorized' });
   }
 
-  // ⛏️ Build dynamic WHERE clause
   const values = [];
   const conditions = [];
 
@@ -121,26 +118,31 @@ router.get('/report', authenticateToken, async (req, res) => {
   }
 });
 
-
 // 💸 POST /api/transactions/add-funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
-  const { wallet_id, amount, note, added_by } = req.body;
+  const { wallet_id, amount, note, user_id } = req.body;
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ error: 'Unauthorized' });
   }
 
-  if (!wallet_id || !amount || isNaN(amount)) {
+  if (!wallet_id || !amount || isNaN(amount) || !user_id) {
     return res.status(400).json({ error: 'Missing or invalid fields' });
   }
 
   try {
     await pool.query(
-  `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-   VALUES ($1, NULL, 'credit', $2, $3, NOW(), $4)`,
-  [wallet_id, Math.round(parseFloat(amount) * 100), note || null, adminId]
-);
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
+      [
+        wallet_id,
+        user_id,
+        Math.round(parseFloat(amount) * 100),
+        note || null,
+        adminId
+      ]
+    );
 
     res.status(201).json({ success: true });
   } catch (err) {
