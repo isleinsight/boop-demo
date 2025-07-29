@@ -272,20 +272,22 @@
 
 
 <script>
-  // 🔒 IMMEDIATE redirect for unauthorized users
   const user = JSON.parse(localStorage.getItem("boopUser"));
+  const allowedTypes = ["superadmin", "admin"];
 
-if (
-  !user ||
-  user.role !== "admin" ||
-  ["viewer", "support", "accountant"].includes(user.type)
-) {
-  alert("🚫 You do not have permission to access this page.");
-  window.location.href = "login.html"; // Or redirect somewhere safer if needed
-}
+  const isAuthorized =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
 
-  // ✅ DOM logic after authorization confirmed
+  if (!isAuthorized) {
+    window.location.href = "login.html"; // Redirect non-authorized users
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
+    console.log("admin.js has loaded!");
+
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", (e) => {
