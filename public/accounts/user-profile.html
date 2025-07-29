@@ -3,7 +3,7 @@
   let user;
   try {
     user = JSON.parse(localStorage.getItem("boopUser"));
-    if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
+    if (!user || user.role !== "admin" || !["accountant", "treasury", "viewer"].includes(user.type)) {
       throw new Error("Not authorized");
     }
   } catch (err) {
