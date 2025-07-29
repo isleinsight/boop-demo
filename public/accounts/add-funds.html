@@ -75,61 +75,62 @@
 </head>
 <body>
 
-    <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      <div class="nav-right">
-        <a href="index.html">Dashboard</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Accounts</a>
-          <div class="dropdown-content">
-            <a href="add-funds.html">Add Funds</a>
-            <a href="transfer.html">Transfer</a>
-            <a href="reports.html">Reports</a>
-            <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
-          </div>
+<!-- Top Nav -->
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+    </div>
+    <div class="nav-right">
+      <a href="index.html">Dashboard</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn" style="color: white;">Accounts</a>
+        <div class="dropdown-content">
+          <a href="add-funds.html">Add Funds</a>
+          <a href="transfer.html">Transfer</a>
+          <a href="reports.html">Reports</a>
+          <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
         </div>
-        <a href="view-users.html">View Users</a>
-        <a href="transactions.html">Transactions</a>
-        <a href="#" id="logoutBtn">Log Out</a>
       </div>
+      <a href="view-users.html">View Users</a>
+      <a href="transactions.html">Transactions</a>
+      <a href="#" id="logoutBtn">Log Out</a>
     </div>
-  </nav>
-
-  <!-- Main Form -->
-  <div class="container-small">
-    <h3>Add Funds</h3>
-
-    <div class="input-group">
-      <label for="userSearch">Search User</label>
-      <input type="text" id="userSearch" placeholder="Type name or email..." autocomplete="off" />
-      <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
-    </div>
-
-    <div class="input-group">
-      <label for="amount">Amount (BMD)</label>
-      <input type="number" id="amount" min="1" placeholder="Enter amount..." />
-    </div>
-
-    <div class="input-group">
-      <label for="note">Note</label>
-      <textarea id="note" rows="3" placeholder="Optional note..."></textarea>
-    </div>
-
-    <button id="addFundsBtn">Add Funds</button>
-    <div class="status" id="status"></div>
   </div>
+</nav>
+
+<!-- Main Form -->
+<div class="container-small">
+  <h3>Add Funds</h3>
+
+  <div class="input-group">
+    <label for="userSearch">Search User</label>
+    <input type="text" id="userSearch" placeholder="Type name or email..." autocomplete="off" />
+    <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+  </div>
+
+  <div class="input-group">
+    <label for="amount">Amount (BMD)</label>
+    <input type="number" id="amount" min="1" placeholder="Enter amount..." />
+  </div>
+
+  <div class="input-group">
+    <label for="note">Note</label>
+    <textarea id="note" rows="3" placeholder="Optional note..."></textarea>
+  </div>
+
+  <button id="addFundsBtn">Add Funds</button>
+  <div class="status" id="status"></div>
+</div>
 
 <script type="module">
   document.addEventListener("DOMContentLoaded", () => {
-    // 🛡️ Restrict to accountant admins only
     const user = JSON.parse(localStorage.getItem("boopUser"));
+    const token = localStorage.getItem("boop_jwt");
+
     if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
       localStorage.clear();
-      window.location.href = "login.html"; // in the same Accounts folder
+      window.location.href = "login.html";
       return;
     }
 
@@ -143,7 +144,6 @@
 
     let selectedUser = null;
 
-    // 🔍 Search users with wallet
     userSearch.addEventListener("input", async () => {
       const query = userSearch.value.trim();
       if (query.length < 2) {
@@ -155,15 +155,13 @@
         const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`);
         const users = await res.json();
 
-        if (!users.length) {
-          suggestions.innerHTML = "<div>No results found</div>";
-        } else {
-          suggestions.innerHTML = users.map(u => `
-            <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-              ${u.first_name} ${u.last_name} (${u.email})
-            </div>
-          `).join("");
-        }
+        suggestions.innerHTML = users.length
+          ? users.map(u => `
+              <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+                ${u.first_name} ${u.last_name} (${u.email})
+              </div>
+            `).join("")
+          : "<div>No results found</div>";
 
         suggestions.style.display = "block";
       } catch (err) {
@@ -173,7 +171,6 @@
       }
     });
 
-    // 👤 Select from search
     suggestions.addEventListener("click", (e) => {
       const item = e.target.closest(".user-suggestion");
       if (!item) return;
@@ -185,17 +182,13 @@
       suggestions.style.display = "none";
     });
 
-    // 🧼 Close dropdown if clicked outside
     document.addEventListener("click", (e) => {
       if (!suggestions.contains(e.target) && e.target !== userSearch) {
         suggestions.style.display = "none";
       }
     });
 
-    // 💸 Add Funds
     addFundsBtn.addEventListener("click", async () => {
-      const admin = JSON.parse(localStorage.getItem("boopUser"));
-
       if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value)) {
         statusEl.textContent = "Please complete all required fields.";
         statusEl.style.color = "red";
@@ -205,12 +198,15 @@
       try {
         const res = await fetch("/api/transactions/add-funds", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}` // ✅ FIXED HERE
+          },
           body: JSON.stringify({
             wallet_id: selectedUser.wallet_id,
             amount: parseFloat(amount.value),
             note: note.value,
-            added_by: admin.id
+            added_by: user.id
           })
         });
 
@@ -234,7 +230,6 @@
       }
     });
 
-    // 🔓 Logout handler
     if (logoutBtn) {
       logoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
