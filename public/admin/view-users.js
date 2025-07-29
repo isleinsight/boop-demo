@@ -200,6 +200,13 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
   }
 
   searchBtn.addEventListener("click", () => { currentPage = 1; fetchUsers(); });
+  searchInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault(); // Prevent accidental form submission
+    currentPage = 1;
+    fetchUsers();
+  }
+});
   clearSearchBtn.addEventListener("click", () => {
     searchInput.value = "";
     roleFilter.value = "";
