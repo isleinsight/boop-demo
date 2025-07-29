@@ -99,14 +99,33 @@
 </div>
 
 <script type="module">
+  
   const user = JSON.parse(localStorage.getItem("boopUser"));
-  const token = localStorage.getItem("boop_jwt");
-  const tbody = document.getElementById("adminActionsBody");
-  const statusMessage = document.getElementById("statusMessage");
+  const allowedTypes = ["superadmin", "admin", "support"];
 
-  if (!user || user.role !== "admin") {
-    window.location.href = "../login.html";
+  const isAuthorized =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
+
+  if (!isAuthorized) {
+    window.location.href = "login.html"; // Redirect non-authorized users
   }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("admin.js has loaded!");
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+  });
+
 
   async function loadAdminActions() {
     try {
