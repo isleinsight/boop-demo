@@ -22,14 +22,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentUserEmail = null;
   let currentUser = null;
 
-  // ✅ Restrict access to only accountant-type admins
+// ✅ Restrict access to only superadmin, admin, and support-type admins
 try {
   const res = await fetch("/api/me", {
     headers: { Authorization: `Bearer ${token}` }
   });
+
   const meData = await res.json();
 
-  if (!meData || meData.role !== "admin") {
+  const allowedTypes = ["superadmin", "admin", "support"];
+  const isAllowed = meData?.role === "admin" && allowedTypes.includes(meData?.type);
+
+  if (!isAllowed) {
     throw new Error("Not authorized");
   }
 
