@@ -121,4 +121,32 @@ router.get('/report', authenticateToken, async (req, res) => {
   }
 });
 
+
+// 💸 POST /api/transactions/add-funds
+router.post('/add-funds', authenticateToken, async (req, res) => {
+  const { role, type, id: adminId } = req.user;
+  const { wallet_id, amount, note, added_by } = req.body;
+
+  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  if (!wallet_id || !amount || isNaN(amount)) {
+    return res.status(400).json({ error: 'Missing or invalid fields' });
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at)
+       VALUES ($1, NULL, 'credit', $2, $3, NOW())`,
+      [wallet_id, Math.round(parseFloat(amount) * 100), note || null]
+    );
+
+    res.status(201).json({ success: true });
+  } catch (err) {
+    console.error("❌ Failed to add funds:", err.message);
+    res.status(500).json({ error: 'Server error while adding funds' });
+  }
+});
+
 module.exports = router;
