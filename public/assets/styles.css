@@ -1,4 +1,3 @@
-
 form input,
 form select {
   width: 100%;
@@ -845,4 +844,32 @@ select {
 .nav-dropdown:hover .dropdown-content,
 .nav-dropdown:focus-within .dropdown-content {
   display: block;
+}
+
+select.btnEdit {
+  appearance: none;               /* Remove default OS styling */
+  background-color: #f9fbfd;      /* Light background */
+  border: 1px solid #ccc;         /* Soft border */
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 18px;
+  cursor: pointer;
+  transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+select.btnEdit:hover {
+  border-color: #2f80ed;
+  background-color: #eef5ff;
+}
+
+select.btnEdit:focus {
+  outline: none;
+  border-color: #2f80ed;
+  box-shadow: 0 0 0 2px rgba(47, 128, 237, 0.2);
 }
