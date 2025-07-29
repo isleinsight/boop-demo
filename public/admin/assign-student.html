@@ -1,23 +1,26 @@
 <script>
-  // 🔒 Auth check at top with admin type restrictions
-  let user;
-  try {
-    user = JSON.parse(localStorage.getItem("boopUser"));
-    if (
-      !user ||
-      user.role !== "admin" ||
-      ["viewer", "accountant"].includes(user.type)
-    ) {
-      throw new Error("Not authorized");
-    }
-  } catch (err) {
-    localStorage.removeItem("boopUser");
+  // user is already declared in the top script, just reuse it
+  const allowedTypes = ["superadmin", "admin", "support"];
+  const isAllowed =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
+
+  if (!isAllowed) {
     window.location.href = "login.html";
   }
 
-  // ✅ DOM logic after authorization confirmed
   document.addEventListener("DOMContentLoaded", () => {
-    // your logic below...
+    console.log("admin.js has loaded!");
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
   });
 </script>
 <!DOCTYPE html>
