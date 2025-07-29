@@ -90,7 +90,7 @@ try {
     new_email: user.email,
     type: req.user.type,
     status: "completed",
-    completed_at: true
+    completed_at: new Date()
   });
 
   await client.query("COMMIT");
@@ -431,7 +431,8 @@ router.post("/:id/signout", authenticateToken, async (req, res) => {
       action: "signout",
       target_user_id: id,
       type: req.user.type,
-      status: "completed"
+      status: "completed",
+      completed_at: new Date()
     });
 
     res.status(200).json({ message: "User has been force signed out." });
