@@ -64,7 +64,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ PATCH /api/students/:id — Update school or expiry info
+// ✅ PATCH /api/students/:id — Update school or expiry info (with upsert fallback)
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -98,18 +98,25 @@ router.patch("/:id", async (req, res) => {
       RETURNING *
     `;
 
-    values.push(id); // This is the user_id
+    values.push(id); // This is user_id
 
     const result = await pool.query(updateQuery, values);
 
+    // 🧩 If no student row was found, create one instead
     if (result.rowCount === 0) {
-      return res.status(404).json({ message: "Student not found for this user_id" });
+      const insertRes = await pool.query(
+        `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [id, req.body.school_name, req.body.grade_level || null, req.body.expiry_date]
+      );
+
+      return res.status(201).json({ message: "Student created", student: insertRes.rows[0] });
     }
 
     res.json({ message: "Student updated", student: result.rows[0] });
-
   } catch (err) {
-    console.error("❌ Error updating student:", err);
+    console.error("❌ Error upserting student:", err);
     res.status(500).json({ message: "Update failed" });
   }
 });
