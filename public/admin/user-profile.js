@@ -26,10 +26,42 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
   }
 
   async function fetchJSON(url, options = {}) {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error("Network error");
-    return await res.json();
+  const token = localStorage.getItem("boop_jwt");
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  } else if (options.autoRedirect !== false) {
+    window.location.href = "login.html";
+    return;
   }
+
+  const fetchOptions = {
+    ...options,
+    headers,
+  };
+
+  const res = await fetch(url, fetchOptions);
+
+  if (res.status === 401 || res.status === 403) {
+    console.warn("⚠️ Token rejected or expired");
+    if (options.autoRedirect !== false) {
+      window.location.href = "login.html";
+    }
+    throw new Error("Unauthorized");
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || "Network error");
+  }
+
+  return await res.json();
+}
 
   function formatDatePretty(dateStr) {
     const date = new Date(dateStr);
