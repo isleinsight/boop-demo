@@ -410,17 +410,7 @@ editBtn.onclick = () => {
     }
   });
 
-  // Toggle student input fields
-  if (currentUserData.role === "student") {
-    ["School", "Grade", "Expiry"].forEach(field => {
-      const viewEl = document.getElementById(`view${field}`);
-      const editEl = document.getElementById(`edit${field}`);
-      if (viewEl && editEl) {
-        viewEl.style.display = "none";
-        editEl.style.display = "block";
-      }
-    });
-  }
+  
 
   // Toggle vendor input fields
   if (currentUserData.role === "vendor") {
