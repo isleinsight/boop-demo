@@ -453,34 +453,7 @@ saveBtn.onclick = async () => {
     console.warn("❌ User update failed:", err);
   }
 
-  // ✅ Update or create student if needed
-  if (currentUserData.role === "student") {
-    const studentData = {
-      school_name: document.getElementById("editSchool")?.value,
-      grade_level: document.getElementById("editGrade")?.value,
-      expiry_date: document.getElementById("editExpiry")?.value
-    };
-
-    try {
-      if (currentUserData.student_profile) {
-        await fetchJSON(`/api/students/${currentUserId}`, {
-          method: "PATCH",
-          body: JSON.stringify(studentData)
-        });
-      } else {
-        await fetchJSON(`/api/students`, {
-          method: "POST",
-          body: JSON.stringify({
-            user_id: currentUserId,
-            ...studentData
-          })
-        });
-      }
-    } catch (err) {
-      hadError = true;
-      console.warn("❌ Student update/create failed:", err);
-    }
-  }
+  
 
   // ✅ Vendor update
   if (currentUserData.role === "vendor") {
