@@ -535,4 +535,5 @@ saveBtn.onclick = async () => {
     });
 
     loadUserProfile();
-});
+  }
+}; // ✅ CLOSE saveBtn.onclick
