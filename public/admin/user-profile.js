@@ -248,27 +248,33 @@ if (user.role === "student") {
 
   if (s) {
     studentInfoSection.innerHTML = `
-      <div class="section-title">Student Info</div>
-      <div class="user-details-grid">
-        <div>
-          <span class="label">School</span>
-          <span class="value" id="viewSchool">${s.school_name || "-"}</span>
-          <input type="text" id="editSchool" value="${s.school_name || ""}" style="display:none; width: 100%;" />
-        </div>
+  <div class="section-title">Student Info</div>
 
-        <div>
-          <span class="label">Grade</span>
-          <span class="value" id="viewGrade">${s.grade_level || "-"}</span>
-          <input type="text" id="editGrade" value="${s.grade_level || ""}" style="display:none; width: 100%;" />
-        </div>
+  <div style="margin-top: 10px; margin-bottom: 10px;">
+    <button id="editStudentBtn" class="btnEdit">Edit Student</button>
+    <button id="saveStudentBtn" class="btnEdit" style="display:none;">Save Student Info</button>
+  </div>
 
-        <div>
-          <span class="label">Expiry</span>
-          <span class="value" id="viewExpiry">${s.expiry_date ? formatDatePretty(s.expiry_date) : "-"}</span>
-          <input type="date" id="editExpiry" value="${s.expiry_date ? s.expiry_date.slice(0, 10) : ""}" style="display:none; width: 100%;" />
-        </div>
-      </div>
-    `;
+  <div class="user-details-grid">
+    <div>
+      <span class="label">School</span>
+      <span class="value" id="viewSchool">${s.school_name || "-"}</span>
+      <input type="text" id="editSchool" value="${s.school_name || ""}" style="display:none; width: 100%;" />
+    </div>
+
+    <div>
+      <span class="label">Grade</span>
+      <span class="value" id="viewGrade">${s.grade_level || "-"}</span>
+      <input type="text" id="editGrade" value="${s.grade_level || ""}" style="display:none; width: 100%;" />
+    </div>
+
+    <div>
+      <span class="label">Expiry</span>
+      <span class="value" id="viewExpiry">${s.expiry_date ? formatDatePretty(s.expiry_date) : "-"}</span>
+      <input type="date" id="editExpiry" value="${s.expiry_date ? s.expiry_date.slice(0, 10) : ""}" style="display:none; width: 100%;" />
+    </div>
+  </div>
+`;
     studentInfoSection.style.display = "block";
   }
 
