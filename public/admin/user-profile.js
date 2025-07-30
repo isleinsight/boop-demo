@@ -569,6 +569,50 @@ editStudentBtn.onclick = () => {
 
   saveStudentBtn.style.display = "inline-block";
 };
+
+saveStudentBtn.onclick = async () => {
+  const studentData = {
+    school_name: document.getElementById("editSchool")?.value,
+    grade_level: document.getElementById("editGrade")?.value,
+    expiry_date: document.getElementById("editExpiry")?.value
+  };
+
+  try {
+    if (currentUserData?.student_profile) {
+      await fetchJSON(`/api/students/${currentUserId}`, {
+        method: "PATCH",
+        body: JSON.stringify(studentData)
+      });
+    } else {
+      await fetchJSON(`/api/students`, {
+        method: "POST",
+        body: JSON.stringify({
+          user_id: currentUserId,
+          ...studentData
+        })
+      });
+    }
+
+    alert("✅ Student info saved.");
+
+    // Toggle UI back to view mode
+    ["School", "Grade", "Expiry"].forEach(field => {
+      const viewEl = document.getElementById(`view${field}`);
+      const editEl = document.getElementById(`edit${field}`);
+      if (viewEl && editEl) {
+        viewEl.style.display = "inline-block";
+        editEl.style.display = "none";
+      }
+    });
+
+    saveStudentBtn.style.display = "none";
+    loadUserProfile(); // refresh view
+
+  } catch (err) {
+    console.error("❌ Failed to save student info:", err);
+    alert("Failed to save student info.");
+  }
+};
   
   loadUserProfile();
 });
