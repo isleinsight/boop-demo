@@ -537,3 +537,4 @@ saveBtn.onclick = async () => {
     loadUserProfile();
   }
 }; // ✅ CLOSE saveBtn.onclick
+}); // <-- closes the DOMContentLoaded event listener
