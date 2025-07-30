@@ -590,6 +590,22 @@ isEditMode = false;
     console.error("Force sign-out check failed:", err);
   }
 })();
+
+  const editStudentBtn = document.getElementById("editStudentBtn");
+const saveStudentBtn = document.getElementById("saveStudentBtn");
+
+editStudentBtn.onclick = () => {
+  ["School", "Grade", "Expiry"].forEach(field => {
+    const viewEl = document.getElementById(`view${field}`);
+    const editEl = document.getElementById(`edit${field}`);
+    if (viewEl && editEl) {
+      viewEl.style.display = "none";
+      editEl.style.display = "block";
+    }
+  });
+
+  saveStudentBtn.style.display = "inline-block";
+};
   
   loadUserProfile();
 });
