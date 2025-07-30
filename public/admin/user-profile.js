@@ -595,7 +595,6 @@ saveStudentBtn.onclick = async () => {
 
     alert("✅ Student info saved.");
 
-    // Toggle UI back to view mode
     ["School", "Grade", "Expiry"].forEach(field => {
       const viewEl = document.getElementById(`view${field}`);
       const editEl = document.getElementById(`edit${field}`);
@@ -606,7 +605,7 @@ saveStudentBtn.onclick = async () => {
     });
 
     saveStudentBtn.style.display = "none";
-    loadUserProfile(); // refresh view
+    loadUserProfile();
 
   } catch (err) {
     console.error("❌ Failed to save student info:", err);
