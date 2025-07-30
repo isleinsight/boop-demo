@@ -438,48 +438,79 @@ editBtn.onclick = () => {
 };
 
 saveBtn.onclick = async () => {
+  let hadError = false;
+
+  // ✅ Update user base info
   try {
-    // Update user base profile
     await fetchJSON(`/api/users/${currentUserId}`, {
-  method: "PATCH",
-  body: JSON.stringify({
-    first_name: document.getElementById("editFirstName").value,
-    middle_name: document.getElementById("editMiddleName").value,
-    last_name: document.getElementById("editLastName").value,
-    email: document.getElementById("editEmail").value,
-    on_assistance: document.getElementById("editAssistance").value === "true"
-  })
-});
+      method: "PATCH",
+      body: JSON.stringify({
+        first_name: document.getElementById("editFirstName").value,
+        middle_name: document.getElementById("editMiddleName").value,
+        last_name: document.getElementById("editLastName").value,
+        email: document.getElementById("editEmail").value,
+        on_assistance: document.getElementById("editAssistance").value === "true"
+      })
+    });
+  } catch (err) {
+    hadError = true;
+    console.warn("❌ User update failed:", err);
+  }
 
-    // Conditionally update student
-    if (currentUserData.role === "student") {
-      await fetchJSON(`/api/students/${currentUserId}`, {
-  method: "PATCH",
-  body: JSON.stringify({
-    school_name: document.getElementById("editSchool")?.value,
-    grade_level: document.getElementById("editGrade")?.value,
-    expiry_date: document.getElementById("editExpiry")?.value
-  })
-});
+  // ✅ Update or create student if needed
+  if (currentUserData.role === "student") {
+    const studentData = {
+      school_name: document.getElementById("editSchool")?.value,
+      grade_level: document.getElementById("editGrade")?.value,
+      expiry_date: document.getElementById("editExpiry")?.value
+    };
+
+    try {
+      if (currentUserData.student_profile) {
+        await fetchJSON(`/api/students/${currentUserId}`, {
+          method: "PATCH",
+          body: JSON.stringify(studentData)
+        });
+      } else {
+        await fetchJSON(`/api/students`, {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: currentUserId,
+            ...studentData
+          })
+        });
+      }
+    } catch (err) {
+      hadError = true;
+      console.warn("❌ Student update/create failed:", err);
     }
+  }
 
-    // Conditionally update vendor
-    if (currentUserData.role === "vendor") {
+  // ✅ Vendor update
+  if (currentUserData.role === "vendor") {
+    try {
       await fetchJSON(`/api/vendors/${currentUserId}`, {
-  method: "PATCH",
-  body: JSON.stringify({
-    business_name: document.getElementById("editVendorBusiness")?.value,
-    category: document.getElementById("editVendorCategory")?.value,
-    phone: document.getElementById("editVendorPhone")?.value,
-  })
-});
+        method: "PATCH",
+        body: JSON.stringify({
+          business_name: document.getElementById("editVendorBusiness")?.value,
+          category: document.getElementById("editVendorCategory")?.value,
+          phone: document.getElementById("editVendorPhone")?.value,
+        })
+      });
+    } catch (err) {
+      hadError = true;
+      console.warn("❌ Vendor update failed:", err);
     }
+  }
 
-    alert("Profile updated.");
+  // ✅ Final outcome
+  if (hadError) {
+    alert("Some changes were saved, but not all.");
+  } else {
+    alert("✅ All changes saved.");
     isEditMode = false;
     saveBtn.style.display = "none";
 
-    // Toggle all inputs back to display mode
     [
       "FirstName", "MiddleName", "LastName", "Email", "Assistance",
       "School", "Grade", "Expiry",
@@ -493,19 +524,13 @@ saveBtn.onclick = async () => {
       }
     });
 
-    // Hide remove buttons again
     document.querySelectorAll(".remove-student-wrapper").forEach(el => {
       el.style.display = "none";
     });
 
     loadUserProfile();
-  } catch (err) {
-    console.error("❌ Failed to save profile:", err);
-    alert("Error saving changes.");
   }
 };
-
-
     
       
 
