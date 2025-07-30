@@ -67,28 +67,47 @@ router.get("/:id", async (req, res) => {
 // ✅ PATCH /api/students/:id — Update school or expiry info
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const fields = ["school_name", "grade_level", "expiry_date"];
-  const updates = [];
+
+  const fieldsToUpdate = [];
   const values = [];
 
-  fields.forEach((field) => {
-    if (req.body[field] !== undefined) {
-      updates.push(`${field} = $${updates.length + 1}`);
-      values.push(req.body[field]);
-    }
-  });
+  if (req.body.school_name !== undefined) {
+    fieldsToUpdate.push("school_name = $1");
+    values.push(req.body.school_name);
+  }
 
-  if (updates.length === 0) {
+  if (req.body.grade_level !== undefined) {
+    fieldsToUpdate.push("grade_level = $2");
+    values.push(req.body.grade_level);
+  }
+
+  if (req.body.expiry_date !== undefined) {
+    fieldsToUpdate.push("expiry_date = $3");
+    values.push(req.body.expiry_date);
+  }
+
+  if (fieldsToUpdate.length === 0) {
     return res.status(400).json({ message: "No fields to update" });
   }
 
   try {
-    await pool.query(
-      `UPDATE students SET ${updates.join(", ")} WHERE user_id = $${values.length + 1}`,
-      [...values, id]
-    );
+    const updateQuery = `
+      UPDATE students
+      SET ${fieldsToUpdate.join(", ")}
+      WHERE user_id = $${values.length + 1}
+      RETURNING *
+    `;
 
-    res.json({ message: "Student updated" });
+    values.push(id); // This is the user_id
+
+    const result = await pool.query(updateQuery, values);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Student not found for this user_id" });
+    }
+
+    res.json({ message: "Student updated", student: result.rows[0] });
+
   } catch (err) {
     console.error("❌ Error updating student:", err);
     res.status(500).json({ message: "Update failed" });
