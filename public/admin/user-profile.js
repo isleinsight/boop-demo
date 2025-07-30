@@ -396,7 +396,7 @@ if (user.role === "vendor") {
   }
 }
       
-      // === Edit Profile Setup ===
+// === Edit Profile Setup ===
 editBtn.onclick = () => {
   isEditMode = true;
 
@@ -410,7 +410,17 @@ editBtn.onclick = () => {
     }
   });
 
-  
+  // Toggle student input fields (if any)
+  if (currentUserData.role === "student") {
+    ["School", "Grade", "Expiry"].forEach(field => {
+      const viewEl = document.getElementById(`view${field}`);
+      const editEl = document.getElementById(`edit${field}`);
+      if (viewEl && editEl) {
+        viewEl.style.display = "none";
+        editEl.style.display = "block";
+      }
+    });
+  }
 
   // Toggle vendor input fields
   if (currentUserData.role === "vendor") {
@@ -453,7 +463,34 @@ saveBtn.onclick = async () => {
     console.warn("❌ User update failed:", err);
   }
 
-  
+  // ✅ Student profile update
+  if (currentUserData.role === "student") {
+    const studentData = {
+      school_name: document.getElementById("editSchool")?.value,
+      grade_level: document.getElementById("editGrade")?.value,
+      expiry_date: document.getElementById("editExpiry")?.value
+    };
+
+    try {
+      if (currentUserData?.student_profile) {
+        await fetchJSON(`/api/students/${currentUserId}`, {
+          method: "PATCH",
+          body: JSON.stringify(studentData)
+        });
+      } else {
+        await fetchJSON(`/api/students`, {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: currentUserId,
+            ...studentData
+          })
+        });
+      }
+    } catch (err) {
+      hadError = true;
+      console.warn("❌ Student update failed:", err);
+    }
+  }
 
   // ✅ Vendor update
   if (currentUserData.role === "vendor") {
@@ -500,118 +537,3 @@ saveBtn.onclick = async () => {
     loadUserProfile();
   }
 };
-    
-      
-
-    } catch (err) {
-      console.error("❌ Failed to load user:", err);
-      alert("Error loading user");
-      window.location.href = "view-users.html";
-    }
-  }
-
-  logoutBtn?.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST" }).then(() => {
-      window.location.href = "index.html";
-    });
-  });
-isEditMode = false;
-
-// ✅ Check if current user has been force signed out
-(async () => {
-  const token = localStorage.getItem("boop_jwt");
-  if (!token) return;
-
-  try {
-    const res = await fetch("/api/me", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!res.ok) return;
-
-    const user = await res.json();
-
-    if (user.force_signed_out) {
-      alert("You have been signed out by an administrator.");
-      localStorage.clear();
-
-      try {
-        const sessionRes = await fetch(`/api/sessions/${user.email}`, { method: "DELETE" });
-
-        // ignore 404 (session already gone)
-        if (sessionRes.status !== 200 && sessionRes.status !== 404) {
-          console.warn("🧹 Session deletion failed:", await sessionRes.text());
-        }
-      } catch (err) {
-        console.warn("🧹 Session cleanup failed:", err);
-      }
-
-      window.location.href = "login.html";
-    }
-  } catch (err) {
-    console.error("Force sign-out check failed:", err);
-  }
-})();
-
-  const editStudentBtn = document.getElementById("editStudentBtn");
-const saveStudentBtn = document.getElementById("saveStudentBtn");
-
-editStudentBtn.onclick = () => {
-  ["School", "Grade", "Expiry"].forEach(field => {
-    const viewEl = document.getElementById(`view${field}`);
-    const editEl = document.getElementById(`edit${field}`);
-    if (viewEl && editEl) {
-      viewEl.style.display = "none";
-      editEl.style.display = "block";
-    }
-  });
-
-  saveStudentBtn.style.display = "inline-block";
-};
-
-saveStudentBtn.onclick = async () => {
-  const studentData = {
-    school_name: document.getElementById("editSchool")?.value,
-    grade_level: document.getElementById("editGrade")?.value,
-    expiry_date: document.getElementById("editExpiry")?.value
-  };
-
-  try {
-    if (currentUserData?.student_profile) {
-      await fetchJSON(`/api/students/${currentUserId}`, {
-        method: "PATCH",
-        body: JSON.stringify(studentData)
-      });
-    } else {
-      await fetchJSON(`/api/students`, {
-        method: "POST",
-        body: JSON.stringify({
-          user_id: currentUserId,
-          ...studentData
-        })
-      });
-    }
-
-    alert("✅ Student info saved.");
-
-    ["School", "Grade", "Expiry"].forEach(field => {
-      const viewEl = document.getElementById(`view${field}`);
-      const editEl = document.getElementById(`edit${field}`);
-      if (viewEl && editEl) {
-        viewEl.style.display = "inline-block";
-        editEl.style.display = "none";
-      }
-    });
-
-    saveStudentBtn.style.display = "none";
-    loadUserProfile();
-
-  } catch (err) {
-    console.error("❌ Failed to save student info:", err);
-    alert("Failed to save student info.");
-  }
-};
-  
-  loadUserProfile();
-});
