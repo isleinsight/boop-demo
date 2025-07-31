@@ -300,39 +300,29 @@ if (user.role === "student") {
     }
 
     if (saveStudentBtn) {
-      saveStudentBtn.onclick = async () => {
-        const studentData = {
-          school_name: document.getElementById("editSchool")?.value,
-          grade_level: document.getElementById("editGrade")?.value,
-          expiry_date: document.getElementById("editExpiry")?.value,
-        };
+  saveStudentBtn.onclick = async () => {
+    const studentData = {
+      school_name: document.getElementById("editSchool")?.value,
+      grade_level: document.getElementById("editGrade")?.value,
+      expiry_date: document.getElementById("editExpiry")?.value,
+    };
 
-        try {
-          if (currentUserData?.student_profile) {
-            await fetchJSON(`/api/students/${currentUserId}`, {
-              method: "PATCH",
-              body: JSON.stringify(studentData)
-            });
-          } else {
-            await fetchJSON(`/api/students`, {
-              method: "POST",
-              body: JSON.stringify({
-                user_id: currentUserId,
-                ...studentData
-              })
-            });
-          }
+    try {
+      await fetchJSON(`/api/students/${currentUserId}`, {
+        method: "PATCH",
+        body: JSON.stringify(studentData)
+      });
 
-          alert("✅ Student info saved.");
-          isEditMode = false;
-          saveStudentBtn.style.display = "none";
-          loadUserProfile();
-        } catch (err) {
-          console.error("❌ Failed to save student data:", err);
-          alert("Failed to save student info.");
-        }
-      };
+      alert("✅ Student info saved.");
+      isEditMode = false;
+      saveStudentBtn.style.display = "none";
+      loadUserProfile();
+    } catch (err) {
+      console.error("❌ Failed to save student data:", err);
+      alert("Failed to save student info.");
     }
+  };
+}
   }
 }
       
