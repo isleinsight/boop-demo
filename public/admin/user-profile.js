@@ -76,30 +76,34 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 
       let walletHTML = "";
 
-// ✅ All Cards: Transit & Spending
-try {
-  const allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
-  const transitCards = allCards.filter(c => c.type === "transit");
-  const spendingCards = allCards.filter(c => c.type === "spending");
+// ✅ All Cards: Transit & Spending (safely skip for users with no wallet)
+if (user.wallet_id || user.wallet?.id) {
+  try {
+    const allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
+    const transitCards = allCards.filter(c => c.type === "transit");
+    const spendingCards = allCards.filter(c => c.type === "spending");
 
-  // Show Transit Cards
-  if (transitCards.length > 0) {
-    transitCards.forEach(card => {
-      walletHTML += `<div><span class="label">Transit Card</span><span class="value">${card.uid}</span></div>`;
-    });
-  } else {
-    walletHTML += `<div><span class="label">Transit Card</span><span class="value">None</span></div>`;
-  }
+    // Show Transit Cards
+    if (transitCards.length > 0) {
+      transitCards.forEach(card => {
+        walletHTML += `<div><span class="label">Transit Card</span><span class="value">${card.uid}</span></div>`;
+      });
+    } else {
+      walletHTML += `<div><span class="label">Transit Card</span><span class="value">None</span></div>`;
+    }
 
-  // Show Spending Card (optional, remove if you want only transit)
-  if (spendingCards.length > 0) {
-    spendingCards.forEach(card => {
-      walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
-    });
+    // Show Spending Card (optional)
+    if (spendingCards.length > 0) {
+      spendingCards.forEach(card => {
+        walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
+      });
+    }
+  } catch (err) {
+    console.warn("🟡 Failed to load cards:", err.message);
+    walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
   }
-} catch (err) {
-  console.warn("🟡 Failed to load cards:", err.message);
-  walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
+} else {
+  walletHTML += `<div><span class="label">Cards</span><span class="value">Not applicable</span></div>`;
 }
 
 userInfo.innerHTML = `
