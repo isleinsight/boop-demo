@@ -47,7 +47,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 
 // ✅ Log admin action
 await db.query(
-  `INSERT INTO admin_actions (action, status, performed_by, target_id, requested_at, completed_at)
+  `INSERT INTO admin_actions (action, status, performed_by, target_user_id, requested_at, completed_at)
    VALUES ($1, $2, $3, $4, NOW(), NOW())`,
   ['update_vendor', 'completed', adminId, id]
 );
