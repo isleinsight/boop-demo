@@ -123,7 +123,7 @@ if (user.wallet_id || user.wallet?.id) {
 } else {
   walletHTML += `<div><span class="label">Cards</span><span class="value">Not applicable</span></div>`;
 }
-      let assistanceHTML = "";
+     let assistanceHTML = "";
 if (user.wallet || user.wallet_id) {
   assistanceHTML = `
     <div>
@@ -135,7 +135,7 @@ if (user.wallet || user.wallet_id) {
       </select>
     </div>
   `;
-}
+} 
 
 userInfo.innerHTML = `
   <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
@@ -160,7 +160,10 @@ userInfo.innerHTML = `
   ${walletHTML}
 `;
 
-document.getElementById("editAssistance").value = user.on_assistance ? "true" : "false";
+const assistDropdown = document.getElementById("editAssistance");
+if (assistDropdown) {
+  assistDropdown.value = user.on_assistance ? "true" : "false";
+}
 
       // ✅ dropdown
 
