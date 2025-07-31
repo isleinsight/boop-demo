@@ -1,7 +1,9 @@
-// backend/auth/routes/students.js
-
+const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
+
+const { authenticateToken } = require("../middleware/authMiddleware");
+const logAdminAction = require("../middleware/log-admin-action");
 
 // ✅ POST /api/students — Create a student entry
 router.post("/", async (req, res) => {
@@ -66,26 +68,46 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ PATCH /api/students/:id — Update school or expiry info (with upsert fallback)
+// ✅ PATCH /api/students/:id — Update or insert by user_id
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
 
-  console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
+  const fieldsToUpdate = [];
+  const values = [];
+
+  if (req.body.school_name !== undefined) {
+    values.push(req.body.school_name);
+    fieldsToUpdate.push(`school_name = $${values.length}`);
+  }
+
+  if (req.body.grade_level !== undefined) {
+    values.push(req.body.grade_level);
+    fieldsToUpdate.push(`grade_level = $${values.length}`);
+  }
+
+  if (req.body.expiry_date !== undefined) {
+    values.push(req.body.expiry_date);
+    fieldsToUpdate.push(`expiry_date = $${values.length}`);
+  }
+
+  if (fieldsToUpdate.length === 0) {
+    return res.status(400).json({ message: "No fields to update" });
+  }
+
+  values.push(id); // This is user_id
+
+  const updateQuery = `
+    UPDATE students
+    SET ${fieldsToUpdate.join(", ")}
+    WHERE user_id = $${values.length}
+    RETURNING *
+  `;
 
   try {
-    const updateQuery = `
-      UPDATE students
-      SET ${fieldsToUpdate.join(", ")}
-      WHERE user_id = $${values.length + 1}
-      RETURNING *
-    `;
-
-    values.push(id); // This is user_id
-
     const result = await pool.query(updateQuery, values);
 
-    // 🧩 If no student row was found, create one instead
     if (result.rowCount === 0) {
+      // Student not found, insert instead
       const insertRes = await pool.query(
         `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
          VALUES ($1, $2, $3, $4)
@@ -103,7 +125,7 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// ✅ DELETE /api/students/:id — Delete the student row
+// ✅ DELETE /api/students/:id — Delete by user_id
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -116,15 +138,11 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-
 // =========================
 // 👨‍👩‍👧 PARENT RELATIONSHIP ROUTES
 // =========================
 
-const { authenticateToken } = require("../middleware/authMiddleware");
-const logAdminAction = require("../middleware/log-admin-action");
-
-// ✅ POST /api/students/:id/parents — Add a parent
+// ✅ POST /api/students/:id/parents — Link parent to student
 router.post("/:id/parents", authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { parent_id } = req.body;
@@ -166,7 +184,7 @@ router.post("/:id/parents", authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ GET /api/students/:id/parents — List all parents
+// ✅ GET /api/students/:id/parents — List parents for student
 router.get("/:id/parents", async (req, res) => {
   const { id } = req.params;
 
@@ -185,7 +203,7 @@ router.get("/:id/parents", async (req, res) => {
   }
 });
 
-// ✅ GET /api/students/for-parent/:parentId — Get students assigned to a specific parent
+// ✅ GET /api/students/for-parent/:parentId — Students linked to parent
 router.get("/for-parent/:parentId", async (req, res) => {
   const { parentId } = req.params;
 
@@ -205,8 +223,7 @@ router.get("/for-parent/:parentId", async (req, res) => {
   }
 });
 
-
-// ✅ DELETE /api/students/:id/parents/:parentId — Remove a parent
+// ✅ DELETE /api/students/:id/parents/:parentId — Unlink parent from student
 router.delete("/:id/parents/:parentId", async (req, res) => {
   const { id, parentId } = req.params;
 
