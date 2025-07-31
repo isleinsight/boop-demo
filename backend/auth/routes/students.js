@@ -1,3 +1,5 @@
+// backend/auth/routes/students.js
+
 const router = express.Router();
 const pool = require("../../db");
 
