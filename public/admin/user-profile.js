@@ -163,6 +163,41 @@ userInfo.innerHTML = `
   ${walletHTML}
 `;
 
+  // ✅ Load transactions for this user
+const transactionTableBody = document.querySelector("#transactionTable tbody");
+transactionTableBody.innerHTML = "";
+
+let transactions = [];
+
+try {
+  transactions = await fetchJSON(`/api/transactions/user/${user.id}`);
+} catch (err) {
+  console.error("❌ Failed to fetch transactions:", err.message);
+}
+
+if (transactions.length === 0) {
+  transactionTableBody.innerHTML = `
+    <tr>
+      <td colspan="6" style="text-align: center; padding: 20px; color: #888;">
+        No transactions recorded.
+      </td>
+    </tr>
+  `;
+} else {
+  transactions.forEach(tx => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${new Date(tx.created_at).toLocaleString()}</td>
+      <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
+      <td>${tx.wallet_id || "-"}</td>
+      <td>${tx.type}</td>
+      <td>${tx.note || "-"}</td>
+      <td>${tx.id}</td>
+    `;
+    transactionTableBody.appendChild(row);
+  });
+}
+
 const assistDropdown = document.getElementById("editAssistance");
 if (assistDropdown) {
   assistDropdown.value = user.on_assistance ? "true" : "false";
