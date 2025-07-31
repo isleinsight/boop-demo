@@ -386,9 +386,11 @@ router.get("/:id", async (req, res) => {
 
     if (user.role === "parent") {
       const studentsRes = await client.query(`
-        SELECT u.id, u.first_name, u.last_name, u.email
+        SELECT u.id, u.first_name, u.last_name, u.email,
+               s.school_name, s.grade_level, s.expiry_date
         FROM student_parents sp
         JOIN users u ON sp.student_id = u.id
+        LEFT JOIN students s ON u.id = s.user_id
         WHERE sp.parent_id = $1
       `, [user.id]);
       user.assigned_students = studentsRes.rows;
@@ -403,6 +405,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// ✅ POST /api/users/:id/signout
 router.post("/:id/signout", authenticateToken, async (req, res) => {
   const { id } = req.params;
 
@@ -442,8 +445,7 @@ router.post("/:id/signout", authenticateToken, async (req, res) => {
   }
 });
 
-
-// ✅ Get current user info (used by /api/me)
+// ✅ GET /api/users/me — Get current user info
 router.get("/me", authenticateToken, async (req, res) => {
   try {
     const userId = req.user && req.user.id;
