@@ -123,8 +123,11 @@ if (user.wallet_id || user.wallet?.id) {
 } else {
   walletHTML += `<div><span class="label">Cards</span><span class="value">Not applicable</span></div>`;
 }
-     let assistanceHTML = "";
-if (user.wallet || user.wallet_id) {
+let assistanceHTML = "";
+if (
+  (user.wallet || user.wallet_id) &&
+  (user.role === "cardholder" || user.role === "senior")
+) {
   assistanceHTML = `
     <div>
       <span class="label">On Assistance</span>
@@ -135,7 +138,7 @@ if (user.wallet || user.wallet_id) {
       </select>
     </div>
   `;
-} 
+}
 
 userInfo.innerHTML = `
   <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
