@@ -123,6 +123,19 @@ if (user.wallet_id || user.wallet?.id) {
 } else {
   walletHTML += `<div><span class="label">Cards</span><span class="value">Not applicable</span></div>`;
 }
+      let assistanceHTML = "";
+if (user.wallet || user.wallet_id) {
+  assistanceHTML = `
+    <div>
+      <span class="label">On Assistance</span>
+      <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
+      <select id="editAssistance" style="display:none; width: 100%;">
+        <option value="true">Yes</option>
+        <option value="false">No</option>
+      </select>
+    </div>
+  `;
+}
 
 userInfo.innerHTML = `
   <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
@@ -142,21 +155,7 @@ userInfo.innerHTML = `
   <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
 
   <div><span class="label">Role</span><span class="value">${user.role}</span></div>
-  ${assistanceHTML}
-
-    let assistanceHTML = "";
-if (user.wallet || user.wallet_id) {
-  assistanceHTML = `
-    <div>
-      <span class="label">On Assistance</span>
-      <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
-      <select id="editAssistance" style="display:none; width: 100%;">
-        <option value="true">Yes</option>
-        <option value="false">No</option>
-      </select>
-    </div>
-  `;
-}
+  ${assistanceHTML} 
 
   ${walletHTML}
 `;
