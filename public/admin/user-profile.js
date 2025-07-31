@@ -71,7 +71,15 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 
     async function loadUserProfile() {
     try {
-      const user = await fetchJSON(`/api/users/${currentUserId}`);
+      console.log("🔍 Loading user with ID:", currentUserId);
+let user;
+try {
+  user = await fetchJSON(`/api/users/${currentUserId}`);
+  console.log("✅ User loaded:", user);
+} catch (err) {
+  console.error("❌ Error during fetchJSON:", err.message);
+  throw err;
+}
       currentUserData = user;
 
       let walletHTML = "";
