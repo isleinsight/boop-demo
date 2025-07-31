@@ -309,6 +309,7 @@ if (user.role === "student") {
 
     try {
       await fetchJSON(`/api/students/${currentUserId}`, {
+        console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
         method: "PATCH",
         body: JSON.stringify(studentData)
       });
