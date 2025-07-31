@@ -411,7 +411,7 @@ if (user.role === "vendor") {
   }
 }
       
-      // === Edit Profile Setup ===
+// === Edit Profile Setup ===
 editBtn.onclick = () => {
   isEditMode = true;
 
@@ -425,7 +425,20 @@ editBtn.onclick = () => {
     }
   });
 
-  
+  // Toggle student input fields (if any)
+  if (currentUserData.role === "student") {
+    ["School", "Grade", "Expiry"].forEach(field => {
+      const viewEl = document.getElementById(`view${field}`);
+      const editEl = document.getElementById(`edit${field}`);
+      if (viewEl && editEl) {
+        viewEl.style.display = "none";
+        editEl.style.display = "block";
+      }
+    });
+
+    const saveStudentBtn = document.getElementById("saveStudentBtn");
+    if (saveStudentBtn) saveStudentBtn.style.display = "inline-block";
+  }
 
   // Toggle vendor input fields
   if (currentUserData.role === "vendor") {
@@ -468,7 +481,34 @@ saveBtn.onclick = async () => {
     console.warn("❌ User update failed:", err);
   }
 
-  
+  // ✅ Student profile update
+  if (currentUserData.role === "student") {
+    const studentData = {
+      school_name: document.getElementById("editSchool")?.value,
+      grade_level: document.getElementById("editGrade")?.value,
+      expiry_date: document.getElementById("editExpiry")?.value
+    };
+
+    try {
+      if (currentUserData?.student_profile) {
+        await fetchJSON(`/api/students/${currentUserId}`, {
+          method: "PATCH",
+          body: JSON.stringify(studentData)
+        });
+      } else {
+        await fetchJSON(`/api/students`, {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: currentUserId,
+            ...studentData
+          })
+        });
+      }
+    } catch (err) {
+      hadError = true;
+      console.warn("❌ Student update failed:", err);
+    }
+  }
 
   // ✅ Vendor update
   if (currentUserData.role === "vendor") {
@@ -515,21 +555,18 @@ saveBtn.onclick = async () => {
     loadUserProfile();
   }
 };
-    
-      
 
-    } catch (err) {
-      console.error("❌ Failed to load user:", err);
-      alert("Error loading user");
-      window.location.href = "view-users.html";
-    }
-  }
+} catch (err) {
+  console.error("❌ Failed to load user:", err);
+  alert("Error loading user");
+  window.location.href = "view-users.html";
+}
 
-  logoutBtn?.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST" }).then(() => {
-      window.location.href = "index.html";
-    });
+logoutBtn?.addEventListener("click", () => {
+  fetch("/api/logout", { method: "POST" }).then(() => {
+    window.location.href = "index.html";
   });
+});
 isEditMode = false;
 
 // ✅ Check if current user has been force signed out
@@ -568,6 +605,6 @@ isEditMode = false;
     console.error("Force sign-out check failed:", err);
   }
 })();
-  
-  loadUserProfile();
+
+loadUserProfile();
 });
