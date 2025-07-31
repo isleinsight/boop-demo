@@ -277,25 +277,59 @@ if (user.role === "student") {
 `;
     studentInfoSection.style.display = "block";
   // ✅ Attach Edit Student click handler
-  const editStudentBtn = document.getElementById("editStudentBtn");
-  const saveStudentBtn = document.getElementById("saveStudentBtn");
+const editStudentBtn = document.getElementById("editStudentBtn");
+const saveStudentBtn = document.getElementById("saveStudentBtn");
 
-  if (editStudentBtn) {
-    editStudentBtn.onclick = () => {
-      ["School", "Grade", "Expiry"].forEach(field => {
-        const viewEl = document.getElementById(`view${field}`);
-        const editEl = document.getElementById(`edit${field}`);
-        if (viewEl && editEl) {
-          viewEl.style.display = "none";
-          editEl.style.display = "block";
-        }
-      });
-
-      if (saveStudentBtn) {
-        saveStudentBtn.style.display = "inline-block";
+if (editStudentBtn) {
+  editStudentBtn.onclick = () => {
+    ["School", "Grade", "Expiry"].forEach(field => {
+      const viewEl = document.getElementById(`view${field}`);
+      const editEl = document.getElementById(`edit${field}`);
+      if (viewEl && editEl) {
+        viewEl.style.display = "none";
+        editEl.style.display = "block";
       }
+    });
+
+    if (saveStudentBtn) {
+      saveStudentBtn.style.display = "inline-block";
+    }
+  };
+}
+
+if (saveStudentBtn) {
+  saveStudentBtn.onclick = async () => {
+    const studentData = {
+      school_name: document.getElementById("editSchool")?.value,
+      grade_level: document.getElementById("editGrade")?.value,
+      expiry_date: document.getElementById("editExpiry")?.value,
     };
-  }
+
+    try {
+      if (currentUserData?.student_profile) {
+        await fetchJSON(`/api/students/${currentUserId}`, {
+          method: "PATCH",
+          body: JSON.stringify(studentData)
+        });
+      } else {
+        await fetchJSON(`/api/students`, {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: currentUserId,
+            ...studentData
+          })
+        });
+      }
+
+      alert("✅ Student info saved.");
+      isEditMode = false;
+      saveStudentBtn.style.display = "none";
+      loadUserProfile();
+    } catch (err) {
+      console.error("❌ Failed to save student data:", err);
+      alert("Failed to save student info.");
+    }
+  };
 }
 
   // Show parent info
