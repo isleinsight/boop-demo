@@ -360,12 +360,13 @@ console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
       
 // === Parent View ===
 if (user.role === "parent" && Array.isArray(user.assigned_students)) {
-  studentInfoSection.innerHTML = '<div class="section-title">Assigned Students</div>';
-  
+  studentInfoSection.innerHTML = `
+    <div class="section-title">Assigned Students</div>
+  `;
+
   user.assigned_students.forEach(student => {
     const block = document.createElement("div");
     block.classList.add("user-details-grid");
-    block.setAttribute("data-student-id", student.id);
 
     block.innerHTML = `
       <div><span class="label">Name</span><span class="value">
@@ -373,97 +374,15 @@ if (user.role === "parent" && Array.isArray(user.assigned_students)) {
           ${student.first_name} ${student.last_name}
         </a></span></div>
       <div><span class="label">Email</span><span class="value">${student.email}</span></div>
-      <div class="remove-student-wrapper" style="display: ${isEditMode ? 'block' : 'none'};">
-        <button class="remove-student-btn" data-id="${student.id}" style="margin-top: 10px; background-color: #e74c3c; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">
-          Remove
-        </button>
-      </div>
+      <div><span class="label">School</span><span class="value">${student.school_name || "-"}</span></div>
+      <div><span class="label">Grade</span><span class="value">${student.grade_level || "-"}</span></div>
+      <div><span class="label">Expiry</span><span class="value">${student.expiry_date ? formatDatePretty(student.expiry_date) : "-"}</span></div>
     `;
 
     studentInfoSection.appendChild(block);
   });
 
-  // ✅ Attach remove listeners
-  setTimeout(() => {
-    document.querySelectorAll(".remove-student-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const studentId = btn.dataset.id;
-        const confirmed = confirm("Are you sure you want to remove this student?");
-        if (!confirmed) return;
-
-        try {
-          const res = await fetch(`/api/user-students/${studentId}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ parent_id: currentUserId }) // <- ensure backend expects this!
-          });
-
-          if (!res.ok) throw new Error("Unlink failed");
-
-          alert("Student removed from your account.");
-          loadUserProfile();
-        } catch (err) {
-          console.error("❌ Remove failed:", err);
-          alert("Failed to remove student.");
-        }
-      });
-    });
-  }, 0);
-
   studentInfoSection.style.display = "block";
-  const editStudentBtn = document.getElementById("editStudentBtn");
-const saveStudentBtn = document.getElementById("saveStudentBtn");
-
-editStudentBtn.onclick = () => {
-  ["School", "Grade", "Expiry"].forEach(field => {
-    const viewEl = document.getElementById(`view${field}`);
-    const editEl = document.getElementById(`edit${field}`);
-    if (viewEl && editEl) {
-      viewEl.style.display = "none";
-      editEl.style.display = "block";
-    }
-  });
-
-  saveStudentBtn.style.display = "inline-block";
-};
-}
-
-// === Vendor View ===
-if (user.role === "vendor") {
-  try {
-    const vendorSection = document.getElementById("vendorSection");
-    const vendorData = await fetchJSON(`/api/vendors`);
-    const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id);
-
-    if (vendor) {
-      vendorSection.innerHTML = `
-        <div class="section-title">Vendor Info</div>
-        <div class="user-details-grid">
-          <div>
-            <span class="label">Business Name</span>
-            <span class="value" id="viewBusiness">${vendor.business_name || "-"}</span>
-            <input type="text" id="editBusiness" value="${vendor.business_name || ""}" style="display:none; width: 100%;" />
-          </div>
-
-          <div>
-            <span class="label">Category</span>
-            <span class="value" id="viewCategory">${vendor.category || "-"}</span>
-            <input type="text" id="editCategory" value="${vendor.category || ""}" style="display:none; width: 100%;" />
-          </div>
-
-          <div>
-            <span class="label">Phone</span>
-            <span class="value" id="viewPhone">${vendor.phone || "-"}</span>
-            <input type="tel" id="editPhone" value="${vendor.phone || ""}" style="display:none; width: 100%;" />
-          </div>
-          
-        </div>
-      `;
-      vendorSection.style.display = "block";
-    }
-  } catch (err) {
-    console.error("❌ Failed to fetch vendor info:", err);
-  }
 }
       
       // === Edit Profile Setup ===
