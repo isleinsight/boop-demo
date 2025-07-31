@@ -355,7 +355,7 @@ if (saveStudentBtn) {
     `;
     parentSection.style.display = "block";
   }
-}
+
       
 // === Parent View ===
 if (user.role === "parent" && Array.isArray(user.assigned_students)) {
