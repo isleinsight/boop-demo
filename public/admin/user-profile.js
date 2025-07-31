@@ -155,28 +155,15 @@ userInfo.innerHTML = `
   <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
     <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
 
-    <div><span class="label">Role</span><span class="value">${user.role}</span></div>
-  ${assistanceHTML} 
-  ${walletHTML}
+  <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
 
-  <div class="section-title" style="margin-top: 30px;">Transactions</div>
-  <table id="transactionTable" class="user-details-grid full-width-table">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Amount</th>
-        <th>Wallet</th>
-        <th>Type</th>
-        <th>Note</th>
-        <th>ID</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Filled in below -->
-    </tbody>
-  </table>
+  <div><span class="label">Role</span><span class="value">${user.role}</span></div>
+  ${assistanceHTML} 
+
+  ${walletHTML}
 `;
 
+  // ✅ Load transactions for this user
 const transactionTableBody = document.querySelector("#transactionTable tbody");
 transactionTableBody.innerHTML = "";
 
