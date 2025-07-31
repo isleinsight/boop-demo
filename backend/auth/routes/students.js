@@ -70,27 +70,7 @@ router.get("/:id", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
 
-  const fieldsToUpdate = [];
-  const values = [];
-
-  if (req.body.school_name !== undefined) {
-    fieldsToUpdate.push("school_name = $1");
-    values.push(req.body.school_name);
-  }
-
-  if (req.body.grade_level !== undefined) {
-    fieldsToUpdate.push("grade_level = $2");
-    values.push(req.body.grade_level);
-  }
-
-  if (req.body.expiry_date !== undefined) {
-    fieldsToUpdate.push("expiry_date = $3");
-    values.push(req.body.expiry_date);
-  }
-
-  if (fieldsToUpdate.length === 0) {
-    return res.status(400).json({ message: "No fields to update" });
-  }
+  console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
 
   try {
     const updateQuery = `
