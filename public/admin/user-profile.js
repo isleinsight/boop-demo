@@ -276,7 +276,27 @@ if (user.role === "student") {
   </div>
 `;
     studentInfoSection.style.display = "block";
+  // ✅ Attach Edit Student click handler
+  const editStudentBtn = document.getElementById("editStudentBtn");
+  const saveStudentBtn = document.getElementById("saveStudentBtn");
+
+  if (editStudentBtn) {
+    editStudentBtn.onclick = () => {
+      ["School", "Grade", "Expiry"].forEach(field => {
+        const viewEl = document.getElementById(`view${field}`);
+        const editEl = document.getElementById(`edit${field}`);
+        if (viewEl && editEl) {
+          viewEl.style.display = "none";
+          editEl.style.display = "block";
+        }
+      });
+
+      if (saveStudentBtn) {
+        saveStudentBtn.style.display = "inline-block";
+      }
+    };
   }
+}
 
   // Show parent info
   if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
