@@ -1,4 +1,6 @@
- const userInfo = document.getElementById("userInfo");
+document.addEventListener("DOMContentLoaded", () => {
+
+  const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
   const saveBtn = document.getElementById("saveProfileBtn");
   const currentAdmin = JSON.parse(localStorage.getItem("boopUser"));
