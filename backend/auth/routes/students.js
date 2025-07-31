@@ -70,7 +70,11 @@ router.get("/:id", async (req, res) => {
 
 // ✅ PATCH /api/students/:id — Update or insert by user_id
 router.patch("/:id", async (req, res) => {
-  const { id: user_id } = req.params; // Treat the param as user_id
+  const { id: user_id } = req.params;
+
+  console.log("🔄 PATCH /api/students/:id triggered");
+  console.log("👉 Incoming user_id:", user_id);
+  console.log("📦 Body data:", req.body);
 
   const fieldsToUpdate = [];
   const values = [];
@@ -91,10 +95,11 @@ router.patch("/:id", async (req, res) => {
   }
 
   if (fieldsToUpdate.length === 0) {
+    console.log("⚠️ No fields provided for update.");
     return res.status(400).json({ message: "No fields to update" });
   }
 
-  values.push(user_id); // user_id is used in WHERE clause
+  values.push(user_id);
 
   const updateQuery = `
     UPDATE students
@@ -103,11 +108,16 @@ router.patch("/:id", async (req, res) => {
     RETURNING *
   `;
 
+  console.log("📝 Update Query:", updateQuery);
+  console.log("🧮 Query Values:", values);
+
   try {
     const result = await pool.query(updateQuery, values);
+    console.log("🟢 Update Result:", result.rowCount);
 
     if (result.rowCount === 0) {
-      // Student not found, insert instead
+      console.log("📭 No matching student found — inserting instead.");
+
       const insertRes = await pool.query(
         `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
          VALUES ($1, $2, $3, $4)
@@ -115,12 +125,16 @@ router.patch("/:id", async (req, res) => {
         [user_id, req.body.school_name, req.body.grade_level || null, req.body.expiry_date]
       );
 
+      console.log("✅ Inserted new student:", insertRes.rows[0]);
+
       return res.status(201).json({ message: "Student created", student: insertRes.rows[0] });
     }
 
+    console.log("✅ Student updated:", result.rows[0]);
     res.json({ message: "Student updated", student: result.rows[0] });
+
   } catch (err) {
-    console.error("❌ Error upserting student:", err);
+    console.error("❌ Error in PATCH /api/students/:id:", err);
     res.status(500).json({ message: "Update failed" });
   }
 });
