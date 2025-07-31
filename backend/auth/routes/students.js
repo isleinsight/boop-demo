@@ -70,7 +70,7 @@ router.get("/:id", async (req, res) => {
 
 // ✅ PATCH /api/students/:id — Update or insert by user_id
 router.patch("/:id", async (req, res) => {
-  const { id } = req.params;
+  const { id: user_id } = req.params; // Treat the param as user_id
 
   const fieldsToUpdate = [];
   const values = [];
@@ -94,8 +94,7 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ message: "No fields to update" });
   }
 
-  // Add the user_id to values list for WHERE clause
-  values.push(id);
+  values.push(user_id); // user_id is used in WHERE clause
 
   const updateQuery = `
     UPDATE students
@@ -104,43 +103,24 @@ router.patch("/:id", async (req, res) => {
     RETURNING *
   `;
 
-  // 🧠 Debug log
-  console.log("🔧 PATCH /api/students/:id");
-  console.log("👉 Final SQL:", updateQuery);
-  console.log("👉 Values:", values);
-
   try {
     const result = await pool.query(updateQuery, values);
 
     if (result.rowCount === 0) {
-      // 🔁 Fallback: insert if student doesn't exist yet
-      const insertQuery = `
-        INSERT INTO students (user_id, school_name, grade_level, expiry_date)
-        VALUES ($1, $2, $3, $4)
-        RETURNING *
-      `;
+      // Student not found, insert instead
+      const insertRes = await pool.query(
+        `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [user_id, req.body.school_name, req.body.grade_level || null, req.body.expiry_date]
+      );
 
-      const insertValues = [
-        id,
-        req.body.school_name,
-        req.body.grade_level || null,
-        req.body.expiry_date,
-      ];
-
-      console.log("📦 Performing fallback INSERT...");
-      console.log("👉 INSERT SQL:", insertQuery);
-      console.log("👉 INSERT values:", insertValues);
-
-      const insertRes = await pool.query(insertQuery, insertValues);
-
-      return res
-        .status(201)
-        .json({ message: "Student created", student: insertRes.rows[0] });
+      return res.status(201).json({ message: "Student created", student: insertRes.rows[0] });
     }
 
     res.json({ message: "Student updated", student: result.rows[0] });
   } catch (err) {
-    console.error("❌ Error in PATCH /api/students/:id:", err);
+    console.error("❌ Error upserting student:", err);
     res.status(500).json({ message: "Update failed" });
   }
 });
