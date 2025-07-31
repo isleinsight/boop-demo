@@ -248,89 +248,92 @@ if (user.role === "student") {
 
   if (s) {
     studentInfoSection.innerHTML = `
-  <div class="section-title">Student Info</div>
+      <div class="section-title">Student Info</div>
 
-  <div style="margin-top: 10px; margin-bottom: 10px;">
-    <button id="editStudentBtn" class="btnEdit">Edit Student</button>
-    <button id="saveStudentBtn" class="btnEdit" style="display:none;">Save Student Info</button>
-  </div>
+      <div style="margin-top: 10px; margin-bottom: 10px;">
+        <button id="editStudentBtn" class="btnEdit">Edit Student</button>
+        <button id="saveStudentBtn" class="btnEdit" style="display:none;">Save Student Info</button>
+      </div>
 
-  <div class="user-details-grid">
-    <div>
-      <span class="label">School</span>
-      <span class="value" id="viewSchool">${s.school_name || "-"}</span>
-      <input type="text" id="editSchool" value="${s.school_name || ""}" style="display:none; width: 100%;" />
-    </div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">School</span>
+          <span class="value" id="viewSchool">${s.school_name || "-"}</span>
+          <input type="text" id="editSchool" value="${s.school_name || ""}" style="display:none; width: 100%;" />
+        </div>
 
-    <div>
-      <span class="label">Grade</span>
-      <span class="value" id="viewGrade">${s.grade_level || "-"}</span>
-      <input type="text" id="editGrade" value="${s.grade_level || ""}" style="display:none; width: 100%;" />
-    </div>
+        <div>
+          <span class="label">Grade</span>
+          <span class="value" id="viewGrade">${s.grade_level || "-"}</span>
+          <input type="text" id="editGrade" value="${s.grade_level || ""}" style="display:none; width: 100%;" />
+        </div>
 
-    <div>
-      <span class="label">Expiry</span>
-      <span class="value" id="viewExpiry">${s.expiry_date ? formatDatePretty(s.expiry_date) : "-"}</span>
-      <input type="date" id="editExpiry" value="${s.expiry_date ? s.expiry_date.slice(0, 10) : ""}" style="display:none; width: 100%;" />
-    </div>
-  </div>
-`;
+        <div>
+          <span class="label">Expiry</span>
+          <span class="value" id="viewExpiry">${s.expiry_date ? formatDatePretty(s.expiry_date) : "-"}</span>
+          <input type="date" id="editExpiry" value="${s.expiry_date ? s.expiry_date.slice(0, 10) : ""}" style="display:none; width: 100%;" />
+        </div>
+      </div>
+    `;
+
     studentInfoSection.style.display = "block";
 
-// ✅ Attach Edit + Save Student button handlers
-const editStudentBtn = document.getElementById("editStudentBtn");
-const saveStudentBtn = document.getElementById("saveStudentBtn");
+    // ✅ Attach Edit + Save handlers
+    const editStudentBtn = document.getElementById("editStudentBtn");
+    const saveStudentBtn = document.getElementById("saveStudentBtn");
 
-if (editStudentBtn) {
-  editStudentBtn.onclick = () => {
-    ["School", "Grade", "Expiry"].forEach(field => {
-      const viewEl = document.getElementById(`view${field}`);
-      const editEl = document.getElementById(`edit${field}`);
-      if (viewEl && editEl) {
-        viewEl.style.display = "none";
-        editEl.style.display = "block";
-      }
-    });
+    if (editStudentBtn) {
+      editStudentBtn.onclick = () => {
+        ["School", "Grade", "Expiry"].forEach(field => {
+          const viewEl = document.getElementById(`view${field}`);
+          const editEl = document.getElementById(`edit${field}`);
+          if (viewEl && editEl) {
+            viewEl.style.display = "none";
+            editEl.style.display = "block";
+          }
+        });
+
+        if (saveStudentBtn) {
+          saveStudentBtn.style.display = "inline-block";
+        }
+      };
+    }
 
     if (saveStudentBtn) {
-      saveStudentBtn.style.display = "inline-block";
-    }
-  };
-}
+      saveStudentBtn.onclick = async () => {
+        const studentData = {
+          school_name: document.getElementById("editSchool")?.value,
+          grade_level: document.getElementById("editGrade")?.value,
+          expiry_date: document.getElementById("editExpiry")?.value,
+        };
 
-if (saveStudentBtn) {
-  saveStudentBtn.onclick = async () => {
-    const studentData = {
-      school_name: document.getElementById("editSchool")?.value,
-      grade_level: document.getElementById("editGrade")?.value,
-      expiry_date: document.getElementById("editExpiry")?.value,
-    };
+        try {
+          if (currentUserData?.student_profile) {
+            await fetchJSON(`/api/students/${currentUserId}`, {
+              method: "PATCH",
+              body: JSON.stringify(studentData)
+            });
+          } else {
+            await fetchJSON(`/api/students`, {
+              method: "POST",
+              body: JSON.stringify({
+                user_id: currentUserId,
+                ...studentData
+              })
+            });
+          }
 
-    try {
-      if (currentUserData?.student_profile) {
-        await fetchJSON(`/api/students/${currentUserId}`, {
-          method: "PATCH",
-          body: JSON.stringify(studentData)
-        });
-      } else {
-        await fetchJSON(`/api/students`, {
-          method: "POST",
-          body: JSON.stringify({
-            user_id: currentUserId,
-            ...studentData
-          })
-        });
-      }
+          alert("✅ Student info saved.");
+          isEditMode = false;
+          saveStudentBtn.style.display = "none";
+          loadUserProfile();
+        } catch (err) {
+          console.error("❌ Failed to save student data:", err);
+          alert("Failed to save student info.");
+        }
+      };
     }
-      alert("✅ Student info saved.");
-      isEditMode = false;
-      saveStudentBtn.style.display = "none";
-      loadUserProfile();
-    } catch (err) {
-      console.error("❌ Failed to save student data:", err);
-      alert("Failed to save student info.");
-    }
-  };
+  }
 }
 
   // Show parent info
