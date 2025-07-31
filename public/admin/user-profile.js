@@ -515,7 +515,10 @@ saveBtn.onclick = async () => {
         middle_name: document.getElementById("editMiddleName").value,
         last_name: document.getElementById("editLastName").value,
         email: document.getElementById("editEmail").value,
-        on_assistance: document.getElementById("editAssistance").value === "true"
+        on_assistance: (() => {
+  const el = document.getElementById("editAssistance");
+  return el ? el.value === "true" : false;
+})()
       })
     });
   } catch (err) {
