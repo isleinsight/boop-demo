@@ -307,6 +307,9 @@ if (user.role === "student") {
       expiry_date: document.getElementById("editExpiry")?.value,
     };
 console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
+    console.log("PATCHING student with user_id:", id);
+console.log("Final SQL:", updateQuery);
+console.log("Values:", values);
     try {
       await fetchJSON(`/api/students/${currentUserId}`, {
         
