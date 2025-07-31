@@ -321,7 +321,7 @@ if (saveStudentBtn) {
           })
         });
       }
-
+    }
       alert("✅ Student info saved.");
       isEditMode = false;
       saveStudentBtn.style.display = "none";
