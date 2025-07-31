@@ -194,6 +194,37 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 });
 
+// 📄 GET /api/transactions/user/:userId — For admin viewing someone else's profile
+router.get('/user/:userId', authenticateToken, async (req, res) => {
+  const { role } = req.user;
+  const { userId } = req.params;
+
+  if (role !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        wallet_id,
+        type,
+        amount_cents,
+        note,
+        created_at
+      FROM transactions
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT 50
+    `, [userId]);
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('❌ Failed to load target user transactions:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve transactions.' });
+  }
+});
+
 
 
 module.exports = router;
