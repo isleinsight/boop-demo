@@ -335,31 +335,6 @@ if (user.role === "student") {
     }
   }
 }
-
-  // Show parent info
-  if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
-    parentSection.innerHTML = `
-      <div class="section-title">Parent Info</div>
-      <div class="user-details-grid">
-        ${user.assigned_parents.map(p => `
-          <div>
-            <span class="label">Name</span>
-            <span class="value">
-              <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${p.id}')">
-                ${p.first_name} ${p.last_name}
-              </a>
-            </span>
-          </div>
-          <div>
-            <span class="label">Email</span>
-            <span class="value">${p.email}</span>
-          </div>
-        `).join("")}
-      </div>
-    `;
-    parentSection.style.display = "block";
-  }
-}
       
 // === Parent View ===
 if (user.role === "parent" && Array.isArray(user.assigned_students)) {
