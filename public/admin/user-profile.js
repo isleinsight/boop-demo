@@ -306,10 +306,10 @@ if (user.role === "student") {
       grade_level: document.getElementById("editGrade")?.value,
       expiry_date: document.getElementById("editExpiry")?.value,
     };
-
+console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
     try {
       await fetchJSON(`/api/students/${currentUserId}`, {
-        console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
+        
         method: "PATCH",
         body: JSON.stringify(studentData)
       });
