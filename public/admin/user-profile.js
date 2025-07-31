@@ -87,7 +87,17 @@ try {
 // ✅ All Cards: Transit & Spending (safely skip for users with no wallet)
 if (user.wallet_id || user.wallet?.id) {
   try {
-    const allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
+let allCards = [];
+
+if (user.wallet_id || user.wallet?.id) {
+  try {
+    allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
+  } catch (err) {
+    console.warn("🟡 Failed to load cards:", err.message);
+  }
+} else {
+  console.info("ℹ️ Skipping card fetch — user has no wallet.");
+}
     const transitCards = allCards.filter(c => c.type === "transit");
     const spendingCards = allCards.filter(c => c.type === "spending");
 
