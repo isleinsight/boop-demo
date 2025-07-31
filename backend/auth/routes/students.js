@@ -94,7 +94,8 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ message: "No fields to update" });
   }
 
-  values.push(id); // This is user_id
+  // Add the user_id to values list for WHERE clause
+  values.push(id);
 
   const updateQuery = `
     UPDATE students
@@ -103,24 +104,43 @@ router.patch("/:id", async (req, res) => {
     RETURNING *
   `;
 
+  // 🧠 Debug log
+  console.log("🔧 PATCH /api/students/:id");
+  console.log("👉 Final SQL:", updateQuery);
+  console.log("👉 Values:", values);
+
   try {
     const result = await pool.query(updateQuery, values);
 
     if (result.rowCount === 0) {
-      // Student not found, insert instead
-      const insertRes = await pool.query(
-        `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
-         VALUES ($1, $2, $3, $4)
-         RETURNING *`,
-        [id, req.body.school_name, req.body.grade_level || null, req.body.expiry_date]
-      );
+      // 🔁 Fallback: insert if student doesn't exist yet
+      const insertQuery = `
+        INSERT INTO students (user_id, school_name, grade_level, expiry_date)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `;
 
-      return res.status(201).json({ message: "Student created", student: insertRes.rows[0] });
+      const insertValues = [
+        id,
+        req.body.school_name,
+        req.body.grade_level || null,
+        req.body.expiry_date,
+      ];
+
+      console.log("📦 Performing fallback INSERT...");
+      console.log("👉 INSERT SQL:", insertQuery);
+      console.log("👉 INSERT values:", insertValues);
+
+      const insertRes = await pool.query(insertQuery, insertValues);
+
+      return res
+        .status(201)
+        .json({ message: "Student created", student: insertRes.rows[0] });
     }
 
     res.json({ message: "Student updated", student: result.rows[0] });
   } catch (err) {
-    console.error("❌ Error upserting student:", err);
+    console.error("❌ Error in PATCH /api/students/:id:", err);
     res.status(500).json({ message: "Update failed" });
   }
 });
