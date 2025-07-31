@@ -151,4 +151,49 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   }
 });
 
+// 🔍 GET /api/transactions/user/:userId — Paginated for Admin User Profile
+router.get('/user/:userId', authenticateToken, async (req, res) => {
+  const { role } = req.user;
+  const { userId } = req.params;
+  const page = parseInt(req.query.page || 1, 10);
+  const limit = parseInt(req.query.limit || 10, 10);
+  const offset = (page - 1) * limit;
+
+  if (role !== "admin") {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const txRes = await pool.query(`
+      SELECT
+        id,
+        wallet_id,
+        type,
+        amount_cents,
+        note,
+        created_at
+      FROM transactions
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [userId, limit, offset]);
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
+      [userId]
+    );
+
+    res.json({
+      transactions: txRes.rows,
+      totalCount: parseInt(countRes.rows[0].count, 10)
+    });
+
+  } catch (err) {
+    console.error("❌ Failed to fetch user transactions:", err);
+    res.status(500).json({ error: "Failed to load transactions" });
+  }
+});
+
+
+
 module.exports = router;
