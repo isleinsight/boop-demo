@@ -164,8 +164,20 @@
   const token = localStorage.getItem("boop_jwt");
   const tbody = document.getElementById("adminActionsBody");
   const statusMessage = document.getElementById("statusMessage");
-  const prevBtn = document.getElementById("prevPage");
-  const nextBtn = document.getElementById("nextPage");
+const prevBtn = document.getElementById("prevPage");
+const nextBtn = document.getElementById("nextPage");
+
+if (currentPage <= 1) {
+  prevBtn.style.display = "none";
+} else {
+  prevBtn.style.display = "inline-block";
+}
+
+if (currentPage >= totalPages) {
+  nextBtn.style.display = "none";
+} else {
+  nextBtn.style.display = "inline-block";
+}
   const pageIndicator = document.getElementById("pageIndicator");
 
   const allowedTypes = ["super_admin", "admin", "support"];
