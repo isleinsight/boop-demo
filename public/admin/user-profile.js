@@ -209,24 +209,30 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
   const amount = typeof tx.amount_cents === "number"
     ? `$${(tx.amount_cents / 100).toFixed(2)}`
     : "-";
-  const name = tx.name || "-"; // this line was the old name logic
-  const direction = tx.type === "debit" ? "Sent" : tx.type === "credit" ? "Received" : tx.type;
+
+  const isCredit = tx.type === "credit";
+  const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type;
+
+  const counterparty = tx.counterparty_name || "Unknown";
+  const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
+
   const noteBtn = tx.note
     ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
     : "-";
+
   const id = tx.id || "-";
 
   const row = document.createElement("tr");
   row.innerHTML = `
     <td>${createdAt}</td>
     <td>${amount}</td>
-    <td>${tx.sender_name || "-"}</td> <!-- 🧠 NEW: using sender_name -->
+    <td>${name}</td>
     <td>${direction}</td>
     <td>${noteBtn}</td>
     <td>${id}</td>
   `;
   transactionTableBody.appendChild(row);
-}// 🔁 END for-loop
+}
 } // ✅ END else block
 
 // ✅ Restore assist dropdown logic
