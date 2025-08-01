@@ -26,10 +26,10 @@ router.get('/recent', authenticateToken, async (req, res) => {
           v.business_name,
           u.first_name || ' ' || u.last_name,
           'System'
-        ) AS sender_name
+        ) AS counterparty_name
       FROM transactions t
-      LEFT JOIN users u ON u.id = t.user_id
-      LEFT JOIN vendors v ON v.user_id = t.user_id
+      LEFT JOIN vendors v ON v.id = t.vendor_id
+      LEFT JOIN users u ON u.id = t.added_by
       ORDER BY t.created_at DESC
       LIMIT 50
     `);
@@ -110,10 +110,10 @@ router.get('/report', authenticateToken, async (req, res) => {
           v.business_name,
           u.first_name || ' ' || u.last_name,
           'System'
-        ) AS sender_name
+        ) AS counterparty_name
       FROM transactions t
-      LEFT JOIN users u ON u.id = t.user_id
-      LEFT JOIN vendors v ON v.user_id = t.user_id
+      LEFT JOIN vendors v ON v.id = t.vendor_id
+      LEFT JOIN users u ON u.id = t.added_by
       ${whereClause}
       ORDER BY t.created_at DESC
       LIMIT 200
@@ -159,7 +159,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   }
 });
 
-// 📄 GET /api/transactions/user/:userId — Admin view of someone's profile
+// 📄 GET /api/transactions/user/:userId — For admin viewing someone else's profile
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
@@ -177,7 +177,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        COALESCE(v.business_name, u.first_name || ' ' || u.last_name, 'Unknown') AS counterparty_name
+        COALESCE(
+          v.business_name,
+          u.first_name || ' ' || u.last_name,
+          'System'
+        ) AS counterparty_name
       FROM transactions t
       LEFT JOIN vendors v ON v.id = t.vendor_id
       LEFT JOIN users u ON u.id = t.added_by
