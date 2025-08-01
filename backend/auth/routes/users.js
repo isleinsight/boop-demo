@@ -475,4 +475,38 @@ router.get("/me", authenticateToken, async (req, res) => {
 });
 
 
+// 🔍 GET /api/users/assign-card?search=
+router.get('/assign-card', authenticateToken, async (req, res) => {
+  const { role } = req.user;
+  const { search } = req.query;
+
+  if (role !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized access' });
+  }
+
+  try {
+    const keyword = `%${search.trim().toLowerCase()}%`;
+
+    const result = await pool.query(`
+      SELECT id, first_name, middle_name, last_name, email, wallet_id, role, type
+      FROM users
+      WHERE role = 'user'
+        AND type NOT IN ('parent')
+        AND (
+          LOWER(first_name) LIKE $1 OR
+          LOWER(last_name) LIKE $1 OR
+          LOWER(email) LIKE $1
+        )
+      LIMIT 20
+    `, [keyword]);
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching assign-card users:", err.message);
+    res.status(500).json({ message: 'Failed to search assignable users' });
+  }
+});
+
+
+
 module.exports = router;
