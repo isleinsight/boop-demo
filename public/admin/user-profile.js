@@ -81,41 +81,7 @@ try {
   throw err;
 }
       currentUserData = user;
-// ✅ Populate transactions table (existing HTML table)
-const transactionTableBody = document.querySelector("#transactionTable tbody");
-if (transactionTableBody) {
-  transactionTableBody.innerHTML = "";
 
-  let transactions = [];
-  try {
-    transactions = await fetchJSON(`/api/transactions/user/${user.id}`);
-  } catch (err) {
-    console.error("❌ Failed to fetch transactions:", err.message);
-  }
-
-  if (transactions.length === 0) {
-    transactionTableBody.innerHTML = `
-      <tr>
-        <td colspan="6" style="text-align: center; padding: 20px; color: #888;">
-          No transactions recorded.
-        </td>
-      </tr>
-    `;
-  } else {
-    transactions.forEach(tx => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${new Date(tx.created_at).toLocaleString()}</td>
-        <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
-        <td>${tx.wallet_id || "-"}</td>
-        <td>${tx.type}</td>
-        <td>${tx.note || "-"}</td>
-        <td>${tx.id}</td>
-      `;
-      transactionTableBody.appendChild(row);
-    });
-  }
-}
       let walletHTML = "";
 
 // ✅ All Cards: Transit & Spending (safely skip for users with no wallet)
