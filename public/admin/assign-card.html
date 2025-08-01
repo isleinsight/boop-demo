@@ -145,7 +145,7 @@
     }
 
     try {
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&eligibleOnly=true`);
+      const res = await fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`);
       const users = await res.json();
 
 // 🚫 Filter out users with roles/types we don’t assign cards to
