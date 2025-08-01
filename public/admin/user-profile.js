@@ -163,7 +163,7 @@ userInfo.innerHTML = `
   ${walletHTML}
 `;
 console.log("👀 Attempting to load transactions for user:", user.id);
-      
+
 const transactionTableBody = document.querySelector("#transactionTable tbody");
 transactionTableBody.innerHTML = "";
 
@@ -171,7 +171,7 @@ let transactions = [];
 
 try {
   const res = await fetchJSON(`/api/transactions/user/${user.id}`);
-  transactions = res.transactions || [];  // 🔥 unpack from object
+  transactions = res.transactions || [];
   console.log("💳 Cleaned up transactions array:", transactions);
 } catch (err) {
   console.error("❌ Failed to fetch transactions:", err.message);
@@ -191,19 +191,20 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
     const amount = typeof tx.amount_cents === "number"
       ? `$${(tx.amount_cents / 100).toFixed(2)}`
       : "-";
-    const walletId = tx.wallet_id || "-";
-    const type = tx.type || "-";
-    const note = tx.note || "-";
+    const name = tx.name || "-";
+    const direction = tx.type === "debit" ? "Sent" : tx.type === "credit" ? "Received" : tx.type;
+    const noteBtn = tx.note
+      ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
+      : "-";
     const id = tx.id || "-";
 
-    
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${createdAt}</td>
       <td>${amount}</td>
-      <td>${walletId}</td>
-      <td>${type}</td>
-      <td>${note}</td>
+      <td>${name}</td>
+      <td>${direction}</td>
+      <td>${noteBtn}</td>
       <td>${id}</td>
     `;
     transactionTableBody.appendChild(row);
