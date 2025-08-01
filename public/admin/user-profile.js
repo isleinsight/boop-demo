@@ -177,6 +177,24 @@ try {
   console.error("❌ Failed to fetch transactions:", err.message);
 }
 
+// 🧠 User cache to avoid duplicate fetches
+const userCache = {};
+
+async function getUserName(userId) {
+  if (!userId) return "-";
+  if (userCache[userId]) return userCache[userId];
+
+  try {
+    const user = await fetchJSON(`/api/users/${userId}`);
+    const fullName = `${user.first_name} ${user.last_name}`;
+    userCache[userId] = fullName;
+    return fullName;
+  } catch (err) {
+    console.warn("🔍 Failed to load user for transaction:", err.message);
+    return "(Unknown)";
+  }
+}
+
 if (!Array.isArray(transactions) || transactions.length === 0) {
   transactionTableBody.innerHTML = `
     <tr>
@@ -186,29 +204,31 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
     </tr>
   `;
 } else {
-  transactions.forEach(tx => {
-    const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
-    const amount = typeof tx.amount_cents === "number"
-      ? `$${(tx.amount_cents / 100).toFixed(2)}`
-      : "-";
-    const name = tx.name || "-";
-    const direction = tx.type === "debit" ? "Sent" : tx.type === "credit" ? "Received" : tx.type;
-    const noteBtn = tx.note
-      ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
-      : "-";
-    const id = tx.id || "-";
+  for (const tx of transactions) {
+  const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
+  const amount = typeof tx.amount_cents === "number"
+    ? `$${(tx.amount_cents / 100).toFixed(2)}`
+    : "-";
 
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${createdAt}</td>
-      <td>${amount}</td>
-      <td>${name}</td>
-      <td>${direction}</td>
-      <td>${noteBtn}</td>
-      <td>${id}</td>
-    `;
-    transactionTableBody.appendChild(row);
-  });
+  const otherUserId = tx.other_user_id || tx.related_user_id || tx.wallet_user_id || null;
+  const name = await getUserName(otherUserId);
+
+  const direction = tx.type === "debit" ? "Sent" : tx.type === "credit" ? "Received" : tx.type;
+  const noteBtn = tx.note
+    ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
+    : "-";
+  const id = tx.id || "-";
+
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td>${createdAt}</td>
+    <td>${amount}</td>
+    <td>${name}</td>
+    <td>${direction}</td>
+    <td>${noteBtn}</td>
+    <td>${id}</td>
+  `;
+  transactionTableBody.appendChild(row);
 }
 
 const assistDropdown = document.getElementById("editAssistance");
