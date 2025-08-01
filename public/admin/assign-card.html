@@ -119,7 +119,7 @@
     <div class="status" id="status"></div>
   </div>
 
-  <script type="module">
+<script type="module">
   const cardUID = document.getElementById("cardUID");
   const assignBtn = document.getElementById("assignBtn");
   const statusEl = document.getElementById("status");
@@ -129,14 +129,13 @@
 
   let selectedUser = null;
 
-  // 🔧 Generate UID
+  // 🔐 Generate card UID
   generateBtn.addEventListener("click", () => {
     const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     cardUID.value = uid;
   });
 
-
-  // 👤 Autocomplete
+  // 🔎 Autocomplete user search
   userSearch.addEventListener("input", async () => {
     const query = userSearch.value.trim();
     if (query.length < 2) {
@@ -146,30 +145,31 @@
 
     try {
       const res = await fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error("Failed to fetch assignable users.");
+
       const users = await res.json();
 
-// 🚫 Filter out users with roles/types we don’t assign cards to
-const eligibleUsers = users.filter(u =>
-  u.role !== "admin" && u.type !== "parent"
-);
+      if (!Array.isArray(users) || users.length === 0) {
+        userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
+        userSuggestions.style.display = "block";
+        return;
+      }
 
-if (!eligibleUsers.length) {
-  userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
-  userSuggestions.style.display = "block";
-  return;
-}
+      userSuggestions.innerHTML = users.map(u => `
+        <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+          ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
+        </div>
+      `).join("");
+      userSuggestions.style.display = "block";
 
-userSuggestions.innerHTML = eligibleUsers.map(u => `
-  <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-    ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
-  </div>
-`).join("");
-userSuggestions.style.display = "block";
     } catch (e) {
-      console.error("User search failed:", e);
+      console.error("❌ User search failed:", e.message);
+      userSuggestions.innerHTML = "<div style='padding: 8px;'>Error loading users</div>";
+      userSuggestions.style.display = "block";
     }
   });
 
+  // 🎯 Select user
   userSuggestions.addEventListener("click", (e) => {
     const item = e.target.closest(".user-suggestion");
     if (!item) return;
@@ -181,13 +181,14 @@ userSuggestions.style.display = "block";
     userSuggestions.style.display = "none";
   });
 
+  // 🖱️ Hide suggestions when clicking outside
   document.addEventListener("click", (e) => {
     if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
       userSuggestions.style.display = "none";
     }
   });
 
-  // 📨 Assign card
+  // 📨 Assign card to selected user
   assignBtn.addEventListener("click", async () => {
     const uid = cardUID.value.trim();
     const admin = JSON.parse(localStorage.getItem("boopUser"));
@@ -225,7 +226,7 @@ userSuggestions.style.display = "block";
         throw new Error(result.message || "Card assignment failed.");
       }
 
-      // ✅ Success message
+      // ✅ Success
       statusEl.textContent = "✅ Card assigned successfully!";
       statusEl.style.color = "green";
 
@@ -233,7 +234,7 @@ userSuggestions.style.display = "block";
       userSearch.value = "";
       selectedUser = null;
 
-      // ✅ Create & show "Assign New Card" button
+      // Add "Assign Another Card" button
       let newBtn = document.getElementById("assignNewCardBtn");
       if (!newBtn) {
         newBtn = document.createElement("button");
@@ -270,36 +271,6 @@ userSuggestions.style.display = "block";
       const btn = document.getElementById("assignNewCardBtn");
       if (btn) btn.remove();
     });
-  });
-</script>
-
-
-
-<script>
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  const allowedTypes = ["super_admin", "admin"];
-
-  const isAuthorized =
-    user &&
-    typeof user === "object" &&
-    user.role === "admin" &&
-    allowedTypes.includes(user.type);
-
-  if (!isAuthorized) {
-    window.location.href = "login.html"; // Redirect non-authorized users
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("admin.js has loaded!");
-
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        localStorage.removeItem("boopUser");
-        window.location.href = "login.html";
-      });
-    }
   });
 </script>
     
