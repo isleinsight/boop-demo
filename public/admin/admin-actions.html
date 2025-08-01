@@ -164,20 +164,8 @@
   const token = localStorage.getItem("boop_jwt");
   const tbody = document.getElementById("adminActionsBody");
   const statusMessage = document.getElementById("statusMessage");
-const prevBtn = document.getElementById("prevPage");
-const nextBtn = document.getElementById("nextPage");
-
-if (currentPage <= 1) {
-  prevBtn.style.display = "none";
-} else {
-  prevBtn.style.display = "inline-block";
-}
-
-if (currentPage >= totalPages) {
-  nextBtn.style.display = "none";
-} else {
-  nextBtn.style.display = "inline-block";
-}
+  const prevBtn = document.getElementById("prevPage");
+  const nextBtn = document.getElementById("nextPage");
   const pageIndicator = document.getElementById("pageIndicator");
 
   const allowedTypes = ["super_admin", "admin", "support"];
@@ -189,10 +177,10 @@ if (currentPage >= totalPages) {
   const limit = 20;
 
   async function loadAdminActions() {
-    const start = document.getElementById("startDate").value;
-    const end = document.getElementById("endDate").value;
-    const status = document.getElementById("statusFilter").value;
-    const search = document.getElementById("searchInput").value;
+    const start = document.getElementById("startDate")?.value;
+    const end = document.getElementById("endDate")?.value;
+    const status = document.getElementById("statusFilter")?.value;
+    const search = document.getElementById("searchInput")?.value;
 
     const query = new URLSearchParams({
       page: currentPage,
@@ -228,8 +216,10 @@ if (currentPage >= totalPages) {
         : `<tr><td colspan="7" style="text-align:center;">No results found.</td></tr>`;
 
       pageIndicator.textContent = `Page ${currentPage}`;
-      prevBtn.disabled = currentPage === 1;
-      nextBtn.disabled = currentPage * limit >= totalCount;
+
+      // ✅ Hide/show pagination buttons appropriately
+      prevBtn.style.display = currentPage <= 1 ? "none" : "inline-block";
+      nextBtn.style.display = currentPage * limit >= totalCount ? "none" : "inline-block";
 
     } catch (err) {
       console.error("❌", err);
@@ -238,19 +228,19 @@ if (currentPage >= totalPages) {
     }
   }
 
-  document.getElementById("applyFilters").addEventListener("click", () => {
+  document.getElementById("applyFilters")?.addEventListener("click", () => {
     currentPage = 1;
     loadAdminActions();
   });
 
-  prevBtn.addEventListener("click", () => {
+  prevBtn?.addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
       loadAdminActions();
     }
   });
 
-  nextBtn.addEventListener("click", () => {
+  nextBtn?.addEventListener("click", () => {
     currentPage++;
     loadAdminActions();
   });
