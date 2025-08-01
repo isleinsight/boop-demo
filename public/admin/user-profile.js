@@ -171,6 +171,7 @@ let transactions = [];
 
 try {
   transactions = await fetchJSON(`/api/transactions/user/${user.id}`);
+  console.log("💳 Transactions fetched:", transactions);
 } catch (err) {
   console.error("❌ Failed to fetch transactions:", err.message);
 }
@@ -194,7 +195,6 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
     const note = tx.note || "-";
     const id = tx.id || "-";
 
-console.log("💳 Transactions fetched:", transactions);
     
     const row = document.createElement("tr");
     row.innerHTML = `
