@@ -23,8 +23,8 @@ router.get('/recent', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         COALESCE(
-          u.first_name || ' ' || u.last_name,
           v.business_name,
+          u.first_name || ' ' || u.last_name,
           'System'
         ) AS sender_name
       FROM transactions t
@@ -107,8 +107,8 @@ router.get('/report', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         COALESCE(
-          u.first_name || ' ' || u.last_name,
           v.business_name,
+          u.first_name || ' ' || u.last_name,
           'System'
         ) AS sender_name
       FROM transactions t
@@ -158,7 +158,8 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error while adding funds' });
   }
 });
-// 📄 GET /api/transactions/user/:userId — For admin viewing someone else's profile
+
+// 📄 GET /api/transactions/user/:userId — Admin view of someone's profile
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
@@ -176,7 +177,6 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        -- 👇 Resolves vendor name or admin/system name
         COALESCE(v.business_name, u.first_name || ' ' || u.last_name, 'Unknown') AS counterparty_name
       FROM transactions t
       LEFT JOIN vendors v ON v.id = t.vendor_id
@@ -190,11 +190,6 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       transactions: result.rows,
       totalCount: result.rows.length
     });
-  } catch (err) {
-    console.error('❌ Failed to load target user transactions:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve transactions.' });
-  }
-});
   } catch (err) {
     console.error('❌ Failed to load target user transactions:', err.message);
     res.status(500).json({ message: 'Failed to retrieve transactions.' });
