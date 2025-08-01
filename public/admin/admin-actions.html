@@ -24,7 +24,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 30px;
+      margin-top: 20px;
     }
 
     th, td {
@@ -36,6 +36,41 @@
     th {
       background-color: #f0f4f8;
       text-align: left;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .filters input,
+    .filters select {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+
+    .pagination {
+      margin-top: 20px;
+      text-align: right;
+    }
+
+    .pagination button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      margin-left: 5px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .pagination button:disabled {
+      background: #ccc;
+      cursor: default;
     }
 
     .status-pending { color: orange; }
@@ -75,7 +110,20 @@
   </nav>
 
 <div class="container">
-  <h2>Recent Admin Actions</h2>
+  <h2>Admin Actions</h2>
+
+  <div class="filters">
+    <input type="date" id="startDate" />
+    <input type="date" id="endDate" />
+    <select id="statusFilter">
+      <option value="">All Statuses</option>
+      <option value="pending">Pending</option>
+      <option value="completed">Completed</option>
+      <option value="error">Error</option>
+    </select>
+    <input type="text" id="searchInput" placeholder="Search name/email..." />
+    <button id="applyFilters">Apply</button>
+  </div>
 
   <table id="adminActionsTable">
     <thead>
@@ -94,6 +142,12 @@
     </tbody>
   </table>
 
+  <div class="pagination">
+    <button id="prevPage">Previous</button>
+    <span id="pageIndicator">Page 1</span>
+    <button id="nextPage">Next</button>
+  </div>
+
   <div id="statusMessage" class="status-message"></div>
 </div>
 
@@ -102,51 +156,84 @@
   const token = localStorage.getItem("boop_jwt");
   const tbody = document.getElementById("adminActionsBody");
   const statusMessage = document.getElementById("statusMessage");
+  const prevBtn = document.getElementById("prevPage");
+  const nextBtn = document.getElementById("nextPage");
+  const pageIndicator = document.getElementById("pageIndicator");
 
   const allowedTypes = ["super_admin", "admin", "support"];
-  const isAuthorized =
-    user &&
-    typeof user === "object" &&
-    user.role === "admin" &&
-    allowedTypes.includes(user.type);
-
-  if (!isAuthorized) {
-    window.location.href = "login.html"; // Restrict to only allowed admin types
+  if (!user || user.role !== "admin" || !allowedTypes.includes(user.type)) {
+    window.location.href = "login.html";
   }
 
+  let currentPage = 1;
+  const limit = 20;
+
   async function loadAdminActions() {
+    const start = document.getElementById("startDate").value;
+    const end = document.getElementById("endDate").value;
+    const status = document.getElementById("statusFilter").value;
+    const search = document.getElementById("searchInput").value;
+
+    const query = new URLSearchParams({
+      page: currentPage,
+      limit,
+      ...(start && { start }),
+      ...(end && { end }),
+      ...(status && { status }),
+      ...(search && { search })
+    });
+
     try {
-      const res = await fetch("/api/admin-actions", {
+      const res = await fetch(`/api/admin-actions?${query.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
 
-      if (!res.ok || !Array.isArray(data)) {
-        throw new Error(data.message || "Failed to load admin actions.");
-      }
+      if (!res.ok) throw new Error(data.message || "Failed to load actions.");
 
-      if (!data.length) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No admin actions found.</td></tr>`;
-        return;
-      }
+      const { actions, totalCount } = data;
 
-      tbody.innerHTML = data.map(action => `
-        <tr>
-          <td>${action.action}</td>
-          <td class="status-${action.status}">${action.status}</td>
-          <td>${action.performed_by_name || "—"}<br><small>${action.performed_by_email || ""}</small></td>
-          <td>${action.target_name || "—"}<br><small>${action.target_email || ""}</small></td>
-          <td>${new Date(action.requested_at).toLocaleString()}</td>
-          <td>${action.completed_at ? new Date(action.completed_at).toLocaleString() : "—"}</td>
-          <td>${action.error_message || ""}</td>
-        </tr>
-      `).join("");
+      tbody.innerHTML = actions.length
+        ? actions.map(action => `
+          <tr>
+            <td>${action.action}</td>
+            <td class="status-${action.status}">${action.status}</td>
+            <td>${action.performed_by_name || "—"}<br><small>${action.performed_by_email || ""}</small></td>
+            <td>${action.target_name || "—"}<br><small>${action.target_email || ""}</small></td>
+            <td>${new Date(action.requested_at).toLocaleString()}</td>
+            <td>${action.completed_at ? new Date(action.completed_at).toLocaleString() : "—"}</td>
+            <td>${action.error_message || ""}</td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="7" style="text-align:center;">No results found.</td></tr>`;
+
+      pageIndicator.textContent = `Page ${currentPage}`;
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage * limit >= totalCount;
 
     } catch (err) {
       console.error("❌", err);
-      statusMessage.textContent = "Failed to load admin actions.";
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Error loading data.</td></tr>`;
+      statusMessage.textContent = err.message;
     }
   }
+
+  document.getElementById("applyFilters").addEventListener("click", () => {
+    currentPage = 1;
+    loadAdminActions();
+  });
+
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadAdminActions();
+    }
+  });
+
+  nextBtn.addEventListener("click", () => {
+    currentPage++;
+    loadAdminActions();
+  });
 
   document.addEventListener("DOMContentLoaded", () => {
     loadAdminActions();
