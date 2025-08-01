@@ -162,7 +162,8 @@ userInfo.innerHTML = `
 
   ${walletHTML}
 `;
-
+console.log("👀 Attempting to load transactions for user:", user.id);
+      
 const transactionTableBody = document.querySelector("#transactionTable tbody");
 transactionTableBody.innerHTML = "";
 
@@ -193,6 +194,8 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
     const note = tx.note || "-";
     const id = tx.id || "-";
 
+console.log("💳 Transactions fetched:", transactions);
+    
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${createdAt}</td>
