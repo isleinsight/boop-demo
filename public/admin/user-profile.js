@@ -169,8 +169,6 @@ transactionTableBody.innerHTML = "";
 
 let transactions = [];
 
-let transactions = [];
-
 try {
   const res = await fetchJSON(`/api/transactions/user/${user.id}`);
   transactions = res.transactions || [];  // 🔥 unpack from object
