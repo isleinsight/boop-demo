@@ -205,32 +205,34 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
   `;
 } else {
   for (const tx of transactions) {
-  const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
-  const amount = typeof tx.amount_cents === "number"
-    ? `$${(tx.amount_cents / 100).toFixed(2)}`
-    : "-";
+    const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
+    const amount = typeof tx.amount_cents === "number"
+      ? `$${(tx.amount_cents / 100).toFixed(2)}`
+      : "-";
 
-  const otherUserId = tx.other_user_id || tx.related_user_id || tx.wallet_user_id || null;
-  const name = await getUserName(otherUserId);
+    const otherUserId = tx.other_user_id || tx.related_user_id || tx.wallet_user_id || null;
+    const name = await getUserName(otherUserId);
 
-  const direction = tx.type === "debit" ? "Sent" : tx.type === "credit" ? "Received" : tx.type;
-  const noteBtn = tx.note
-    ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
-    : "-";
-  const id = tx.id || "-";
+    const direction = tx.type === "debit" ? "Sent" : tx.type === "credit" ? "Received" : tx.type;
+    const noteBtn = tx.note
+      ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
+      : "-";
+    const id = tx.id || "-";
 
-  const row = document.createElement("tr");
-  row.innerHTML = `
-    <td>${createdAt}</td>
-    <td>${amount}</td>
-    <td>${name}</td>
-    <td>${direction}</td>
-    <td>${noteBtn}</td>
-    <td>${id}</td>
-  `;
-  transactionTableBody.appendChild(row);
-}
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${createdAt}</td>
+      <td>${amount}</td>
+      <td>${name}</td>
+      <td>${direction}</td>
+      <td>${noteBtn}</td>
+      <td>${id}</td>
+    `;
+    transactionTableBody.appendChild(row);
+  } // 🔁 END for-loop
+} // ✅ END else block
 
+// ✅ Restore assist dropdown logic
 const assistDropdown = document.getElementById("editAssistance");
 if (assistDropdown) {
   assistDropdown.value = user.on_assistance ? "true" : "false";
