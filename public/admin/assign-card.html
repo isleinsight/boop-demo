@@ -148,18 +148,23 @@
       const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&eligibleOnly=true`);
       const users = await res.json();
 
-      if (!users.length) {
-        userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
-        userSuggestions.style.display = "block";
-        return;
-      }
+// 🚫 Filter out users with roles/types we don’t assign cards to
+const eligibleUsers = users.filter(u =>
+  u.role !== "admin" && u.type !== "parent"
+);
 
-      userSuggestions.innerHTML = users.map(u => `
-        <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-          ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
-        </div>
-      `).join("");
-      userSuggestions.style.display = "block";
+if (!eligibleUsers.length) {
+  userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
+  userSuggestions.style.display = "block";
+  return;
+}
+
+userSuggestions.innerHTML = eligibleUsers.map(u => `
+  <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+    ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
+  </div>
+`).join("");
+userSuggestions.style.display = "block";
     } catch (e) {
       console.error("User search failed:", e);
     }
