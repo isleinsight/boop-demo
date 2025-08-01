@@ -13,7 +13,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
   }
 
   try {
-    const result = await pool.query(\`
+    const result = await pool.query(`
       SELECT
         t.id,
         t.user_id,
@@ -22,13 +22,17 @@ router.get('/recent', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        u.first_name || ' ' || u.last_name AS user_name,
-        u.email AS user_email
+        COALESCE(
+          u.first_name || ' ' || u.last_name,
+          v.business_name,
+          'System'
+        ) AS sender_name
       FROM transactions t
       LEFT JOIN users u ON u.id = t.user_id
+      LEFT JOIN vendors v ON v.user_id = t.user_id
       ORDER BY t.created_at DESC
       LIMIT 50
-    \`);
+    `);
 
     res.status(200).json(result.rows);
   } catch (err) {
@@ -42,7 +46,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const result = await pool.query(\`
+    const result = await pool.query(`
       SELECT
         id,
         wallet_id,
@@ -54,7 +58,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
       WHERE user_id = $1
       ORDER BY created_at DESC
       LIMIT 50
-    \`, [userId]);
+    `, [userId]);
 
     res.status(200).json(result.rows);
   } catch (err) {
@@ -77,23 +81,23 @@ router.get('/report', authenticateToken, async (req, res) => {
 
   if (start) {
     values.push(start);
-    conditions.push(\`t.created_at >= $\${values.length}\`);
+    conditions.push(`t.created_at >= $${values.length}`);
   }
 
   if (end) {
     values.push(end);
-    conditions.push(\`t.created_at <= $\${values.length}\`);
+    conditions.push(`t.created_at <= $${values.length}`);
   }
 
   if (filterType) {
     values.push(filterType);
-    conditions.push(\`t.type = $\${values.length}\`);
+    conditions.push(`t.type = $${values.length}`);
   }
 
-  const whereClause = conditions.length ? \`WHERE \${conditions.join(' AND ')}\` : '';
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
-    const result = await pool.query(\`
+    const result = await pool.query(`
       SELECT
         t.id,
         t.user_id,
@@ -102,14 +106,18 @@ router.get('/report', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        u.first_name || ' ' || u.last_name AS user_name,
-        u.email AS user_email
+        COALESCE(
+          u.first_name || ' ' || u.last_name,
+          v.business_name,
+          'System'
+        ) AS sender_name
       FROM transactions t
       LEFT JOIN users u ON u.id = t.user_id
-      \${whereClause}
+      LEFT JOIN vendors v ON v.user_id = t.user_id
+      ${whereClause}
       ORDER BY t.created_at DESC
       LIMIT 200
-    \`, values);
+    `, values);
 
     res.status(200).json(result.rows);
   } catch (err) {
@@ -133,8 +141,8 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
   try {
     await pool.query(
-      \`INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)\`,
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
       [
         wallet_id,
         user_id,
@@ -151,20 +159,17 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   }
 });
 
-// 🔍 GET /api/transactions/user/:userId — Unified route
+// 📄 GET /api/transactions/user/:userId — For admin viewing someone's profile
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
-  const page = parseInt(req.query.page || 1, 10);
-  const limit = parseInt(req.query.limit || 10, 10);
-  const offset = (page - 1) * limit;
 
-  if (role !== "admin") {
-    return res.status(403).json({ error: "Unauthorized" });
+  if (role !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized' });
   }
 
   try {
-    const txRes = await pool.query(\`
+    const result = await pool.query(`
       SELECT
         t.id,
         t.wallet_id,
@@ -172,27 +177,27 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        u.first_name || ' ' || u.last_name AS sender_name,
-        u.id as sender_id
+        t.user_id,
+        COALESCE(
+          u.first_name || ' ' || u.last_name,
+          v.business_name,
+          'System'
+        ) AS sender_name
       FROM transactions t
-      LEFT JOIN users u ON u.id = t.added_by
+      LEFT JOIN users u ON u.id = t.user_id
+      LEFT JOIN vendors v ON v.user_id = t.user_id
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
-      LIMIT $2 OFFSET $3
-    \`, [userId, limit, offset]);
+      LIMIT 50
+    `, [userId]);
 
-    const countRes = await pool.query(
-      \`SELECT COUNT(*) FROM transactions WHERE user_id = $1\`,
-      [userId]
-    );
-
-    res.json({
-      transactions: txRes.rows,
-      totalCount: parseInt(countRes.rows[0].count, 10)
+    res.status(200).json({
+      transactions: result.rows,
+      totalCount: result.rows.length
     });
   } catch (err) {
-    console.error("❌ Failed to fetch user transactions:", err);
-    res.status(500).json({ error: "Failed to load transactions" });
+    console.error('❌ Failed to load target user transactions:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve transactions.' });
   }
 });
 
