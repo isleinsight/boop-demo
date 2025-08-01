@@ -158,8 +158,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error while adding funds' });
   }
 });
-
-// 📄 GET /api/transactions/user/:userId — For admin viewing someone's profile
+// 📄 GET /api/transactions/user/:userId — For admin viewing someone else's profile
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
@@ -177,15 +176,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        t.user_id,
-        COALESCE(
-          u.first_name || ' ' || u.last_name,
-          v.business_name,
-          'System'
-        ) AS sender_name
+        -- 👇 Resolves vendor name or admin/system name
+        COALESCE(v.business_name, u.first_name || ' ' || u.last_name, 'Unknown') AS counterparty_name
       FROM transactions t
-      LEFT JOIN users u ON u.id = t.user_id
-      LEFT JOIN vendors v ON v.user_id = t.user_id
+      LEFT JOIN vendors v ON v.id = t.vendor_id
+      LEFT JOIN users u ON u.id = t.added_by
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT 50
@@ -195,6 +190,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       transactions: result.rows,
       totalCount: result.rows.length
     });
+  } catch (err) {
+    console.error('❌ Failed to load target user transactions:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve transactions.' });
+  }
+});
   } catch (err) {
     console.error('❌ Failed to load target user transactions:', err.message);
     res.status(500).json({ message: 'Failed to retrieve transactions.' });
