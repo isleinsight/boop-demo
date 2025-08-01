@@ -73,6 +73,14 @@
       cursor: default;
     }
 
+    .pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+
     .status-pending { color: orange; }
     .status-completed { color: green; }
     .status-error { color: red; }
@@ -142,11 +150,11 @@
     </tbody>
   </table>
 
-  <div class="pagination">
-    <button id="prevPage">Previous</button>
-    <span id="pageIndicator">Page 1</span>
-    <button id="nextPage">Next</button>
-  </div>
+  <div class="pagination-container">
+  <button id="prevPage">Previous</button>
+  <span id="pageIndicator">Page 1</span>
+  <button id="nextPage">Next</button>
+</div>
 
   <div id="statusMessage" class="status-message"></div>
 </div>
