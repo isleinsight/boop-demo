@@ -169,9 +169,12 @@ transactionTableBody.innerHTML = "";
 
 let transactions = [];
 
+let transactions = [];
+
 try {
-  transactions = await fetchJSON(`/api/transactions/user/${user.id}`);
-  console.log("💳 Transactions fetched:", transactions);
+  const res = await fetchJSON(`/api/transactions/user/${user.id}`);
+  transactions = res.transactions || [];  // 🔥 unpack from object
+  console.log("💳 Cleaned up transactions array:", transactions);
 } catch (err) {
   console.error("❌ Failed to fetch transactions:", err.message);
 }
