@@ -478,18 +478,23 @@ router.get("/me", authenticateToken, async (req, res) => {
 // 🔍 GET /api/users/assign-card?search=
 router.get('/assign-card', authenticateToken, async (req, res) => {
   const { role } = req.user;
-  const { search } = req.query;
+  const rawSearch = req.query.search;
+
+  // 📋 Log input for debugging
+  console.log("🔍 Assign-card search received:", rawSearch);
 
   if (role !== 'admin') {
     return res.status(403).json({ message: 'Unauthorized access' });
   }
 
-  if (!search || search.trim().length < 2) {
+  const search = rawSearch?.toString().trim().toLowerCase();
+
+  if (!search || search.length < 2) {
     return res.status(400).json({ message: "Search term must be at least 2 characters." });
   }
 
   try {
-    const keyword = `%${search.trim().toLowerCase()}%`;
+    const keyword = `%${search}%`;
 
     const result = await pool.query(`
       SELECT id, first_name, middle_name, last_name, email, wallet_id, role, type
@@ -500,13 +505,14 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
           LOWER(last_name) LIKE $1 OR
           LOWER(email) LIKE $1
         )
+        AND deleted_at IS NULL
       ORDER BY first_name ASC
       LIMIT 20
     `, [keyword]);
 
     res.status(200).json(result.rows);
   } catch (err) {
-    console.error("❌ Error fetching assign-card users:", err.message);
+    console.error("❌ Error fetching assign-card users:", err);
     res.status(500).json({ message: 'Failed to search assignable users' });
   }
 });
