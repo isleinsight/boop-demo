@@ -166,7 +166,7 @@
         userSuggestions.style.display = "none";
         return;
       }
-
+console.log("🔗 Requesting:", `/api/users/assign-card?search=${encodeURIComponent(query)}`);
       try {
         const res = await fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`);
         if (!res.ok) throw new Error("Failed to fetch assignable users.");
