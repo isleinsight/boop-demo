@@ -484,6 +484,10 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
     return res.status(403).json({ message: 'Unauthorized access' });
   }
 
+  if (!search || search.trim().length < 2) {
+    return res.status(400).json({ message: "Search term must be at least 2 characters." });
+  }
+
   try {
     const keyword = `%${search.trim().toLowerCase()}%`;
 
