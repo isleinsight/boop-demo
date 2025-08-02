@@ -406,31 +406,50 @@ if (user.role === "student") {
     }
 
     if (saveStudentBtn) {
-  saveStudentBtn.onclick = async () => {
-    const studentData = {
-      school_name: document.getElementById("editSchool")?.value,
-      grade_level: document.getElementById("editGrade")?.value,
-      expiry_date: document.getElementById("editExpiry")?.value,
-    };
-console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
-    
-    try {
-      await fetchJSON(`/api/students/${currentUserId}`, {
-        
-        method: "PATCH",
-        body: JSON.stringify(studentData)
-      });
+      saveStudentBtn.onclick = async () => {
+        const studentData = {
+          school_name: document.getElementById("editSchool")?.value,
+          grade_level: document.getElementById("editGrade")?.value,
+          expiry_date: document.getElementById("editExpiry")?.value,
+        };
 
-      alert("✅ Student info saved.");
-      isEditMode = false;
-      saveStudentBtn.style.display = "none";
-      loadUserProfile();
-    } catch (err) {
-      console.error("❌ Failed to save student data:", err);
-      alert("Failed to save student info.");
+        console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
+
+        try {
+          await fetchJSON(`/api/students/${currentUserId}`, {
+            method: "PATCH",
+            body: JSON.stringify(studentData)
+          });
+
+          alert("✅ Student info saved.");
+          isEditMode = false;
+          saveStudentBtn.style.display = "none";
+          loadUserProfile();
+        } catch (err) {
+          console.error("❌ Failed to save student data:", err);
+          alert("Failed to save student info.");
+        }
+      };
     }
-  };
-}
+
+    // ✅ Fetch and display parent info
+    try {
+      const parents = await fetchJSON(`/api/user-students/parents/${user.id}`);
+
+      if (Array.isArray(parents) && parents.length > 0) {
+        const parent = parents[0]; // change if multiple supported
+
+        document.getElementById("parentName").innerHTML = `
+          <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">
+            ${parent.first_name} ${parent.last_name}
+          </a>
+        `;
+        document.getElementById("parentEmail").textContent = parent.email;
+        document.getElementById("parentSection").style.display = "block";
+      }
+    } catch (err) {
+      console.warn("❌ Could not load parent info:", err.message);
+    }
   }
 }
       
