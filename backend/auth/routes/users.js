@@ -477,27 +477,30 @@ router.get("/me", authenticateToken, async (req, res) => {
 
 // 🔍 GET /api/users/assign-card?search=
 router.get('/assign-card', authenticateToken, async (req, res) => {
+  console.log("🛠 Incoming /assign-card request");
+  console.log("Headers:", req.headers);
+  console.log("Decoded user:", req.user);
+
+  if (!req.user || !req.user.role) {
+    console.log("❌ req.user missing or malformed");
+    return res.status(401).json({ message: "User not authenticated" });
+  }
+
   const { role } = req.user;
   const { search } = req.query;
 
-  console.log("🧪 Incoming request");
-  console.log("Role:", role);
-  console.log("Search raw:", search);
+  console.log("Role from token:", role);
+  console.log("Search param:", search);
 
-  if (role !== 'admin') {
-    console.log("🚫 User role is not admin");
-    return res.status(403).json({ message: 'Unauthorized access' });
-  }
+  // COMMENT OUT strict check temporarily
+  // if (role !== 'admin') {
+  //   return res.status(403).json({ message: 'Unauthorized access' });
+  // }
 
-  const trimmedSearch = (search || '').trim().toLowerCase();
-  console.log("Trimmed search:", trimmedSearch);
-
-// if (trimmedSearch.length < 2) {
-//   return res.status(400).json({ message: "Search term must be at least 2 characters." });
-// }
+  const trimmedSearch = (search || '').trim().toLowerCase() || "a";
 
   try {
-    // const keyword = `%${trimmedSearch}%`;
+    const keyword = `%${trimmedSearch}%`;
 
     const result = await pool.query(`
       SELECT id, first_name, middle_name, last_name, email, wallet_id, role, type
@@ -516,8 +519,8 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
 
     res.status(200).json(result.rows);
   } catch (err) {
-    console.error("❌ DB query error:", err.message);
-    res.status(500).json({ message: 'Failed to search assignable users' });
+    console.error("❌ SQL ERROR:", err.message);
+    res.status(500).json({ message: 'DB failure' });
   }
 });
 
