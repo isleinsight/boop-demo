@@ -103,4 +103,29 @@ router.delete("/:studentId", authenticateToken, async (req, res) => {
   }
 });
 
+
+// ✅ GET /api/user-students/parents/:studentId — Get parent(s) of student
+router.get("/parents/:studentId", authenticateToken, async (req, res) => {
+  const { studentId } = req.params;
+
+  if (!studentId) {
+    return res.status(400).json({ error: "Missing studentId" });
+  }
+
+  try {
+    const result = await db.query(`
+      SELECT u.id, u.first_name, u.last_name, u.email
+      FROM student_parents sp
+      JOIN users u ON sp.parent_id = u.id
+      WHERE sp.student_id = $1
+    `, [studentId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Failed to fetch parent(s):", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+
 module.exports = router;
