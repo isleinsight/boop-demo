@@ -497,7 +497,7 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
 // }
 
   try {
-    const keyword = `%${trimmedSearch}%`;
+    // const keyword = `%${trimmedSearch}%`;
 
     const result = await pool.query(`
       SELECT id, first_name, middle_name, last_name, email, wallet_id, role, type
