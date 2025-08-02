@@ -174,7 +174,7 @@ let transactions = [];
 
 try {
   const offset = (currentPage - 1) * transactionsPerPage;
-  const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage}&offset=${offset}`);
+  const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage + 1}&offset=${offset}`);
 
   transactions = res.transactions || [];
   console.log("💳 Cleaned up transactions array:", transactions);
