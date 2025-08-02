@@ -177,30 +177,15 @@ try {
   const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage + 1}&offset=${offset}`);
 
   transactions = res.transactions || [];
-  console.log("💳 Cleaned up transactions array:", transactions);
+  console.log("💳 Loaded transactions:", transactions);
 } catch (err) {
   console.error("❌ Failed to fetch transactions:", err.message);
 }
 
-// 🧠 User cache to avoid duplicate fetches
-const userCache = {};
+// Only display up to the per-page limit
+const pageTransactions = transactions.slice(0, transactionsPerPage);
 
-async function getUserName(userId) {
-  if (!userId) return "-";
-  if (userCache[userId]) return userCache[userId];
-
-  try {
-    const user = await fetchJSON(`/api/users/${userId}`);
-    const fullName = `${user.first_name} ${user.last_name}`;
-    userCache[userId] = fullName;
-    return fullName;
-  } catch (err) {
-    console.warn("🔍 Failed to load user for transaction:", err.message);
-    return "(Unknown)";
-  }
-}
-
-if (!Array.isArray(transactions) || transactions.length === 0) {
+if (pageTransactions.length === 0) {
   transactionTableBody.innerHTML = `
     <tr>
       <td colspan="6" style="text-align: center; padding: 20px; color: #888;">
@@ -209,22 +194,18 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
     </tr>
   `;
 } else {
-  for (const tx of transactions) {
+  for (const tx of pageTransactions) {
     const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
     const amount = typeof tx.amount_cents === "number"
       ? `$${(tx.amount_cents / 100).toFixed(2)}`
       : "-";
-
     const isCredit = tx.type === "credit";
     const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type;
-
     const counterparty = tx.counterparty_name || "Unknown";
     const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
-
     const noteBtn = tx.note
       ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
       : "-";
-
     const id = tx.id || "-";
 
     const row = document.createElement("tr");
@@ -238,9 +219,9 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
     `;
     transactionTableBody.appendChild(row);
   }
-} // ✅ END else block
+}
 
-// === PAGINATION INFO UPDATE ===
+// === PAGINATION CONTROLS ===
 const pageIndicator = document.getElementById("transactionPageIndicator");
 const prevBtn = document.getElementById("prevTransactions");
 const nextBtn = document.getElementById("nextTransactions");
@@ -252,7 +233,7 @@ if (prevBtn) {
   prevBtn.style.display = currentPage === 1 ? "none" : "inline-block";
 }
 if (nextBtn) {
-  nextBtn.style.display = transactions.length < transactionsPerPage ? "none" : "inline-block";
+  nextBtn.style.display = transactions.length > transactionsPerPage ? "inline-block" : "none";
 }
 
 // ✅ Restore assist dropdown logic
