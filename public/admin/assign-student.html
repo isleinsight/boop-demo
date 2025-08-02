@@ -113,14 +113,17 @@
 
 <script>
   const user = JSON.parse(localStorage.getItem("boopUser"));
+  const token = localStorage.getItem("boop_jwt");
   const allowedTypes = ["super_admin", "admin", "support"];
+
   const isAllowed =
     user &&
     typeof user === "object" &&
     user.role === "admin" &&
     allowedTypes.includes(user.type);
 
-  if (!isAllowed) {
+  if (!isAllowed || !token) {
+    localStorage.clear();
     window.location.href = "login.html";
   }
 
@@ -131,7 +134,7 @@
     if (logoutBtn) {
       logoutBtn.addEventListener("click", (e) => {
         e.preventDefault();
-        localStorage.removeItem("boopUser");
+        localStorage.clear();
         window.location.href = "login.html";
       });
     }
@@ -155,7 +158,11 @@
         }
 
         try {
-          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&role=${role}`);
+          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&role=${role}`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
           const users = await res.json();
 
           if (!Array.isArray(users) || users.length === 0) {
@@ -201,49 +208,56 @@
       }
 
       try {
-  const res = await fetch("/api/user-students", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: selectedParent, student_id: selectedStudent })
-  });
+        const res = await fetch("/api/user-students", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            user_id: selectedParent,
+            student_id: selectedStudent
+          })
+        });
 
-  const result = await res.json();
+        const result = await res.json();
 
-  if (!res.ok) throw new Error(result.message || "Failed to assign student.");
+        if (!res.ok) throw new Error(result.message || "Failed to assign student.");
 
-  statusMessage.textContent = result.message || "✅ Student assigned successfully!";
-  statusMessage.style.color = "green";
+        statusMessage.textContent = result.message || "✅ Student assigned successfully!";
+        statusMessage.style.color = "green";
 
-  parentSearch.value = "";
-  studentSearch.value = "";
-  selectedParent = null;
-  selectedStudent = null;
+        parentSearch.value = "";
+        studentSearch.value = "";
+        selectedParent = null;
+        selectedStudent = null;
 
-  let anotherBtn = document.getElementById("assignAnotherBtn");
-  if (!anotherBtn) {
-    anotherBtn = document.createElement("button");
-    anotherBtn.id = "assignAnotherBtn";
-    anotherBtn.textContent = "Assign Another Student";
-    anotherBtn.style.marginTop = "12px";
-    anotherBtn.style.width = "100%";
-    anotherBtn.style.padding = "10px";
-    anotherBtn.style.fontSize = "1rem";
-    statusMessage.insertAdjacentElement("afterend", anotherBtn);
+        let anotherBtn = document.getElementById("assignAnotherBtn");
+        if (!anotherBtn) {
+          anotherBtn = document.createElement("button");
+          anotherBtn.id = "assignAnotherBtn";
+          anotherBtn.textContent = "Assign Another Student";
+          anotherBtn.style.marginTop = "12px";
+          anotherBtn.style.width = "100%";
+          anotherBtn.style.padding = "10px";
+          anotherBtn.style.fontSize = "1rem";
+          statusMessage.insertAdjacentElement("afterend", anotherBtn);
 
-    anotherBtn.addEventListener("click", () => {
-      parentSearch.value = "";
-      studentSearch.value = "";
-      selectedParent = null;
-      selectedStudent = null;
-      statusMessage.textContent = "";
-      anotherBtn.remove();
-    });
-  }
-} catch (err) {
-  console.error("❌ Assignment failed:", err);
-  statusMessage.textContent = err.message || "❌ Failed to assign student.";
-  statusMessage.style.color = "red";
-}
+          anotherBtn.addEventListener("click", () => {
+            parentSearch.value = "";
+            studentSearch.value = "";
+            selectedParent = null;
+            selectedStudent = null;
+            statusMessage.textContent = "";
+            anotherBtn.remove();
+          });
+        }
+
+      } catch (err) {
+        console.error("❌ Assignment failed:", err);
+        statusMessage.textContent = err.message || "❌ Failed to assign student.";
+        statusMessage.style.color = "red";
+      }
     });
 
     document.querySelectorAll("input").forEach(el => {
