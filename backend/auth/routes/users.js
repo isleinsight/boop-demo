@@ -490,13 +490,13 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
     const result = await pool.query(`
       SELECT id, first_name, middle_name, last_name, email, wallet_id, role, type
       FROM users
-      WHERE role = 'user'
-        AND type NOT IN ('parent')
+      WHERE role IN ('cardholder', 'vendor', 'student', 'senior')
         AND (
           LOWER(first_name) LIKE $1 OR
           LOWER(last_name) LIKE $1 OR
           LOWER(email) LIKE $1
         )
+      ORDER BY first_name ASC
       LIMIT 20
     `, [keyword]);
 
