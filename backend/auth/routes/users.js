@@ -486,18 +486,14 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
     return res.status(401).json({ message: "User not authenticated" });
   }
 
-  const { role } = req.user;
   const { search } = req.query;
+  const trimmedSearch = (search || '').trim().toLowerCase();
 
-  console.log("Role from token:", role);
-  console.log("Search param:", search);
-
-  // COMMENT OUT strict check temporarily
-  // if (role !== 'admin') {
-  //   return res.status(403).json({ message: 'Unauthorized access' });
-  // }
-
-  const trimmedSearch = (search || '').trim().toLowerCase() || "a";
+  // ✂️ Gracefully skip querying for short searches
+  if (trimmedSearch.length < 2) {
+    console.log("⚠️ Search term too short:", trimmedSearch);
+    return res.json([]);
+  }
 
   try {
     const keyword = `%${trimmedSearch}%`;
@@ -505,7 +501,7 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
     const result = await pool.query(`
       SELECT id, first_name, middle_name, last_name, email, wallet_id, role, type
       FROM users
-      WHERE role NOT IN ('admin', 'parent')
+      WHERE can_receive_card = true
         AND deleted_at IS NULL
         AND wallet_id IS NOT NULL
         AND (
@@ -519,8 +515,8 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
 
     res.status(200).json(result.rows);
   } catch (err) {
-    console.error("❌ SQL ERROR:", err.message);
-    res.status(500).json({ message: 'DB failure' });
+    console.error("❌ SQL ERROR in /assign-card:", err.message);
+    res.status(500).json({ message: 'Failed to search assignable users' });
   }
 });
 
