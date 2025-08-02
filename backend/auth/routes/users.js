@@ -482,7 +482,7 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
 
   // 📋 Log input for debugging
   console.log("🔍 Assign-card search received:", rawSearch);
-  console.log("🔗 Requesting:", `/api/users/assign-card?search=${encodeURIComponent(query)}`);
+  
 
   if (role !== 'admin') {
     return res.status(403).json({ message: 'Unauthorized access' });
@@ -493,7 +493,7 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
   if (!search || search.length < 2) {
     return res.status(400).json({ message: "Search term must be at least 2 characters." });
   }
-
+console.log("🔗 Requesting:", `/api/users/assign-card?search=${encodeURIComponent(query)}`);
   try {
     const keyword = `%${search}%`;
 
