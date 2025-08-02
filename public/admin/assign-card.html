@@ -120,20 +120,20 @@
   </div>
 
 <script type="module">
-    const user = JSON.parse(localStorage.getItem("boopUser"));
-  const allowedTypes = ["super_admin", "admin", "support"];
-  const isAllowed =
-    user &&
-    typeof user === "object" &&
-    user.role === "admin" &&
-    allowedTypes.includes(user.type);
-
-  if (!isAllowed) {
-    window.location.href = "login.html";
-  }
-
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("✅ assign-student.js loaded!");
+    console.log("✅ assign-card.js loaded!");
+
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    const allowedTypes = ["super_admin", "admin", "support"];
+    const isAllowed =
+      user &&
+      typeof user === "object" &&
+      user.role === "admin" &&
+      allowedTypes.includes(user.type);
+
+    if (!isAllowed) {
+      return (window.location.href = "login.html");
+    }
 
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
@@ -143,157 +143,155 @@
         window.location.href = "login.html";
       });
     }
-    
-  const cardUID = document.getElementById("cardUID");
-  const assignBtn = document.getElementById("assignBtn");
-  const statusEl = document.getElementById("status");
-  const generateBtn = document.getElementById("generateUIDBtn");
-  const userSearch = document.getElementById("userSearch");
-  const userSuggestions = document.getElementById("userSuggestions");
 
-  let selectedUser = null;
+    const cardUID = document.getElementById("cardUID");
+    const assignBtn = document.getElementById("assignBtn");
+    const statusEl = document.getElementById("status");
+    const generateBtn = document.getElementById("generateUIDBtn");
+    const userSearch = document.getElementById("userSearch");
+    const userSuggestions = document.getElementById("userSuggestions");
 
-  // 🔐 Generate card UID
-  generateBtn.addEventListener("click", () => {
-    const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-    cardUID.value = uid;
-  });
+    let selectedUser = null;
 
-  // 🔎 Autocomplete user search
-  userSearch.addEventListener("input", async () => {
-    const query = userSearch.value.trim();
-    if (query.length < 2) {
-      userSuggestions.style.display = "none";
-      return;
-    }
+    // 🔐 Generate card UID
+    generateBtn.addEventListener("click", () => {
+      const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+      cardUID.value = uid;
+    });
 
-    try {
-      const res = await fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`);
-      if (!res.ok) throw new Error("Failed to fetch assignable users.");
-
-      const users = await res.json();
-
-      if (!Array.isArray(users) || users.length === 0) {
-        userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
-        userSuggestions.style.display = "block";
+    // 🔎 Autocomplete user search
+    userSearch.addEventListener("input", async () => {
+      const query = userSearch.value.trim();
+      if (query.length < 2) {
+        userSuggestions.style.display = "none";
         return;
       }
 
-      userSuggestions.innerHTML = users.map(u => `
-        <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-          ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
-        </div>
-      `).join("");
-      userSuggestions.style.display = "block";
+      try {
+        const res = await fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error("Failed to fetch assignable users.");
 
-    } catch (e) {
-      console.error("❌ User search failed:", e.message);
-      userSuggestions.innerHTML = "<div style='padding: 8px;'>Error loading users</div>";
-      userSuggestions.style.display = "block";
-    }
-  });
+        const users = await res.json();
 
-  // 🎯 Select user
-  userSuggestions.addEventListener("click", (e) => {
-    const item = e.target.closest(".user-suggestion");
-    if (!item) return;
-    selectedUser = {
-      id: item.dataset.id,
-      wallet_id: item.dataset.wallet
-    };
-    userSearch.value = item.textContent;
-    userSuggestions.style.display = "none";
-  });
-
-  // 🖱️ Hide suggestions when clicking outside
-  document.addEventListener("click", (e) => {
-    if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
-      userSuggestions.style.display = "none";
-    }
-  });
-
-  // 📨 Assign card to selected user
-  assignBtn.addEventListener("click", async () => {
-    const uid = cardUID.value.trim();
-    const admin = JSON.parse(localStorage.getItem("boopUser"));
-
-    if (!uid) {
-      statusEl.textContent = "Please generate or scan a UID.";
-      statusEl.style.color = "red";
-      return;
-    }
-
-    if (!selectedUser || !selectedUser.wallet_id) {
-      statusEl.textContent = "Please select a valid user with a wallet.";
-      statusEl.style.color = "red";
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid,
-          wallet_id: selectedUser.wallet_id,
-          issued_by: admin?.id,
-          type: "spending"
-        })
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        if (result.message?.toLowerCase().includes("already has")) {
-          throw new Error("⚠️ This user already has a spending card.");
+        if (!Array.isArray(users) || users.length === 0) {
+          userSuggestions.innerHTML = "<div style='padding: 8px;'>No results found</div>";
+          userSuggestions.style.display = "block";
+          return;
         }
-        throw new Error(result.message || "Card assignment failed.");
+
+        userSuggestions.innerHTML = users.map(u => `
+          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+            ${u.first_name} ${u.middle_name || ""} ${u.last_name} (${u.email})
+          </div>
+        `).join("");
+        userSuggestions.style.display = "block";
+
+      } catch (e) {
+        console.error("❌ User search failed:", e.message);
+        userSuggestions.innerHTML = "<div style='padding: 8px;'>Error loading users</div>";
+        userSuggestions.style.display = "block";
+      }
+    });
+
+    // 🎯 Select user
+    userSuggestions.addEventListener("click", (e) => {
+      const item = e.target.closest(".user-suggestion");
+      if (!item) return;
+      selectedUser = {
+        id: item.dataset.id,
+        wallet_id: item.dataset.wallet
+      };
+      userSearch.value = item.textContent;
+      userSuggestions.style.display = "none";
+    });
+
+    // 🖱️ Hide suggestions when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!userSuggestions.contains(e.target) && e.target !== userSearch) {
+        userSuggestions.style.display = "none";
+      }
+    });
+
+    // 📨 Assign card to selected user
+    assignBtn.addEventListener("click", async () => {
+      const uid = cardUID.value.trim();
+
+      if (!uid) {
+        statusEl.textContent = "Please generate or scan a UID.";
+        statusEl.style.color = "red";
+        return;
       }
 
-      // ✅ Success
-      statusEl.textContent = "✅ Card assigned successfully!";
-      statusEl.style.color = "green";
+      if (!selectedUser || !selectedUser.wallet_id) {
+        statusEl.textContent = "Please select a valid user with a wallet.";
+        statusEl.style.color = "red";
+        return;
+      }
 
-      cardUID.value = "";
-      userSearch.value = "";
-      selectedUser = null;
-
-      // Add "Assign Another Card" button
-      let newBtn = document.getElementById("assignNewCardBtn");
-      if (!newBtn) {
-        newBtn = document.createElement("button");
-        newBtn.id = "assignNewCardBtn";
-        newBtn.textContent = "Assign Another Card";
-        newBtn.style.marginTop = "12px";
-        newBtn.style.width = "100%";
-        newBtn.style.padding = "10px";
-        newBtn.style.fontSize = "1rem";
-
-        statusEl.insertAdjacentElement("afterend", newBtn);
-
-        newBtn.addEventListener("click", () => {
-          cardUID.value = "";
-          userSearch.value = "";
-          selectedUser = null;
-          statusEl.textContent = "";
-          statusEl.style.color = "";
-          newBtn.remove();
+      try {
+        const res = await fetch("/api/cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid,
+            wallet_id: selectedUser.wallet_id,
+            issued_by: user?.id,
+            type: "spending"
+          })
         });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          if (result.message?.toLowerCase().includes("already has")) {
+            throw new Error("⚠️ This user already has a spending card.");
+          }
+          throw new Error(result.message || "Card assignment failed.");
+        }
+
+        statusEl.textContent = "✅ Card assigned successfully!";
+        statusEl.style.color = "green";
+
+        cardUID.value = "";
+        userSearch.value = "";
+        selectedUser = null;
+
+        let newBtn = document.getElementById("assignNewCardBtn");
+        if (!newBtn) {
+          newBtn = document.createElement("button");
+          newBtn.id = "assignNewCardBtn";
+          newBtn.textContent = "Assign Another Card";
+          newBtn.style.marginTop = "12px";
+          newBtn.style.width = "100%";
+          newBtn.style.padding = "10px";
+          newBtn.style.fontSize = "1rem";
+
+          statusEl.insertAdjacentElement("afterend", newBtn);
+
+          newBtn.addEventListener("click", () => {
+            cardUID.value = "";
+            userSearch.value = "";
+            selectedUser = null;
+            statusEl.textContent = "";
+            statusEl.style.color = "";
+            newBtn.remove();
+          });
+        }
+
+      } catch (err) {
+        console.error("❌ Error:", err);
+        statusEl.textContent = err.message || "Unknown error occurred.";
+        statusEl.style.color = "red";
       }
+    });
 
-    } catch (err) {
-      console.error("❌ Error:", err);
-      statusEl.textContent = err.message || "Unknown error occurred.";
-      statusEl.style.color = "red";
-    }
-  });
-
-  // Clear status on new input
-  document.querySelectorAll("input").forEach(el => {
-    el.addEventListener("input", () => {
-      statusEl.textContent = "";
-      const btn = document.getElementById("assignNewCardBtn");
-      if (btn) btn.remove();
+    // 🧽 Clear status on input
+    document.querySelectorAll("input").forEach(el => {
+      el.addEventListener("input", () => {
+        statusEl.textContent = "";
+        const btn = document.getElementById("assignNewCardBtn");
+        if (btn) btn.remove();
+      });
     });
   });
 </script>
