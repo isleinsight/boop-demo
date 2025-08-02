@@ -644,3 +644,15 @@ isEditMode = false;
   
   loadUserProfile();
 });
+
+document.getElementById("nextTransactions")?.addEventListener("click", () => {
+  currentPage++;
+  loadUserProfile();
+});
+
+document.getElementById("prevTransactions")?.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    loadUserProfile();
+  }
+});
