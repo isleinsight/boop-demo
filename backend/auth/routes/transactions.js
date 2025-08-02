@@ -163,6 +163,8 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = parseInt(req.query.offset) || 0;
 
   if (role !== 'admin') {
     return res.status(403).json({ message: 'Unauthorized' });
@@ -179,7 +181,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.created_at,
         COALESCE(
           v.business_name,
-          u.first_name || ' ' || u.last_name,
+          TRIM(u.first_name || ' ' || u.last_name),
           'System'
         ) AS counterparty_name
       FROM transactions t
@@ -187,12 +189,16 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       LEFT JOIN users u ON u.id = t.added_by
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
-      LIMIT 50
+      LIMIT $2 OFFSET $3
+    `, [userId, limit, offset]);
+
+    const countRes = await pool.query(`
+      SELECT COUNT(*) FROM transactions WHERE user_id = $1
     `, [userId]);
 
     res.status(200).json({
       transactions: result.rows,
-      totalCount: result.rows.length
+      totalCount: parseInt(countRes.rows[0].count, 10)
     });
   } catch (err) {
     console.error('❌ Failed to load target user transactions:', err.message);
