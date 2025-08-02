@@ -120,6 +120,30 @@
   </div>
 
 <script type="module">
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+  const allowedTypes = ["super_admin", "admin", "support"];
+  const isAllowed =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
+
+  if (!isAllowed) {
+    window.location.href = "login.html";
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("✅ assign-student.js loaded!");
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      });
+    }
+    
   const cardUID = document.getElementById("cardUID");
   const assignBtn = document.getElementById("assignBtn");
   const statusEl = document.getElementById("status");
