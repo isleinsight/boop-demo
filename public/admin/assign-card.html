@@ -145,7 +145,7 @@
     }
 
     try {
-      const res = await fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`);
+      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&canReceiveCard=true`);
       const users = await res.json();
 
       if (!users.length) {
