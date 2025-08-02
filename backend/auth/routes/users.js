@@ -482,6 +482,7 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
 
   // 📋 Log input for debugging
   console.log("🔍 Assign-card search received:", rawSearch);
+  console.log("🔗 Requesting:", `/api/users/assign-card?search=${encodeURIComponent(query)}`);
 
   if (role !== 'admin') {
     return res.status(403).json({ message: 'Unauthorized access' });
