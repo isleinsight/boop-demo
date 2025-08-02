@@ -1,5 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+  let currentPage = 1;
+const transactionsPerPage = 10;
+
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
   const saveBtn = document.getElementById("saveProfileBtn");
@@ -170,7 +173,9 @@ transactionTableBody.innerHTML = "";
 let transactions = [];
 
 try {
-  const res = await fetchJSON(`/api/transactions/user/${user.id}`);
+  const offset = (currentPage - 1) * transactionsPerPage;
+  const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage}&offset=${offset}`);
+
   transactions = res.transactions || [];
   console.log("💳 Cleaned up transactions array:", transactions);
 } catch (err) {
@@ -205,35 +210,50 @@ if (!Array.isArray(transactions) || transactions.length === 0) {
   `;
 } else {
   for (const tx of transactions) {
-  const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
-  const amount = typeof tx.amount_cents === "number"
-    ? `$${(tx.amount_cents / 100).toFixed(2)}`
-    : "-";
+    const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
+    const amount = typeof tx.amount_cents === "number"
+      ? `$${(tx.amount_cents / 100).toFixed(2)}`
+      : "-";
 
-  const isCredit = tx.type === "credit";
-  const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type;
+    const isCredit = tx.type === "credit";
+    const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type;
 
-  const counterparty = tx.counterparty_name || "Unknown";
-  const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
+    const counterparty = tx.counterparty_name || "Unknown";
+    const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
 
-  const noteBtn = tx.note
-    ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
-    : "-";
+    const noteBtn = tx.note
+      ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
+      : "-";
 
-  const id = tx.id || "-";
+    const id = tx.id || "-";
 
-  const row = document.createElement("tr");
-  row.innerHTML = `
-    <td>${createdAt}</td>
-    <td>${amount}</td>
-    <td>${name}</td>
-    <td>${direction}</td>
-    <td>${noteBtn}</td>
-    <td>${id}</td>
-  `;
-  transactionTableBody.appendChild(row);
-}
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${createdAt}</td>
+      <td>${amount}</td>
+      <td>${name}</td>
+      <td>${direction}</td>
+      <td>${noteBtn}</td>
+      <td>${id}</td>
+    `;
+    transactionTableBody.appendChild(row);
+  }
 } // ✅ END else block
+
+// === PAGINATION INFO UPDATE ===
+const pageIndicator = document.getElementById("transactionPageIndicator");
+const prevBtn = document.getElementById("prevTransactions");
+const nextBtn = document.getElementById("nextTransactions");
+
+if (pageIndicator) {
+  pageIndicator.textContent = `Page ${currentPage}`;
+}
+if (prevBtn) {
+  prevBtn.style.display = currentPage === 1 ? "none" : "inline-block";
+}
+if (nextBtn) {
+  nextBtn.style.display = transactions.length < transactionsPerPage ? "none" : "inline-block";
+}
 
 // ✅ Restore assist dropdown logic
 const assistDropdown = document.getElementById("editAssistance");
