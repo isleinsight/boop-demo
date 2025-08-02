@@ -492,10 +492,9 @@ router.get('/assign-card', authenticateToken, async (req, res) => {
   const trimmedSearch = (search || '').trim().toLowerCase();
   console.log("Trimmed search:", trimmedSearch);
 
-  if (trimmedSearch.length < 2) {
-    console.log("⚠️ Search too short");
-    return res.status(400).json({ message: "Search term must be at least 2 characters." });
-  }
+// if (trimmedSearch.length < 2) {
+//   return res.status(400).json({ message: "Search term must be at least 2 characters." });
+// }
 
   try {
     const keyword = `%${trimmedSearch}%`;
