@@ -478,46 +478,43 @@ router.get("/me", authenticateToken, async (req, res) => {
 // 🔍 GET /api/users/assign-card?search=
 router.get('/assign-card', authenticateToken, async (req, res) => {
   const { role } = req.user;
-  const rawSearch = req.query.search;
-
-  // 📋 Log input for debugging
-  console.log("🔍 Assign-card search received:", rawSearch);
-  
+  const { search } = req.query;
 
   if (role !== 'admin') {
     return res.status(403).json({ message: 'Unauthorized access' });
   }
 
-  const search = rawSearch?.toString().trim().toLowerCase();
+  const trimmedSearch = search?.trim().toLowerCase();
 
-  if (!search || search.length < 2) {
+  if (!trimmedSearch || trimmedSearch.length < 2) {
     return res.status(400).json({ message: "Search term must be at least 2 characters." });
   }
-console.log("🔗 Requesting:", `/api/users/assign-card?search=${encodeURIComponent(query)}`);
+
+  console.log("🔍 Assign-card search received:", trimmedSearch);
+
   try {
-    const keyword = `%${search}%`;
+    const keyword = `%${trimmedSearch}%`;
 
     const result = await pool.query(`
       SELECT id, first_name, middle_name, last_name, email, wallet_id, role, type
       FROM users
-      WHERE role IN ('cardholder', 'vendor', 'student', 'senior')
+      WHERE role NOT IN ('admin', 'parent')
+        AND deleted_at IS NULL
         AND (
           LOWER(first_name) LIKE $1 OR
           LOWER(last_name) LIKE $1 OR
           LOWER(email) LIKE $1
         )
-        AND deleted_at IS NULL
       ORDER BY first_name ASC
       LIMIT 20
     `, [keyword]);
 
     res.status(200).json(result.rows);
   } catch (err) {
-    console.error("❌ Error fetching assign-card users:", err);
+    console.error("❌ Error fetching assign-card users:", err.message);
     res.status(500).json({ message: 'Failed to search assignable users' });
   }
 });
-
 
 
 module.exports = router;
