@@ -119,7 +119,7 @@
     <div class="status" id="status"></div>
   </div>
 
-  <script type="module">
+<script type="module">
   const cardUID = document.getElementById("cardUID");
   const assignBtn = document.getElementById("assignBtn");
   const statusEl = document.getElementById("status");
@@ -135,7 +135,6 @@
     cardUID.value = uid;
   });
 
-
   // 👤 Autocomplete
   userSearch.addEventListener("input", async () => {
     const query = userSearch.value.trim();
@@ -145,7 +144,7 @@
     }
 
     try {
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&can_receive_card=true`);
+      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&canReceiveCard=true`);
       const users = await res.json();
 
       if (!users.length) {
@@ -267,8 +266,6 @@
     });
   });
 </script>
-
-
 
 <script>
   const user = JSON.parse(localStorage.getItem("boopUser"));
