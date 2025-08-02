@@ -128,7 +128,7 @@ try {
 
 // ✅ Get users (with autocomplete or pagination, now including deleted filter)
 router.get("/", async (req, res) => {
-  const { search, role, status, page, perPage, assistanceOnly, type } = req.query;
+  const { search, role, status, page, perPage, assistanceOnly, type, canReceiveCard, hasWallet } = req.query;
   const isAutocomplete = !page && !perPage;
 
   try {
@@ -141,6 +141,10 @@ router.get("/", async (req, res) => {
     } else {
       whereClauses.push("deleted_at IS NULL");
     }
+
+    if (canReceiveCard && canReceiveCard.toLowerCase() === 'true') {
+  whereClauses.push("can_receive_card IS TRUE");
+}
 
     if (search) {
       values.push(`%${search.toLowerCase()}%`);
