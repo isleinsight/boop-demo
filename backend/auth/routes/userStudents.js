@@ -9,14 +9,25 @@ router.post("/", authenticateToken, async (req, res) => {
   const { user_id, student_id } = req.body;
 
   if (!user_id || !student_id) {
-    return res.status(400).json({ error: "Missing required fields" });
+    return res.status(400).json({ message: "Missing required fields." });
   }
 
   try {
+    // ✅ Check for existing relationship
+    const existing = await db.query(
+      `SELECT 1 FROM student_parents WHERE student_id = $1 AND parent_id = $2`,
+      [student_id, user_id]
+    );
+
+    if (existing.rowCount > 0) {
+      return res.status(400).json({
+        message: "⚠️ This student is already assigned to this parent."
+      });
+    }
+
+    // ✅ Insert new relationship
     await db.query(
-      `INSERT INTO student_parents (student_id, parent_id)
-       VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
+      `INSERT INTO student_parents (student_id, parent_id) VALUES ($1, $2)`,
       [student_id, user_id]
     );
 
@@ -29,9 +40,10 @@ router.post("/", authenticateToken, async (req, res) => {
       completed_at: new Date()
     });
 
-    res.status(201).json({ message: "Student assigned to parent" });
+    res.status(201).json({ message: "✅ Student assigned to parent." });
+
   } catch (err) {
-    console.error("❌ Failed to assign student:", err);
+    console.error("❌ Failed to assign student:", err.message);
 
     await logAdminAction({
       performed_by: req.user.id,
@@ -42,7 +54,7 @@ router.post("/", authenticateToken, async (req, res) => {
       error_message: err.message
     });
 
-    res.status(500).json({ error: "Database error" });
+    res.status(500).json({ message: "🚨 Database error. Could not assign student." });
   }
 });
 
