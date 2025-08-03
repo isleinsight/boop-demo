@@ -1,7 +1,7 @@
-document.addEventListener("DOMContentLoaded", () => {
-
   let currentPage = 1;
 const transactionsPerPage = 10;
+
+document.addEventListener("DOMContentLoaded", () => {
 
   const userInfo = document.getElementById("userInfo");
   const editBtn = document.getElementById("editProfileBtn");
