@@ -1,6 +1,165 @@
   let currentPage = 1;
 const transactionsPerPage = 10;
 
+async function loadUserProfile() {
+  try {
+    console.log("🔍 Loading user with ID:", currentUserId);
+    let user;
+    try {
+      user = await fetchJSON(`/api/users/${currentUserId}`);
+      console.log("✅ User loaded:", user);
+    } catch (err) {
+      console.error("❌ Error during fetchJSON:", err.message);
+      throw err;
+    }
+
+    currentUserData = user;
+
+    let walletHTML = "";
+
+    // ✅ All Cards: Transit & Spending (safely skip for users with no wallet)
+    if (user.wallet_id || user.wallet?.id) {
+      try {
+        let allCards = [];
+        try {
+          allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
+        } catch (err) {
+          console.warn("🟡 Failed to load cards:", err.message);
+        }
+
+        const transitCards = allCards.filter(c => c.type === "transit");
+        const spendingCards = allCards.filter(c => c.type === "spending");
+
+        if (transitCards.length > 0) {
+          transitCards.forEach(card => {
+            walletHTML += `<div><span class="label">Transit Card</span><span class="value">${card.uid}</span></div>`;
+          });
+        } else {
+          walletHTML += `<div><span class="label">Transit Card</span><span class="value">None</span></div>`;
+        }
+
+        if (spendingCards.length > 0) {
+          spendingCards.forEach(card => {
+            walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
+          });
+        }
+      } catch (err) {
+        console.warn("🟡 Failed to load cards:", err.message);
+        walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
+      }
+    } else {
+      walletHTML += `<div><span class="label">Cards</span><span class="value">Not applicable</span></div>`;
+    }
+
+    let assistanceHTML = "";
+    if ((user.wallet || user.wallet_id) && (user.role === "cardholder" || user.role === "senior")) {
+      assistanceHTML = `
+        <div>
+          <span class="label">On Assistance</span>
+          <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
+          <select id="editAssistance" style="display:none; width: 100%;">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      `;
+    }
+
+    userInfo.innerHTML = `
+      <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
+      <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
+        <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
+      <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
+        <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
+      <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
+        <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
+      <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
+        <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
+      <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
+      <div><span class="label">Role</span><span class="value">${user.role}</span></div>
+      ${assistanceHTML}
+      ${walletHTML}
+    `;
+
+    console.log("👀 Attempting to load transactions for user:", user.id);
+
+    const transactionTableBody = document.querySelector("#transactionTable tbody");
+    transactionTableBody.innerHTML = "";
+
+    let transactions = [];
+
+    try {
+      const offset = (currentPage - 1) * transactionsPerPage;
+      const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage + 1}&offset=${offset}`);
+      transactions = res.transactions || [];
+      console.log("💳 Loaded transactions:", transactions);
+    } catch (err) {
+      console.error("❌ Failed to fetch transactions:", err.message);
+    }
+
+    const pageTransactions = transactions.slice(0, transactionsPerPage);
+
+    if (pageTransactions.length === 0) {
+      transactionTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 20px; color: #888;">
+            No transactions recorded.
+          </td>
+        </tr>
+      `;
+    } else {
+      for (const tx of pageTransactions) {
+        const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
+        const amount = typeof tx.amount_cents === "number"
+          ? `$${(tx.amount_cents / 100).toFixed(2)}`
+          : "-";
+        const isCredit = tx.type === "credit";
+        const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type;
+        const counterparty = tx.counterparty_name || "Unknown";
+        const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
+        const noteBtn = tx.note
+          ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
+          : "-";
+        const id = tx.id || "-";
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${createdAt}</td>
+          <td>${amount}</td>
+          <td>${name}</td>
+          <td>${direction}</td>
+          <td>${noteBtn}</td>
+          <td>${id}</td>
+        `;
+        transactionTableBody.appendChild(row);
+      }
+    }
+
+    const pageIndicator = document.getElementById("transactionPageIndicator");
+    const prevBtn = document.getElementById("prevTransactions");
+    const nextBtn = document.getElementById("nextTransactions");
+
+    if (pageIndicator) {
+      pageIndicator.textContent = `Page ${currentPage}`;
+    }
+    if (prevBtn) {
+      prevBtn.style.display = currentPage === 1 ? "none" : "inline-block";
+    }
+    if (nextBtn) {
+      nextBtn.style.display = transactions.length > transactionsPerPage ? "inline-block" : "none";
+    }
+
+    const assistDropdown = document.getElementById("editAssistance");
+    if (assistDropdown) {
+      assistDropdown.value = user.on_assistance ? "true" : "false";
+    }
+  } catch (err) {
+    console.error("❌ Failed to load user:", err);
+    alert("Error loading user");
+    window.location.href = "view-users.html";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
   const userInfo = document.getElementById("userInfo");
@@ -72,176 +231,7 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
     return date.toLocaleDateString("en-US", options);
   }
 
-    async function loadUserProfile() {
-    try {
-      console.log("🔍 Loading user with ID:", currentUserId);
-let user;
-try {
-  user = await fetchJSON(`/api/users/${currentUserId}`);
-  console.log("✅ User loaded:", user);
-} catch (err) {
-  console.error("❌ Error during fetchJSON:", err.message);
-  throw err;
-}
-      currentUserData = user;
-
-      let walletHTML = "";
-
-// ✅ All Cards: Transit & Spending (safely skip for users with no wallet)
-if (user.wallet_id || user.wallet?.id) {
-  try {
-let allCards = [];
-
-if (user.wallet_id || user.wallet?.id) {
-  try {
-    allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
-  } catch (err) {
-    console.warn("🟡 Failed to load cards:", err.message);
-  }
-} else {
-  console.info("ℹ️ Skipping card fetch — user has no wallet.");
-}
-    const transitCards = allCards.filter(c => c.type === "transit");
-    const spendingCards = allCards.filter(c => c.type === "spending");
-
-    // Show Transit Cards
-    if (transitCards.length > 0) {
-      transitCards.forEach(card => {
-        walletHTML += `<div><span class="label">Transit Card</span><span class="value">${card.uid}</span></div>`;
-      });
-    } else {
-      walletHTML += `<div><span class="label">Transit Card</span><span class="value">None</span></div>`;
-    }
-
-    // Show Spending Card (optional)
-    if (spendingCards.length > 0) {
-      spendingCards.forEach(card => {
-        walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
-      });
-    }
-  } catch (err) {
-    console.warn("🟡 Failed to load cards:", err.message);
-    walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
-  }
-} else {
-  walletHTML += `<div><span class="label">Cards</span><span class="value">Not applicable</span></div>`;
-}
-let assistanceHTML = "";
-if (
-  (user.wallet || user.wallet_id) &&
-  (user.role === "cardholder" || user.role === "senior")
-) {
-  assistanceHTML = `
-    <div>
-      <span class="label">On Assistance</span>
-      <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
-      <select id="editAssistance" style="display:none; width: 100%;">
-        <option value="true">Yes</option>
-        <option value="false">No</option>
-      </select>
-    </div>
-  `;
-}
-
-userInfo.innerHTML = `
-  <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
-  
-  <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
-    <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
-
-  <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
-    <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
-
-  <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
-    <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
-
-  <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
-    <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
-
-  <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
-
-  <div><span class="label">Role</span><span class="value">${user.role}</span></div>
-  ${assistanceHTML} 
-
-  ${walletHTML}
-`;
-console.log("👀 Attempting to load transactions for user:", user.id);
-
-const transactionTableBody = document.querySelector("#transactionTable tbody");
-transactionTableBody.innerHTML = "";
-
-let transactions = [];
-
-try {
-  const offset = (currentPage - 1) * transactionsPerPage;
-  const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage + 1}&offset=${offset}`);
-
-  transactions = res.transactions || [];
-  console.log("💳 Loaded transactions:", transactions);
-} catch (err) {
-  console.error("❌ Failed to fetch transactions:", err.message);
-}
-
-// Only display up to the per-page limit
-const pageTransactions = transactions.slice(0, transactionsPerPage);
-
-if (pageTransactions.length === 0) {
-  transactionTableBody.innerHTML = `
-    <tr>
-      <td colspan="6" style="text-align: center; padding: 20px; color: #888;">
-        No transactions recorded.
-      </td>
-    </tr>
-  `;
-} else {
-  for (const tx of pageTransactions) {
-    const createdAt = tx.created_at ? new Date(tx.created_at).toLocaleString() : "-";
-    const amount = typeof tx.amount_cents === "number"
-      ? `$${(tx.amount_cents / 100).toFixed(2)}`
-      : "-";
-    const isCredit = tx.type === "credit";
-    const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type;
-    const counterparty = tx.counterparty_name || "Unknown";
-    const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
-    const noteBtn = tx.note
-      ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
-      : "-";
-    const id = tx.id || "-";
-
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${createdAt}</td>
-      <td>${amount}</td>
-      <td>${name}</td>
-      <td>${direction}</td>
-      <td>${noteBtn}</td>
-      <td>${id}</td>
-    `;
-    transactionTableBody.appendChild(row);
-  }
-}
-
-// === PAGINATION CONTROLS ===
-const pageIndicator = document.getElementById("transactionPageIndicator");
-const prevBtn = document.getElementById("prevTransactions");
-const nextBtn = document.getElementById("nextTransactions");
-
-if (pageIndicator) {
-  pageIndicator.textContent = `Page ${currentPage}`;
-}
-if (prevBtn) {
-  prevBtn.style.display = currentPage === 1 ? "none" : "inline-block";
-}
-if (nextBtn) {
-  nextBtn.style.display = transactions.length > transactionsPerPage ? "inline-block" : "none";
-}
-
-// ✅ Restore assist dropdown logic
-const assistDropdown = document.getElementById("editAssistance");
-if (assistDropdown) {
-  assistDropdown.value = user.on_assistance ? "true" : "false";
-}
-
+    
       // ✅ dropdown
 
 const dropdown = document.createElement("select");
