@@ -42,14 +42,23 @@ router.post("/", async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO cards (uid, wallet_id, type, status, issued_by)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [uid, wallet_id, type, status, issued_by]
-    );
+  `INSERT INTO cards (uid, wallet_id, type, status, issued_by)
+   VALUES ($1, $2, $3, $4, $5)
+   RETURNING *`,
+  [uid, wallet_id, type, status, issued_by]
+);
 
-    console.log("✅ Card successfully inserted:", result.rows[0]);
-    res.status(201).json(result.rows[0]);
+// Log the action in admin_actions
+await db.query(
+  `INSERT INTO admin_actions (action, type, status, performed_by, target_user_id, created_at)
+   SELECT 'assign_card', 'card', 'completed', $1, u.id, NOW()
+   FROM users u
+   WHERE u.wallet_id = $2`,
+  [issued_by, wallet_id]
+);
+
+console.log("✅ Card successfully inserted:", result.rows[0]);
+res.status(201).json(result.rows[0]);
 
   } catch (err) {
     console.error("❌ DB insert error:", err);
