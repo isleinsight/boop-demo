@@ -145,11 +145,13 @@ if (
   `;
 }
 
-      let walletBalance = "N/A";
+let walletBalance = "N/A";
+
 try {
   const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
-  if (typeof wallet.balance === "number") {
-    walletBalance = `$${wallet.balance.toFixed(2)}`;
+  const balanceNum = Number(wallet.balance); // This handles string balances like "0.00"
+  if (!isNaN(balanceNum)) {
+    walletBalance = `$${balanceNum.toFixed(2)}`;
   }
 } catch (err) {
   console.warn("⚠️ Could not load wallet balance:", err.message);
