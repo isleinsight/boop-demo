@@ -50,8 +50,8 @@ router.post("/", async (req, res) => {
 
 // Log the action in admin_actions
 await db.query(
-  `INSERT INTO admin_actions (action, type, status, performed_by, target_user_id, created_at)
-   SELECT 'assign_card', 'card', 'completed', $1, u.id, NOW()
+  `INSERT INTO admin_actions (action, type, status, performed_by, target_user_id, created_at, completed_at)
+   SELECT 'assign_card', 'card', 'completed', $1, u.id, NOW(), NOW()
    FROM users u
    WHERE u.wallet_id = $2`,
   [issued_by, wallet_id]
