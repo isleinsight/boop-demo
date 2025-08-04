@@ -656,4 +656,3 @@ document.getElementById("prevTransactions")?.addEventListener("click", () => {
     loadUserProfile();
   }
 });
-});
