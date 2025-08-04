@@ -1,5 +1,6 @@
 let currentPage = 1;
 const transactionsPerPage = 10;
+loadUserProfile();
 
 document.addEventListener("DOMContentLoaded", () => {
 
