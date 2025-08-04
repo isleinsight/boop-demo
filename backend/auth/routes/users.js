@@ -128,7 +128,7 @@ try {
 
 // ✅ Get users (with autocomplete or pagination, now including deleted filter)
 router.get("/", async (req, res) => {
-  const { search, role, status, page, perPage, assistanceOnly, type, canReceiveCard, hasWallet } = req.query;
+  const { search, role, status, page, perPage, assistanceOnly, type, canReceiveCard, hasWallet, sortBy = 'first_name', sortDirection = 'asc' } = req.query;
   const isAutocomplete = !page && !perPage;
 
   try {
@@ -143,8 +143,8 @@ router.get("/", async (req, res) => {
     }
 
     if (canReceiveCard && canReceiveCard.toLowerCase() === 'true') {
-  whereClauses.push("can_receive_card IS TRUE");
-}
+      whereClauses.push("can_receive_card IS TRUE");
+    }
 
     if (search) {
       values.push(`%${search.toLowerCase()}%`);
@@ -172,13 +172,18 @@ router.get("/", async (req, res) => {
 
     const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
+    // Validate sortBy to prevent SQL injection
+    const validSortColumns = ['first_name', 'last_name', 'email'];
+    const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'first_name';
+    const sortDir = sortDirection === 'desc' ? 'DESC' : 'ASC';
+
     // 🔍 Autocomplete mode
     if (isAutocomplete) {
       const result = await pool.query(
         `SELECT id, first_name, last_name, email, wallet_id
          FROM users
          ${whereSQL}
-         ORDER BY first_name ASC
+         ORDER BY ${sortColumn} ${sortDir}
          LIMIT 10`,
         values
       );
@@ -193,7 +198,7 @@ router.get("/", async (req, res) => {
       `SELECT *
        FROM users
        ${whereSQL}
-       ORDER BY first_name ASC
+       ORDER BY ${sortColumn} ${sortDir}
        LIMIT $${values.length + 1}
        OFFSET $${values.length + 2}`,
       [...values, limit, offset]
