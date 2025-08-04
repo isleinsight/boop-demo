@@ -200,24 +200,29 @@
 
     try {
       const res = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid,
-          wallet_id: selectedUser.wallet_id,
-          issued_by: admin?.id,
-          type: "spending"
-        })
-      });
+  method: "POST",
+  headers: { 
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("boop_jwt")}` // Add token
+  },
+  body: JSON.stringify({
+    uid,
+    wallet_id: selectedUser.wallet_id,
+    issued_by: admin?.id,
+    type: "spending"
+  })
+});
 
-      const result = await res.json();
+const result = await res.json();
 
-      if (!res.ok) {
-        if (result.message?.toLowerCase().includes("already has")) {
-          throw new Error("⚠️ This user already has a spending card.");
-        }
-        throw new Error(result.message || "Card assignment failed.");
-      }
+if (!res.ok) {
+  if (result.message?.toLowerCase().includes("already has")) {
+    throw new Error("⚠️ This user already has a spending card.");
+  }
+  throw new Error(result.message || "Card assignment failed.");
+}
+
+console.log("✅ Card assigned:", result);
 
       // ✅ Success message
       statusEl.textContent = "✅ Card assigned successfully!";
