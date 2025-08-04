@@ -139,23 +139,35 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: 'Missing or invalid fields' });
   }
 
+  const client = await pool.connect();
+
   try {
-    await pool.query(
+    await client.query('BEGIN');
+
+    const cents = Math.round(parseFloat(amount) * 100);
+
+    // Insert transaction
+    await client.query(
       `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
        VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
-      [
-        wallet_id,
-        user_id,
-        Math.round(parseFloat(amount) * 100),
-        note || null,
-        adminId
-      ]
+      [wallet_id, user_id, cents, note || null, adminId]
     );
+
+    // Update wallet balance
+    await client.query(
+      `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
+      [cents / 100, wallet_id]
+    );
+
+    await client.query('COMMIT');
 
     res.status(201).json({ success: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("❌ Failed to add funds:", err.message);
     res.status(500).json({ error: 'Server error while adding funds' });
+  } finally {
+    client.release();
   }
 });
 
