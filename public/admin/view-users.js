@@ -1,5 +1,3 @@
-//view-usersw.js
-
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
   const userTableBody = document.getElementById("userTableBody");
@@ -21,43 +19,45 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allUsers = [];
   let currentUserEmail = null;
   let currentUser = null;
+  let sortBy = 'created_at'; // Default sort column
+  let sortDirection = 'desc'; // Default sort direction
 
-// ✅ Restrict access to only superadmin, admin, and support-type admins
-try {
-  const res = await fetch("/api/me", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  // Restrict access to only superadmin, admin, and support-type admins
+  try {
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
-  const meData = await res.json();
+    const meData = await res.json();
 
-  const allowedTypes = ["super_admin", "admin", "support"];
-  const isAllowed = meData?.role === "admin" && allowedTypes.includes(meData?.type);
+    const allowedTypes = ["super_admin", "admin", "support"];
+    const isAllowed = meData?.role === "admin" && allowedTypes.includes(meData?.type);
 
-  if (!isAllowed) {
-    throw new Error("Not authorized");
+    if (!isAllowed) {
+      throw new Error("Not authorized");
+    }
+
+    currentUser = meData;
+    currentUserEmail = meData.email;
+  } catch (err) {
+    console.warn("🔒 Not authorized or error fetching user:", err);
+    localStorage.removeItem("boop_jwt");
+    localStorage.removeItem("boopUser");
+    window.location.href = "login.html";
+    return;
   }
-
-  currentUser = meData;
-  currentUserEmail = meData.email;
-} catch (err) {
-  console.warn("🔒 Not authorized or error fetching user:", err);
-  localStorage.removeItem("boop_jwt");
-  localStorage.removeItem("boopUser");
-  window.location.href = "login.html";
-  return;
-}
 
   async function fetchUsers() {
     try {
       let role = roleFilter.value;
-let assistanceOnly = false;
+      let assistanceOnly = false;
 
-if (role === "cardholder_assistance") {
-  role = "cardholder";
-  assistanceOnly = true;
-}
+      if (role === "cardholder_assistance") {
+        role = "cardholder";
+        assistanceOnly = true;
+      }
 
-const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(statusFilter.value)}${assistanceOnly ? '&assistanceOnly=true' : ''}`;
+      const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(statusFilter.value)}${assistanceOnly ? '&assistanceOnly=true' : ''}&sortBy=${encodeURIComponent(sortBy)}&sortDirection=${encodeURIComponent(sortDirection)}`;
       const res = await fetch(`/api/users${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -75,28 +75,26 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
   async function performAction(user, action) {
     try {
       if (action === "delete") {
-  if (user.email === currentUserEmail) return alert("You cannot delete your own account.");
-  const confirmText = prompt("Type DELETE to confirm.");
-  if (confirmText !== "DELETE") return;
+        if (user.email === currentUserEmail) return alert("You cannot delete your own account.");
+        const confirmText = prompt("Type DELETE to confirm.");
+        if (confirmText !== "DELETE") return;
 
-  const res = await fetch(`/api/users/${user.id}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ uid: currentUser?.id })
-  });
+        const res = await fetch(`/api/users/${user.id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uid: currentUser?.id })
+        });
 
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.message || `Delete failed with status ${res.status}`);
-  }
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || `Delete failed with status ${res.status}`);
+        }
 
-  alert("✅ User deleted successfully.");
-}
-
-      else if (action === "suspend" || action === "unsuspend") {
+        alert("✅ User deleted successfully.");
+      } else if (action === "suspend" || action === "unsuspend") {
         const newStatus = action === "suspend" ? "suspended" : "active";
         const res = await fetch(`/api/users/${user.id}`, {
           method: "PATCH",
@@ -118,9 +116,7 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
             headers: { Authorization: `Bearer ${token}` }
           });
         }
-      }
-
-      else if (action === "signout") {
+      } else if (action === "signout") {
         const res = await fetch(`/api/users/${user.id}/signout`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` }
@@ -130,9 +126,7 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
           return alert("❌ Force sign-out failed: " + (err.message || res.status));
         }
         alert("✅ User signed out.");
-      }
-
-      else if (action === "restore") {
+      } else if (action === "restore") {
         await fetch(`/api/users/${user.id}/restore`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` }
@@ -142,7 +136,7 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
       await fetchUsers();
     } catch (err) {
       console.error("❌ performAction failed:", err);
-      alert("Action failed. Check console.");
+      alert("Action failed: " + err.message);
     }
   }
 
@@ -192,6 +186,14 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
       userTableBody.appendChild(row);
     });
 
+    // Update sort indicators
+    document.querySelectorAll('.sort-header').forEach(header => {
+      header.innerHTML = header.dataset.sortLabel; // Reset to original label
+      if (header.dataset.sort === sortBy) {
+        header.innerHTML += sortDirection === 'asc' ? ' ▲' : ' ▼';
+      }
+    });
+
     attachCheckboxListeners();
     updateDeleteButtonVisibility();
 
@@ -210,18 +212,37 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
     deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
   }
 
+  // Add sort event listeners
+  document.querySelectorAll('.sort-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const column = header.dataset.sort;
+      if (sortBy === column) {
+        // Toggle direction if same column
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        // New column, default to ascending
+        sortBy = column;
+        sortDirection = 'asc';
+      }
+      currentPage = 1; // Reset to first page
+      fetchUsers();
+    });
+  });
+
   searchBtn.addEventListener("click", () => { currentPage = 1; fetchUsers(); });
   searchInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault(); // Prevent accidental form submission
-    currentPage = 1;
-    fetchUsers();
-  }
-});
+    if (event.key === "Enter") {
+      event.preventDefault();
+      currentPage = 1;
+      fetchUsers();
+    }
+  });
   clearSearchBtn.addEventListener("click", () => {
     searchInput.value = "";
     roleFilter.value = "";
     statusFilter.value = "";
+    sortBy = 'created_at';
+    sortDirection = 'desc';
     currentPage = 1;
     fetchUsers();
   });
@@ -236,39 +257,39 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
     updateDeleteButtonVisibility();
   });
 
-deleteSelectedBtn.addEventListener("click", async () => {
-  const selected = [...document.querySelectorAll(".user-checkbox:checked")];
-  const ids = selected.map(cb => cb.dataset.id);
-  const emails = selected.map(cb => cb.dataset.email);
-  if (emails.includes(currentUserEmail)) return alert("You cannot delete your own account.");
-  const confirmText = prompt("Type DELETE to confirm deletion.");
-  if (confirmText !== "DELETE") return;
+  deleteSelectedBtn.addEventListener("click", async () => {
+    const selected = [...document.querySelectorAll(".user-checkbox:checked")];
+    const ids = selected.map(cb => cb.dataset.id);
+    const emails = selected.map(cb => cb.dataset.email);
+    if (emails.includes(currentUserEmail)) return alert("You cannot delete your own account.");
+    const confirmText = prompt("Type DELETE to confirm deletion.");
+    if (confirmText !== "DELETE") return;
 
-  try {
-    await Promise.all(ids.map(id =>
-      fetch(`/api/users/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ uid: currentUser?.id })
-      }).then(res => {
-        if (!res.ok) {
-          return res.json().then(err => {
-            throw new Error(err.message || `Delete failed for user ${id} with status ${res.status}`);
-          });
-        }
-        return res;
-      })
-    ));
-    alert("✅ Selected users deleted successfully.");
-    fetchUsers();
-  } catch (err) {
-    console.error("⚠️ Bulk delete failed:", err);
-    alert("Delete failed: " + err.message);
-  }
-});
+    try {
+      await Promise.all(ids.map(id =>
+        fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uid: currentUser?.id })
+        }).then(res => {
+          if (!res.ok) {
+            return res.json().then(err => {
+              throw new Error(err.message || `Delete failed for user ${id} with status ${res.status}`);
+            });
+          }
+          return res;
+        })
+      ));
+      alert("✅ Selected users deleted successfully.");
+      fetchUsers();
+    } catch (err) {
+      console.error("⚠️ Bulk delete failed:", err);
+      alert("Delete failed: " + err.message);
+    }
+  });
 
   fetchUsers();
 });
