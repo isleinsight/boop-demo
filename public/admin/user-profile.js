@@ -1,6 +1,6 @@
 let currentPage = 1;
 const transactionsPerPage = 10;
-loadUserProfile();
+
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -644,7 +644,7 @@ isEditMode = false;
 })();
   
   loadUserProfile();
-});
+
 
 document.getElementById("nextTransactions")?.addEventListener("click", () => {
   currentPage++;
@@ -657,3 +657,5 @@ document.getElementById("prevTransactions")?.addEventListener("click", () => {
     loadUserProfile();
   }
 });
+  
+  });
