@@ -162,6 +162,13 @@ userInfo.innerHTML = `
   <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
 
   <div><span class="label">Role</span><span class="value">${user.role}</span></div>
+
+  <div><span class="label">Balance</span><span class="value">${
+    user.wallet?.balance_cents != null 
+      ? (user.wallet.balance_cents / 100).toFixed(2) 
+      : "N/A"
+  }</span></div>
+  
   ${assistanceHTML} 
 
   ${walletHTML}
