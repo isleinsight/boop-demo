@@ -234,6 +234,7 @@ if (pageTransactions.length === 0) {
     `;
     transactionTableBody.appendChild(row);
   }
+}
 
 
     document.querySelectorAll(".btn-view-note").forEach(button => {
