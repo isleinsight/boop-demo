@@ -86,6 +86,17 @@ try {
 }
       currentUserData = user;
 
+      let walletBalance = "N/A";
+
+try {
+  const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
+  if (typeof wallet.balance_cents === "number") {
+    walletBalance = `$${(wallet.balance_cents / 100).toFixed(2)}`;
+  }
+} catch (err) {
+  console.warn("⚠️ Could not load wallet balance:", err.message);
+}
+
       let walletHTML = "";
 
 // ✅ All Cards: Transit & Spending (safely skip for users with no wallet)
@@ -163,11 +174,7 @@ userInfo.innerHTML = `
 
   <div><span class="label">Role</span><span class="value">${user.role}</span></div>
 
-  <div><span class="label">Balance</span><span class="value">${
-    user.wallet?.balance_cents != null 
-      ? (user.wallet.balance_cents / 100).toFixed(2) 
-      : "N/A"
-  }</span></div>
+  <div><span class="label">Balance</span><span class="value">${walletBalance}</span></div>
   
   ${assistanceHTML} 
 
