@@ -19,8 +19,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allUsers = [];
   let currentUserEmail = null;
   let currentUser = null;
-  let sortBy = 'created_at'; // Default sort column
-  let sortDirection = 'desc'; // Default sort direction
+  let sortBy = 'first_name'; // Default sort by first_name
+  let sortDirection = 'asc'; // Default ascending
 
   // Restrict access to only superadmin, admin, and support-type admins
   try {
@@ -61,6 +61,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetch(`/api/users${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to fetch users: ${res.status}`);
+      }
       const data = await res.json();
       allUsers = data.users || [];
       totalPages = data.totalPages || 1;
@@ -69,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     } catch (err) {
       console.error("⚠️ Error loading users:", err);
+      userTableBody.innerHTML = `<tr><td colspan="7">Error loading users: ${err.message}</td></tr>`;
     }
   }
 
@@ -188,7 +193,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Update sort indicators
     document.querySelectorAll('.sort-header').forEach(header => {
-      header.innerHTML = header.dataset.sortLabel; // Reset to original label
+      header.innerHTML = header.dataset.sortLabel;
       if (header.dataset.sort === sortBy) {
         header.innerHTML += sortDirection === 'asc' ? ' ▲' : ' ▼';
       }
@@ -217,14 +222,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     header.addEventListener('click', () => {
       const column = header.dataset.sort;
       if (sortBy === column) {
-        // Toggle direction if same column
         sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
       } else {
-        // New column, default to ascending
         sortBy = column;
         sortDirection = 'asc';
       }
-      currentPage = 1; // Reset to first page
+      currentPage = 1;
       fetchUsers();
     });
   });
@@ -241,8 +244,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     searchInput.value = "";
     roleFilter.value = "";
     statusFilter.value = "";
-    sortBy = 'created_at';
-    sortDirection = 'desc';
+    sortBy = 'first_name';
+    sortDirection = 'asc';
     currentPage = 1;
     fetchUsers();
   });
@@ -297,6 +300,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 const logoutBtn = document.getElementById("logoutBtn");
 logoutBtn?.addEventListener("click", () => {
   fetch("/api/logout", { method: "POST" })
-    .then(() => window.location.href = "login.html")
+    .then(() => {
+      localStorage.removeItem("boop_jwt");
+      localStorage.removeItem("boopUser");
+      window.location.href = "login.html";
+    })
     .catch(() => alert("Logout failed."));
 });
