@@ -220,9 +220,8 @@ if (pageTransactions.length === 0) {
     const counterparty = tx.counterparty_name || "Unknown";
     const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
     const noteBtn = tx.note
-      ? `<button class="btn-view-note" onclick="showNote(\`${tx.note.replace(/`/g, "\\`")}\`)">View</button>`
-      : "-";
-    const id = tx.id || "-";
+   ? `<button class="btn-view-note" data-note="${tx.note.replace(/"/g, '&quot;')}">View</button>`
+   : "-";
 
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -235,7 +234,14 @@ if (pageTransactions.length === 0) {
     `;
     transactionTableBody.appendChild(row);
   }
-}
+
+
+    document.querySelectorAll(".btn-view-note").forEach(button => {
+  button.addEventListener("click", () => {
+    const noteText = button.dataset.note;
+    showNote(noteText);
+  });
+});  
 
 // === PAGINATION CONTROLS ===
 const pageIndicator = document.getElementById("transactionPageIndicator");
