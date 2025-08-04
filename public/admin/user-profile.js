@@ -184,6 +184,11 @@ userInfo.innerHTML = `
 console.log("👀 Attempting to load transactions for user:", user.id);
 
 const transactionTableBody = document.querySelector("#transactionTable tbody");
+if (!transactionTableBody) {
+  console.error("❌ Transaction table body not found in DOM");
+  return; // Stop here but don't throw to avoid breaking profile
+}
+
 transactionTableBody.innerHTML = "";
 
 let transactions = [];
@@ -191,14 +196,12 @@ let transactions = [];
 try {
   const offset = (currentPage - 1) * transactionsPerPage;
   const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage + 1}&offset=${offset}`);
-
   transactions = res.transactions || [];
   console.log("💳 Loaded transactions:", transactions);
 } catch (err) {
   console.error("❌ Failed to fetch transactions:", err.message);
 }
 
-// Only display up to the per-page limit
 const pageTransactions = transactions.slice(0, transactionsPerPage);
 
 if (pageTransactions.length === 0) {
@@ -216,33 +219,41 @@ if (pageTransactions.length === 0) {
       ? `$${(tx.amount_cents / 100).toFixed(2)}`
       : "-";
     const isCredit = tx.type === "credit";
-    const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type;
+    const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type || "-";
     const counterparty = tx.counterparty_name || "Unknown";
     const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
-    const noteBtn = tx.note
-   ? `<button class="btn-view-note" data-note="${tx.note.replace(/"/g, '&quot;')}">View</button>`
-   : "-";
+    const noteBtn = typeof tx.note === "string" && tx.note
+      ? `<button class="btn-view-note" data-note="${tx.note.replace(/"/g, '&quot;')}">View</button>`
+      : "-";
+    const id = tx.id || "-";
 
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${createdAt}</td>
-      <td>${amount}</td>
-      <td>${name}</td>
-      <td>${direction}</td>
-      <td>${noteBtn}</td>
-      <td>${id}</td>
-    `;
-    transactionTableBody.appendChild(row);
+    try {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${createdAt}</td>
+        <td>${amount}</td>
+        <td>${name}</td>
+        <td>${direction}</td>
+        <td>${noteBtn}</td>
+        <td>${id}</td>
+      `;
+      transactionTableBody.appendChild(row);
+    } catch (err) {
+      console.error("❌ Error creating transaction row:", err.message, tx);
+    }
   }
 }
 
-
-    document.querySelectorAll(".btn-view-note").forEach(button => {
-  button.addEventListener("click", () => {
-    const noteText = button.dataset.note;
-    showNote(noteText);
+try {
+  document.querySelectorAll(".btn-view-note").forEach(button => {
+    button.addEventListener("click", () => {
+      const noteText = button.dataset.note || "";
+      showNote(noteText);
+    });
   });
-});  
+} catch (err) {
+  console.error("❌ Error attaching note button listeners:", err.message);
+}  
 
 // === PAGINATION CONTROLS ===
 const pageIndicator = document.getElementById("transactionPageIndicator");
@@ -615,10 +626,9 @@ saveBtn.onclick = async () => {
       
 
     } catch (err) {
-      console.error("❌ Failed to load user:", err);
-      alert("Error loading user");
-      window.location.href = "view-users.html";
-    }
+  console.error("❌ Failed to load user:", err);
+  alert("Error loading user: " + err.message);
+}
   }
 
   logoutBtn?.addEventListener("click", () => {
