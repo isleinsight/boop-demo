@@ -1,77 +1,6 @@
 let currentPage = 1;
 const transactionsPerPage = 10;
 
-document.addEventListener("DOMContentLoaded", () => {
-
-  const userInfo = document.getElementById("userInfo");
-  const editBtn = document.getElementById("editProfileBtn");
-  const saveBtn = document.getElementById("saveProfileBtn");
-  const currentAdmin = JSON.parse(localStorage.getItem("boopUser"));
-if (currentAdmin?.role === "admin" && ["viewer", "accountant"].includes(currentAdmin?.type)) {
-  if (editBtn) editBtn.style.display = "none";
-}
-  const logoutBtn = document.getElementById("logoutBtn");
-  const parentSection = document.getElementById("parentSection");
-  const studentInfoSection = document.getElementById("studentInfoSection");
-  const parentNameEl = document.getElementById("parentName");
-  const parentEmailEl = document.getElementById("parentEmail");
-
-let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
-
-// 🚫 Remove any accidental whitespace or malformed characters from UUID
-currentUserId = currentUserId?.replace(/\s+/g, ''); 
-  let currentUserData = null;
-  let isEditMode = false;
-
-  if (!currentUserId) {
-    alert("User ID not found.");
-    window.location.href = "view-users.html";
-  }
-
-  async function fetchJSON(url, options = {}) {
-  const token = localStorage.getItem("boop_jwt");
-
-  const headers = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  } else if (options.autoRedirect !== false) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  const fetchOptions = {
-    ...options,
-    headers,
-  };
-
-  const res = await fetch(url, fetchOptions);
-
-  if (res.status === 401 || res.status === 403) {
-    console.warn("⚠️ Token rejected or expired");
-    if (options.autoRedirect !== false) {
-      window.location.href = "login.html";
-    }
-    throw new Error("Unauthorized");
-  }
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(errText || "Network error");
-  }
-
-  return await res.json();
-}
-
-  function formatDatePretty(dateStr) {
-    const date = new Date(dateStr);
-    const options = { year: "numeric", month: "long", day: "numeric" };
-    return date.toLocaleDateString("en-US", options);
-  }
-
     async function loadUserProfile() {
     try {
       console.log("🔍 Loading user with ID:", currentUserId);
@@ -596,6 +525,77 @@ saveBtn.onclick = async () => {
       alert("Error loading user");
       window.location.href = "view-users.html";
     }
+ }
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const userInfo = document.getElementById("userInfo");
+  const editBtn = document.getElementById("editProfileBtn");
+  const saveBtn = document.getElementById("saveProfileBtn");
+  const currentAdmin = JSON.parse(localStorage.getItem("boopUser"));
+if (currentAdmin?.role === "admin" && ["viewer", "accountant"].includes(currentAdmin?.type)) {
+  if (editBtn) editBtn.style.display = "none";
+}
+  const logoutBtn = document.getElementById("logoutBtn");
+  const parentSection = document.getElementById("parentSection");
+  const studentInfoSection = document.getElementById("studentInfoSection");
+  const parentNameEl = document.getElementById("parentName");
+  const parentEmailEl = document.getElementById("parentEmail");
+
+let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
+
+// 🚫 Remove any accidental whitespace or malformed characters from UUID
+currentUserId = currentUserId?.replace(/\s+/g, ''); 
+  let currentUserData = null;
+  let isEditMode = false;
+
+  if (!currentUserId) {
+    alert("User ID not found.");
+    window.location.href = "view-users.html";
+  }
+
+  async function fetchJSON(url, options = {}) {
+  const token = localStorage.getItem("boop_jwt");
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  } else if (options.autoRedirect !== false) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const fetchOptions = {
+    ...options,
+    headers,
+  };
+
+  const res = await fetch(url, fetchOptions);
+
+  if (res.status === 401 || res.status === 403) {
+    console.warn("⚠️ Token rejected or expired");
+    if (options.autoRedirect !== false) {
+      window.location.href = "login.html";
+    }
+    throw new Error("Unauthorized");
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || "Network error");
+  }
+
+  return await res.json();
+}
+
+  function formatDatePretty(dateStr) {
+    const date = new Date(dateStr);
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return date.toLocaleDateString("en-US", options);
   }
 
   logoutBtn?.addEventListener("click", () => {
