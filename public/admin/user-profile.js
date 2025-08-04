@@ -155,6 +155,17 @@ if (
   `;
 }
 
+      let walletBalance = "N/A";
+
+try {
+  const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
+  if (typeof wallet.balance === "number") {
+    walletBalance = `$${wallet.balance.toFixed(2)}`;
+  }
+} catch (err) {
+  console.warn("⚠️ Could not load wallet balance:", err.message);
+}
+
 userInfo.innerHTML = `
   <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
   
