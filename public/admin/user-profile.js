@@ -674,7 +674,6 @@ document.getElementById("prevTransactions")?.addEventListener("click", () => {
   }
 });
   
-  });
 
  function showNote(noteText) {
   const modal = document.createElement("div");
@@ -704,3 +703,5 @@ document.getElementById("prevTransactions")?.addEventListener("click", () => {
   modal.appendChild(box);
   document.body.appendChild(modal);
 }
+
+  });
