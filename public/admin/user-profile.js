@@ -86,16 +86,6 @@ try {
 }
       currentUserData = user;
 
-      let walletBalance = "N/A";
-
-try {
-  const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
-  if (typeof wallet.balance_cents === "number") {
-    walletBalance = `$${(wallet.balance_cents / 100).toFixed(2)}`;
-  }
-} catch (err) {
-  console.warn("⚠️ Could not load wallet balance:", err.message);
-}
 
       let walletHTML = "";
 
