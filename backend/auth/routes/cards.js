@@ -24,6 +24,18 @@ router.post("/", async (req, res) => {
   }
 
   try {
+    // Check for duplicate UID
+    const existingUID = await db.query(
+      `SELECT * FROM cards WHERE uid = $1`,
+      [uid]
+    );
+
+    if (existingUID.rows.length > 0) {
+      console.warn(`⚠️ Card UID already assigned: ${uid}`);
+      return res.status(409).json({ message: `Card UID ${uid} is already assigned to another wallet.` });
+    }
+
+    // Check for existing cards for the wallet
     const existing = await db.query(
       `SELECT * FROM cards WHERE wallet_id = $1`,
       [wallet_id]
@@ -41,24 +53,25 @@ router.post("/", async (req, res) => {
       }
     }
 
+    // Insert the card
     const result = await db.query(
-  `INSERT INTO cards (uid, wallet_id, type, status, issued_by)
-   VALUES ($1, $2, $3, $4, $5)
-   RETURNING *`,
-  [uid, wallet_id, type, status, issued_by]
-);
+      `INSERT INTO cards (uid, wallet_id, type, status, issued_by)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [uid, wallet_id, type, status, issued_by]
+    );
 
-// Log the action in admin_actions
-await db.query(
-  `INSERT INTO admin_actions (action, type, status, performed_by, target_user_id, created_at, completed_at)
-   SELECT 'assign_card', 'card', 'completed', $1, u.id, NOW(), NOW()
-   FROM users u
-   WHERE u.wallet_id = $2`,
-  [issued_by, wallet_id]
-);
+    // Log the action in admin_actions
+    await db.query(
+      `INSERT INTO admin_actions (action, type, status, performed_by, target_user_id, created_at, completed_at)
+       SELECT 'assign_card', 'card', 'completed', $1, u.id, NOW(), NOW()
+       FROM users u
+       WHERE u.wallet_id = $2`,
+      [issued_by, wallet_id]
+    );
 
-console.log("✅ Card successfully inserted:", result.rows[0]);
-res.status(201).json(result.rows[0]);
+    console.log("✅ Card successfully inserted:", result.rows[0]);
+    res.status(201).json(result.rows[0]);
 
   } catch (err) {
     console.error("❌ DB insert error:", err);
