@@ -658,6 +658,36 @@ isEditMode = false;
     console.error("Force sign-out check failed:", err);
   }
 })();
+
+  function showNote(noteText) {
+  const modal = document.createElement("div");
+  modal.style.position = "fixed";
+  modal.style.top = "0";
+  modal.style.left = "0";
+  modal.style.width = "100%";
+  modal.style.height = "100%";
+  modal.style.background = "rgba(0, 0, 0, 0.6)";
+  modal.style.display = "flex";
+  modal.style.alignItems = "center";
+  modal.style.justifyContent = "center";
+  modal.style.zIndex = "9999";
+
+  const box = document.createElement("div");
+  box.style.background = "#fff";
+  box.style.padding = "20px";
+  box.style.borderRadius = "8px";
+  box.style.maxWidth = "400px";
+  box.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.3)";
+  box.innerHTML = `
+    <h3>Transaction Note</h3>
+    <p style="white-space: pre-wrap;">${noteText}</p>
+    <button style="margin-top: 20px;" onclick="this.closest('div').parentNode.remove()">Close</button>
+  `;
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+}
+
   
   loadUserProfile();
 
