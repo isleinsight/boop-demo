@@ -203,7 +203,7 @@
   method: "POST",
   headers: { 
     "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("boop_jwt")}` // Add token
+    Authorization: `Bearer ${localStorage.getItem("boop_jwt")}`
   },
   body: JSON.stringify({
     uid,
@@ -218,6 +218,9 @@ const result = await res.json();
 if (!res.ok) {
   if (result.message?.toLowerCase().includes("already has")) {
     throw new Error("⚠️ This user already has a spending card.");
+  }
+  if (result.message?.toLowerCase().includes("uid")) {
+    throw new Error("⚠️ This card UID is already assigned to another user.");
   }
   throw new Error(result.message || "Card assignment failed.");
 }
