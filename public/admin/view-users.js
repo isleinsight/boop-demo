@@ -1,4 +1,4 @@
-//view-users.js
+//view-usersw.js
 
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
@@ -75,15 +75,26 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
   async function performAction(user, action) {
     try {
       if (action === "delete") {
-        if (user.email === currentUserEmail) return alert("You cannot delete your own account.");
-        const confirmText = prompt("Type DELETE to confirm.");
-        if (confirmText !== "DELETE") return;
+  if (user.email === currentUserEmail) return alert("You cannot delete your own account.");
+  const confirmText = prompt("Type DELETE to confirm.");
+  if (confirmText !== "DELETE") return;
 
-        await fetch(`/api/users/${user.id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
+  const res = await fetch(`/api/users/${user.id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ uid: currentUser?.id })
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || `Delete failed with status ${res.status}`);
+  }
+
+  alert("✅ User deleted successfully.");
+}
 
       else if (action === "suspend" || action === "unsuspend") {
         const newStatus = action === "suspend" ? "suspended" : "active";
@@ -225,27 +236,39 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
     updateDeleteButtonVisibility();
   });
 
-  deleteSelectedBtn.addEventListener("click", async () => {
-    const selected = [...document.querySelectorAll(".user-checkbox:checked")];
-    const ids = selected.map(cb => cb.dataset.id);
-    const emails = selected.map(cb => cb.dataset.email);
-    if (emails.includes(currentUserEmail)) return alert("You cannot delete your own account.");
-    const confirmText = prompt("Type DELETE to confirm deletion.");
-    if (confirmText !== "DELETE") return;
+deleteSelectedBtn.addEventListener("click", async () => {
+  const selected = [...document.querySelectorAll(".user-checkbox:checked")];
+  const ids = selected.map(cb => cb.dataset.id);
+  const emails = selected.map(cb => cb.dataset.email);
+  if (emails.includes(currentUserEmail)) return alert("You cannot delete your own account.");
+  const confirmText = prompt("Type DELETE to confirm deletion.");
+  if (confirmText !== "DELETE") return;
 
-    try {
-      await Promise.all(ids.map(id =>
-        fetch(`/api/users/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
-        })
-      ));
-      fetchUsers();
-    } catch (err) {
-      console.error("⚠️ Bulk delete failed:", err);
-      alert("Delete failed.");
-    }
-  });
+  try {
+    await Promise.all(ids.map(id =>
+      fetch(`/api/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ uid: currentUser?.id })
+      }).then(res => {
+        if (!res.ok) {
+          return res.json().then(err => {
+            throw new Error(err.message || `Delete failed for user ${id} with status ${res.status}`);
+          });
+        }
+        return res;
+      })
+    ));
+    alert("✅ Selected users deleted successfully.");
+    fetchUsers();
+  } catch (err) {
+    console.error("⚠️ Bulk delete failed:", err);
+    alert("Delete failed: " + err.message);
+  }
+});
 
   fetchUsers();
 });
