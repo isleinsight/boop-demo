@@ -1,4 +1,5 @@
 require('dotenv').config({ path: __dirname + '/.env' });
+require('dotenv').config({ path: __dirname + '/.env.treasury', override: true });
 
 const express = require('express');
 const cors = require('cors');
