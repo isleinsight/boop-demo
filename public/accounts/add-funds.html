@@ -239,9 +239,10 @@ populateTreasuryAccounts();
         }
 
         try {
-          fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`);
-            headers: { Authorization: `Bearer ${token}` }
-          });
+  const res = await fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const users = await res.json();
           const users = await res.json();
 
           if (!users.length) {
