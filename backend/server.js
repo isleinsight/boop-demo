@@ -1,5 +1,7 @@
 require('dotenv').config({ path: __dirname + '/.env' });
 require('dotenv').config({ path: __dirname + '/.env.treasury', override: true });
+console.log("🪙 HSBC:", process.env.HSBC_WALLET_ID);
+console.log("🏦 BUTTERFIELD:", process.env.BUTTERFIELD_WALLET_ID);
 
 const express = require('express');
 const cors = require('cors');
