@@ -1,536 +1,303 @@
-document.addEventListener("DOMContentLoaded", () => {
-
-  const userInfo = document.getElementById("userInfo");
-  const editBtn = document.getElementById("editProfileBtn");
-  const saveBtn = document.getElementById("saveProfileBtn");
-  const currentAdmin = JSON.parse(localStorage.getItem("boopUser"));
-if (currentAdmin?.role === "admin" && ["viewer", "accountant"].includes(currentAdmin?.type)) {
-  if (editBtn) editBtn.style.display = "none";
-}
-  const logoutBtn = document.getElementById("logoutBtn");
-  const parentSection = document.getElementById("parentSection");
-  const studentInfoSection = document.getElementById("studentInfoSection");
-  const parentNameEl = document.getElementById("parentName");
-  const parentEmailEl = document.getElementById("parentEmail");
-
-let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
-
-// 🚫 Remove any accidental whitespace or malformed characters from UUID
-currentUserId = currentUserId?.replace(/\s+/g, ''); 
-  let currentUserData = null;
-  let isEditMode = false;
-
-  if (!currentUserId) {
-    alert("User ID not found.");
-    window.location.href = "view-users.html";
-  }
-
-  async function fetchJSON(url, options = {}) {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error("Network error");
-    return await res.json();
-  }
-
-  function formatDatePretty(dateStr) {
-    const date = new Date(dateStr);
-    const options = { year: "numeric", month: "long", day: "numeric" };
-    return date.toLocaleDateString("en-US", options);
-  }
-
-    async function loadUserProfile() {
-    try {
-      const user = await fetchJSON(`/api/users/${currentUserId}`);
-      currentUserData = user;
-
-      let walletHTML = "";
-
-// ✅ All Cards: Transit & Spending
-try {
-  const allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
-  const transitCards = allCards.filter(c => c.type === "transit");
-  const spendingCards = allCards.filter(c => c.type === "spending");
-
-  // Show Transit Cards
-  if (transitCards.length > 0) {
-    transitCards.forEach(card => {
-      walletHTML += `<div><span class="label">Transit Card</span><span class="value">${card.uid}</span></div>`;
-    });
-  } else {
-    walletHTML += `<div><span class="label">Transit Card</span><span class="value">None</span></div>`;
-  }
-
-  // Show Spending Card (optional, remove if you want only transit)
-  if (spendingCards.length > 0) {
-    spendingCards.forEach(card => {
-      walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
-    });
-  }
-} catch (err) {
-  console.warn("🟡 Failed to load cards:", err.message);
-  walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
-}
-
-userInfo.innerHTML = `
-  <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
-  
-  <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
-    <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
-
-  <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
-    <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
-
-  <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
-    <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
-
-  <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
-    <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
-
-  <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
-
-  <div><span class="label">Role</span><span class="value">${user.role}</span></div>
-
-  <div>
-    <span class="label">On Assistance</span>
-    <span class="value" id="viewAssistance">${user.on_assistance ? "Yes" : "No"}</span>
-    <select id="editAssistance" style="display:none; width: 100%;">
-      <option value="true">Yes</option>
-      <option value="false">No</option>
-    </select>
-  </div>
-
-  ${walletHTML}
-`;
-
-document.getElementById("editAssistance").value = user.on_assistance ? "true" : "false";
-
-      // ✅ dropdown
-
-const dropdown = document.createElement("select");
-dropdown.innerHTML = `
-  <option value="">Actions</option>
-  <option value="${user.status === "suspended" ? "unsuspend" : "suspend"}">${user.status === "suspended" ? "Unsuspend" : "Suspend"}</option>
-  <option value="signout">Force Sign-out</option>
-  <option value="delete">Delete</option>
-`;
-dropdown.addEventListener("change", async () => {
-  const action = dropdown.value;
-  dropdown.value = "";
-  if (!action) return;
-
+document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
-  if (!token) {
-    alert("Missing token.");
+  const userTableBody = document.getElementById("userTableBody");
+  const searchInput = document.getElementById("searchInput");
+  const searchBtn = document.getElementById("searchBtn");
+  const clearSearchBtn = document.getElementById("clearSearchBtn");
+  const roleFilter = document.getElementById("roleFilter");
+  const statusFilter = document.getElementById("statusFilter");
+  const selectAll = document.getElementById("selectAllCheckbox");
+  const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+  const prevBtn = document.getElementById("prevBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const paginationInfo = document.getElementById("paginationInfo");
+  const userCount = document.getElementById("userCount");
+
+  let currentPage = 1;
+  const perPage = 10;
+  let totalPages = 1;
+  let allUsers = [];
+  let currentUserEmail = null;
+  let currentUser = null;
+  let sortBy = 'first_name'; // Default sort by first_name
+  let sortDirection = 'asc'; // Default ascending
+
+  // Map HTML data-sort to backend column names
+  const sortColumnMap = {
+    firstName: 'first_name',
+    lastName: 'last_name',
+    email: 'email'
+  };
+
+    currentUser = meData;
+    currentUserEmail = meData.email;
+  } catch (err) {
+    console.warn("🔒 Not authorized or error fetching user:", err);
+    localStorage.removeItem("boop_jwt");
+    localStorage.removeItem("boopUser");
+    window.location.href = "login.html";
     return;
   }
 
-  // ✅ Load current user info for email (like View Users does)
-  let adminUser = null;
-  try {
-    const meRes = await fetch("/api/me", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    adminUser = await meRes.json();
-  } catch (e) {
-    console.warn("Failed to fetch current admin");
-  }
+  async function fetchUsers() {
+    try {
+      let role = roleFilter.value;
+      let assistanceOnly = false;
 
-  if (action === "delete") {
-    const confirmDelete = prompt("Type DELETE to confirm.");
-    if (confirmDelete !== "DELETE") return;
-  }
-
-  try {
-    let res;
-
-    if (action === "suspend" || action === "unsuspend") {
-      const newStatus = action === "suspend" ? "suspended" : "active";
-      res = await fetch(`/api/users/${currentUserId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to update status");
+      if (role === "cardholder_assistance") {
+        role = "cardholder";
+        assistanceOnly = true;
       }
 
-      alert(`User status updated to ${newStatus}.`);
+      const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(statusFilter.value)}${assistanceOnly ? '&assistanceOnly=true' : ''}&sortBy=${encodeURIComponent(sortBy)}&sortDirection=${encodeURIComponent(sortDirection)}`;
+      const res = await fetch(`/api/users${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to fetch users: ${res.status}`);
+      }
+      const data = await res.json();
+      allUsers = data.users || [];
+      totalPages = data.totalPages || 1;
+      render();
+      userCount.textContent = `Total Users: ${data.total}`;
+      paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    } catch (err) {
+      console.error("⚠️ Error loading users:", err);
+      userTableBody.innerHTML = `<tr><td colspan="7">Error loading users: ${err.message}</td></tr>`;
+    }
+  }
 
-      if (newStatus === "suspended") {
-        await fetch(`/api/users/${currentUserId}/signout`, {
+  async function performAction(user, action) {
+    try {
+      if (action === "delete") {
+        if (user.email === currentUserEmail) return alert("You cannot delete your own account.");
+        const confirmText = prompt("Type DELETE to confirm.");
+        if (confirmText !== "DELETE") return;
+
+        const res = await fetch(`/api/users/${user.id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uid: currentUser?.id })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || `Delete failed with status ${res.status}`);
+        }
+
+        alert("✅ User deleted successfully.");
+      } else if (action === "suspend" || action === "unsuspend") {
+        const newStatus = action === "suspend" ? "suspended" : "active";
+        const res = await fetch(`/api/users/${user.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          return alert("❌ Failed to update status: " + (err.message || res.status));
+        }
+
+        if (newStatus === "suspended") {
+          await fetch(`/api/users/${user.id}/signout`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        }
+      } else if (action === "signout") {
+        const res = await fetch(`/api/users/${user.id}/signout`, {
           method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          return alert("❌ Force sign-out failed: " + (err.message || res.status));
+        }
+        alert("✅ User signed out.");
+      } else if (action === "restore") {
+        await fetch(`/api/users/${user.id}/restore`, {
+          method: "PATCH",
           headers: { Authorization: `Bearer ${token}` }
         });
       }
 
-    } else if (action === "signout") {
-      res = await fetch(`/api/users/${currentUserId}/signout`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await fetchUsers();
+    } catch (err) {
+      console.error("❌ performAction failed:", err);
+      alert("Action failed: " + err.message);
+    }
+  }
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Force sign-out failed");
+  function createDropdown(user) {
+    const select = document.createElement("select");
+    select.classList.add("btnEdit");
+    select.innerHTML = `
+      <option value="action">Action</option>
+      <option value="view">View Profile</option>
+      ${user.deleted_at ? '<option value="restore">Restore</option>' : `
+        ${user.status === "suspended" ? '<option value="unsuspend">Unsuspend</option>' : '<option value="suspend">Suspend</option>'}
+        <option value="signout">Force Sign-out</option>
+        <option value="delete">Delete</option>`}
+    `;
+    select.addEventListener("change", async () => {
+      const action = select.value;
+      select.value = "action";
+      if (action === "view") {
+        localStorage.setItem("selectedUserId", user.id);
+        return (window.location.href = "user-profile.html");
       }
+      await performAction(user, action);
+    });
+    return select;
+  }
 
-      alert("✅ User signed out.");
-
-    } else if (action === "delete") {
-      res = await fetch(`/api/users/${currentUserId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ uid: adminUser?.id }) // Just in case the backend checks this
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "User deletion failed");
-      }
-
-      alert("User deleted.");
-      window.location.href = "view-users.html";
+  function render() {
+    userTableBody.innerHTML = "";
+    if (!allUsers.length) {
+      userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
       return;
     }
 
-    await loadUserProfile();
+    allUsers.forEach(user => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input type="checkbox" class="user-checkbox" data-id="${user.id}" data-email="${user.email}" /></td>
+        <td>${user.first_name || ""}</td>
+        <td>${user.last_name || ""}</td>
+        <td>${user.email || ""}</td>
+        <td>${user.role || ""}</td>
+        <td><span style="color:${user.status === "suspended" ? "#e74c3c" : "#27ae60"}">${user.status}</span></td>
+      `;
+      const td = document.createElement("td");
+      td.appendChild(createDropdown(user));
+      row.appendChild(td);
+      userTableBody.appendChild(row);
+    });
 
-  } catch (err) {
-    console.error("❌ Action failed:", err);
-    alert("❌ Action failed: " + err.message);
+    // Update sort indicators
+    document.querySelectorAll('.sortable').forEach(header => {
+      const arrow = header.querySelector('.arrow');
+      arrow.textContent = '';
+      if (sortColumnMap[header.dataset.sort] === sortBy) {
+        arrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
+      }
+    });
+
+    attachCheckboxListeners();
+    updateDeleteButtonVisibility();
+
+    prevBtn.style.display = currentPage > 1 ? "inline-block" : "none";
+    nextBtn.style.display = currentPage < totalPages ? "inline-block" : "none";
   }
+
+  function attachCheckboxListeners() {
+    document.querySelectorAll(".user-checkbox").forEach(cb => {
+      cb.addEventListener("change", updateDeleteButtonVisibility);
+    });
+  }
+
+  function updateDeleteButtonVisibility() {
+    const checked = document.querySelectorAll(".user-checkbox:checked").length;
+    deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
+  }
+
+  // Add sort event listeners
+  document.querySelectorAll('.sortable').forEach(header => {
+    header.addEventListener('click', () => {
+      const column = header.dataset.sort;
+      const backendColumn = sortColumnMap[column];
+      if (sortBy === backendColumn) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortBy = backendColumn;
+        sortDirection = 'asc';
+      }
+      currentPage = 1;
+      fetchUsers();
+    });
+  });
+
+  searchBtn.addEventListener("click", () => { currentPage = 1; fetchUsers(); });
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      currentPage = 1;
+      fetchUsers();
+    }
+  });
+  clearSearchBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    roleFilter.value = "";
+    statusFilter.value = "";
+    sortBy = 'first_name';
+    sortDirection = 'asc';
+    currentPage = 1;
+    fetchUsers();
+  });
+
+  roleFilter.addEventListener("change", () => { currentPage = 1; fetchUsers(); });
+  statusFilter.addEventListener("change", () => { currentPage = 1; fetchUsers(); });
+  prevBtn.addEventListener("click", () => { if (currentPage > 1) currentPage--; fetchUsers(); });
+  nextBtn.addEventListener("click", () => { if (currentPage < totalPages) currentPage++; fetchUsers(); });
+
+  selectAll.addEventListener("change", () => {
+    document.querySelectorAll(".user-checkbox").forEach(cb => cb.checked = selectAll.checked);
+    updateDeleteButtonVisibility();
+  });
+
+  deleteSelectedBtn.addEventListener("click", async () => {
+    const selected = [...document.querySelectorAll(".user-checkbox:checked")];
+    const ids = selected.map(cb => cb.dataset.id);
+    const emails = selected.map(cb => cb.dataset.email);
+    if (emails.includes(currentUserEmail)) return alert("You cannot delete your own account.");
+    const confirmText = prompt("Type DELETE to confirm deletion.");
+    if (confirmText !== "DELETE") return;
+
+    try {
+      await Promise.all(ids.map(id =>
+        fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uid: currentUser?.id })
+        }).then(res => {
+          if (!res.ok) {
+            return res.json().then(err => {
+              throw new Error(err.message || `Delete failed for user ${id} with status ${res.status}`);
+            });
+          }
+          return res;
+        })
+      ));
+      alert("✅ Selected users deleted successfully.");
+      fetchUsers();
+    } catch (err) {
+      console.error("⚠️ Bulk delete failed:", err);
+      alert("Delete failed: " + err.message);
+    }
+  });
+
+  fetchUsers();
 });
 
-userInfo.appendChild(dropdown);
-
-// === Student View ===
-if (user.role === "student") {
-  const s = user.student_profile;
-
-  if (s) {
-    studentInfoSection.innerHTML = `
-      <div class="section-title">Student Info</div>
-      <div class="user-details-grid">
-        <div>
-          <span class="label">School</span>
-          <span class="value" id="viewSchool">${s.school_name || "-"}</span>
-          <input type="text" id="editSchool" value="${s.school_name || ""}" style="display:none; width: 100%;" />
-        </div>
-
-        <div>
-          <span class="label">Grade</span>
-          <span class="value" id="viewGrade">${s.grade_level || "-"}</span>
-          <input type="text" id="editGrade" value="${s.grade_level || ""}" style="display:none; width: 100%;" />
-        </div>
-
-        <div>
-          <span class="label">Expiry</span>
-          <span class="value" id="viewExpiry">${s.expiry_date ? formatDatePretty(s.expiry_date) : "-"}</span>
-          <input type="date" id="editExpiry" value="${s.expiry_date ? s.expiry_date.slice(0, 10) : ""}" style="display:none; width: 100%;" />
-        </div>
-      </div>
-    `;
-    studentInfoSection.style.display = "block";
-  }
-
-  // Show parent info
-  if (Array.isArray(user.assigned_parents) && user.assigned_parents.length > 0) {
-    parentSection.innerHTML = `
-      <div class="section-title">Parent Info</div>
-      <div class="user-details-grid">
-        ${user.assigned_parents.map(p => `
-          <div>
-            <span class="label">Name</span>
-            <span class="value">
-              <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${p.id}')">
-                ${p.first_name} ${p.last_name}
-              </a>
-            </span>
-          </div>
-          <div>
-            <span class="label">Email</span>
-            <span class="value">${p.email}</span>
-          </div>
-        `).join("")}
-      </div>
-    `;
-    parentSection.style.display = "block";
-  }
-}
-      
-// === Parent View ===
-if (user.role === "parent" && Array.isArray(user.assigned_students)) {
-  studentInfoSection.innerHTML = '<div class="section-title">Assigned Students</div>';
-  
-  user.assigned_students.forEach(student => {
-    const block = document.createElement("div");
-    block.classList.add("user-details-grid");
-    block.setAttribute("data-student-id", student.id);
-
-    block.innerHTML = `
-      <div><span class="label">Name</span><span class="value">
-        <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${student.id}')">
-          ${student.first_name} ${student.last_name}
-        </a></span></div>
-      <div><span class="label">Email</span><span class="value">${student.email}</span></div>
-      <div class="remove-student-wrapper" style="display: ${isEditMode ? 'block' : 'none'};">
-        <button class="remove-student-btn" data-id="${student.id}" style="margin-top: 10px; background-color: #e74c3c; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">
-          Remove
-        </button>
-      </div>
-    `;
-
-    studentInfoSection.appendChild(block);
-  });
-
-  // ✅ Attach remove listeners
-  setTimeout(() => {
-    document.querySelectorAll(".remove-student-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const studentId = btn.dataset.id;
-        const confirmed = confirm("Are you sure you want to remove this student?");
-        if (!confirmed) return;
-
-        try {
-          const res = await fetch(`/api/user-students/${studentId}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ parent_id: currentUserId }) // <- ensure backend expects this!
-          });
-
-          if (!res.ok) throw new Error("Unlink failed");
-
-          alert("Student removed from your account.");
-          loadUserProfile();
-        } catch (err) {
-          console.error("❌ Remove failed:", err);
-          alert("Failed to remove student.");
-        }
-      });
-    });
-  }, 0);
-
-  studentInfoSection.style.display = "block";
-}
-
-// === Vendor View ===
-if (user.role === "vendor") {
-  try {
-    const vendorSection = document.getElementById("vendorSection");
-    const vendorData = await fetchJSON(`/api/vendors`);
-    const vendor = vendorData.find(v => v.id === user.id || v.user_id === user.id);
-
-    if (vendor) {
-      vendorSection.innerHTML = `
-        <div class="section-title">Vendor Info</div>
-        <div class="user-details-grid">
-          <div>
-            <span class="label">Business Name</span>
-            <span class="value" id="viewBusiness">${vendor.business_name || "-"}</span>
-            <input type="text" id="editBusiness" value="${vendor.business_name || ""}" style="display:none; width: 100%;" />
-          </div>
-
-          <div>
-            <span class="label">Category</span>
-            <span class="value" id="viewCategory">${vendor.category || "-"}</span>
-            <input type="text" id="editCategory" value="${vendor.category || ""}" style="display:none; width: 100%;" />
-          </div>
-
-          <div>
-            <span class="label">Phone</span>
-            <span class="value" id="viewPhone">${vendor.phone || "-"}</span>
-            <input type="tel" id="editPhone" value="${vendor.phone || ""}" style="display:none; width: 100%;" />
-          </div>
-          
-        </div>
-      `;
-      vendorSection.style.display = "block";
-    }
-  } catch (err) {
-    console.error("❌ Failed to fetch vendor info:", err);
-  }
-}
-      
-      // === Edit Profile Setup ===
-editBtn.onclick = () => {
-  isEditMode = true;
-
-  // Toggle user input fields
-  ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
-    const viewEl = document.getElementById(`view${field}`);
-    const editEl = document.getElementById(`edit${field}`);
-    if (viewEl && editEl) {
-      viewEl.style.display = "none";
-      editEl.style.display = "block";
-    }
-  });
-
-  // Toggle student input fields
-  if (currentUserData.role === "student") {
-    ["School", "Grade", "Expiry"].forEach(field => {
-      const viewEl = document.getElementById(`view${field}`);
-      const editEl = document.getElementById(`edit${field}`);
-      if (viewEl && editEl) {
-        viewEl.style.display = "none";
-        editEl.style.display = "block";
-      }
-    });
-  }
-
-  // Toggle vendor input fields
-  if (currentUserData.role === "vendor") {
-    ["Business", "Category", "Phone", "VendorApproved"].forEach(field => {
-      const viewEl = document.getElementById(`vendor${field}`) || document.getElementById(`view${field}`);
-      const editEl = document.getElementById(`editVendor${field}`) || document.getElementById(`edit${field}`);
-      if (viewEl && editEl) {
-        viewEl.style.display = "none";
-        editEl.style.display = "block";
-      }
-    });
-  }
-
-  // Show save button
-  saveBtn.style.display = "inline-block";
-
-  // Show remove buttons for parents
-  document.querySelectorAll(".remove-student-wrapper").forEach(el => {
-    el.style.display = "block";
-  });
-};
-
-saveBtn.onclick = async () => {
-  try {
-    // Update user base profile
-    await fetch(`/api/users/${currentUserId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        first_name: document.getElementById("editFirstName").value,
-        middle_name: document.getElementById("editMiddleName").value,
-        last_name: document.getElementById("editLastName").value,
-        email: document.getElementById("editEmail").value,
-        on_assistance: document.getElementById("editAssistance").value === "true"
-      })
-    });
-
-    // Conditionally update student
-    if (currentUserData.role === "student") {
-      await fetch(`/api/students/${currentUserId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          school_name: document.getElementById("editSchool")?.value,
-          grade_level: document.getElementById("editGrade")?.value,
-          expiry_date: document.getElementById("editExpiry")?.value
-        })
-      });
-    }
-
-    // Conditionally update vendor
-    if (currentUserData.role === "vendor") {
-      await fetch(`/api/vendors/${currentUserId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business_name: document.getElementById("editVendorBusiness")?.value,
-          category: document.getElementById("editVendorCategory")?.value,
-          phone: document.getElementById("editVendorPhone")?.value,
-
-        })
-      });
-    }
-
-    alert("Profile updated.");
-    isEditMode = false;
-    saveBtn.style.display = "none";
-
-    // Toggle all inputs back to display mode
-    [
-      "FirstName", "MiddleName", "LastName", "Email", "Assistance",
-      "School", "Grade", "Expiry",
-      "Business", "Category", "Phone", "VendorApproved"
-    ].forEach(field => {
-      const viewEl = document.getElementById(`view${field}`) || document.getElementById(`vendor${field}`);
-      const editEl = document.getElementById(`edit${field}`) || document.getElementById(`editVendor${field}`);
-      if (viewEl && editEl) {
-        viewEl.style.display = "inline-block";
-        editEl.style.display = "none";
-      }
-    });
-
-    // Hide remove buttons again
-    document.querySelectorAll(".remove-student-wrapper").forEach(el => {
-      el.style.display = "none";
-    });
-
-    loadUserProfile();
-  } catch (err) {
-    console.error("❌ Failed to save profile:", err);
-    alert("Error saving changes.");
-  }
-};
-
-
-    
-      
-
-    } catch (err) {
-      console.error("❌ Failed to load user:", err);
-      alert("Error loading user");
-      window.location.href = "view-users.html";
-    }
-  }
-
-  logoutBtn?.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST" }).then(() => {
-      window.location.href = "index.html";
-    });
-  });
-isEditMode = false;
-
-// ✅ Check if current user has been force signed out
-(async () => {
-  const token = localStorage.getItem("boop_jwt");
-  if (!token) return;
-
-  try {
-    const res = await fetch("/api/me", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!res.ok) return;
-
-    const user = await res.json();
-
-    if (user.force_signed_out) {
-      alert("You have been signed out by an administrator.");
-      localStorage.clear();
-
-      try {
-        const sessionRes = await fetch(`/api/sessions/${user.email}`, { method: "DELETE" });
-
-        // ignore 404 (session already gone)
-        if (sessionRes.status !== 200 && sessionRes.status !== 404) {
-          console.warn("🧹 Session deletion failed:", await sessionRes.text());
-        }
-      } catch (err) {
-        console.warn("🧹 Session cleanup failed:", err);
-      }
-
+const logoutBtn = document.getElementById("logoutBtn");
+logoutBtn?.addEventListener("click", () => {
+  fetch("/api/logout", { method: "POST" })
+    .then(() => {
+      localStorage.removeItem("boop_jwt");
+      localStorage.removeItem("boopUser");
       window.location.href = "login.html";
-    }
-  } catch (err) {
-    console.error("Force sign-out check failed:", err);
-  }
-})();
-  
-  loadUserProfile();
+    })
+    .catch(() => alert("Logout failed."));
 });
