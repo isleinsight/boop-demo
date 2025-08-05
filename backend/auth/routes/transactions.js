@@ -1,10 +1,9 @@
-// backend/auth/routes/transactions.js
 const express = require('express');
 const router = express.Router();
 const pool = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// 🔍 GET /api/transactions/recent
+// 🔍 GET /api/transactions/recent (unchanged)
 router.get('/recent', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
 
@@ -41,7 +40,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
   }
 });
 
-// 👤 GET /api/transactions/mine
+// 👤 GET /api/transactions/mine (unchanged)
 router.get('/mine', authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
@@ -67,7 +66,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
   }
 });
 
-// 📊 GET /api/transactions/report
+// 📊 GET /api/transactions/report (unchanged)
 router.get('/report', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
   const { start, end, type: filterType } = req.query;
@@ -126,7 +125,7 @@ router.get('/report', authenticateToken, async (req, res) => {
   }
 });
 
-// 💸 POST /api/transactions/add-funds
+// 💸 POST /api/transactions/add-funds (modified)
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   const { wallet_id, amount, note, user_id } = req.body;
@@ -146,32 +145,73 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
     const cents = Math.round(parseFloat(amount) * 100);
 
-    // Insert transaction
+    // Get sender's wallet (admin's wallet)
+    const senderWalletResult = await client.query(
+      `SELECT * FROM wallets WHERE user_id = $1 FOR UPDATE`,
+      [adminId]
+    );
+    if (senderWalletResult.rows.length === 0) {
+      throw new Error('Sender wallet not found');
+    }
+    const senderWallet = senderWalletResult.rows[0];
+
+    // Get recipient's wallet
+    const recipientWalletResult = await client.query(
+      `SELECT * FROM wallets WHERE id = $1 AND user_id = $2 FOR UPDATE`,
+      [wallet_id, user_id]
+    );
+    if (recipientWalletResult.rows.length === 0) {
+      throw new Error('Recipient wallet not found');
+    }
+    const recipientWallet = recipientWalletResult.rows[0];
+
+    // Validate wallet statuses and balance
+    if (senderWallet.status !== 'active' || recipientWallet.status !== 'active') {
+      throw new Error('Sender or recipient wallet is not active');
+    }
+    if (senderWallet.balance < cents / 100) {
+      throw new Error('Insufficient funds in sender wallet');
+    }
+
+    // Deduct from sender's wallet
     await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
-      [wallet_id, user_id, cents, note || null, adminId]
+      `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
+      [cents / 100, senderWallet.id]
     );
 
-    // Update wallet balance
+    // Add to recipient's wallet
     await client.query(
       `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
       [cents / 100, wallet_id]
     );
 
+    // Log sender transaction (debit)
+    await client.query(
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
+      [senderWallet.id, adminId, cents, note || 'Fund transfer to user ' + user_id, adminId]
+    );
+
+    // Log recipient transaction (credit)
+    await client.query(
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
+      [wallet_id, user_id, cents, note || 'Funds received from admin ' + adminId, adminId]
+    );
+
     await client.query('COMMIT');
 
-    res.status(201).json({ success: true });
+    res.status(201).json({ success: true, message: 'Funds transferred successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error("❌ Failed to add funds:", err.message);
-    res.status(500).json({ error: 'Server error while adding funds' });
+    console.error('❌ Failed to add funds:', err.message);
+    res.status(500).json({ error: err.message || 'Server error while adding funds' });
   } finally {
     client.release();
   }
 });
 
-// 📄 GET /api/transactions/user/:userId — For admin viewing someone else's profile
+// 📄 GET /api/transactions/user/:userId (unchanged)
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
