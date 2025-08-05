@@ -155,7 +155,7 @@ router.get('/treasury-wallets', authenticateToken, async (req, res) => {
     const treasuryWallets = [
       { id: process.env.HSBC_WALLET_ID, name: 'HSBC Treasury' },
       { id: process.env.BUTTERFIELD_WALLET_ID, name: 'Butterfield Treasury' }
-    ].filter(w => w.id); // Filter out undefined IDs if .env is misconfigured
+    ].filter(w => w.id); // Filter out undefined IDs
     if (treasuryWallets.length === 0) {
       throw new Error('No treasury wallets configured');
     }
