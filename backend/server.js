@@ -1,7 +1,7 @@
 require('dotenv').config({ path: __dirname + '/.env' });
 
-console.log("🪙 HSBC:", process.env.HSBC_WALLET_ID);
-console.log("🏦 BUTTERFIELD:", process.env.BUTTERFIELD_WALLET_ID);
+console.log("HSBC =", process.env.TREASURY_WALLET_ID_HSBC);
+console.log("BUTTERFIELD =", process.env.TREASURY_WALLET_ID_BUTTERFIELD);
 
 const express = require('express');
 const cors = require('cors');
