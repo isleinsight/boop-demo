@@ -29,6 +29,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     email: 'email'
   };
 
+  // ✅ Restrict access to only accountant-type admins
+  try {
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const meData = await res.json();
+
+    if (!meData || meData.role !== "admin" || !["accountant", "treasury", "viewer"].includes(meData.type)) {
+      throw new Error("Not authorized");
+    }
+
     currentUser = meData;
     currentUserEmail = meData.email;
   } catch (err) {
