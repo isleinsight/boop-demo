@@ -1,33 +1,25 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
-  const userTableBody = document.getElementById("userTableBody");
-  const searchInput = document.getElementById("searchInput");
-  const searchBtn = document.getElementById("searchBtn");
-  const clearSearchBtn = document.getElementById("clearSearchBtn");
-  const roleFilter = document.getElementById("roleFilter");
-  const statusFilter = document.getElementById("statusFilter");
-  const selectAll = document.getElementById("selectAllCheckbox");
-  const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
-  const prevBtn = document.getElementById("prevBtn");
-  const nextBtn = document.getElementById("nextBtn");
-  const paginationInfo = document.getElementById("paginationInfo");
-  const userCount = document.getElementById("userCount");
-
-  let currentPage = 1;
-  const perPage = 10;
-  let totalPages = 1;
-  let allUsers = [];
-  let currentUserEmail = null;
+  const userDetails = document.getElementById("userDetails");
+  const suspendBtn = document.getElementById("suspendBtn");
+  const signoutBtn = document.getElementById("signoutBtn");
+  const deleteBtn = document.getElementById("deleteBtn");
+  const restoreBtn = document.getElementById("restoreBtn");
+  const backBtn = document.getElementById("backBtn");
   let currentUser = null;
-  let sortBy = 'first_name'; // Default sort by first_name
-  let sortDirection = 'asc'; // Default ascending
+  let currentUserEmail = null;
+  let selectedUser = null;
 
-  // Map HTML data-sort to backend column names
-  const sortColumnMap = {
-    firstName: 'first_name',
-    lastName: 'last_name',
-    email: 'email'
-  };
+  // ✅ Restrict access to only accountant-type admins
+  try {
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const meData = await res.json();
+
+    if (!meData || meData.role !== "admin" || !["accountant", "treasury", "viewer"].includes(meData.type)) {
+      throw new Error("Not authorized");
+    }
 
     currentUser = meData;
     currentUserEmail = meData.email;
@@ -39,44 +31,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  async function fetchUsers() {
+  async function fetchUser() {
     try {
-      let role = roleFilter.value;
-      let assistanceOnly = false;
-
-      if (role === "cardholder_assistance") {
-        role = "cardholder";
-        assistanceOnly = true;
+      const userId = localStorage.getItem("selectedUserId");
+      if (!userId) {
+        throw new Error("No user selected");
       }
 
-      const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(statusFilter.value)}${assistanceOnly ? '&assistanceOnly=true' : ''}&sortBy=${encodeURIComponent(sortBy)}&sortDirection=${encodeURIComponent(sortDirection)}`;
-      const res = await fetch(`/api/users${query}`, {
+      const res = await fetch(`/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Failed to fetch users: ${res.status}`);
+        throw new Error(err.message || `Failed to fetch user: ${res.status}`);
       }
-      const data = await res.json();
-      allUsers = data.users || [];
-      totalPages = data.totalPages || 1;
+      selectedUser = await res.json();
       render();
-      userCount.textContent = `Total Users: ${data.total}`;
-      paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     } catch (err) {
-      console.error("⚠️ Error loading users:", err);
-      userTableBody.innerHTML = `<tr><td colspan="7">Error loading users: ${err.message}</td></tr>`;
+      console.error("⚠️ Error loading user:", err);
+      userDetails.innerHTML = `<p>Error loading user: ${err.message}</p>`;
     }
   }
 
-  async function performAction(user, action) {
+  async function performAction(action) {
     try {
       if (action === "delete") {
-        if (user.email === currentUserEmail) return alert("You cannot delete your own account.");
+        if (selectedUser.email === currentUserEmail) return alert("You cannot delete your own account.");
         const confirmText = prompt("Type DELETE to confirm.");
         if (confirmText !== "DELETE") return;
 
-        const res = await fetch(`/api/users/${user.id}`, {
+        const res = await fetch(`/api/users/${selectedUser.id}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -91,9 +75,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         alert("✅ User deleted successfully.");
+        window.location.href = "view-users.html";
       } else if (action === "suspend" || action === "unsuspend") {
         const newStatus = action === "suspend" ? "suspended" : "active";
-        const res = await fetch(`/api/users/${user.id}`, {
+        const res = await fetch(`/api/users/${selectedUser.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -108,13 +93,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (newStatus === "suspended") {
-          await fetch(`/api/users/${user.id}/signout`, {
+          await fetch(`/api/users/${selectedUser.id}/signout`, {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` }
           });
         }
+        await fetchUser();
       } else if (action === "signout") {
-        const res = await fetch(`/api/users/${user.id}/signout`, {
+        const res = await fetch(`/api/users/${selectedUser.id}/signout`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -123,181 +109,75 @@ document.addEventListener("DOMContentLoaded", async () => {
           return alert("❌ Force sign-out failed: " + (err.message || res.status));
         }
         alert("✅ User signed out.");
+        await fetchUser();
       } else if (action === "restore") {
-        await fetch(`/api/users/${user.id}/restore`, {
+        await fetch(`/api/users/${selectedUser.id}/restore`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` }
         });
+        await fetchUser();
       }
-
-      await fetchUsers();
     } catch (err) {
       console.error("❌ performAction failed:", err);
       alert("Action failed: " + err.message);
     }
   }
 
-  function createDropdown(user) {
-    const select = document.createElement("select");
-    select.classList.add("btnEdit");
-    select.innerHTML = `
-      <option value="action">Action</option>
-      <option value="view">View Profile</option>
-      ${user.deleted_at ? '<option value="restore">Restore</option>' : `
-        ${user.status === "suspended" ? '<option value="unsuspend">Unsuspend</option>' : '<option value="suspend">Suspend</option>'}
-        <option value="signout">Force Sign-out</option>
-        <option value="delete">Delete</option>`}
-    `;
-    select.addEventListener("change", async () => {
-      const action = select.value;
-      select.value = "action";
-      if (action === "view") {
-        localStorage.setItem("selectedUserId", user.id);
-        return (window.location.href = "user-profile.html");
-      }
-      await performAction(user, action);
-    });
-    return select;
-  }
-
   function render() {
-    userTableBody.innerHTML = "";
-    if (!allUsers.length) {
-      userTableBody.innerHTML = `<tr><td colspan="7">No users found.</td></tr>`;
+    if (!selectedUser) {
+      userDetails.innerHTML = `<p>No user data available.</p>`;
       return;
     }
 
-    allUsers.forEach(user => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td><input type="checkbox" class="user-checkbox" data-id="${user.id}" data-email="${user.email}" /></td>
-        <td>${user.first_name || ""}</td>
-        <td>${user.last_name || ""}</td>
-        <td>${user.email || ""}</td>
-        <td>${user.role || ""}</td>
-        <td><span style="color:${user.status === "suspended" ? "#e74c3c" : "#27ae60"}">${user.status}</span></td>
-      `;
-      const td = document.createElement("td");
-      td.appendChild(createDropdown(user));
-      row.appendChild(td);
-      userTableBody.appendChild(row);
-    });
+    userDetails.innerHTML = `
+      <h3>User Profile</h3>
+      <p><strong>First Name:</strong> ${selectedUser.first_name || "N/A"}</p>
+      <p><strong>Last Name:</strong> ${selectedUser.last_name || "N/A"}</p>
+      <p><strong>Email:</strong> ${selectedUser.email || "N/A"}</p>
+      <p><strong>Role:</strong> ${selectedUser.role || "N/A"}</p>
+      <p><strong>Status:</strong> <span style="color:${selectedUser.status === "suspended" ? "#e74c3c" : "#27ae60"}">${selectedUser.status || "N/A"}</span></p>
+    `;
 
-    // Update sort indicators
-    document.querySelectorAll('.sortable').forEach(header => {
-      const arrow = header.querySelector('.arrow');
-      arrow.textContent = '';
-      if (sortColumnMap[header.dataset.sort] === sortBy) {
-        arrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
-      }
-    });
-
-    attachCheckboxListeners();
-    updateDeleteButtonVisibility();
-
-    prevBtn.style.display = currentPage > 1 ? "inline-block" : "none";
-    nextBtn.style.display = currentPage < totalPages ? "inline-block" : "none";
+    // Show/hide buttons based on user status
+    suspendBtn.style.display = selectedUser.deleted_at ? "none" : "inline-block";
+    suspendBtn.textContent = selectedUser.status === "suspended" ? "Unsuspend" : "Suspend";
+    signoutBtn.style.display = selectedUser.deleted_at ? "none" : "inline-block";
+    deleteBtn.style.display = selectedUser.deleted_at ? "none" : "inline-block";
+    restoreBtn.style.display = selectedUser.deleted_at ? "inline-block" : "none";
   }
 
-  function attachCheckboxListeners() {
-    document.querySelectorAll(".user-checkbox").forEach(cb => {
-      cb.addEventListener("change", updateDeleteButtonVisibility);
+  // Event listeners for action buttons
+  if (suspendBtn) {
+    suspendBtn.addEventListener("click", () => performAction(selectedUser.status === "suspended" ? "unsuspend" : "suspend"));
+  }
+  if (signoutBtn) {
+    signoutBtn.addEventListener("click", () => performAction("signout"));
+  }
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", () => performAction("delete"));
+  }
+  if (restoreBtn) {
+    restoreBtn.addEventListener("click", () => performAction("restore"));
+  }
+  if (backBtn) {
+    backBtn.addEventListener("click", () => {
+      window.location.href = "view-users.html";
     });
   }
 
-  function updateDeleteButtonVisibility() {
-    const checked = document.querySelectorAll(".user-checkbox:checked").length;
-    deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
-  }
-
-  // Add sort event listeners
-  document.querySelectorAll('.sortable').forEach(header => {
-    header.addEventListener('click', () => {
-      const column = header.dataset.sort;
-      const backendColumn = sortColumnMap[column];
-      if (sortBy === backendColumn) {
-        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-      } else {
-        sortBy = backendColumn;
-        sortDirection = 'asc';
-      }
-      currentPage = 1;
-      fetchUsers();
-    });
-  });
-
-  searchBtn.addEventListener("click", () => { currentPage = 1; fetchUsers(); });
-  searchInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      currentPage = 1;
-      fetchUsers();
-    }
-  });
-  clearSearchBtn.addEventListener("click", () => {
-    searchInput.value = "";
-    roleFilter.value = "";
-    statusFilter.value = "";
-    sortBy = 'first_name';
-    sortDirection = 'asc';
-    currentPage = 1;
-    fetchUsers();
-  });
-
-  roleFilter.addEventListener("change", () => { currentPage = 1; fetchUsers(); });
-  statusFilter.addEventListener("change", () => { currentPage = 1; fetchUsers(); });
-  prevBtn.addEventListener("click", () => { if (currentPage > 1) currentPage--; fetchUsers(); });
-  nextBtn.addEventListener("click", () => { if (currentPage < totalPages) currentPage++; fetchUsers(); });
-
-  selectAll.addEventListener("change", () => {
-    document.querySelectorAll(".user-checkbox").forEach(cb => cb.checked = selectAll.checked);
-    updateDeleteButtonVisibility();
-  });
-
-  deleteSelectedBtn.addEventListener("click", async () => {
-    const selected = [...document.querySelectorAll(".user-checkbox:checked")];
-    const ids = selected.map(cb => cb.dataset.id);
-    const emails = selected.map(cb => cb.dataset.email);
-    if (emails.includes(currentUserEmail)) return alert("You cannot delete your own account.");
-    const confirmText = prompt("Type DELETE to confirm deletion.");
-    if (confirmText !== "DELETE") return;
-
-    try {
-      await Promise.all(ids.map(id =>
-        fetch(`/api/users/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ uid: currentUser?.id })
-        }).then(res => {
-          if (!res.ok) {
-            return res.json().then(err => {
-              throw new Error(err.message || `Delete failed for user ${id} with status ${res.status}`);
-            });
-          }
-          return res;
+  // Logout button
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      fetch("/api/logout", { method: "POST" })
+        .then(() => {
+          localStorage.removeItem("boop_jwt");
+          localStorage.removeItem("boopUser");
+          window.location.href = "login.html";
         })
-      ));
-      alert("✅ Selected users deleted successfully.");
-      fetchUsers();
-    } catch (err) {
-      console.error("⚠️ Bulk delete failed:", err);
-      alert("Delete failed: " + err.message);
-    }
-  });
+        .catch(() => alert("Logout failed."));
+    });
+  }
 
-  fetchUsers();
-});
-
-const logoutBtn = document.getElementById("logoutBtn");
-logoutBtn?.addEventListener("click", () => {
-  fetch("/api/logout", { method: "POST" })
-    .then(() => {
-      localStorage.removeItem("boop_jwt");
-      localStorage.removeItem("boopUser");
-      window.location.href = "login.html";
-    })
-    .catch(() => alert("Logout failed."));
+  await fetchUser();
 });
