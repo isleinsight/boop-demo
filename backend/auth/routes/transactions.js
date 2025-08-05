@@ -126,6 +126,7 @@ router.get('/report', authenticateToken, async (req, res) => {
 });
 
 // 💸 POST /api/transactions/add-funds (modified)
+// 💸 POST /api/transactions/add-funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   const { wallet_id, amount, note, user_id, treasury_wallet_id } = req.body;
@@ -145,17 +146,17 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
     const cents = Math.round(parseFloat(amount) * 100);
 
-    // Get treasury wallet (admin's wallet)
+    // Get treasury wallet (selected by accountant or treasury user's own wallet)
     const treasuryWalletResult = await client.query(
       `SELECT * FROM wallets WHERE id = $1 AND status = $2 FOR UPDATE`,
       [treasury_wallet_id, 'active']
     );
     if (treasuryWalletResult.rows.length === 0) {
-      throw new Error('Treasury wallet not found for admin');
+      throw new Error('Treasury wallet not found');
     }
     const treasuryWallet = treasuryWalletResult.rows[0];
 
-    // Get recipient's wallet
+    // Get recipient's wallet (user, student, or senior)
     const recipientWalletResult = await client.query(
       `SELECT * FROM wallets WHERE id = $1 AND user_id = $2 AND status = $3 FOR UPDATE`,
       [wallet_id, user_id, 'active']
@@ -165,12 +166,25 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     }
     const recipientWallet = recipientWalletResult.rows[0];
 
-    // Validate balance
+    // Validate balance and role-specific rules
     if (treasuryWallet.balance < cents / 100) {
       throw new Error('Insufficient funds in treasury wallet');
     }
 
-    // Deduct from treasury wallet (admin's)
+    // Check recipient role restrictions (e.g., students/assistance can't receive transfers)
+    const userRoleResult = await client.query(
+      `SELECT role FROM users WHERE id = $1`,
+      [user_id]
+    );
+    const userRole = userRoleResult.rows[0]?.role;
+    if (userRole === 'student' || userRole === 'assistance') {
+      // Only allow funding, not transfers to banks
+      if (note && note.toLowerCase().includes('transfer to bank')) {
+        throw new Error('This user type cannot receive bank transfers');
+      }
+    }
+
+    // Deduct from treasury wallet
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
       [cents / 100, treasury_wallet_id]
