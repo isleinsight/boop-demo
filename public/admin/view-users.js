@@ -22,6 +22,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   let sortBy = 'first_name'; // Default sort by first_name
   let sortDirection = 'asc'; // Default ascending
 
+  // Map HTML data-sort to backend column names
+  const sortColumnMap = {
+    firstName: 'first_name',
+    lastName: 'last_name',
+    email: 'email'
+  };
+
   // Restrict access to only superadmin, admin, and support-type admins
   try {
     const res = await fetch("/api/me", {
@@ -192,10 +199,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // Update sort indicators
-    document.querySelectorAll('.sort-header').forEach(header => {
-      header.innerHTML = header.dataset.sortLabel;
-      if (header.dataset.sort === sortBy) {
-        header.innerHTML += sortDirection === 'asc' ? ' ▲' : ' ▼';
+    document.querySelectorAll('.sortable').forEach(header => {
+      const arrow = header.querySelector('.arrow');
+      arrow.textContent = '';
+      if (sortColumnMap[header.dataset.sort] === sortBy) {
+        arrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
       }
     });
 
@@ -218,13 +226,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Add sort event listeners
-  document.querySelectorAll('.sort-header').forEach(header => {
+  document.querySelectorAll('.sortable').forEach(header => {
     header.addEventListener('click', () => {
       const column = header.dataset.sort;
-      if (sortBy === column) {
+      const backendColumn = sortColumnMap[column];
+      if (sortBy === backendColumn) {
         sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
       } else {
-        sortBy = column;
+        sortBy = backendColumn;
         sortDirection = 'asc';
       }
       currentPage = 1;
