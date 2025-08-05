@@ -137,13 +137,7 @@
   <!-- Main Form -->
   <div class="container-small">
     <h3>Add Funds</h3>
-    <div class="input-group">
-      <label for="treasuryAccount">Source Treasury Account</label>
-      <select id="treasuryAccount" required>
-        <option value="" disabled selected>Select a treasury account</option>
-        <!-- Populated dynamically or hardcoded -->
-      </select>
-    </div>
+    
     <div class="input-group">
       <label for="userSearch">Search User</label>
       <input type="text" id="userSearch" placeholder="Type name or email..." autocomplete="off" />
@@ -170,181 +164,13 @@
     </div>
   </div>
 
-  <script type="module">
-    document.addEventListener("DOMContentLoaded", async () => {
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  const token = localStorage.getItem("boop_jwt");
-  const userSearch = document.getElementById("userSearch");
-  const suggestions = document.getElementById("userSuggestions");
-  const treasuryAccount = document.getElementById("treasuryAccount");
-  const amount = document.getElementById("amount");
-  const note = document.getElementById("note");
-  const addFundsBtn = document.getElementById("addFundsBtn");
-  const statusEl = document.getElementById("status");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const modal = document.getElementById("modal");
-  const modalAmount = document.getElementById("modalAmount");
-  const modalTreasury = document.getElementById("modalTreasury");
-  const modalUser = document.getElementById("modalUser");
-  const confirmModalBtn = document.getElementById("confirmModalBtn");
-  const cancelModalBtn = document.getElementById("cancelModalBtn");
-  let selectedUser = null;
-  let selectedTreasury = null;
-
-  // Show Manage Treasury link for treasury users
-  if (user?.type === "treasury") {
-    document.getElementById("manageTreasuryLink").style.display = "block";
-  }
-
-  // Fetch treasury accounts
-  try {
-    const res = await fetch('/api/treasury-wallets', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const treasuryWallets = await res.json();
-    treasuryAccount.innerHTML = `
-      <option value="" disabled selected>Select a treasury account</option>
-      ${treasuryWallets.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
-    `;
-  } catch (err) {
-    console.error("Treasury accounts error:", err);
-    statusEl.textContent = "❌ Failed to load treasury accounts.";
-    statusEl.style.color = "red";
-  }
-
-  // 🔍 Search users with wallet
-  userSearch.addEventListener("input", async () => {
-    const query = userSearch.value.trim();
-    if (query.length < 2) {
-      suggestions.style.display = "none";
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const users = await res.json();
-
-      if (!users.length) {
-        suggestions.innerHTML = "<div>No results found</div>";
-      } else {
-        suggestions.innerHTML = users.map(u => `
-          <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-            ${u.first_name} ${u.last_name} (${u.email})
-          </div>
-        `).join("");
-      }
-
-      suggestions.style.display = "block";
-    } catch (err) {
-      console.error("User search error:", err);
-      suggestions.innerHTML = "<div>Error loading suggestions</div>";
-      suggestions.style.display = "block";
-    }
-  });
-
-  // 👤 Select from search
-  suggestions.addEventListener("click", (e) => {
-    const item = e.target.closest(".user-suggestion");
-    if (!item) return;
-    selectedUser = {
-      id: item.dataset.id,
-      wallet_id: item.dataset.wallet,
-      name: item.textContent
-    };
-    userSearch.value = item.textContent;
-    suggestions.style.display = "none";
-  });
-
-  // 🧼 Close dropdown if clicked outside
-  document.addEventListener("click", (e) => {
-    if (!suggestions.contains(e.target) && e.target !== userSearch) {
-      suggestions.style.display = "none";
-    }
-  });
-
-  // 💸 Add Funds
-  addFundsBtn.addEventListener("click", async () => {
-    if (!selectedUser?.wallet_id || !selectedUser?.id || !amount.value || isNaN(amount.value) || amount.value <= 0 || !treasuryAccount.value) {
-      statusEl.textContent = "Please complete all required fields with valid values.";
-      statusEl.style.color = "red";
-      return;
-    }
-
-    // Show confirmation modal
-    modalAmount.textContent = parseFloat(amount.value).toFixed(2);
-    modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex].text;
-    modalUser.textContent = selectedUser.name;
-    modal.style.display = "flex";
-
-    const confirmPromise = new Promise((resolve, reject) => {
-      confirmModalBtn.onclick = () => {
-        modal.style.display = "none";
-        resolve();
-      };
-      cancelModalBtn.onclick = () => {
-        modal.style.display = "none";
-        reject(new Error("Transfer cancelled"));
-      };
-    });
-
-    try {
-      await confirmPromise;
-
-      const res = await fetch("/api/transactions/add-funds", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          wallet_id: selectedUser.wallet_id,
-          user_id: selectedUser.id,
-          amount: parseFloat(amount.value),
-          note: note.value,
-          added_by: user.id,
-          treasury_wallet_id: treasuryAccount.value
-        })
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        statusEl.textContent = "✅ Funds transferred successfully!";
-        statusEl.style.color = "green";
-        amount.value = "";
-        note.value = "";
-        userSearch.value = "";
-        treasuryAccount.value = "";
-        selectedUser = null;
-      } else {
-        statusEl.textContent = `❌ ${result.error || "Failed to add funds."}`;
-        statusEl.style.color = "red";
-      }
-    } catch (err) {
-      console.error("Add funds error:", err);
-      statusEl.textContent = `❌ ${err.message || "Server error occurred."}`;
-      statusEl.style.color = "red";
-    }
-  });
-
-  // 🔓 Logout handler
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      try {
-        await fetch("/api/logout", { method: "POST" });
-      } catch (err) {
-        console.warn("Logout API error:", err);
-      }
-      localStorage.clear();
-      window.location.href = "login.html";
-    });
-  }
-
-  console.log("✅ Accountant script ready.");
-});
+  <script type="module"><div class="input-group">
+      <label for="treasuryAccount">Source Treasury Account</label>
+      <select id="treasuryAccount" required>
+        <option value="" disabled selected>Select a treasury account</option>
+        <!-- Populated dynamically or hardcoded -->
+      </select>
+    </div>
   </script>
 </body>
 </html>
