@@ -1,4 +1,3 @@
-// backend/server.js
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const express = require('express');
@@ -17,13 +16,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// ✅ Routes (ONE AT A TIME)
+// ✅ Routes
 try {
-  // const authRoutes = require('./auth/auth');
-  // app.use('/auth', authRoutes);
-
+  // Auth-related routes
   app.use('/auth/login', require('./auth/routes/login'));
   app.use('/logout', require('./auth/routes/logout'));
+
+  // API routes
   app.use('/api/users', require('./auth/routes/users'));
   app.use('/api/cards', require('./auth/routes/cards'));
   app.use('/api/wallets', require('./auth/routes/wallets'));
@@ -31,8 +30,8 @@ try {
   app.use('/api/students', require('./auth/routes/students'));
   app.use('/api/user-students', require('./auth/routes/userStudents'));
   app.use('/api/sessions', require('./auth/routes/sessions'));
-  app.use('/api/transactions', require('./auth/routes/transactions'));
-  app.use('/api/treasury', require('./auth/routes/treasury'));
+  app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
+  app.use('/api/treasury', require('./auth/routes/treasury')); // Ensure treasury-wallets works
   app.use('/api/admin-actions', require('./auth/routes/admin-actions'));
 } catch (err) {
   console.error("❌ Route load failure:", err.message);
