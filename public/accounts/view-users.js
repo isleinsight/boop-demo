@@ -1,5 +1,3 @@
-//view-users.js
-
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("boop_jwt");
   const userTableBody = document.getElementById("userTableBody");
@@ -21,42 +19,44 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allUsers = [];
   let currentUserEmail = null;
   let currentUser = null;
+  let sortBy = 'first_name'; // Default sort by first_name
+  let sortDirection = 'asc'; // Default ascending
 
-  // ✅ Restrict access to only accountant-type admins
-try {
-  const res = await fetch("/api/me", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  const meData = await res.json();
+  // Map HTML data-sort to backend column names
+  const sortColumnMap = {
+    firstName: 'first_name',
+    lastName: 'last_name',
+    email: 'email'
+  };
 
-  if (!meData || meData.role !== "admin" || !["accountant", "treasury", "viewer"].includes(meData.type)) {
-    throw new Error("Not authorized");
+    currentUser = meData;
+    currentUserEmail = meData.email;
+  } catch (err) {
+    console.warn("🔒 Not authorized or error fetching user:", err);
+    localStorage.removeItem("boop_jwt");
+    localStorage.removeItem("boopUser");
+    window.location.href = "login.html";
+    return;
   }
-
-  currentUser = meData;
-  currentUserEmail = meData.email;
-} catch (err) {
-  console.warn("🔒 Not authorized or error fetching user:", err);
-  localStorage.removeItem("boop_jwt");
-  localStorage.removeItem("boopUser");
-  window.location.href = "login.html";
-  return;
-}
 
   async function fetchUsers() {
     try {
       let role = roleFilter.value;
-let assistanceOnly = false;
+      let assistanceOnly = false;
 
-if (role === "cardholder_assistance") {
-  role = "cardholder";
-  assistanceOnly = true;
-}
+      if (role === "cardholder_assistance") {
+        role = "cardholder";
+        assistanceOnly = true;
+      }
 
-const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(statusFilter.value)}${assistanceOnly ? '&assistanceOnly=true' : ''}`;
+      const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURIComponent(searchInput.value)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(statusFilter.value)}${assistanceOnly ? '&assistanceOnly=true' : ''}&sortBy=${encodeURIComponent(sortBy)}&sortDirection=${encodeURIComponent(sortDirection)}`;
       const res = await fetch(`/api/users${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to fetch users: ${res.status}`);
+      }
       const data = await res.json();
       allUsers = data.users || [];
       totalPages = data.totalPages || 1;
@@ -65,6 +65,7 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
       paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     } catch (err) {
       console.error("⚠️ Error loading users:", err);
+      userTableBody.innerHTML = `<tr><td colspan="7">Error loading users: ${err.message}</td></tr>`;
     }
   }
 
@@ -75,13 +76,22 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
         const confirmText = prompt("Type DELETE to confirm.");
         if (confirmText !== "DELETE") return;
 
-        await fetch(`/api/users/${user.id}`, {
+        const res = await fetch(`/api/users/${user.id}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uid: currentUser?.id })
         });
-      }
 
-      else if (action === "suspend" || action === "unsuspend") {
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || `Delete failed with status ${res.status}`);
+        }
+
+        alert("✅ User deleted successfully.");
+      } else if (action === "suspend" || action === "unsuspend") {
         const newStatus = action === "suspend" ? "suspended" : "active";
         const res = await fetch(`/api/users/${user.id}`, {
           method: "PATCH",
@@ -103,9 +113,7 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
             headers: { Authorization: `Bearer ${token}` }
           });
         }
-      }
-
-      else if (action === "signout") {
+      } else if (action === "signout") {
         const res = await fetch(`/api/users/${user.id}/signout`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` }
@@ -115,9 +123,7 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
           return alert("❌ Force sign-out failed: " + (err.message || res.status));
         }
         alert("✅ User signed out.");
-      }
-
-      else if (action === "restore") {
+      } else if (action === "restore") {
         await fetch(`/api/users/${user.id}/restore`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` }
@@ -127,7 +133,7 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
       await fetchUsers();
     } catch (err) {
       console.error("❌ performAction failed:", err);
-      alert("Action failed. Check console.");
+      alert("Action failed: " + err.message);
     }
   }
 
@@ -177,6 +183,15 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
       userTableBody.appendChild(row);
     });
 
+    // Update sort indicators
+    document.querySelectorAll('.sortable').forEach(header => {
+      const arrow = header.querySelector('.arrow');
+      arrow.textContent = '';
+      if (sortColumnMap[header.dataset.sort] === sortBy) {
+        arrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
+      }
+    });
+
     attachCheckboxListeners();
     updateDeleteButtonVisibility();
 
@@ -195,18 +210,36 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
     deleteSelectedBtn.style.display = checked > 0 ? "block" : "none";
   }
 
+  // Add sort event listeners
+  document.querySelectorAll('.sortable').forEach(header => {
+    header.addEventListener('click', () => {
+      const column = header.dataset.sort;
+      const backendColumn = sortColumnMap[column];
+      if (sortBy === backendColumn) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortBy = backendColumn;
+        sortDirection = 'asc';
+      }
+      currentPage = 1;
+      fetchUsers();
+    });
+  });
+
   searchBtn.addEventListener("click", () => { currentPage = 1; fetchUsers(); });
   searchInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault(); // Prevent accidental form submission
-    currentPage = 1;
-    fetchUsers();
-  }
-});
+    if (event.key === "Enter") {
+      event.preventDefault();
+      currentPage = 1;
+      fetchUsers();
+    }
+  });
   clearSearchBtn.addEventListener("click", () => {
     searchInput.value = "";
     roleFilter.value = "";
     statusFilter.value = "";
+    sortBy = 'first_name';
+    sortDirection = 'asc';
     currentPage = 1;
     fetchUsers();
   });
@@ -233,13 +266,25 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
       await Promise.all(ids.map(id =>
         fetch(`/api/users/${id}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uid: currentUser?.id })
+        }).then(res => {
+          if (!res.ok) {
+            return res.json().then(err => {
+              throw new Error(err.message || `Delete failed for user ${id} with status ${res.status}`);
+            });
+          }
+          return res;
         })
       ));
+      alert("✅ Selected users deleted successfully.");
       fetchUsers();
     } catch (err) {
       console.error("⚠️ Bulk delete failed:", err);
-      alert("Delete failed.");
+      alert("Delete failed: " + err.message);
     }
   });
 
@@ -249,6 +294,10 @@ const query = `?page=${currentPage}&perPage=${perPage}&search=${encodeURICompone
 const logoutBtn = document.getElementById("logoutBtn");
 logoutBtn?.addEventListener("click", () => {
   fetch("/api/logout", { method: "POST" })
-    .then(() => window.location.href = "login.html")
+    .then(() => {
+      localStorage.removeItem("boop_jwt");
+      localStorage.removeItem("boopUser");
+      window.location.href = "login.html";
+    })
     .catch(() => alert("Logout failed."));
 });
