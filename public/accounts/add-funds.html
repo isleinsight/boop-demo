@@ -239,7 +239,7 @@ populateTreasuryAccounts();
         }
 
         try {
-          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`, {
+          fetch(`/api/users/assign-card?search=${encodeURIComponent(query)}`);
             headers: { Authorization: `Bearer ${token}` }
           });
           const users = await res.json();
