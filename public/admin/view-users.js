@@ -29,6 +29,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     email: 'email'
   };
 
+  // Restrict access to only superadmin, admin, and support-type admins
+  try {
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    const meData = await res.json();
+
+    const allowedTypes = ["super_admin", "admin", "support"];
+    const isAllowed = meData?.role === "admin" && allowedTypes.includes(meData?.type);
+
+    if (!isAllowed) {
+      throw new Error("Not authorized");
+    }
+
     currentUser = meData;
     currentUserEmail = meData.email;
   } catch (err) {
