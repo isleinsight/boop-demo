@@ -202,7 +202,7 @@
             treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
             treasuryAccount.disabled = true;
           } else if (user.type === "accountant") {
-            const res = await fetch('/api/treasury/treasury-wallet', {
+            const res = await fetch('/api/treasury/treasury-wallets', {
               headers: { Authorization: `Bearer ${token}` }
             });
             const wallets = await res.json();
