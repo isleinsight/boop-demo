@@ -126,44 +126,4 @@ router.get('/recent', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/treasury/wallet-id — Fetch treasury admin's wallet ID
-router.get('/wallet-id', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-  try {
-    const result = await pool.query(
-      'SELECT id FROM wallets WHERE user_id = $1 AND status = $2',
-      [userId, 'active']
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Wallet not found for this user.' });
-    }
-    res.json({ wallet_id: result.rows[0].id });
-  } catch (err) {
-    console.error('❌ Error fetching wallet ID:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve wallet ID' });
-  }
-});
-
-// GET /api/treasury-wallets — Fetch HSBC and Butterfield wallets from .env
-router.get('/treasury-wallets', authenticateToken, async (req, res) => {
-  const { role, type } = req.user;
-  if (role !== 'admin' || type !== 'accountant') {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
-
-  try {
-    const treasuryWallets = [
-      { id: process.env.HSBC_WALLET_ID, name: 'HSBC Treasury' },
-      { id: process.env.BUTTERFIELD_WALLET_ID, name: 'Butterfield Treasury' }
-    ].filter(w => w.id); // Filter out undefined IDs
-    if (treasuryWallets.length === 0) {
-      throw new Error('No treasury wallets configured');
-    }
-    res.status(200).json(treasuryWallets);
-  } catch (err) {
-    console.error('❌ Error fetching treasury wallets:', err.message);
-    res.status(500).json({ error: 'Failed to fetch treasury wallets' });
-  }
-});
-
 module.exports = router;
