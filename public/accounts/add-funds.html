@@ -1,251 +1,351 @@
-const express = require('express');
-const router = express.Router();
-const pool = require('../../db');
-const { authenticateToken } = require('../middleware/authMiddleware');
-
-// 🔍 GET /api/transactions/recent (unchanged)
-router.get('/recent', authenticateToken, async (req, res) => {
-  const { role, type } = req.user;
-  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    return res.status(403).json({ message: 'Unauthorized' });
-  }
-  try {
-    const result = await pool.query(`
-      SELECT
-        t.id,
-        t.user_id,
-        t.wallet_id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        COALESCE(
-          v.business_name,
-          u.first_name || ' ' || u.last_name,
-          'System'
-        ) AS counterparty_name
-      FROM transactions t
-      LEFT JOIN vendors v ON v.id = t.vendor_id
-      LEFT JOIN users u ON u.id = t.added_by
-      ORDER BY t.created_at DESC
-      LIMIT 50
-    `);
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error('❌ Failed to load transactions:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve transactions.' });
-  }
-});
-
-// 👤 GET /api/transactions/mine (unchanged)
-router.get('/mine', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-  try {
-    const result = await pool.query(`
-      SELECT
-        id,
-        wallet_id,
-        type,
-        amount_cents,
-        note,
-        created_at
-      FROM transactions
-      WHERE user_id = $1
-      ORDER BY created_at DESC
-      LIMIT 50
-    `, [userId]);
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error('❌ Failed to load user transactions:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve your transactions.' });
-  }
-});
-
-// 📊 GET /api/transactions/report (unchanged)
-router.get('/report', authenticateToken, async (req, res) => {
-  const { role, type } = req.user;
-  const { start, end, type: filterType } = req.query;
-  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    return res.status(403).json({ message: 'Unauthorized' });
-  }
-  const values = [];
-  const conditions = [];
-  if (start) {
-    values.push(start);
-    conditions.push(`t.created_at >= $${values.length}`);
-  }
-  if (end) {
-    values.push(end);
-    conditions.push(`t.created_at <= $${values.length}`);
-  }
-  if (filterType) {
-    values.push(filterType);
-    conditions.push(`t.type = $${values.length}`);
-  }
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  try {
-    const result = await pool.query(`
-      SELECT
-        t.id,
-        t.user_id,
-        t.wallet_id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        COALESCE(
-          v.business_name,
-          u.first_name || ' ' || u.last_name,
-          'System'
-        ) AS counterparty_name
-      FROM transactions t
-      LEFT JOIN vendors v ON v.id = t.vendor_id
-      LEFT JOIN users u ON u.id = t.added_by
-      ${whereClause}
-      ORDER BY t.created_at DESC
-      LIMIT 200
-    `, values);
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error('❌ Error loading transaction report:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve report transactions.' });
-  }
-});
-
-// 💸 POST /api/transactions/add-funds (modified)
-router.post('/add-funds', authenticateToken, async (req, res) => {
-  const { role, type, id: adminId } = req.user;
-  const { wallet_id, amount, note, user_id } = req.body;
-
-  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
-
-  if (!wallet_id || !amount || isNaN(amount) || amount <= 0 || !user_id) {
-    return res.status(400).json({ error: 'Missing or invalid fields' });
-  }
-
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    const cents = Math.round(parseFloat(amount) * 100);
-
-    // Get sender's wallet (admin's wallet)
-    const senderWalletResult = await client.query(
-      `SELECT * FROM wallets WHERE user_id = $1 FOR UPDATE`,
-      [adminId]
-    );
-    if (senderWalletResult.rows.length === 0) {
-      throw new Error('Sender wallet not found');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Add Funds – BOOP Accounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
     }
-    const senderWallet = senderWalletResult.rows[0];
-
-    // Get recipient's wallet
-    const recipientWalletResult = await client.query(
-      `SELECT * FROM wallets WHERE id = $1 AND user_id = $2 FOR UPDATE`,
-      [wallet_id, user_id]
-    );
-    if (recipientWalletResult.rows.length === 0) {
-      throw new Error('Recipient wallet not found');
+    .container-small {
+      max-width: 500px;
+      background: white;
+      margin: 50px auto;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-    const recipientWallet = recipientWalletResult.rows[0];
-
-    // Validate wallet statuses and balance
-    if (senderWallet.status !== 'active' || recipientWallet.status !== 'active') {
-      throw new Error('Sender or recipient wallet is not active');
+    .input-group {
+      margin-bottom: 20px;
     }
-    if (senderWallet.balance < cents / 100) {
-      throw new Error('Insufficient funds in sender wallet');
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: calc(0.8vw + 0.4rem);
+      min-font-size: 12px;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
-    if (adminId === user_id) {
-      throw new Error('Cannot transfer funds to your own wallet');
+    button {
+      background: #2f80ed;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
     }
+    button:hover {
+      background: #1c6fd8;
+    }
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      color: #333;
+    }
+    #userSuggestions div {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    #userSuggestions div:hover {
+      background-color: #f0f0f0;
+    }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .modal-content button {
+      padding: 8px 16px;
+      margin: 5px;
+    }
+    #cancelModalBtn {
+      background: #e74c3c;
+    }
+    #cancelModalBtn:hover {
+      background: #c0392b;
+    }
+    @media screen and (max-width: 600px) {
+      input, select, textarea, button {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Permissions check -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        const res = await fetch("/api/me", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const meData = await res.json();
+        if (!meData || meData.role !== "admin" || !["accountant", "treasury"].includes(meData.type)) {
+          throw new Error("Not authorized");
+        }
+        localStorage.setItem("boopUser", JSON.stringify(meData));
+      } catch (err) {
+        console.warn("🔒 Not authorized:", err);
+        localStorage.clear();
+        window.location.href = "login.html";
+      }
+    })();
+  </script>
 
-    // Deduct from sender's wallet
-    await client.query(
-      `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
-      [cents / 100, senderWallet.id]
-    );
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <div class="nav-dropdown">
+          <a href="#" class="dropbtn" style="color: white;">Accounts</a>
+          <div class="dropdown-content">
+            <a href="add-funds.html">Add Funds</a>
+            <a href="transfer.html">Transfer</a>
+            <a href="reports.html">Reports</a>
+            <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
+          </div>
+        </div>
+        <a href="view-users.html">View Users</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
 
-    // Add to recipient's wallet
-    await client.query(
-      `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
-      [cents / 100, wallet_id]
-    );
+  <!-- Main Form -->
+  <div class="container-small">
+    <h3>Add Funds</h3>
+    <div class="input-group">
+      <label for="treasuryAccount">Source Treasury Account</label>
+      <select id="treasuryAccount" required>
+        <option value="" disabled selected>Select a treasury account</option>
+        <!-- Populated dynamically or hardcoded -->
+      </select>
+    </div>
+    <div class="input-group">
+      <label for="userSearch">Search User</label>
+      <input type="text" id="userSearch" placeholder="Type name or email..." autocomplete="off" />
+      <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+    </div>
+    <div class="input-group">
+      <label for="amount">Amount (BMD)</label>
+      <input type="number" id="amount" min="0.01" step="0.01" placeholder="Enter amount..." />
+    </div>
+    <div class="input-group">
+      <label for="note">Note</label>
+      <textarea id="note" rows="3" placeholder="Optional note..."></textarea>
+    </div>
+    <button id="addFundsBtn">Add Funds</button>
+    <div class="status" id="status"></div>
+  </div>
 
-    // Log sender transaction (debit)
-    await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
-      [senderWallet.id, adminId, cents, note || `Fund transfer to user ${user_id}`, adminId]
-    );
+  <!-- Confirmation Modal -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <p>Confirm transfer of $<span id="modalAmount"></span> from <span id="modalTreasury"></span> to user <span id="modalUser"></span>?</p>
+      <button id="confirmModalBtn">Confirm</button>
+      <button id="cancelModalBtn">Cancel</button>
+    </div>
+  </div>
 
-    // Log recipient transaction (credit)
-    await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
-      [wallet_id, user_id, cents, note || `Funds received from admin ${adminId}`, adminId]
-    );
+  <script type="module">
+    document.addEventListener("DOMContentLoaded", async () => {
+      const user = JSON.parse(localStorage.getItem("boopUser"));
+      const token = localStorage.getItem("boop_jwt");
+      const userSearch = document.getElementById("userSearch");
+      const suggestions = document.getElementById("userSuggestions");
+      const treasuryAccount = document.getElementById("treasuryAccount");
+      const amount = document.getElementById("amount");
+      const note = document.getElementById("note");
+      const addFundsBtn = document.getElementById("addFundsBtn");
+      const statusEl = document.getElementById("status");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const modal = document.getElementById("modal");
+      const modalAmount = document.getElementById("modalAmount");
+      const modalTreasury = document.getElementById("modalTreasury");
+      const modalUser = document.getElementById("modalUser");
+      const confirmModalBtn = document.getElementById("confirmModalBtn");
+      const cancelModalBtn = document.getElementById("cancelModalBtn");
+      let selectedUser = null;
+      let selectedTreasury = null;
 
-    await client.query('COMMIT');
+      // Show Manage Treasury link for treasury users
+      if (user?.type === "treasury") {
+        document.getElementById("manageTreasuryLink").style.display = "block";
+      }
 
-    res.status(201).json({ success: true, message: 'Funds transferred successfully' });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('❌ Failed to add funds:', err.message);
-    res.status(500).json({ error: err.message || 'Server error while adding funds' });
-  } finally {
-    client.release();
-  }
-});
+      // Fetch treasury accounts
+      try {
+        // Replace with actual endpoint or hardcoded IDs
+        const treasuryWallets = [
+          { id: 1, name: "HSBC Treasury" },
+          { id: 2, name: "Butterfield Treasury" }
+        ]; // TODO: Fetch from /api/treasury-wallets
+        treasuryAccount.innerHTML = `
+          <option value="" disabled selected>Select a treasury account</option>
+          ${treasuryWallets.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
+        `;
+      } catch (err) {
+        console.error("Treasury accounts error:", err);
+        statusEl.textContent = "❌ Failed to load treasury accounts.";
+        statusEl.style.color = "red";
+      }
 
-// 📄 GET /api/transactions/user/:userId (unchanged)
-router.get('/user/:userId', authenticateToken, async (req, res) => {
-  const { role } = req.user;
-  const { userId } = req.params;
-  const limit = parseInt(req.query.limit) || 10;
-  const offset = parseInt(req.query.offset) || 0;
+      // 🔍 Search users with wallet
+      userSearch.addEventListener("input", async () => {
+        const query = userSearch.value.trim();
+        if (query.length < 2) {
+          suggestions.style.display = "none";
+          return;
+        }
 
-  if (role !== 'admin') {
-    return res.status(403).json({ message: 'Unauthorized' });
-  }
+        try {
+          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const users = await res.json();
 
-  try {
-    const result = await pool.query(`
-      SELECT
-        t.id,
-        t.wallet_id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        COALESCE(
-          v.business_name,
-          TRIM(u.first_name || ' ' || u.last_name),
-          'System'
-        ) AS counterparty_name
-      FROM transactions t
-      LEFT JOIN vendors v ON v.id = t.vendor_id
-      LEFT JOIN users u ON u.id = t.added_by
-      WHERE t.user_id = $1
-      ORDER BY t.created_at DESC
-      LIMIT $2 OFFSET $3
-    `, [userId, limit, offset]);
+          if (!users.length) {
+            suggestions.innerHTML = "<div>No results found</div>";
+          } else {
+            suggestions.innerHTML = users.map(u => `
+              <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+                ${u.first_name} ${u.last_name} (${u.email})
+              </div>
+            `).join("");
+          }
 
-    const countRes = await pool.query(`
-      SELECT COUNT(*) FROM transactions WHERE user_id = $1
-    `, [userId]);
+          suggestions.style.display = "block";
+        } catch (err) {
+          console.error("User search error:", err);
+          suggestions.innerHTML = "<div>Error loading suggestions</div>";
+          suggestions.style.display = "block";
+        }
+      });
 
-    res.status(200).json({
-      transactions: result.rows,
-      totalCount: parseInt(countRes.rows[0].count, 10)
+      // 👤 Select from search
+      suggestions.addEventListener("click", (e) => {
+        const item = e.target.closest(".user-suggestion");
+        if (!item) return;
+        selectedUser = {
+          id: item.dataset.id,
+          wallet_id: item.dataset.wallet,
+          name: item.textContent
+        };
+        userSearch.value = item.textContent;
+        suggestions.style.display = "none";
+      });
+
+      // 🧼 Close dropdown if clicked outside
+      document.addEventListener("click", (e) => {
+        if (!suggestions.contains(e.target) && e.target !== userSearch) {
+          suggestions.style.display = "none";
+        }
+      });
+
+      // 💸 Add Funds
+      addFundsBtn.addEventListener("click", async () => {
+        if (!selectedUser?.wallet_id || !selectedUser?.id || !amount.value || isNaN(amount.value) || amount.value <= 0 || !treasuryAccount.value) {
+          statusEl.textContent = "Please complete all required fields with valid values.";
+          statusEl.style.color = "red";
+          return;
+        }
+
+        // Show confirmation modal
+        modalAmount.textContent = parseFloat(amount.value).toFixed(2);
+        modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex].text;
+        modalUser.textContent = selectedUser.name;
+        modal.style.display = "flex";
+
+        const confirmPromise = new Promise((resolve, reject) => {
+          confirmModalBtn.onclick = () => {
+            modal.style.display = "none";
+            resolve();
+          };
+          cancelModalBtn.onclick = () => {
+            modal.style.display = "none";
+            reject(new Error("Transfer cancelled"));
+          };
+        });
+
+        try {
+          await confirmPromise;
+
+          const res = await fetch("/api/transactions/add-funds", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              wallet_id: selectedUser.wallet_id,
+              user_id: selectedUser.id,
+              amount: parseFloat(amount.value),
+              note: note.value,
+              added_by: user.id,
+              treasury_wallet_id: treasuryAccount.value
+            })
+          });
+
+          const result = await res.json();
+
+          if (res.ok) {
+            statusEl.textContent = "✅ Funds transferred successfully!";
+            statusEl.style.color = "green";
+            amount.value = "";
+            note.value = "";
+            userSearch.value = "";
+            treasuryAccount.value = "";
+            selectedUser = null;
+          } else {
+            statusEl.textContent = `❌ ${result.error || "Failed to add funds."}`;
+            statusEl.style.color = "red";
+          }
+        } catch (err) {
+          console.error("Add funds error:", err);
+          statusEl.textContent = `❌ ${err.message || "Server error occurred."}`;
+          statusEl.style.color = "red";
+        }
+      });
+
+      // 🔓 Logout handler
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          try {
+            await fetch("/api/logout", { method: "POST" });
+          } catch (err) {
+            console.warn("Logout API error:", err);
+          }
+          localStorage.clear();
+          window.location.href = "login.html";
+        });
+      }
+
+      console.log("✅ Accountant script ready.");
     });
-  } catch (err) {
-    console.error('❌ Failed to load target user transactions:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve transactions.' });
-  }
-});
-
-module.exports = router;
+  </script>
+</body>
+</html>
