@@ -197,6 +197,38 @@
       }
 
       async function populateTreasuryAccounts() {
+        try {
+          if (user.type === "treasury") {
+            const res = await fetch('/api/treasury/wallet-id', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok || !data.wallet_id) {
+              throw new Error(data.error || "Missing wallet_id");
+            }
+            treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
+            treasuryAccount.disabled = true;
+          } else if (user.type === "accountant") {
+            const res = await fetch('/api/treasury/treasury-wallets', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              console.error("Wallet fetch failed:", res.status, data.error || "Unknown error");
+              throw new Error(`Error ${res.status}: ${data.error || "Failed to fetch wallets"}`);
+            }
+            treasuryAccount.innerHTML = `
+              <option value="" disabled selected>Select a treasury account</option>
+              ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
+            `;
+          }
+        } catch (err) {
+          console.error("Treasury accounts error:", err);
+          statusEl.textContent = `❌ Failed to load treasury accounts: ${err.message}`;
+          statusEl.style.color = "red";
+          addFundsBtn.disabled = true; // Disable button if accounts fail to load
+        }
+      }
 
       await populateTreasuryAccounts();
 
@@ -311,6 +343,6 @@
 
       console.log("✅ Add Funds script initialized");
     });
-  </script>
+</script>
 </body>
 </html>
