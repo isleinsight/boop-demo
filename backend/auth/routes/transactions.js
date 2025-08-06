@@ -119,6 +119,12 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
   console.log('📥 Received add-funds request:', { wallet_id, user_id, amount, note, added_by, treasury_wallet_id });
   console.log('🧠 Auth user:', { role, type, adminId });
+  console.log('🌐 DB config:', {
+    user: pool.options.user,
+    host: pool.options.host,
+    database: pool.options.database,
+    port: pool.options.port
+  });
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     console.error('❌ Unauthorized access:', { role, type });
@@ -143,11 +149,10 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     const cents = Math.round(parseFloat(amount) * 100);
     console.log('🔢 Converted amount to cents:', cents);
 
-    // Debug: Log all columns for treasury wallet (no status filter)
-    const treasuryWalletResult = await client.query(
-      `SELECT * FROM wallets WHERE id = $1 FOR UPDATE`,
-      [treasury_wallet_id]
-    );
+    // Debug: Log treasury wallet query
+    const treasuryQuery = `SELECT * FROM wallets WHERE LOWER(id::text) = LOWER($1)`;
+    console.log('🏦 Executing treasury wallet query:', treasuryQuery, { treasury_wallet_id });
+    const treasuryWalletResult = await client.query(treasuryQuery, [treasury_wallet_id]);
     console.log('🏦 Treasury wallet query result:', {
       rowCount: treasuryWalletResult.rowCount,
       rows: treasuryWalletResult.rows
@@ -160,15 +165,14 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     const treasuryWallet = treasuryWalletResult.rows[0];
     if (treasuryWallet.status !== 'active') {
       console.warn('⚠️ Treasury wallet not active:', { id: treasury_wallet_id, status: treasuryWallet.status });
-      // Proceed for testing, but log warning
+      // Proceed for testing
     }
     console.log('🏦 Treasury wallet details:', treasuryWallet);
 
-    // Debug: Log all columns for recipient wallet
-    const recipientWalletResult = await client.query(
-      `SELECT * FROM wallets WHERE id = $1 AND user_id = $2 FOR UPDATE`,
-      [wallet_id, user_id]
-    );
+    // Debug: Log recipient wallet query
+    const recipientQuery = `SELECT * FROM wallets WHERE id = $1 AND user_id = $2`;
+    console.log('👤 Executing recipient wallet query:', recipientQuery, { wallet_id, user_id });
+    const recipientWalletResult = await client.query(recipientQuery, [wallet_id, user_id]);
     console.log('👤 Recipient wallet query result:', {
       rowCount: recipientWalletResult.rowCount,
       rows: recipientWalletResult.rows
@@ -192,10 +196,9 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     }
 
     // Check recipient role restrictions
-    const userRoleResult = await client.query(
-      `SELECT role FROM users WHERE id = $1`,
-      [user_id]
-    );
+    const userRoleQuery = `SELECT role FROM users WHERE id = $1`;
+    console.log('👤 Executing user role query:', userRoleQuery, { user_id });
+    const userRoleResult = await client.query(userRoleQuery, [user_id]);
     console.log('👤 User role query result:', {
       rowCount: userRoleResult.rowCount,
       rows: userRoleResult.rows
