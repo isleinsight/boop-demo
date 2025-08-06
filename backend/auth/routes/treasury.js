@@ -18,8 +18,8 @@ router.get('/wallet-id', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
     const result = await pool.query(
-      'SELECT id FROM wallets WHERE user_id = $1 AND status = $2',
-      [userId, 'active']
+      'SELECT id FROM wallets WHERE user_id = $1',
+[userId]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Wallet not found for this user.' });
@@ -36,8 +36,8 @@ router.get('/balance', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
     const result = await pool.query(
-      'SELECT balance FROM wallets WHERE user_id = $1 AND status = $2',
-      [userId, 'active']
+      'SELECT balance FROM wallets WHERE user_id = $1',
+      [userId]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Wallet not found for this user.' });
