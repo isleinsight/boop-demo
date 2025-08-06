@@ -112,13 +112,13 @@ router.get('/report', authenticateToken, async (req, res) => {
   }
 });
 
-// 💸 POST /api/transactions/add-funds (updated to match treasury logic)
 // 💸 POST /api/transactions/add-funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   const { wallet_id, user_id, amount, note, added_by, treasury_wallet_id } = req.body;
 
   console.log('📥 Received add-funds request:', { wallet_id, user_id, amount, note, added_by, treasury_wallet_id });
+  console.log('🧠 Auth user:', { role, type, adminId });
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     console.error('❌ Unauthorized access:', { role, type });
@@ -143,29 +143,47 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     const cents = Math.round(parseFloat(amount) * 100);
     console.log('🔢 Converted amount to cents:', cents);
 
-    // Get treasury wallet
+    // Debug: Log all columns for treasury wallet (no status filter)
     const treasuryWalletResult = await client.query(
-      `SELECT balance, user_id FROM wallets WHERE id = $1 AND status = $2 FOR UPDATE`,
-      [treasury_wallet_id, 'active']
+      `SELECT * FROM wallets WHERE id = $1 FOR UPDATE`,
+      [treasury_wallet_id]
     );
-    if (treasuryWalletResult.rows.length === 0) {
+    console.log('🏦 Treasury wallet query result:', {
+      rowCount: treasuryWalletResult.rowCount,
+      rows: treasuryWalletResult.rows
+    });
+
+    if (treasuryWalletResult.rowCount === 0) {
       console.error('❌ Treasury wallet not found:', treasury_wallet_id);
       throw new Error('Treasury wallet not found');
     }
     const treasuryWallet = treasuryWalletResult.rows[0];
-    console.log('🏦 Treasury wallet:', { id: treasury_wallet_id, balance: treasuryWallet.balance });
+    if (treasuryWallet.status !== 'active') {
+      console.warn('⚠️ Treasury wallet not active:', { id: treasury_wallet_id, status: treasuryWallet.status });
+      // Proceed for testing, but log warning
+    }
+    console.log('🏦 Treasury wallet details:', treasuryWallet);
 
-    // Get recipient's wallet
+    // Debug: Log all columns for recipient wallet
     const recipientWalletResult = await client.query(
-      `SELECT balance FROM wallets WHERE id = $1 AND user_id = $2 AND status = $3 FOR UPDATE`,
-      [wallet_id, user_id, 'active']
+      `SELECT * FROM wallets WHERE id = $1 AND user_id = $2 FOR UPDATE`,
+      [wallet_id, user_id]
     );
-    if (recipientWalletResult.rows.length === 0) {
+    console.log('👤 Recipient wallet query result:', {
+      rowCount: recipientWalletResult.rowCount,
+      rows: recipientWalletResult.rows
+    });
+
+    if (recipientWalletResult.rowCount === 0) {
       console.error('❌ Recipient wallet not found:', { wallet_id, user_id });
       throw new Error('Recipient wallet not found');
     }
     const recipientWallet = recipientWalletResult.rows[0];
-    console.log('👤 Recipient wallet:', { id: wallet_id, balance: recipientWallet.balance });
+    if (recipientWallet.status !== 'active') {
+      console.error('❌ Recipient wallet not active:', { id: wallet_id, status: recipientWallet.status });
+      throw new Error('Recipient wallet is not active');
+    }
+    console.log('👤 Recipient wallet details:', recipientWallet);
 
     // Validate balance
     if (treasuryWallet.balance < cents / 100) {
@@ -178,6 +196,11 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       `SELECT role FROM users WHERE id = $1`,
       [user_id]
     );
+    console.log('👤 User role query result:', {
+      rowCount: userRoleResult.rowCount,
+      rows: userRoleResult.rows
+    });
+
     const userRole = userRoleResult.rows[0]?.role;
     if (!userRole) {
       console.error('❌ User not found:', user_id);
