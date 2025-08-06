@@ -196,39 +196,22 @@
         document.getElementById("manageTreasuryLink").style.display = "block";
       }
 
-      async function populateTreasuryAccounts() {
-        try {
-          if (user.type === "treasury") {
-            const res = await fetch('/api/treasury/wallet-id', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (!res.ok || !data.wallet_id) {
-              throw new Error(data.error || "Missing wallet_id");
-            }
-            treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
-            treasuryAccount.disabled = true;
-          } else if (user.type === "accountant") {
-            const res = await fetch('/api/treasury/treasury-wallets', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (!res.ok) {
-              console.error("Wallet fetch failed:", res.status, data.error || "Unknown error");
-              throw new Error(`Error ${res.status}: ${data.error || "Failed to fetch wallets"}`);
-            }
-            treasuryAccount.innerHTML = `
-              <option value="" disabled selected>Select a treasury account</option>
-              ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
-            `;
-          }
-        } catch (err) {
-          console.error("Treasury accounts error:", err);
-          statusEl.textContent = `❌ Failed to load treasury accounts: ${err.message}`;
-          statusEl.style.color = "red";
-          addFundsBtn.disabled = true; // Disable button if accounts fail to load
-        }
-      }
+      JWT Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImY2Y2U1OGJjLWRhNzAtNDM0MS04ZDViLTViODM1MGEzMzU2YiIsImVtYWlsIjoiYWNjb3VudGFudEBib29wLnRlc3QiLCJyb2xlIjoiYWRtaW4iLCJ0eXBlIjoiYWNjb3VudGFudCIsImlhdCI6MTc1NDQ4NzU1NiwiZXhwIjoxNzU0NDk0NzU2fQ.4NWIm7KDkQWTDjb31QrRt03FEprt3xetN4yXWxeCrsE
+add-funds.html:96 Response from /api/me: 200 {id: 'f6ce58bc-da70-4341-8d5b-5b8350a3356b', email: 'accountant@boop.test', role: 'admin', type: 'accountant'}
+add-funds.html:212  GET https://boopcard.com/api/treasury/treasury-wallets 500 (Internal Server Error)
+populateTreasuryAccounts @ add-funds.html:212
+(anonymous) @ add-funds.html:233
+add-funds.html:217 Wallet fetch failed: 500 Failed to fetch treasury wallets
+populateTreasuryAccounts @ add-funds.html:217
+await in populateTreasuryAccounts
+(anonymous) @ add-funds.html:233
+add-funds.html:226 Treasury accounts error: Error: Error 500: Failed to fetch treasury wallets
+    at populateTreasuryAccounts (add-funds.html:218:21)
+    at async HTMLDocument.<anonymous> (add-funds.html:233:7)
+populateTreasuryAccounts @ add-funds.html:226
+await in populateTreasuryAccounts
+(anonymous) @ add-funds.html:233
+add-funds.html:344 ✅ Add Funds script initialized
 
       await populateTreasuryAccounts();
 
