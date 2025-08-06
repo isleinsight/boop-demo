@@ -193,10 +193,10 @@
 
       async function populateTreasuryAccounts() {
         try {
-          if (user.type === "treasury") {
-            const res = await fetch('/api/treasury/wallet-id', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
+         // if (user.type === "treasury") {
+            // const res = await fetch('/api/treasury/wallet-id', {
+               // headers: { Authorization: `Bearer ${token}` }
+          //  });
             const data = await res.json();
             if (!res.ok || !data.wallet_id) throw new Error("Missing wallet_id");
             treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
