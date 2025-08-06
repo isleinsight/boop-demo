@@ -176,10 +176,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     });
     
     const recipientWallet = recipientWalletResult.rows[0];
-    if (recipientWallet.status !== 'active') {
-      console.error('❌ Recipient wallet not active:', { id: wallet_id, status: recipientWallet.status });
-      throw new Error('Recipient wallet is not active');
-    }
+    
     console.log('👤 Recipient wallet details:', recipientWallet);
 
     // Validate balance
