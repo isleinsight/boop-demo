@@ -1,5 +1,5 @@
 const path = require('path');
-const dotenvPath = path.resolve(__dirname, '../.env');
+const dotenvPath = path.resolve(__dirname, '../../.env');
 console.log('Attempting to load .env from:', dotenvPath);
 require('dotenv').config({ path: dotenvPath });
 console.log('Environment variables loaded:', {
