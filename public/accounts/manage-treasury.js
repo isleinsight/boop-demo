@@ -9,13 +9,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitBtn = document.getElementById("submitAdjustment");
   const statusMessage = document.getElementById("statusMessage");
 
-  // 🔒 Access Control
   if (!user || user.role !== "admin" || !["treasury", "accountant"].includes(user.type)) {
     alert("🚫 You do not have access to this page.");
     return (window.location.href = "login.html");
   }
 
-  // 🔐 Fetch balance from API
   async function fetchBalance() {
     try {
       const res = await fetch("/api/treasury/balance", {
@@ -23,15 +21,15 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const data = await res.json();
-      const balance = data.balance_cents || 0;
-      balanceDisplay.textContent = `$${(balance / 100).toFixed(2)}`;
+      const balanceCents = data.balance_cents || 0;
+      const balanceDollars = (balanceCents / 100).toFixed(2);
+      balanceDisplay.textContent = `$${balanceDollars}`;
     } catch (err) {
       console.error("❌ Failed to fetch balance:", err);
       balanceDisplay.textContent = "Error";
     }
   }
 
-  // 📄 Fetch and render the 5 most recent transactions
   async function fetchRecentTransactions() {
     try {
       const res = await fetch("/api/treasury/recent", {
@@ -61,7 +59,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 📨 Submit adjustment
   async function submitAdjustment() {
     const amount = parseFloat(amountInput.value);
     const note = noteInput.value.trim();
@@ -97,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
       amountInput.value = "";
       noteInput.value = "";
       await fetchBalance();
-      await fetchRecentTransactions(); // 🔁 Refresh list after update
+      await fetchRecentTransactions();
 
     } catch (err) {
       console.error("❌ Submit failed:", err);
@@ -110,10 +107,8 @@ document.addEventListener("DOMContentLoaded", () => {
     statusMessage.style.color = color;
   }
 
-  // 🧪 Event Bindings
   submitBtn.addEventListener("click", submitAdjustment);
 
-  // Initial load
   fetchBalance();
-  fetchRecentTransactions(); // ✅ Now included on load
+  fetchRecentTransactions();
 });
