@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// 🔍 GET /api/transactions/recent (unchanged)
+// 🔍 GET /api/transactions/recent
 router.get('/recent', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
@@ -37,7 +37,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
   }
 });
 
-// 👤 GET /api/transactions/mine (unchanged)
+// 👤 GET /api/transactions/mine
 router.get('/mine', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
@@ -61,7 +61,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
   }
 });
 
-// 📊 GET /api/transactions/report (unchanged)
+// 📊 GET /api/transactions/report
 router.get('/report', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
   const { start, end, type: filterType } = req.query;
@@ -115,29 +115,20 @@ router.get('/report', authenticateToken, async (req, res) => {
 // 💸 POST /api/transactions/add-funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
-  const { wallet_id, user_id, amount, note, added_by, treasury_wallet_id } = req.body;
+  const { wallet_id, user_id, amount, note, added_by } = req.body;
 
-  console.log('📥 Received add-funds request:', { wallet_id, user_id, amount, note, added_by, treasury_wallet_id });
+  console.log('📥 Received add-funds request:', { wallet_id, user_id, amount, note, added_by });
   console.log('🧠 Auth user:', { role, type, adminId });
-  console.log('🌐 DB config:', {
-    user: pool.options.user,
-    host: pool.options.host,
-    database: pool.options.database,
-    port: pool.options.port
-  });
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    console.error('❌ Unauthorized access:', { role, type });
     return res.status(403).json({ error: 'Unauthorized' });
   }
 
-  if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0 || !treasury_wallet_id) {
-    console.error('❌ Invalid input:', { wallet_id, user_id, amount, note, added_by, treasury_wallet_id });
+  if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Missing or invalid fields' });
   }
 
   if (added_by !== adminId) {
-    console.error('❌ Mismatch in added_by:', { added_by, adminId });
     return res.status(403).json({ error: 'Invalid added_by: must match authenticated user' });
   }
 
@@ -147,111 +138,85 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     await client.query('BEGIN');
 
     const cents = Math.round(parseFloat(amount) * 100);
-    console.log('🔢 Converted amount to cents:', cents);
 
-    // Debug: Log treasury wallet query
-    const treasuryQuery = `SELECT * FROM wallets WHERE id = $1`;
-    console.log('🏦 Executing treasury wallet query:', treasuryQuery, { treasury_wallet_id });
-    const treasuryWalletResult = await client.query(treasuryQuery, [treasury_wallet_id]);
-    console.log('🏦 Treasury wallet query result:', {
-      rowCount: treasuryWalletResult.rowCount,
-      rows: treasuryWalletResult.rows
-    });
+    // Get treasury wallet (linked to admin)
+    const treasuryWalletResult = await client.query(
+      `SELECT * FROM wallets WHERE user_id = $1`,
+      [adminId]
+    );
 
     if (treasuryWalletResult.rowCount === 0) {
-      console.error('❌ Treasury wallet not found:', treasury_wallet_id);
       throw new Error('Treasury wallet not found');
     }
+
     const treasuryWallet = treasuryWalletResult.rows[0];
-    
-    console.log('🏦 Treasury wallet details:', treasuryWallet);
 
-    // Debug: Log recipient wallet query
-    const recipientQuery = `SELECT * FROM wallets WHERE id = $1 AND user_id = $2`;
-    console.log('👤 Executing recipient wallet query:', recipientQuery, { wallet_id, user_id });
-    const recipientWalletResult = await client.query(recipientQuery, [wallet_id, user_id]);
-    console.log('👤 Recipient wallet query result:', {
-      rowCount: recipientWalletResult.rowCount,
-      rows: recipientWalletResult.rows
-    });
-    
-    const recipientWallet = recipientWalletResult.rows[0];
-    
-    console.log('👤 Recipient wallet details:', recipientWallet);
-
-    // Validate balance
-    if (treasuryWallet.balance < cents / 100) {
-      console.error('❌ Insufficient funds in treasury wallet:', { balance: treasuryWallet.balance, required: cents / 100 });
+    // Check balance
+    if (parseFloat(treasuryWallet.balance) < cents / 100) {
       throw new Error('Insufficient funds in treasury wallet');
     }
 
-    // Check recipient role restrictions
-    const userRoleQuery = `SELECT role FROM users WHERE id = $1`;
-    console.log('👤 Executing user role query:', userRoleQuery, { user_id });
-    const userRoleResult = await client.query(userRoleQuery, [user_id]);
-    console.log('👤 User role query result:', {
-      rowCount: userRoleResult.rowCount,
-      rows: userRoleResult.rows
-    });
+    // Validate recipient wallet
+    const recipientWalletResult = await client.query(
+      `SELECT * FROM wallets WHERE id = $1 AND user_id = $2`,
+      [wallet_id, user_id]
+    );
+
+    if (recipientWalletResult.rowCount === 0) {
+      throw new Error('Recipient wallet not found');
+    }
+
+    // Check recipient role
+    const userRoleResult = await client.query(
+      `SELECT role FROM users WHERE id = $1`,
+      [user_id]
+    );
 
     const userRole = userRoleResult.rows[0]?.role;
-    if (!userRole) {
-      console.error('❌ User not found:', user_id);
-      throw new Error('User not found');
-    }
-    if (userRole === 'student' || userRole === 'assistance') {
-      if (note && note.toLowerCase().includes('transfer to bank')) {
-        console.error('❌ Invalid note for user role:', { userRole, note });
-        throw new Error('This user type cannot receive bank transfers');
-      }
-    }
-    console.log('✅ User role validated:', userRole);
+    if (!userRole) throw new Error('User not found');
 
-    // Deduct from treasury wallet
+    if (['student', 'assistance'].includes(userRole) && note?.toLowerCase().includes('transfer to bank')) {
+      throw new Error('This user type cannot receive bank transfers');
+    }
+
+    // Deduct from treasury
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
-      [cents / 100, treasury_wallet_id]
+      [cents / 100, treasuryWallet.id]
     );
-    console.log('✅ Deducted from treasury wallet:', { amount: cents / 100, treasury_wallet_id });
 
-    // Add to recipient's wallet
+    // Credit recipient
     await client.query(
       `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
       [cents / 100, wallet_id]
     );
-    console.log('✅ Credited recipient wallet:', { amount: cents / 100, wallet_id });
 
     // Log treasury transaction (debit)
     await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by, treasury_wallet_id)
-       VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)`,
-      [treasury_wallet_id, treasuryWallet.user_id, 'debit', cents, note || `Fund transfer to user ${user_id}`, adminId, treasury_wallet_id]
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
+      [treasuryWallet.id, treasuryWallet.user_id, cents, note || `Fund transfer to user ${user_id}`, adminId]
     );
-    console.log('✅ Logged treasury transaction (debit)');
 
     // Log recipient transaction (credit)
     await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by, treasury_wallet_id)
-       VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)`,
-      [wallet_id, user_id, 'credit', cents, note || `Funds received from treasury`, adminId, treasury_wallet_id]
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
+      [wallet_id, user_id, cents, note || `Funds received from treasury`, adminId]
     );
-    console.log('✅ Logged recipient transaction (credit)');
 
     await client.query('COMMIT');
-    console.log('✅ Transaction committed successfully');
-
     res.status(201).json({ success: true, message: 'Funds transferred successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('❌ Failed to add funds:', err.message, err.stack);
+    console.error('❌ Failed to add funds:', err.message);
     res.status(500).json({ error: err.message || 'Server error while adding funds' });
   } finally {
     client.release();
-    console.log('🛠️ Database client released');
   }
 });
 
-// 📄 GET /api/transactions/user/:userId (unchanged)
+// 📄 GET /api/transactions/user/:userId
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
@@ -284,9 +249,10 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    const countRes = await pool.query(`
-      SELECT COUNT(*) FROM transactions WHERE user_id = $1
-    `, [userId]);
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
+      [userId]
+    );
 
     res.status(200).json({
       transactions: result.rows,
