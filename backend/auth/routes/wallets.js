@@ -23,7 +23,6 @@ router.get("/user/:userId", async (req, res) => {
   }
 });
 
-// ❌ Removed PATCH /api/wallets/:walletId — Status update route
-// If wallet status is no longer used in your system, this route is unnecessary.
+
 
 module.exports = router;
