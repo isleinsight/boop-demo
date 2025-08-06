@@ -86,22 +86,27 @@
   <!-- Permissions check -->
   <script>
     (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        const res = await fetch("/api/me", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const meData = await res.json();
-        if (!meData || meData.role !== "admin" || !["accountant", "treasury"].includes(meData.type)) {
-          throw new Error("Not authorized");
-        }
-        localStorage.setItem("boopUser", JSON.stringify(meData));
-      } catch (err) {
-        console.warn("🔒 Not authorized:", err);
-        localStorage.clear();
-        window.location.href = "login.html";
-      }
-    })();
+  try {
+    const token = localStorage.getItem("boop_jwt");
+    console.log("JWT Token:", token);
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const meData = await res.json();
+    console.log("Response from /api/me:", res.status, meData);
+    if (!res.ok) {
+      throw new Error(`HTTP error ${res.status}`);
+    }
+    if (!meData || meData.role !== "admin" || !["accountant", "treasury"].includes(meData.type)) {
+      throw new Error("Not authorized");
+    }
+    localStorage.setItem("boopUser", JSON.stringify(meData));
+  } catch (err) {
+    console.warn("🔒 Not authorized:", err);
+    localStorage.clear();
+    window.location.href = "login.html";
+  }
+})();
   </script>
 
   <!-- Top Nav -->
