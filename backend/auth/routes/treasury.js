@@ -108,21 +108,25 @@ router.get('/recent', authenticateToken, async (req, res) => {
 // GET /api/treasury-wallets — Fetch HSBC and Butterfield wallets from .env
 router.get('/treasury-wallets', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
-  if (role !== 'admin' || type !== 'accountant') {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
+
+  console.log("🧠 Auth user:", req.user);
+  console.log("💵 HSBC:", process.env.HSBC_WALLET_ID);
+  console.log("💵 BUTTERFIELD:", process.env.BUTTERFIELD_WALLET_ID);
+
   try {
     const treasuryWallets = [
       { id: process.env.HSBC_WALLET_ID, name: 'HSBC Treasury' },
       { id: process.env.BUTTERFIELD_WALLET_ID, name: 'Butterfield Treasury' }
-    ].filter(w => w.id); // Filter out undefined IDs
+    ].filter(w => w.id);
+
     if (treasuryWallets.length === 0) {
       throw new Error('No treasury wallets configured');
     }
-    res.status(200).json(treasuryWallets);
+
+    return res.status(200).json(treasuryWallets);
   } catch (err) {
     console.error('❌ Error fetching treasury wallets:', err.message);
-    res.status(500).json({ error: 'Failed to fetch treasury wallets' });
+    return res.status(500).json({ error: 'Failed to fetch treasury wallets' });
   }
 });
 
