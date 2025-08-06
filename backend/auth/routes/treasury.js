@@ -1,142 +1,181 @@
-const path = require('path');
-const dotenvPath = path.resolve(__dirname, '../../.env');
-console.log('Attempting to load .env from:', dotenvPath);
-require('dotenv').config({ path: dotenvPath });
-console.log('Environment variables loaded:', {
-  HSBC_WALLET_ID: process.env.HSBC_WALLET_ID,
-  BUTTERFIELD_WALLET_ID: process.env.BUTTERFIELD_WALLET_ID
-});
+<script type="module">
+    document.addEventListener("DOMContentLoaded", async () => {
+      const user = JSON.parse(localStorage.getItem("boopUser"));
+      const token = localStorage.getItem("boop_jwt");
 
-const express = require('express');
-const router = express.Router();
-const pool = require('../../db');
-const { authenticateToken } = require('../middleware/authMiddleware');
-const logAdminAction = require('../middleware/log-admin-action');
+      const userSearch = document.getElementById("userSearch");
+      const suggestions = document.getElementById("userSuggestions");
+      const treasuryAccount = document.getElementById("treasuryAccount");
+      const amount = document.getElementById("amount");
+      const note = document.getElementById("note");
+      const addFundsBtn = document.getElementById("addFundsBtn");
+      const statusEl = document.getElementById("status");
+      const logoutBtn = document.getElementById("logoutBtn");
 
-// GET /api/treasury/wallet-id — Fetch treasury admin's wallet ID
-router.get('/wallet-id', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-  try {
-    const result = await pool.query(
-      'SELECT id FROM wallets WHERE user_id = $1 AND status = $2',
-      [userId, 'active']
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Wallet not found for this user.' });
-    }
-    res.json({ wallet_id: result.rows[0].id });
-  } catch (err) {
-    console.error('❌ Error fetching wallet ID:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve wallet ID' });
-  }
-});
+      const modal = document.getElementById("modal");
+      const modalAmount = document.getElementById("modalAmount");
+      const modalTreasury = document.getElementById("modalTreasury");
+      const modalUser = document.getElementById("modalUser");
+      const confirmModalBtn = document.getElementById("confirmModalBtn");
+      const cancelModalBtn = document.getElementById("cancelModalBtn");
 
-// GET treasury balance for current user
-router.get('/balance', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-  try {
-    const result = await pool.query(
-      'SELECT balance FROM wallets WHERE user_id = $1 AND status = $2',
-      [userId, 'active']
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Wallet not found for this user.' });
-    }
-    const { balance } = result.rows[0];
-    res.json({ balance_cents: Math.round(parseFloat(balance) * 100) });
-  } catch (err) {
-    console.error('❌ Error fetching balance:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve balance' });
-  }
-});
+      let selectedUser = null;
 
-// POST adjust treasury balance (credit or debit)
-router.post('/adjust', authenticateToken, async (req, res) => {
-  const { amount_cents, note, type } = req.body;
-  const userId = req.user.id;
-  if (!amount_cents || typeof amount_cents !== 'number' || !note || !['credit', 'debit'].includes(type)) {
-    return res.status(400).json({ message: 'Missing or invalid adjustment data.' });
-  }
-  const amount = amount_cents / 100;
-  try {
-    const walletRes = await pool.query(
-      'SELECT id, balance FROM wallets WHERE user_id = $1 AND status = $2',
-      [userId, 'active']
-    );
-    if (walletRes.rows.length === 0) {
-      return res.status(404).json({ message: 'Wallet not found for this user.' });
-    }
-    const { id: walletId, balance: currentBalance } = walletRes.rows[0];
-    let newBalance = type === 'credit' ? parseFloat(currentBalance) + amount : parseFloat(currentBalance) - amount;
-    if (newBalance < 0) {
-      return res.status(400).json({ message: 'Insufficient funds.' });
-    }
-    await pool.query('UPDATE wallets SET balance = $1 WHERE id = $2', [newBalance, walletId]);
-    await pool.query(
-      `INSERT INTO transactions (wallet_id, user_id, amount_cents, type, note) VALUES ($1, $2, $3, $4, $5)`,
-      [walletId, userId, amount_cents, type, note]
-    );
-    await logAdminAction({
-      performed_by: req.user.id,
-      target_user_id: userId,
-      action: `wallet_${type}`,
-      type: req.user.type,
-      status: 'completed',
-      completed_at: new Date()
+      if (user?.type === "treasury") {
+        document.getElementById("manageTreasuryLink").style.display = "block";
+      }
+
+      async function populateTreasuryAccounts() {
+        try {
+          if (user.type === "treasury") {
+            const res = await fetch('/api/treasury/wallet-id', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok || !data.wallet_id) {
+              throw new Error(data.error || "Missing wallet_id");
+            }
+            treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
+            treasuryAccount.disabled = true;
+          } else if (user.type === "accountant") {
+            const res = await fetch('/api/treasury/treasury-wallets', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            console.log("Full response from /api/treasury/treasury-wallets:", {
+              status: res.status,
+              statusText: res.statusText,
+              headers: Object.fromEntries(res.headers.entries())
+            });
+            const data = await res.json();
+            console.log("Response body:", data);
+            if (!res.ok) {
+              console.error("Wallet fetch failed:", res.status, data);
+              throw new Error(`Error ${res.status}: ${data.error || data.message || "Failed to fetch treasury wallets"}`);
+            }
+            treasuryAccount.innerHTML = `
+              <option value="" disabled selected>Select a treasury account</option>
+              ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
+            `;
+          }
+        } catch (err) {
+          console.error("Treasury accounts error:", err);
+          statusEl.textContent = `❌ Failed to load treasury accounts: ${err.message}`;
+          statusEl.style.color = "red";
+          addFundsBtn.disabled = true;
+        }
+      }
+
+      await populateTreasuryAccounts();
+
+      userSearch.addEventListener("input", async () => {
+        const query = userSearch.value.trim();
+        if (query.length < 2) {
+          suggestions.style.display = "none";
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const users = await res.json();
+
+          suggestions.innerHTML = users.length
+            ? users.map(u => `
+                <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+                  ${u.first_name} ${u.last_name} (${u.email})
+                </div>`).join("")
+            : "<div>No results found</div>";
+
+          suggestions.style.display = "block";
+        } catch (err) {
+          console.error("User search error:", err);
+          suggestions.innerHTML = "<div>Error loading suggestions</div>";
+          suggestions.style.display = "block";
+        }
+      });
+
+      suggestions.addEventListener("click", (e) => {
+        const item = e.target.closest(".user-suggestion");
+        if (!item) return;
+        selectedUser = {
+          id: item.dataset.id,
+          wallet_id: item.dataset.wallet,
+          name: item.textContent
+        };
+        userSearch.value = item.textContent;
+        suggestions.style.display = "none";
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!suggestions.contains(e.target) && e.target !== userSearch) {
+          suggestions.style.display = "none";
+        }
+      });
+
+      addFundsBtn.addEventListener("click", async () => {
+        if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value) || amount.value <= 0 || !treasuryAccount.value) {
+          statusEl.textContent = "Please complete all required fields with valid values.";
+          statusEl.style.color = "red";
+          return;
+        }
+
+        modalAmount.textContent = parseFloat(amount.value).toFixed(2);
+        modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex].text;
+        modalUser.textContent = selectedUser.name;
+        modal.style.display = "flex";
+
+        const confirmed = await new Promise((resolve, reject) => {
+          confirmModalBtn.onclick = () => { modal.style.display = "none"; resolve(true); };
+          cancelModalBtn.onclick = () => { modal.style.display = "none"; reject(new Error("Cancelled")); };
+        });
+
+        try {
+          const res = await fetch("/api/transactions/add-funds", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              wallet_id: selectedUser.wallet_id,
+              user_id: selectedUser.id,
+              amount: parseFloat(amount.value),
+              note: note.value,
+              added_by: user.id,
+              treasury_wallet_id: treasuryAccount.value
+            })
+          });
+
+          const result = await res.json();
+          if (res.ok) {
+            statusEl.textContent = "✅ Funds transferred successfully!";
+            statusEl.style.color = "green";
+            userSearch.value = "";
+            amount.value = "";
+            note.value = "";
+            treasuryAccount.value = "";
+            selectedUser = null;
+          } else {
+            statusEl.textContent = `❌ ${result.error || "Transaction failed."}`;
+            statusEl.style.color = "red";
+          }
+        } catch (err) {
+          console.error("Fund transfer failed:", err);
+          statusEl.textContent = `❌ ${err.message || "Unexpected error occurred."}`;
+          statusEl.style.color = "red";
+        }
+      });
+
+      logoutBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          await fetch("/api/logout", { method: "POST" });
+        } catch {}
+        localStorage.clear();
+        window.location.href = "login.html";
+      });
+
+      console.log("✅ Add Funds script initialized");
     });
-    res.status(200).json({ message: 'Balance updated successfully.' });
-  } catch (err) {
-    console.error('❌ Error submitting adjustment:', err.message);
-    await logAdminAction({
-      performed_by: req.user.id,
-      target_user_id: userId,
-      action: `wallet_${type}`,
-      type: req.user.type,
-      status: 'failed',
-      error_message: err.message
-    });
-    res.status(500).json({ message: 'Adjustment failed.' });
-  }
-});
-
-// GET recent treasury transactions (latest 5)
-router.get('/recent', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-  try {
-    const txRes = await pool.query(
-      `SELECT amount_cents, type, note, created_at FROM transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5`,
-      [userId]
-    );
-    res.json(txRes.rows);
-  } catch (err) {
-    console.error('❌ Error fetching recent transactions:', err.message);
-    res.status(500).json({ message: 'Could not fetch recent transactions.' });
-  }
-});
-
-// GET /api/treasury/treasury-wallets — Fetch HSBC and Butterfield wallets from .env
-router.get('/treasury-wallets', authenticateToken, async (req, res) => {
-  const { role, type } = req.user;
-
-  console.log("🧠 Auth user:", req.user);
-  console.log("💵 HSBC:", process.env.HSBC_WALLET_ID);
-  console.log("💵 BUTTERFIELD:", process.env.BUTTERFIELD_WALLET_ID);
-
-  try {
-    const treasuryWallets = [
-      { id: process.env.HSBC_WALLET_ID, name: 'HSBC Treasury' },
-      { id: process.env.BUTTERFIELD_WALLET_ID, name: 'Butterfield Treasury' }
-    ].filter(w => w.id);
-
-    if (treasuryWallets.length === 0) {
-      throw new Error('No treasury wallets configured');
-    }
-
-    return res.status(200).json(treasuryWallets);
-  } catch (err) {
-    console.error('❌ Error fetching treasury wallets:', err.message);
-    return res.status(500).json({ error: 'Failed to fetch treasury wallets' });
-  }
-});
-
-module.exports = router;
+</script>
