@@ -113,16 +113,26 @@ router.get('/report', authenticateToken, async (req, res) => {
 });
 
 // 💸 POST /api/transactions/add-funds (updated to match treasury logic)
+// 💸 POST /api/transactions/add-funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
-  const { wallet_id, amount, note, user_id, treasury_wallet_id } = req.body;
+  const { wallet_id, user_id, amount, note, added_by, treasury_wallet_id } = req.body;
+
+  console.log('📥 Received add-funds request:', { wallet_id, user_id, amount, note, added_by, treasury_wallet_id });
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
+    console.error('❌ Unauthorized access:', { role, type });
     return res.status(403).json({ error: 'Unauthorized' });
   }
 
-  if (!wallet_id || !amount || isNaN(amount) || amount <= 0 || !user_id || !treasury_wallet_id) {
+  if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0 || !treasury_wallet_id) {
+    console.error('❌ Invalid input:', { wallet_id, user_id, amount, note, added_by, treasury_wallet_id });
     return res.status(400).json({ error: 'Missing or invalid fields' });
+  }
+
+  if (added_by !== adminId) {
+    console.error('❌ Mismatch in added_by:', { added_by, adminId });
+    return res.status(403).json({ error: 'Invalid added_by: must match authenticated user' });
   }
 
   const client = await pool.connect();
@@ -131,79 +141,97 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     await client.query('BEGIN');
 
     const cents = Math.round(parseFloat(amount) * 100);
+    console.log('🔢 Converted amount to cents:', cents);
 
-    // Get treasury wallet (selected by accountant or treasury user's own wallet)
+    // Get treasury wallet
     const treasuryWalletResult = await client.query(
-      `SELECT * FROM wallets WHERE id = $1 AND status = $2 FOR UPDATE`,
+      `SELECT balance, user_id FROM wallets WHERE id = $1 AND status = $2 FOR UPDATE`,
       [treasury_wallet_id, 'active']
     );
     if (treasuryWalletResult.rows.length === 0) {
+      console.error('❌ Treasury wallet not found:', treasury_wallet_id);
       throw new Error('Treasury wallet not found');
     }
     const treasuryWallet = treasuryWalletResult.rows[0];
+    console.log('🏦 Treasury wallet:', { id: treasury_wallet_id, balance: treasuryWallet.balance });
 
-    // Get recipient's wallet (user, student, or senior)
+    // Get recipient's wallet
     const recipientWalletResult = await client.query(
-      `SELECT * FROM wallets WHERE id = $1 AND user_id = $2 AND status = $3 FOR UPDATE`,
+      `SELECT balance FROM wallets WHERE id = $1 AND user_id = $2 AND status = $3 FOR UPDATE`,
       [wallet_id, user_id, 'active']
     );
     if (recipientWalletResult.rows.length === 0) {
+      console.error('❌ Recipient wallet not found:', { wallet_id, user_id });
       throw new Error('Recipient wallet not found');
     }
     const recipientWallet = recipientWalletResult.rows[0];
+    console.log('👤 Recipient wallet:', { id: wallet_id, balance: recipientWallet.balance });
 
-    // Validate balance and role-specific rules
+    // Validate balance
     if (treasuryWallet.balance < cents / 100) {
+      console.error('❌ Insufficient funds in treasury wallet:', { balance: treasuryWallet.balance, required: cents / 100 });
       throw new Error('Insufficient funds in treasury wallet');
     }
 
-    // Check recipient role restrictions (e.g., students/assistance can't receive bank transfers)
+    // Check recipient role restrictions
     const userRoleResult = await client.query(
       `SELECT role FROM users WHERE id = $1`,
       [user_id]
     );
     const userRole = userRoleResult.rows[0]?.role;
+    if (!userRole) {
+      console.error('❌ User not found:', user_id);
+      throw new Error('User not found');
+    }
     if (userRole === 'student' || userRole === 'assistance') {
       if (note && note.toLowerCase().includes('transfer to bank')) {
+        console.error('❌ Invalid note for user role:', { userRole, note });
         throw new Error('This user type cannot receive bank transfers');
       }
     }
+    console.log('✅ User role validated:', userRole);
 
     // Deduct from treasury wallet
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
       [cents / 100, treasury_wallet_id]
     );
+    console.log('✅ Deducted from treasury wallet:', { amount: cents / 100, treasury_wallet_id });
 
     // Add to recipient's wallet
     await client.query(
       `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
       [cents / 100, wallet_id]
     );
+    console.log('✅ Credited recipient wallet:', { amount: cents / 100, wallet_id });
 
     // Log treasury transaction (debit)
     await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
-      [treasury_wallet_id, adminId, cents, note || `Fund transfer to user ${user_id}`, adminId]
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by, treasury_wallet_id)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)`,
+      [treasury_wallet_id, treasuryWallet.user_id, 'debit', cents, note || `Fund transfer to user ${user_id}`, adminId, treasury_wallet_id]
     );
+    console.log('✅ Logged treasury transaction (debit)');
 
     // Log recipient transaction (credit)
     await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
-      [wallet_id, user_id, cents, note || `Funds received from treasury`, adminId]
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by, treasury_wallet_id)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)`,
+      [wallet_id, user_id, 'credit', cents, note || `Funds received from treasury`, adminId, treasury_wallet_id]
     );
+    console.log('✅ Logged recipient transaction (credit)');
 
     await client.query('COMMIT');
+    console.log('✅ Transaction committed successfully');
 
     res.status(201).json({ success: true, message: 'Funds transferred successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('❌ Failed to add funds:', err.message);
+    console.error('❌ Failed to add funds:', err.message, err.stack);
     res.status(500).json({ error: err.message || 'Server error while adding funds' });
   } finally {
     client.release();
+    console.log('🛠️ Database client released');
   }
 });
 
