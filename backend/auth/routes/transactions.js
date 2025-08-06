@@ -117,51 +117,63 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   const { wallet_id, user_id, amount, note, added_by } = req.body;
 
+  console.log('📥 Received add-funds request:', { wallet_id, user_id, amount, note, added_by });
+
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ error: 'Unauthorized' });
   }
+
   if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Missing or invalid fields' });
   }
+
   if (added_by !== adminId) {
     return res.status(403).json({ error: 'Invalid added_by: must match authenticated user' });
   }
 
+  const transferAmount = parseFloat(amount); // <-- use decimals for logic
+  const amount_cents = Math.round(transferAmount * 100); // <-- still store as cents
+
   const client = await pool.connect();
+
   try {
     await client.query('BEGIN');
-    const cents = Math.round(parseFloat(amount) * 100);
 
-    // 📥 Get treasury wallet (source)
+    // ✅ Get source treasury wallet
     const treasuryWalletResult = await client.query(
       `SELECT * FROM wallets WHERE id = $1`,
-      [wallet_id]
+      [wallet_id] // This is the selected treasury wallet ID
     );
+
     if (treasuryWalletResult.rowCount === 0) {
       throw new Error('Treasury wallet not found');
     }
+
     const treasuryWallet = treasuryWalletResult.rows[0];
 
-    // 🧾 Check treasury balance
-    if (parseFloat(treasuryWallet.balance) < cents / 100) {
+    // ✅ Check available balance
+    if (parseFloat(treasuryWallet.balance) < transferAmount) {
       throw new Error('Insufficient funds in treasury wallet');
     }
 
-    // 📤 Get recipient wallet by user_id
+    // ✅ Check recipient wallet (linked to user)
     const recipientWalletResult = await client.query(
       `SELECT * FROM wallets WHERE user_id = $1`,
       [user_id]
     );
+
     if (recipientWalletResult.rowCount === 0) {
       throw new Error('Recipient wallet not found');
     }
+
     const recipientWallet = recipientWalletResult.rows[0];
 
-    // 🔒 Check recipient's role
+    // ✅ Validate user role
     const userRoleResult = await client.query(
       `SELECT role FROM users WHERE id = $1`,
       [user_id]
     );
+
     const userRole = userRoleResult.rows[0]?.role;
     if (!userRole) throw new Error('User not found');
 
@@ -169,32 +181,33 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       throw new Error('This user type cannot receive bank transfers');
     }
 
-    // 💳 Perform balance update
+    // ✅ Perform transfer
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
-      [cents / 100, treasuryWallet.id]
+      [transferAmount, treasuryWallet.id]
     );
 
     await client.query(
       `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
-      [cents / 100, recipientWallet.id]
+      [transferAmount, recipientWallet.id]
     );
 
-    // 🧾 Log treasury transaction (debit)
+    // ✅ Record treasury debit
     await client.query(
       `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
        VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
-      [treasuryWallet.id, treasuryWallet.user_id, cents, note || `Fund transfer to user ${user_id}`, adminId]
+      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, note || `Fund transfer to user ${user_id}`, adminId]
     );
 
-    // 🧾 Log recipient transaction (credit)
+    // ✅ Record recipient credit
     await client.query(
       `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
        VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
-      [recipientWallet.id, user_id, cents, note || `Funds received from treasury`, adminId]
+      [recipientWallet.id, user_id, amount_cents, note || `Funds received from treasury`, adminId]
     );
 
     await client.query('COMMIT');
+
     res.status(201).json({ success: true, message: 'Funds transferred successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
