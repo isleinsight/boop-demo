@@ -163,10 +163,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       throw new Error('Treasury wallet not found');
     }
     const treasuryWallet = treasuryWalletResult.rows[0];
-    if (treasuryWallet.status !== 'active') {
-      console.warn('⚠️ Treasury wallet not active:', { id: treasury_wallet_id, status: treasuryWallet.status });
-      // Proceed for testing
-    }
+    
     console.log('🏦 Treasury wallet details:', treasuryWallet);
 
     // Debug: Log recipient wallet query
@@ -177,11 +174,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       rowCount: recipientWalletResult.rowCount,
       rows: recipientWalletResult.rows
     });
-
-    if (recipientWalletResult.rowCount === 0) {
-      console.error('❌ Recipient wallet not found:', { wallet_id, user_id });
-      throw new Error('Recipient wallet not found');
-    }
+    
     const recipientWallet = recipientWalletResult.rows[0];
     if (recipientWallet.status !== 'active') {
       console.error('❌ Recipient wallet not active:', { id: wallet_id, status: recipientWallet.status });
