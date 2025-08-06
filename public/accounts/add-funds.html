@@ -197,36 +197,6 @@
       }
 
       async function populateTreasuryAccounts() {
-        try {
-         if (user.type === "treasury") {
-            const res = await fetch('/api/treasury/wallet-id', {
-               headers: { Authorization: `Bearer ${token}` }
-           });
-            const data = await res.json();
-            if (!res.ok || !data.wallet_id) throw new Error("Missing wallet_id");
-            treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
-            treasuryAccount.disabled = true;
-          } else if (user.type === "accountant") {
-            const res = await fetch('/api/treasury/treasury-wallets', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            const wallets = await res.json();
-            if (!res.ok) {
-  const errText = await res.text();
-  console.error("Wallet fetch failed:", res.status, errText);
-  throw new Error(`Error ${res.status}: ${errText}`);
-}
-            treasuryAccount.innerHTML = `
-              <option value="" disabled selected>Select a treasury account</option>
-              ${wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
-            `;
-          }
-        } catch (err) {
-          console.error("Treasury accounts error:", err);
-          statusEl.textContent = "❌ Failed to load treasury accounts.";
-          statusEl.style.color = "red";
-        }
-      }
 
       await populateTreasuryAccounts();
 
