@@ -278,58 +278,57 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 💸 Add Funds flow
   addFundsBtn.addEventListener("click", async () => {
-    if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value) || amount.value <= 0 || !treasuryAccount.value) {
-      statusEl.textContent = "❌ Please complete all required fields.";
-      statusEl.style.color = "red";
-      return;
+  if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value) || amount.value <= 0) {
+    statusEl.textContent = "❌ Please complete all required fields.";
+    statusEl.style.color = "red";
+    return;
+  }
+
+  modalAmount.textContent = parseFloat(amount.value).toFixed(2);
+  modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex]?.text || "Treasury";
+  modalUser.textContent = selectedUser.name;
+  modal.style.display = "flex";
+
+  try {
+    const confirmed = await new Promise((resolve, reject) => {
+      confirmModalBtn.onclick = () => { modal.style.display = "none"; resolve(true); };
+      cancelModalBtn.onclick = () => { modal.style.display = "none"; reject(new Error("Cancelled")); };
+    });
+
+    const res = await fetch("/api/transactions/add-funds", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        wallet_id: selectedUser.wallet_id,
+        user_id: selectedUser.id,
+        amount: parseFloat(amount.value),
+        note: note.value,
+        added_by: user.id
+      })
+    });
+
+    const result = await res.json();
+    if (res.ok) {
+      statusEl.textContent = "✅ Funds transferred successfully!";
+      statusEl.style.color = "green";
+      userSearch.value = "";
+      amount.value = "";
+      note.value = "";
+      selectedUser = null;
+      treasuryAccount.selectedIndex = 0;
+    } else {
+      throw new Error(result.error || "Transfer failed.");
     }
 
-    modalAmount.textContent = parseFloat(amount.value).toFixed(2);
-    modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex].text;
-    modalUser.textContent = selectedUser.name;
-    modal.style.display = "flex";
-
-    try {
-      const confirmed = await new Promise((resolve, reject) => {
-        confirmModalBtn.onclick = () => { modal.style.display = "none"; resolve(true); };
-        cancelModalBtn.onclick = () => { modal.style.display = "none"; reject(new Error("Cancelled")); };
-      });
-
-      const res = await fetch("/api/transactions/add-funds", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          wallet_id: selectedUser.wallet_id,
-          user_id: selectedUser.id,
-          amount: parseFloat(amount.value),
-          note: note.value,
-          added_by: user.id,
-          treasury_wallet_id: treasuryAccount.value
-        })
-      });
-
-      const result = await res.json();
-      if (res.ok) {
-        statusEl.textContent = "✅ Funds transferred successfully!";
-        statusEl.style.color = "green";
-        userSearch.value = "";
-        amount.value = "";
-        note.value = "";
-        selectedUser = null;
-        treasuryAccount.selectedIndex = 0;
-      } else {
-        throw new Error(result.error || "Transfer failed.");
-      }
-
-    } catch (err) {
-      console.error("❌ Fund transfer error:", err);
-      statusEl.textContent = `❌ ${err.message}`;
-      statusEl.style.color = "red";
-    }
-  });
+  } catch (err) {
+    console.error("❌ Fund transfer error:", err);
+    statusEl.textContent = `❌ ${err.message}`;
+    statusEl.style.color = "red";
+  }
+});
 
   logoutBtn.addEventListener("click", async (e) => {
     e.preventDefault();
