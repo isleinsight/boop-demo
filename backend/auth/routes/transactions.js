@@ -117,61 +117,46 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   const { wallet_id, user_id, amount, note, added_by } = req.body;
 
-  console.log('📥 Received add-funds request:', { wallet_id, user_id, amount, note, added_by });
-  console.log('🧠 Auth user:', { role, type, adminId });
-
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ error: 'Unauthorized' });
   }
-
   if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Missing or invalid fields' });
   }
-
   if (added_by !== adminId) {
     return res.status(403).json({ error: 'Invalid added_by: must match authenticated user' });
   }
 
   const client = await pool.connect();
-
   try {
     await client.query('BEGIN');
-
     const cents = Math.round(parseFloat(amount) * 100);
 
-    // Get treasury wallet (linked to admin)
     const treasuryWalletResult = await client.query(
       `SELECT * FROM wallets WHERE user_id = $1`,
       [adminId]
     );
-
     if (treasuryWalletResult.rowCount === 0) {
       throw new Error('Treasury wallet not found');
     }
-
     const treasuryWallet = treasuryWalletResult.rows[0];
 
-    // Check balance
     if (parseFloat(treasuryWallet.balance) < cents / 100) {
       throw new Error('Insufficient funds in treasury wallet');
     }
 
-    // Validate recipient wallet
     const recipientWalletResult = await client.query(
       `SELECT * FROM wallets WHERE id = $1 AND user_id = $2`,
       [wallet_id, user_id]
     );
-
     if (recipientWalletResult.rowCount === 0) {
       throw new Error('Recipient wallet not found');
     }
 
-    // Check recipient role
     const userRoleResult = await client.query(
       `SELECT role FROM users WHERE id = $1`,
       [user_id]
     );
-
     const userRole = userRoleResult.rows[0]?.role;
     if (!userRole) throw new Error('User not found');
 
@@ -179,26 +164,22 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       throw new Error('This user type cannot receive bank transfers');
     }
 
-    // Deduct from treasury
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
       [cents / 100, treasuryWallet.id]
     );
 
-    // Credit recipient
     await client.query(
       `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
       [cents / 100, wallet_id]
     );
 
-    // Log treasury transaction (debit)
     await client.query(
       `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
        VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
       [treasuryWallet.id, treasuryWallet.user_id, cents, note || `Fund transfer to user ${user_id}`, adminId]
     );
 
-    // Log recipient transaction (credit)
     await client.query(
       `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
        VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
@@ -249,10 +230,9 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    const countRes = await pool.query(
-      `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
-      [userId]
-    );
+    const countRes = await pool.query(`
+      SELECT COUNT(*) FROM transactions WHERE user_id = $1
+    `, [userId]);
 
     res.status(200).json({
       transactions: result.rows,
