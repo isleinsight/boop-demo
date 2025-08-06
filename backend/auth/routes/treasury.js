@@ -1,4 +1,11 @@
-require('dotenv').config({ path: __dirname + '/../.env' }); // Adjust path as needed
+const path = require('path');
+const dotenvPath = path.resolve(__dirname, '../.env');
+console.log('Attempting to load .env from:', dotenvPath);
+require('dotenv').config({ path: dotenvPath });
+console.log('Environment variables loaded:', {
+  HSBC_WALLET_ID: process.env.HSBC_WALLET_ID,
+  BUTTERFIELD_WALLET_ID: process.env.BUTTERFIELD_WALLET_ID
+});
 
 const express = require('express');
 const router = express.Router();
@@ -107,7 +114,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/treasury-wallets — Fetch HSBC and Butterfield wallets from .env
+// GET /api/treasury/treasury-wallets — Fetch HSBC and Butterfield wallets from .env
 router.get('/treasury-wallets', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
 
