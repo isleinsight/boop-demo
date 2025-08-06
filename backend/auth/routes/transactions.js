@@ -150,7 +150,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     console.log('🔢 Converted amount to cents:', cents);
 
     // Debug: Log treasury wallet query
-    const treasuryQuery = `SELECT * FROM wallets WHERE LOWER(id::text) = LOWER($1)`;
+    const treasuryQuery = `SELECT * FROM wallets WHERE id = $1`;
     console.log('🏦 Executing treasury wallet query:', treasuryQuery, { treasury_wallet_id });
     const treasuryWalletResult = await client.query(treasuryQuery, [treasury_wallet_id]);
     console.log('🏦 Treasury wallet query result:', {
