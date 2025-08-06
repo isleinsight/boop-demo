@@ -1,3 +1,5 @@
+require('dotenv').config({ path: __dirname + '/../../.env' }); // Adjust path as needed
+
 const express = require('express');
 const router = express.Router();
 const pool = require('../../db');
