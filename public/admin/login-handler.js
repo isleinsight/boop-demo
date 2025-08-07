@@ -22,6 +22,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     const { token, user } = data;
 
+    // 🔒 Allow only users with type = "super_admin", "admin", or "support"
+    if (!['super_admin', 'admin', 'support'].includes(user.type)) {
+      statusEl.style.color = 'red';
+      statusEl.textContent = 'Access denied. This login is for authorized Admins only.';
+      return;
+    }
+
     // ✅ Save session data locally
     localStorage.setItem("admin_id", user.id);
     localStorage.setItem("boop_jwt", token);
