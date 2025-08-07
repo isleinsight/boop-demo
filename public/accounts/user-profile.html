@@ -14,81 +14,154 @@
       color: #333;
     }
 
-    .container {
-      max-width: 600px;
+    .profile-container {
+      max-width: 1200px;
       margin: 40px auto;
+      padding: 24px;
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-      padding: 24px;
     }
 
-    h3 {
+    h2, h3 {
       font-size: 1.6rem;
       color: #1a2b4a;
       margin: 0 0 20px;
+      font-weight: 500;
     }
 
-    .profile-details {
+    .back-button {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #2f80ed;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+
+    .user-details-grid {
       display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e6ebf1;
     }
 
-    .profile-field {
+    .user-details-grid div {
       display: flex;
       flex-direction: column;
     }
 
-    .profile-field label {
+    .label {
+      font-weight: 500;
       font-size: 0.9rem;
       color: #1a2b4a;
-      font-weight: 500;
       margin-bottom: 6px;
     }
 
-    .profile-field span {
+    .value, input, select {
+      font-size: 0.9rem;
       padding: 10px 14px;
       border: 1px solid #d1d9e6;
       border-radius: 6px;
-      font-size: 0.9rem;
       color: #4b5563;
       background: #f9fafb;
     }
 
-    .profile-actions {
+    input, select {
+      background: #fff;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #2f80ed;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      color: #1a2b4a;
+      margin: 20px 0 10px;
+      font-weight: 500;
+    }
+
+    .action-buttons {
       display: flex;
       gap: 12px;
       margin-top: 20px;
     }
 
-    .profile-actions button, .profile-actions a {
-      flex: 1;
-      padding: 10px;
+    button, .btnEdit {
+      padding: 10px 16px;
       border: none;
       border-radius: 6px;
       font-size: 0.9rem;
       cursor: pointer;
       text-align: center;
-      text-decoration: none;
       transition: background-color 0.2s ease;
+      font-weight: 500;
     }
 
-    #editProfileBtn {
+    .btnEdit {
       background: #2f80ed;
       color: #fff;
     }
 
-    #editProfileBtn:hover {
+    .btnEdit:hover {
       background: #1c6fd8;
     }
 
-    #backBtn {
+    #restoreBtn {
+      background: #2f80ed;
+      display: none;
+    }
+
+    #restoreBtn:hover {
+      background: #1c6fd8;
+    }
+
+    .btn-secondary {
       background: #6b7280;
       color: #fff;
     }
 
-    #backBtn:hover {
+    .btn-secondary:hover {
       background: #4b5563;
+    }
+
+    .table-scroll-wrapper {
+      overflow-x: auto;
+    }
+
+    .transaction-table {
+      width: 100%;
+      min-width: 800px;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .transaction-table th, .transaction-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e6ebf1;
+    }
+
+    .transaction-table th {
+      background: #f9fafb;
+      color: #1a2b4a;
+      font-weight: 500;
+    }
+
+    .transaction-table td {
+      color: #4b5563;
+    }
+
+    .transaction-table tr:hover {
+      background: #f5f8fb;
     }
 
     .modal {
@@ -313,6 +386,15 @@
         padding: 10px 0;
         font-size: 0.95rem;
       }
+
+      .profile-container {
+        margin: 40px 16px;
+        padding: 16px;
+      }
+
+      .user-details-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (min-width: 769px) {
@@ -323,6 +405,30 @@
   </style>
 </head>
 <body>
+  <!-- Permissions check -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        const res = await fetch("/api/me", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Unauthorized");
+        const meData = await res.json();
+        const allowedTypes = ["treasury", "accountant"];
+        if (!meData || meData.role !== "admin" || !allowedTypes.includes(meData.type)) {
+          throw new Error("Invalid role or type");
+        }
+        localStorage.setItem("boopUser", JSON.stringify(meData));
+      } catch (err) {
+        console.warn("🔒 Not authorized or error fetching user:", err);
+        localStorage.removeItem("boop_jwt");
+        localStorage.removeItem("boopUser");
+        window.location.href = "login.html";
+      }
+    })();
+  </script>
+
   <!-- Top Nav -->
   <nav>
     <div class="nav-container">
@@ -353,70 +459,119 @@
     </div>
   </nav>
 
-  <div class="container">
-    <h3>User Profile</h3>
-    <div class="profile-details">
-      <div class="profile-field">
-        <label for="firstName">First Name</label>
-        <span id="firstName">Loading...</span>
-      </div>
-      <div class="profile-field">
-        <label for="lastName">Last Name</label>
-        <span id="lastName">Loading...</span>
-      </div>
-      <div class="profile-field">
-        <label for="email">Email</label>
-        <span id="email">Loading...</span>
-      </div>
-      <div class="profile-field">
-        <label for="role">Role</label>
-        <span id="role">Loading...</span>
-      </div>
-      <div class="profile-field">
-        <label for="status">Status</label>
-        <span id="status">Loading...</span>
-      </div>
-      <div class="profile-field">
-        <label for="type">Type</label>
-        <span id="type">Loading...</span>
-      </div>
-    </div>
-    <div class="profile-actions">
-      <button id="editProfileBtn">Edit Profile</button>
-      <a href="view-users.html" id="backBtn">Back to View Users</a>
-    </div>
-  </div>
+  <div class="profile-container user-profile-page">
+    <a href="view-users.html" class="back-button">← Back to Users</a>
+    <h2>User Profile</h2>
 
-  <!-- Modal -->
-  <div id="modal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <p id="modalMessage"></p>
-      <input type="text" id="modalInput" placeholder="Type DELETE to confirm" style="display: none;" />
-      <div>
-        <button id="confirmModalBtn">Confirm</button>
-        <button id="cancelModalBtn">Cancel</button>
+    <div class="action-buttons">
+      <button id="editProfileBtn" class="btnEdit">Edit Profile</button>
+      <button id="saveProfileBtn" style="display: none;" class="btnEdit">Save Changes</button>
+    </div>
+
+    <div class="user-details-grid" id="userInfo"></div>
+
+    <!-- Vendor Info -->
+    <div id="vendorSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Vendor Information</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">Business Name</span>
+          <span class="value" id="vendorBusiness">-</span>
+          <input type="text" id="editBusiness" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Category</span>
+          <span class="value" id="vendorCategory">-</span>
+          <input type="text" id="editCategory" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Phone</span>
+          <span class="value" id="vendorPhone">-</span>
+          <input type="text" id="editPhone" style="display: none; width: 100%;" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Parent Info -->
+    <div id="parentSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Parent Information</div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">Name</span>
+          <span class="value" id="parentName">-</span>
+        </div>
+        <div>
+          <span class="label">Email</span>
+          <span class="value" id="parentEmail">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Student Info -->
+    <div id="studentInfoSection" style="display: none; margin-top: 40px;">
+      <div class="section-title">Student Information</div>
+      <div class="action-buttons">
+        <button id="editStudentBtn" class="btnEdit">Edit Student</button>
+        <button id="saveStudentBtn" class="btnEdit" style="display: none;">Save Student Info</button>
+      </div>
+      <div class="user-details-grid">
+        <div>
+          <span class="label">School Name</span>
+          <span class="value" id="studentSchoolName">-</span>
+          <input type="text" id="editSchoolName" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Grade Level</span>
+          <span class="value" id="studentGradeLevel">-</span>
+          <input type="text" id="editGradeLevel" style="display: none; width: 100%;" />
+        </div>
+        <div>
+          <span class="label">Expiry Date</span>
+          <span class="value" id="studentExpiryDate">-</span>
+          <input type="date" id="editExpiryDate" style="display: none; width: 100%;" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="section-title">Transaction History</div>
+    <div class="table-scroll-wrapper">
+      <table class="transaction-table" id="transactionTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Note</th>
+            <th>ID</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="action-buttons" style="justify-content: center;">
+      <button id="prevTransactions" class="btn-secondary">Previous</button>
+      <span id="transactionPageIndicator">Page 1</span>
+      <button id="nextTransactions" class="btn-secondary">Next</button>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <p id="modalMessage"></p>
+        <input type="text" id="modalInput" placeholder="Type DELETE to confirm" style="display: none;" />
+        <div>
+          <button id="confirmModalBtn">Confirm</button>
+          <button id="cancelModalBtn">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script type="module">
-    const user = JSON.parse(localStorage.getItem("boopUser"));
-    const token = localStorage.getItem("boop_jwt");
-    const allowedTypes = ["treasury", "accountant"];
-
-    const isAllowed =
-      user &&
-      typeof user === "object" &&
-      user.role === "admin" &&
-      allowedTypes.includes(user.type);
-
-    if (!isAllowed || !token) {
-      localStorage.clear();
-      window.location.href = "login.html";
-    }
-
     document.addEventListener("DOMContentLoaded", () => {
-      console.log("✅ user-profile.js loaded!");
+      const user = JSON.parse(localStorage.getItem("boopUser"));
 
       // Hide "Add Funds" link for treasury users
       if (user?.type === "treasury") {
@@ -466,24 +621,6 @@
           }
         });
       });
-
-      // Placeholder for profile data population
-      const fields = ["firstName", "lastName", "email", "role", "status", "type"];
-      fields.forEach((field) => {
-        const element = document.getElementById(field);
-        if (element) {
-          // Replace with actual data fetch in user-profile.js
-          element.textContent = user[field] || "N/A";
-        }
-      });
-
-      const editProfileBtn = document.getElementById("editProfileBtn");
-      if (editProfileBtn) {
-        editProfileBtn.addEventListener("click", () => {
-          // Placeholder: Redirect to edit profile page
-          window.location.href = "edit-profile.html";
-        });
-      }
     });
   </script>
   <script type="module" src="user-profile.js"></script>
