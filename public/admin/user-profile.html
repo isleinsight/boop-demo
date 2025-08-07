@@ -423,7 +423,7 @@
         });
         if (!res.ok) throw new Error("Unauthorized");
         const meData = await res.json();
-        const allowedTypes = ["treasury", "accountant"];
+        const allowedTypes = ["super_admin", "admin", "support"];
         if (!meData || meData.role !== "admin" || !allowedTypes.includes(meData.type)) {
           throw new Error("Invalid role or type");
         }
