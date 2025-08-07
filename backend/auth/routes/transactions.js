@@ -230,8 +230,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 END AS counterparty_name
     FROM transactions t
     LEFT JOIN users sender ON sender.id = t.added_by
-    LEFT JOIN wallets w ON w.id = t.wallet_id
-    LEFT JOIN users receiver ON w.user_id = receiver.id
+    LEFT JOIN users receiver ON receiver.id = t.user_id
     WHERE t.user_id = $1
     ORDER BY t.created_at DESC
     LIMIT $2 OFFSET $3
