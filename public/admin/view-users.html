@@ -18,6 +18,7 @@
       max-width: 1200px;
       margin: 40px auto;
       padding: 0 16px;
+      overflow-x: auto;
     }
 
     .container {
@@ -109,6 +110,7 @@
 
     table {
       width: 100%;
+      min-width: 800px; /* Ensures table is wide enough to trigger horizontal scroll */
       border-collapse: collapse;
       background: #fff;
       border-radius: 8px;
@@ -162,6 +164,11 @@
     th input[type="checkbox"] {
       accent-color: #2f80ed;
       transform: scale(1.2);
+    }
+
+    .table-container {
+      max-height: 400px; /* Adjust as needed for vertical scroll */
+      overflow-y: auto;
     }
 
     .pagination {
@@ -341,6 +348,10 @@
       .filter-label {
         margin-top: 8px;
       }
+
+      .table-scroll-wrapper {
+        padding: 0;
+      }
     }
   </style>
 </head>
@@ -402,22 +413,24 @@
       </div>
 
       <!-- Table -->
-      <table>
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="selectAllCheckbox" /></th>
-            <th class="sortable" data-sort="firstName">First Name <span class="arrow"></span></th>
-            <th class="sortable" data-sort="lastName">Last Name <span class="arrow"></span></th>
-            <th class="sortable" data-sort="email">Email <span class="arrow"></span></th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="userTableBody">
-          <!-- Injected by JS -->
-        </tbody>
-      </table>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAllCheckbox" /></th>
+              <th class="sortable" data-sort="firstName">First Name <span class="arrow"></span></th>
+              <th class="sortable" data-sort="lastName">Last Name <span class="arrow"></span></th>
+              <th class="sortable" data-sort="email">Email <span class="arrow"></span></th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody">
+            <!-- Injected by JS -->
+          </tbody>
+        </table>
+      </div>
 
       <!-- Pagination -->
       <div class="pagination">
