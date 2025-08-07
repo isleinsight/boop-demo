@@ -4,43 +4,68 @@
   <meta charset="UTF-8" />
   <title>Assign Card – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
+      background: #f5f8fb;
+      margin: 0;
+      color: #333;
     }
 
     .container-small {
-      max-width: 500px;
-      background: white;
-      margin: 50px auto;
-      padding: 30px 40px;
+      max-width: 550px;
+      background: #fff;
+      margin: 40px auto;
+      padding: 24px 32px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     }
 
-    .container-small input,
-    .container-small button,
-    .uid-controls {
-      width: 100%;
-      box-sizing: border-box;
+    h3 {
+      font-size: 1.6rem;
+      color: #1a2b4a;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.95rem;
+      color: #1a2b4a;
+      margin-bottom: 8px;
+      font-weight: 500;
     }
 
     input, button {
-      padding: 10px;
-      margin-top: 8px;
-      border: 1px solid #ccc;
+      padding: 12px 16px;
+      margin-top: 4px;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #d1d9e6;
       border-radius: 6px;
-      font-size: 1em;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease;
+    }
+
+    input[readonly] {
+      background: #f9fafb;
+      cursor: not-allowed;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #2f80ed;
     }
 
     button {
       background: #2f80ed;
-      color: white;
-      font-weight: bold;
+      color: #fff;
+      font-weight: 500;
+      border: none;
       cursor: pointer;
+      margin-top: 16px;
+      transition: background-color 0.2s ease;
     }
 
     button:hover {
@@ -50,29 +75,108 @@
     .uid-controls {
       display: flex;
       justify-content: space-between;
-      gap: 10px;
-      margin-top: 5px;
+      gap: 12px;
+      margin-top: 8px;
       margin-bottom: 20px;
     }
 
     .uid-controls button {
+      background: #6b7280;
       flex: 1;
     }
 
-    .status {
-      text-align: center;
-      margin-top: 20px;
+    .uid-controls button:hover {
+      background: #4b5563;
+    }
+
+    /* Navigation Dropdown */
+    .nav-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropbtn {
+      padding: 10px 16px;
+      text-decoration: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background: #fff;
+      min-width: 160px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1;
+    }
+
+    .dropdown-content a {
       color: #333;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      font-size: 0.95rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content a:hover {
+      background-color: #f0f4f8;
+      color: #2f80ed;
+    }
+
+    .nav-dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    /* Suggestion Box */
+    #userSuggestions {
+      border: 1px solid #d1d9e6;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #fff;
+      margin-top: -4px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     #userSuggestions div {
-      padding: 8px 12px;
-      border-bottom: 1px solid #eee;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e6ebf1;
       cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.2s ease;
     }
 
     #userSuggestions div:hover {
-      background-color: #f0f0f0;
+      background-color: #f5f8fb;
+    }
+
+    /* Status Message */
+    .status {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      text-align: center;
+      display: none;
+    }
+
+    .status.success {
+      background: #f0fdf4;
+      color: #2ecc71;
+      border: 1px solid #bbf7d0;
+      display: block;
+    }
+
+    .status.error {
+      background: #fef3f2;
+      color: #e63946;
+      border: 1px solid #f8c4c1;
+      display: block;
     }
   </style>
 </head>
@@ -90,8 +194,8 @@
         <div class="nav-dropdown">
           <a href="#" class="dropbtn" style="color: white;">Add</a>
           <div class="dropdown-content">
-            <a href="add-user.html">Add User</a>
-            <a href="assign-card.html">Assign Card</a>
+            <a href="add-user.html" id="addUserLink">Add User</a>
+            <a href="assign-card.html" id="assignCardLink">Assign Card</a>
             <a href="assign-student.html">Assign Student</a>
           </div>
         </div>
@@ -113,7 +217,7 @@
 
     <label for="userSearch">Assign to User</label>
     <input type="text" id="userSearch" placeholder="Type user name or email" autocomplete="off" />
-    <div id="userSuggestions" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;"></div>
+    <div id="userSuggestions" style="display: none;"></div>
 
     <button id="assignBtn">Assign Card</button>
     <div class="status" id="status"></div>
@@ -188,48 +292,51 @@
 
     if (!uid) {
       statusEl.textContent = "Please generate or scan a UID.";
-      statusEl.style.color = "red";
+      statusEl.classList.remove("success");
+      statusEl.classList.add("error");
       return;
     }
 
     if (!selectedUser || !selectedUser.wallet_id) {
       statusEl.textContent = "Please select a valid user with a wallet.";
-      statusEl.style.color = "red";
+      statusEl.classList.remove("success");
+      statusEl.classList.add("error");
       return;
     }
 
     try {
       const res = await fetch("/api/cards", {
-  method: "POST",
-  headers: { 
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("boop_jwt")}`
-  },
-  body: JSON.stringify({
-    uid,
-    wallet_id: selectedUser.wallet_id,
-    issued_by: admin?.id,
-    type: "spending"
-  })
-});
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("boop_jwt")}`
+        },
+        body: JSON.stringify({
+          uid,
+          wallet_id: selectedUser.wallet_id,
+          issued_by: admin?.id,
+          type: "spending"
+        })
+      });
 
-const result = await res.json();
+      const result = await res.json();
 
-if (!res.ok) {
-  if (result.message?.toLowerCase().includes("already has")) {
-    throw new Error("⚠️ This user already has a spending card.");
-  }
-  if (result.message?.toLowerCase().includes("uid")) {
-    throw new Error("⚠️ This card UID is already assigned to another user.");
-  }
-  throw new Error(result.message || "Card assignment failed.");
-}
+      if (!res.ok) {
+        if (result.message?.toLowerCase().includes("already has")) {
+          throw new Error("⚠️ This user already has a spending card.");
+        }
+        if (result.message?.toLowerCase().includes("uid")) {
+          throw new Error("⚠️ This card UID is already assigned to another user.");
+        }
+        throw new Error(result.message || "Card assignment failed.");
+      }
 
-console.log("✅ Card assigned:", result);
+      console.log("✅ Card assigned:", result);
 
       // ✅ Success message
       statusEl.textContent = "✅ Card assigned successfully!";
-      statusEl.style.color = "green";
+      statusEl.classList.remove("error");
+      statusEl.classList.add("success");
 
       cardUID.value = "";
       userSearch.value = "";
@@ -243,9 +350,20 @@ console.log("✅ Card assigned:", result);
         newBtn.textContent = "Assign Another Card";
         newBtn.style.marginTop = "12px";
         newBtn.style.width = "100%";
-        newBtn.style.padding = "10px";
-        newBtn.style.fontSize = "1rem";
-
+        newBtn.style.padding = "12px 16px";
+        newBtn.style.fontSize = "0.95rem";
+        newBtn.style.background = "#6b7280";
+        newBtn.style.border = "none";
+        newBtn.style.color = "#fff";
+        newBtn.style.borderRadius = "6px";
+        newBtn.style.cursor = "pointer";
+        newBtn.style.transition = "background-color 0.2s ease";
+        newBtn.addEventListener("mouseover", () => {
+          newBtn.style.background = "#4b5563";
+        });
+        newBtn.addEventListener("mouseout", () => {
+          newBtn.style.background = "#6b7280";
+        });
         statusEl.insertAdjacentElement("afterend", newBtn);
 
         newBtn.addEventListener("click", () => {
@@ -253,7 +371,7 @@ console.log("✅ Card assigned:", result);
           userSearch.value = "";
           selectedUser = null;
           statusEl.textContent = "";
-          statusEl.style.color = "";
+          statusEl.classList.remove("success", "error");
           newBtn.remove();
         });
       }
@@ -261,7 +379,8 @@ console.log("✅ Card assigned:", result);
     } catch (err) {
       console.error("❌ Error:", err);
       statusEl.textContent = err.message || "Unknown error occurred.";
-      statusEl.style.color = "red";
+      statusEl.classList.remove("success");
+      statusEl.classList.add("error");
     }
   });
 
@@ -269,6 +388,7 @@ console.log("✅ Card assigned:", result);
   document.querySelectorAll("input").forEach(el => {
     el.addEventListener("input", () => {
       statusEl.textContent = "";
+      statusEl.classList.remove("success", "error");
       const btn = document.getElementById("assignNewCardBtn");
       if (btn) btn.remove();
     });
@@ -292,6 +412,14 @@ console.log("✅ Card assigned:", result);
   document.addEventListener("DOMContentLoaded", () => {
     console.log("admin.js has loaded!");
 
+    // Hide "Add User" and "Assign Card" links for viewer or support users
+    if (user?.type === "viewer" || user?.type === "support") {
+      const addUserLink = document.getElementById("addUserLink");
+      const assignCardLink = document.getElementById("assignCardLink");
+      if (addUserLink) addUserLink.style.display = "none";
+      if (assignCardLink) assignCardLink.style.display = "none";
+    }
+
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", (e) => {
@@ -302,7 +430,5 @@ console.log("✅ Card assigned:", result);
     }
   });
 </script>
-    
-
 </body>
 </html>
