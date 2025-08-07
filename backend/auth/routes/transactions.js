@@ -119,8 +119,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   const { wallet_id, user_id, amount, note, added_by } = req.body;
 
-  console.log('📥 Received add-funds request:', { wallet_id, user_id, amount, note, added_by });
-
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ error: 'Unauthorized' });
   }
@@ -133,84 +131,68 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     return res.status(403).json({ error: 'Invalid added_by: must match authenticated user' });
   }
 
-  const transferAmount = parseFloat(amount); // <-- use decimals for logic
-  const amount_cents = Math.round(transferAmount * 100); // <-- still store as cents
+  const transferAmount = parseFloat(amount);
+  const amount_cents = Math.round(transferAmount * 100);
 
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    // ✅ Get source treasury wallet
-    const treasuryWalletResult = await client.query(
+    // ✅ Get treasury wallet
+    const { rows: treasuryRows } = await client.query(
       `SELECT * FROM wallets WHERE id = $1`,
-      [wallet_id] // This is the selected treasury wallet ID
+      [wallet_id]
     );
+    if (!treasuryRows.length) throw new Error('Treasury wallet not found');
+    const treasuryWallet = treasuryRows[0];
 
-    if (treasuryWalletResult.rowCount === 0) {
-      throw new Error('Treasury wallet not found');
-    }
-
-    const treasuryWallet = treasuryWalletResult.rows[0];
-
-    // ✅ Check available balance
+    // ✅ Ensure funds available
     if (parseFloat(treasuryWallet.balance) < transferAmount) {
       throw new Error('Insufficient funds in treasury wallet');
     }
 
-    // ✅ Check recipient wallet (linked to user)
-    const recipientWalletResult = await client.query(
+    // ✅ Get recipient wallet
+    const { rows: recipientRows } = await client.query(
       `SELECT * FROM wallets WHERE user_id = $1`,
       [user_id]
     );
+    if (!recipientRows.length) throw new Error('Recipient wallet not found');
+    const recipientWallet = recipientRows[0];
 
-    if (recipientWalletResult.rowCount === 0) {
-      throw new Error('Recipient wallet not found');
-    }
-
-    const recipientWallet = recipientWalletResult.rows[0];
-
-    // ✅ Validate user role
-    const userRoleResult = await client.query(
+    // ✅ Validate user
+    const { rows: userRows } = await client.query(
       `SELECT role FROM users WHERE id = $1`,
       [user_id]
     );
-
-    const userRole = userRoleResult.rows[0]?.role;
+    const userRole = userRows[0]?.role;
     if (!userRole) throw new Error('User not found');
 
     if (['student', 'assistance'].includes(userRole) && note?.toLowerCase().includes('transfer to bank')) {
       throw new Error('This user type cannot receive bank transfers');
     }
 
-    // ✅ Perform transfer
-    await client.query(
-      `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
-      [transferAmount, treasuryWallet.id]
-    );
+    // ✅ Transfer funds
+    await client.query(`UPDATE wallets SET balance = balance - $1 WHERE id = $2`, [transferAmount, treasuryWallet.id]);
+    await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [transferAmount, recipientWallet.id]);
 
-    await client.query(
-      `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
-      [transferAmount, recipientWallet.id]
-    );
-
-    // ✅ Record treasury debit
+    // ✅ Insert debit (admin action — audit logs will pick this up)
     await client.query(
       `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
        VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
       [treasuryWallet.id, treasuryWallet.user_id, amount_cents, note || `Fund transfer to user ${user_id}`, adminId]
     );
 
-    // ✅ Record recipient credit
+    // ✅ Insert credit (from Government — no added_by)
     await client.query(
-  `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-   VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
-  [recipientWallet.id, user_id, amount_cents, 'Received from Government', adminId]
-);
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'credit', $3, 'Received from Government', NOW(), NULL)`,
+      [recipientWallet.id, user_id, amount_cents]
+    );
 
     await client.query('COMMIT');
-
     res.status(201).json({ success: true, message: 'Funds transferred successfully' });
+
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('❌ Failed to add funds:', err.message);
