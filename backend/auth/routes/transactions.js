@@ -203,6 +203,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 });
 
 // 📄 GET /api/transactions/user/:userId
+// 📄 GET /api/transactions/user/:userId
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
@@ -222,14 +223,18 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        COALESCE(
-          v.business_name,
-          TRIM(u.first_name || ' ' || u.last_name),
-          'System'
-        ) AS counterparty_name
+        CASE
+          WHEN t.note = 'Received from Government Assistance' THEN 'Government Assistance'
+          WHEN t.type = 'credit' THEN 
+            COALESCE(sender.first_name || ' ' || sender.last_name, 'Sender')
+          WHEN t.type = 'debit' THEN 
+            COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Recipient')
+          ELSE 'Unknown'
+        END AS counterparty_name
       FROM transactions t
-      LEFT JOIN vendors v ON v.id = t.vendor_id
-      LEFT JOIN users u ON u.id = t.added_by
+      LEFT JOIN users sender ON sender.id = t.added_by
+      LEFT JOIN wallets w ON w.id = t.wallet_id
+      LEFT JOIN users receiver ON w.user_id = receiver.id
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
