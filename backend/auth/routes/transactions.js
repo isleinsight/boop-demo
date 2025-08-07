@@ -214,29 +214,28 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 
   try {
-    const result = await pool.query(`
-          const result = await pool.query(`
-      SELECT
-        t.id,
-        t.wallet_id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        CASE
-  WHEN t.note = 'Received from Government Assistance' THEN 'Government Assistance'
-  WHEN t.type = 'credit' THEN COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
-  WHEN t.type = 'debit' THEN COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
-  ELSE 'Unknown'
-END AS counterparty_name
-      FROM transactions t
-      LEFT JOIN users sender ON sender.id = t.added_by
-      LEFT JOIN wallets w ON w.id = t.wallet_id
-      LEFT JOIN users receiver ON w.user_id = receiver.id
-      WHERE t.user_id = $1
-      ORDER BY t.created_at DESC
-      LIMIT $2 OFFSET $3
-    `, [userId, limit, offset]);
+  const result = await pool.query(`
+    SELECT
+      t.id,
+      t.wallet_id,
+      t.type,
+      t.amount_cents,
+      t.note,
+      t.created_at,
+      CASE
+        WHEN t.note = 'Received from Government Assistance' THEN 'Government Assistance'
+        WHEN t.type = 'credit' THEN COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
+        WHEN t.type = 'debit' THEN COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
+        ELSE 'Unknown'
+      END AS counterparty_name
+    FROM transactions t
+    LEFT JOIN users sender ON sender.id = t.added_by
+    LEFT JOIN wallets w ON w.id = t.wallet_id
+    LEFT JOIN users receiver ON w.user_id = receiver.id
+    WHERE t.user_id = $1
+    ORDER BY t.created_at DESC
+    LIMIT $2 OFFSET $3
+  `, [userId, limit, offset]);
 
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
