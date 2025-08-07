@@ -21,7 +21,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
         t.created_at,
         COALESCE(
           v.business_name,
-          u.first_name || ' ' || u.last_name,
+          u.first_name || ' ' || COALESCE(u.last_name, ''),
           'System'
         ) AS counterparty_name
       FROM transactions t
@@ -95,7 +95,7 @@ router.get('/report', authenticateToken, async (req, res) => {
         t.created_at,
         COALESCE(
           v.business_name,
-          u.first_name || ' ' || u.last_name,
+          u.first_name || ' ' || COALESCE(u.last_name, ''),
           'System'
         ) AS counterparty_name
       FROM transactions t
@@ -187,12 +187,12 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
     // ✅ Insert credit transaction (recipient receives from treasury)
     await client.query(
-  `INSERT INTO transactions (
-     wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
-   )
-   VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, $4, $5)`,
-  [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id, user_id]
-);
+      `INSERT INTO transactions (
+         wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
+       )
+       VALUES ($1, $2, 'credit', $3, 'Received from Treasury', NOW(), NULL, $4, $5)`,
+      [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id, user_id]
+    );
 
     await client.query('COMMIT');
     res.status(201).json({ success: true, message: 'Funds transferred successfully.' });
@@ -244,23 +244,27 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.sender_id,
         t.recipient_id,
         CASE
-  WHEN t.type = 'credit' AND t.sender_id IS NULL THEN 'Government Assistance'
-  WHEN t.type = 'credit' THEN
-    COALESCE(senders.first_name || ' ' || COALESCE(senders.last_name, ''), 'Unknown Sender')
-  WHEN t.type = 'debit' AND t.recipient_id IS NULL THEN 'Unknown Recipient'
-  WHEN t.type = 'debit' THEN
-    COALESCE(recipients.first_name || ' ' || COALESCE(recipients.last_name, ''), 'Unknown Recipient')
-  ELSE 'Unknown'
-END AS counterparty_name
+          WHEN t.type = 'credit' THEN
+            COALESCE(
+              (SELECT u.first_name || ' ' || COALESCE(u.last_name, '') 
+               FROM users u WHERE u.id = t.sender_id),
+              'Treasury'
+            )
+          WHEN t.type = 'debit' THEN
+            COALESCE(
+              (SELECT u.first_name || ' ' || COALESCE(u.last_name, '') 
+               FROM users u WHERE u.id = t.recipient_id),
+              'Unknown Recipient'
+            )
+          ELSE 'Unknown'
+        END AS counterparty_name
       FROM transactions t
-      LEFT JOIN users senders ON senders.id = t.sender_id
-      LEFT JOIN users recipients ON recipients.id = t.recipient_id
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    // Debugging: Log sender_id and recipient_id for transactions
+    // Debugging: Log sender_id, recipient_id, and counterparty_name for transactions
     result.rows.forEach(row => {
       console.log(`Transaction ID ${row.id}, type: ${row.type}, sender_id: ${row.sender_id}, recipient_id: ${row.recipient_id}, counterparty_name: ${row.counterparty_name}`);
     });
