@@ -211,11 +211,14 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        COALESCE(
-          v.business_name,
-          TRIM(u.first_name || ' ' || u.last_name),
-          'Government'
-        ) AS counterparty_name
+        CASE
+          WHEN t.type = 'credit' THEN 'Government'
+          ELSE COALESCE(
+            v.business_name,
+            TRIM(u.first_name || ' ' || u.last_name),
+            'System'
+          )
+        END AS counterparty_name
       FROM transactions t
       LEFT JOIN vendors v ON v.id = t.vendor_id
       LEFT JOIN users u ON u.id = t.added_by
@@ -234,7 +237,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       totalCount: parseInt(countRes.rows[0].count, 10)
     });
   } catch (err) {
-    console.error('❌ Failed to load target user transactions:', err.message);
+    console.error('❌ Failed to load filtered transactions:', err.message);
     res.status(500).json({ message: 'Failed to retrieve transactions.' });
   }
 });
