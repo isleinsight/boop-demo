@@ -357,27 +357,32 @@
 </head>
 <body>
   <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      <div class="nav-right">
-        <a href="index.html">Dashboard</a>
-        <a href="admin-actions.html">Admin Actions</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Add</a>
-          <div class="dropdown-content">
-            <a href="add-user.html" id="addUserLink">Add User</a>
-            <a href="assign-card.html" id="assignCardLink">Assign Card</a>
-            <a href="assign-student.html">Assign Student</a>
-          </div>
-        </div>
-        <a href="view-users.html">View Users</a>
-        <a href="#" id="logoutBtn">Log Out</a>
-      </div>
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
     </div>
-  </nav>
+    <button class="hamburger" aria-label="Toggle mobile menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="nav-right">
+      <a href="index.html">Dashboard</a>
+      <a href="admin-actions.html">Admin Actions</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn" style="color: white;">Add</a>
+        <div class="dropdown-content">
+          <a href="add-user.html" id="addUserLink">Add User</a>
+          <a href="assign-card.html" id="assignCardLink">Assign Card</a>
+          <a href="assign-student.html">Assign Student</a>
+        </div>
+      </div>
+      <a href="view-users.html">View Users</a>
+      <a href="#" id="logoutBtn">Log Out</a>
+    </div>
+  </div>
+</nav>
   
   <div class="table-scroll-wrapper">
     <div class="container">
@@ -494,6 +499,42 @@
         });
       }
     });
+
+    document.addEventListener("DOMContentLoaded", () => {
+  const hamburger = document.querySelector(".hamburger");
+  const navRight = document.querySelector(".nav-right");
+  const dropbtn = document.querySelector(".nav-dropdown .dropbtn");
+  const dropdownContent = document.querySelector(".dropdown-content");
+
+  if (hamburger && navRight) {
+    hamburger.addEventListener("click", () => {
+      hamburger.classList.toggle("active");
+      navRight.classList.toggle("active");
+    });
+  }
+
+  if (dropbtn && dropdownContent) {
+    dropbtn.addEventListener("click", (e) => {
+      if (window.innerWidth <= 768) {
+        e.preventDefault();
+        dropdownContent.classList.toggle("active");
+      }
+    });
+  }
+
+  // Close mobile menu when a link is clicked
+  navRight.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      if (window.innerWidth <= 768) {
+        hamburger.classList.remove("active");
+        navRight.classList.remove("active");
+        if (dropdownContent) {
+          dropdownContent.classList.remove("active");
+        }
+      }
+    });
+  });
+});
   </script>
   <script type="module" src="view-users.js"></script>
 </body>
