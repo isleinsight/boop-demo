@@ -201,10 +201,10 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
     // ✅ Record recipient credit
     await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
-      [recipientWallet.id, user_id, amount_cents, note || `Funds received from treasury`, adminId]
-    );
+  `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+   VALUES ($1, $2, 'credit', $3, $4, NOW(), $5)`,
+  [recipientWallet.id, user_id, amount_cents, 'Received from Government', adminId]
+);
 
     await client.query('COMMIT');
 
