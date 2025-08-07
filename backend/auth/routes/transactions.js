@@ -137,7 +137,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // ✅ Get treasury wallet
     const { rows: treasuryRows } = await client.query(
       `SELECT * FROM wallets WHERE id = $1`,
       [wallet_id]
@@ -145,12 +144,10 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     if (!treasuryRows.length) throw new Error('Treasury wallet not found');
     const treasuryWallet = treasuryRows[0];
 
-    // ✅ Ensure funds available
     if (parseFloat(treasuryWallet.balance) < transferAmount) {
       throw new Error('Insufficient funds in treasury wallet');
     }
 
-    // ✅ Get recipient wallet
     const { rows: recipientRows } = await client.query(
       `SELECT * FROM wallets WHERE user_id = $1`,
       [user_id]
@@ -158,7 +155,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     if (!recipientRows.length) throw new Error('Recipient wallet not found');
     const recipientWallet = recipientRows[0];
 
-    // ✅ Validate user
     const { rows: userRows } = await client.query(
       `SELECT role FROM users WHERE id = $1`,
       [user_id]
@@ -170,24 +166,21 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       throw new Error('This user type cannot receive bank transfers');
     }
 
-    // ✅ Transfer funds
     await client.query(`UPDATE wallets SET balance = balance - $1 WHERE id = $2`, [transferAmount, treasuryWallet.id]);
     await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [transferAmount, recipientWallet.id]);
 
-    // ✅ Insert debit (admin action — audit logs will pick this up)
-    const debitNote = note || `Fund transfer to user ${user_id}`;
-    console.log(`Debit transaction note: ${debitNote}`); // Debugging
+    // ✅ Insert debit transaction (from Government -> user)
     await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
-      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId]
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id)
+       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, NULL, $6)`,
+      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, note || `Fund transfer to user ${user_id}`, adminId, user_id]
     );
 
-    // ✅ Insert credit (from Government — no added_by)
+    // ✅ Insert credit transaction (to user from Government)
     await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
-       VALUES ($1, $2, 'credit', $3, 'Received from Government', NOW(), NULL)`,
-      [recipientWallet.id, user_id, amount_cents]
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id)
+       VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, NULL, $4)`,
+      [recipientWallet.id, user_id, amount_cents, user_id]
     );
 
     await client.query('COMMIT');
@@ -223,35 +216,19 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         CASE
-          WHEN t.note ILIKE '%Government Assistance%' OR t.note = 'Received from Government' THEN 'Government Assistance'
           WHEN t.type = 'credit' THEN
-            COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
-          WHEN t.type = 'debit' AND t.note ILIKE '%Fund transfer to user%' THEN
-            COALESCE(
-              (SELECT u.first_name || ' ' || u.last_name
-               FROM users u
-               WHERE u.id::text = REGEXP_REPLACE(t.note, '.*[Ff]und [Tt]ransfer to user[ ]*(\\d+).*', '\\1')),
-              'Unknown Recipient'
-            )
+            COALESCE(senders.first_name || ' ' || senders.last_name, 'Government Assistance')
           WHEN t.type = 'debit' THEN
-            COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
+            COALESCE(recipients.first_name || ' ' || recipients.last_name, 'Unknown Recipient')
           ELSE 'Unknown'
         END AS counterparty_name
       FROM transactions t
-      LEFT JOIN users sender ON sender.id = t.added_by
-      LEFT JOIN wallets w ON w.id = t.wallet_id
-      LEFT JOIN users receiver ON w.user_id = receiver.id
+      LEFT JOIN users senders ON senders.id = t.sender_id
+      LEFT JOIN users recipients ON recipients.id = t.recipient_id
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
-
-    // Debugging: Log notes for debit transactions
-    result.rows.forEach(row => {
-      if (row.type === 'debit') {
-        console.log(`Debit transaction ID ${row.id} note: "${row.note}"`);
-      }
-    });
 
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
