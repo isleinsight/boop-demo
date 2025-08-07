@@ -175,10 +175,12 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [transferAmount, recipientWallet.id]);
 
     // ✅ Insert debit (admin action — audit logs will pick this up)
+    const debitNote = note || `Fund transfer to user ${user_id}`;
+    console.log(`Debit transaction note: ${debitNote}`); // Debugging
     await client.query(
       `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
        VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
-      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, note || `Fund transfer to user ${user_id}`, adminId]
+      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId]
     );
 
     // ✅ Insert credit (from Government — no added_by)
@@ -224,12 +226,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
           WHEN t.note ILIKE '%Government Assistance%' OR t.note = 'Received from Government' THEN 'Government Assistance'
           WHEN t.type = 'credit' THEN
             COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
-          WHEN t.type = 'debit' AND t.note ILIKE 'Fund transfer to user%' THEN
+          WHEN t.type = 'debit' AND t.note ILIKE '%Fund transfer to user%' THEN
             COALESCE(
               (SELECT u.first_name || ' ' || u.last_name
                FROM users u
-               WHERE u.id::text = REGEXP_REPLACE(t.note, '.*Fund transfer to user (\\d+).*', '\\1')
-               AND t.note ILIKE 'Fund transfer to user%'),
+               WHERE u.id::text = REGEXP_REPLACE(t.note, '.*[Ff]und [Tt]ransfer to user[ ]*(\\d+).*', '\\1')),
               'Unknown Recipient'
             )
           WHEN t.type = 'debit' THEN
@@ -244,6 +245,13 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
+
+    // Debugging: Log notes for debit transactions
+    result.rows.forEach(row => {
+      if (row.type === 'debit') {
+        console.log(`Debit transaction ID ${row.id} note: "${row.note}"`);
+      }
+    });
 
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
