@@ -226,15 +226,18 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
           WHEN t.note ILIKE '%Government Assistance%' OR t.note = 'Received from Government' THEN 'Government Assistance'
           WHEN t.type = 'credit' THEN
             COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
-          WHEN t.type = 'debit' AND t.note ILIKE '%[user_id:%]' THEN
+          WHEN t.type = 'debit' THEN
             COALESCE(
               (SELECT u.first_name || ' ' || u.last_name
                FROM users u
-               WHERE u.id::text = REGEXP_REPLACE(t.note, '.*\\[user_id:(\\d+)\\].*', '\\1')),
+               WHERE u.id::text = REGEXP_REPLACE(t.note, '.*\\[user_id:(\\d+)\\].*', '\\1')
+               AND t.note ILIKE '%[user_id:%]'),
+              (SELECT u.first_name || ' ' || u.last_name
+               FROM users u
+               JOIN wallets w2 ON w2.user_id = u.id
+               WHERE w2.id = (SELECT w3.id FROM wallets w3 WHERE w3.user_id = $1 LIMIT 1)),
               'Unknown Recipient'
             )
-          WHEN t.type = 'debit' THEN
-            COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
           ELSE 'Unknown'
         END AS counterparty_name
       FROM transactions t
@@ -246,10 +249,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    // Debugging: Log notes for debit transactions
+    // Debugging: Log notes and extracted user_id for debit transactions
     result.rows.forEach(row => {
       if (row.type === 'debit') {
-        console.log(`Debit transaction ID ${row.id} note: "${row.note}"`);
+        const userIdMatch = row.note.match(/\[user_id:(\d+)\]/i);
+        console.log(`Debit transaction ID ${row.id} note: "${row.note}", extracted user_id: ${userIdMatch ? userIdMatch[1] : 'none'}`);
       }
     });
 
