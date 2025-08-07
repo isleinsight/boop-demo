@@ -60,8 +60,8 @@ router.post('/adjust', authenticateToken, async (req, res) => {
   const amount = amount_cents / 100;
   try {
     const walletRes = await pool.query(
-      'SELECT id, balance FROM wallets WHERE user_id = $1 AND status = $2',
-      [userId, 'active']
+      'SELECT id, balance FROM wallets WHERE user_id = $1',
+      [userId]
     );
     if (walletRes.rows.length === 0) {
       return res.status(404).json({ message: 'Wallet not found for this user.' });
