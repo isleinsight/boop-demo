@@ -7,7 +7,7 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 router.get('/recent', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    return res.status(403).json({ message: 'Unauthorized' });
+    return res.status(403).json({ message: 'You do not have permission to view these transactions.' });
   }
   try {
     const result = await pool.query(`
@@ -33,7 +33,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('❌ Failed to load transactions:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve transactions.' });
+    res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
   }
 });
 
@@ -57,7 +57,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('❌ Failed to load user transactions:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve your transactions.' });
+    res.status(500).json({ message: 'An error occurred while retrieving your transactions.' });
   }
 });
 
@@ -66,7 +66,7 @@ router.get('/report', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
   const { start, end, type: filterType } = req.query;
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    return res.status(403).json({ message: 'Unauthorized' });
+    return res.status(403).json({ message: 'You do not have permission to view these transactions.' });
   }
   const values = [];
   const conditions = [];
@@ -108,7 +108,7 @@ router.get('/report', authenticateToken, async (req, res) => {
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('❌ Error loading transaction report:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve report transactions.' });
+    res.status(500).json({ message: 'An error occurred while retrieving report transactions.' });
   }
 });
 
@@ -118,15 +118,15 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   const { wallet_id, user_id, amount, note, added_by } = req.body;
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    return res.status(403).json({ error: 'Unauthorized' });
+    return res.status(403).json({ error: 'You do not have permission to perform this action.' });
   }
 
   if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'Missing or invalid fields' });
+    return res.status(400).json({ error: 'Please provide all required fields with valid values.' });
   }
 
   if (added_by !== adminId) {
-    return res.status(403).json({ error: 'Invalid added_by: must match authenticated user' });
+    return res.status(403).json({ error: 'Invalid request: Added by user does not match authenticated user.' });
   }
 
   const transferAmount = parseFloat(amount);
@@ -137,6 +137,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // ✅ Get treasury wallet
     const { rows: treasuryRows } = await client.query(
       `SELECT * FROM wallets WHERE id = $1`,
       [wallet_id]
@@ -144,10 +145,12 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     if (!treasuryRows.length) throw new Error('Treasury wallet not found');
     const treasuryWallet = treasuryRows[0];
 
+    // ✅ Ensure funds available
     if (parseFloat(treasuryWallet.balance) < transferAmount) {
       throw new Error('Insufficient funds in treasury wallet');
     }
 
+    // ✅ Get recipient wallet
     const { rows: recipientRows } = await client.query(
       `SELECT * FROM wallets WHERE user_id = $1`,
       [user_id]
@@ -155,45 +158,64 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     if (!recipientRows.length) throw new Error('Recipient wallet not found');
     const recipientWallet = recipientRows[0];
 
+    // ✅ Validate user
     const { rows: userRows } = await client.query(
-      `SELECT role FROM users WHERE id = $1`,
+      `SELECT role, first_name, last_name FROM users WHERE id = $1`,
       [user_id]
     );
     const userRole = userRows[0]?.role;
-    if (!userRole) throw new Error('User not found');
+    if (!userRole) throw new Error('Recipient user not found');
 
     if (['student', 'assistance'].includes(userRole) && note?.toLowerCase().includes('transfer to bank')) {
       throw new Error('This user type cannot receive bank transfers');
     }
 
+    // ✅ Transfer funds
     await client.query(`UPDATE wallets SET balance = balance - $1 WHERE id = $2`, [transferAmount, treasuryWallet.id]);
     await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [transferAmount, recipientWallet.id]);
 
     // ✅ Insert debit transaction (treasury sends to recipient)
-await client.query(
-  `INSERT INTO transactions (
-     wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
-   )
-   VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, $6, $7)`,
-  [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId, treasuryWallet.user_id, user_id]
-);
+    const debitNote = note ? `${note} [user_id:${user_id}]` : `Fund transfer to user ${user_id} [user_id:${user_id}]`;
+    console.log(`Debit transaction note: ${debitNote}, sender_id: ${treasuryWallet.user_id}, recipient_id: ${user_id}`); // Debugging
+    await client.query(
+      `INSERT INTO transactions (
+         wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
+       )
+       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, $6, $7)`,
+      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId, treasuryWallet.user_id, user_id]
+    );
 
-// ✅ Insert credit transaction (recipient receives from treasury)
-await client.query(
-  `INSERT INTO transactions (
-     wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
-   )
-   VALUES ($1, $2, 'credit', $3, 'Received from Government', NOW(), NULL, $4, $5)`,
-  [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id, user_id]
-);
+    // ✅ Insert credit transaction (recipient receives from treasury)
+    await client.query(
+      `INSERT INTO transactions (
+         wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
+       )
+       VALUES ($1, $2, 'credit', $3, 'Received from Government', NOW(), NULL, $4, $5)`,
+      [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id, user_id]
+    );
 
     await client.query('COMMIT');
-    res.status(201).json({ success: true, message: 'Funds transferred successfully' });
+    res.status(201).json({ success: true, message: 'Funds transferred successfully.' });
 
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('❌ Failed to add funds:', err.message);
-    res.status(500).json({ error: err.message || 'Server error while adding funds' });
+    let userErrorMessage = 'An error occurred while processing the fund transfer.';
+    if (err.message === 'Treasury wallet not found') {
+      userErrorMessage = 'The selected treasury wallet could not be found.';
+    } else if (err.message === 'Insufficient funds in treasury wallet') {
+      userErrorMessage = 'The treasury wallet does not have enough funds for this transfer.';
+    } else if (err.message === 'Recipient wallet not found') {
+      userErrorMessage = 'The recipient’s wallet could not be found.';
+    } else if (err.message === 'Recipient user not found') {
+      userErrorMessage = 'The recipient user could not be found.';
+    } else if (err.message === 'This user type cannot receive bank transfers') {
+      userErrorMessage = 'This user type is not eligible for bank transfers.';
+    } else if (err instanceof ReferenceError) {
+      userErrorMessage = 'An internal configuration error occurred. Please contact support.';
+      console.error('ReferenceError details:', err.stack);
+    }
+    res.status(500).json({ error: userErrorMessage });
   } finally {
     client.release();
   }
@@ -207,7 +229,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   const offset = parseInt(req.query.offset) || 0;
 
   if (role !== 'admin') {
-    return res.status(403).json({ message: 'Unauthorized' });
+    return res.status(403).json({ message: 'You do not have permission to view these transactions.' });
   }
 
   try {
@@ -219,11 +241,13 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
+        t.sender_id,
+        t.recipient_id,
         CASE
           WHEN t.type = 'credit' THEN
-            COALESCE(senders.first_name || ' ' || senders.last_name, 'Government Assistance')
+            COALESCE(senders.first_name || ' ' || COALESCE(senders.last_name, ''), 'Government Assistance')
           WHEN t.type = 'debit' THEN
-            COALESCE(recipients.first_name || ' ' || recipients.last_name, 'Unknown Recipient')
+            COALESCE(recipients.first_name || ' ' || COALESCE(recipients.last_name, ''), 'Unknown Recipient')
           ELSE 'Unknown'
         END AS counterparty_name
       FROM transactions t
@@ -233,6 +257,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
+
+    // Debugging: Log sender_id and recipient_id for transactions
+    result.rows.forEach(row => {
+      console.log(`Transaction ID ${row.id}, type: ${row.type}, sender_id: ${row.sender_id}, recipient_id: ${row.recipient_id}, counterparty_name: ${row.counterparty_name}`);
+    });
 
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
@@ -245,7 +274,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Failed to load target user transactions:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve transactions.' });
+    res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
   }
 });
 
