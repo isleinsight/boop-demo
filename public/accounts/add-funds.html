@@ -97,7 +97,7 @@
         if (!res.ok) {
           throw new Error(`HTTP error ${res.status}`);
         }
-        if (!meData || meData.role !== "admin" || !["accountant", "treasury"].includes(meData.type)) {
+        if (!meData || meData.role !== "admin" || !["accountant"].includes(meData.type)) {
           throw new Error("Not authorized");
         }
         localStorage.setItem("boopUser", JSON.stringify(meData));
@@ -144,7 +144,7 @@
       <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
     </div>
     <div class="input-group">
-      <label for="amount">Amount (BMD)</label>
+      <label for="amount">Amount</label>
       <input type="number" id="amount" min="0.01" step="0.01" placeholder="Enter amount..." />
     </div>
     <div class="input-group">
