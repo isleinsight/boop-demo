@@ -203,7 +203,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 });
 
 // 📄 GET /api/transactions/user/:userId
-// 📄 GET /api/transactions/user/:userId
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { role } = req.user;
   const { userId } = req.params;
@@ -215,7 +214,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 
   try {
-        const result = await pool.query(`
+    const result = await pool.query(`
       SELECT
         t.id,
         t.wallet_id,
@@ -224,9 +223,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         CASE
-          WHEN t.note = 'Received from Government Assistance' THEN 'From Government Assistance'
-          WHEN t.type = 'credit' THEN COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
-          WHEN t.type = 'debit' THEN COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
+          WHEN t.note = 'Received from Government Assistance' THEN 'Government Assistance'
+          WHEN t.type = 'credit' THEN 
+            COALESCE(sender.first_name || ' ' || sender.last_name, 'Sender')
+          WHEN t.type = 'debit' THEN 
+            COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Recipient')
           ELSE 'Unknown'
         END AS counterparty_name
       FROM transactions t
