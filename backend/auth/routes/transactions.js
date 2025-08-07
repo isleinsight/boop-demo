@@ -223,7 +223,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         CASE
-          WHEN t.note ILIKE '%Government Assistance%' THEN 'Government Assistance'
+          WHEN t.note ILIKE '%Government Assistance%' OR t.note = 'Received from Government' THEN 'Government Assistance'
           WHEN t.type = 'credit' THEN
             COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
           WHEN t.type = 'debit' THEN
