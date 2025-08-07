@@ -4,69 +4,156 @@
   <meta charset="UTF-8" />
   <title>Assign Student – BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
+      background: #f5f8fb;
+      margin: 0;
+      color: #333;
     }
 
     .container-small {
-      max-width: 500px;
-      background: white;
-      margin: 50px auto;
-      padding: 30px 40px;
+      max-width: 550px;
+      background: #fff;
+      margin: 40px auto;
+      padding: 24px 32px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    h3 {
+      font-size: 1.6rem;
+      color: #1a2b4a;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.95rem;
+      color: #1a2b4a;
+      margin-bottom: 8px;
+      font-weight: 500;
     }
 
     input, button {
-      padding: 10px;
-      margin-top: 8px;
+      padding: 12px 16px;
+      margin-top: 4px;
       width: 100%;
       box-sizing: border-box;
-      border: 1px solid #ccc;
+      border: 1px solid #d1d9e6;
       border-radius: 6px;
-      font-size: 1em;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #2f80ed;
     }
 
     button {
       background: #2f80ed;
-      color: white;
-      font-weight: bold;
+      color: #fff;
+      font-weight: 500;
+      border: none;
       cursor: pointer;
+      margin-top: 16px;
+      transition: background-color 0.2s ease;
     }
 
     button:hover {
       background: #1c6fd8;
     }
 
-    .status-message {
-      text-align: center;
-      margin-top: 20px;
-      font-weight: bold;
+    /* Navigation Dropdown */
+    .nav-dropdown {
+      position: relative;
+      display: inline-block;
     }
 
+    .dropbtn {
+      padding: 10px 16px;
+      text-decoration: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background: #fff;
+      min-width: 160px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1;
+    }
+
+    .dropdown-content a {
+      color: #333;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      font-size: 0.95rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content a:hover {
+      background-color: #f0f4f8;
+      color: #2f80ed;
+    }
+
+    .nav-dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    /* Suggestion Box */
     .suggestion-box {
-      border: 1px solid #ccc;
+      border: 1px solid #d1d9e6;
       border-radius: 6px;
       max-height: 200px;
       overflow-y: auto;
-      background: white;
-      margin-top: -10px;
-      margin-bottom: 15px;
+      background: #fff;
+      margin-top: -4px;
+      margin-bottom: 16px;
       position: relative;
       z-index: 10;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .suggestion-item {
-      padding: 10px;
+      padding: 12px 16px;
       cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.2s ease;
     }
 
     .suggestion-item:hover {
-      background-color: #f0f0f0;
+      background-color: #f5f8fb;
+    }
+
+    /* Status Message */
+    .status-message {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      text-align: center;
+      display: none;
+    }
+
+    .status-message.success {
+      background: #f0fdf4;
+      color: #2ecc71;
+      border: 1px solid #bbf7d0;
+      display: block;
+    }
+
+    .status-message.error {
+      background: #fef3f2;
+      color: #e63946;
+      border: 1px solid #f8c4c1;
+      display: block;
     }
   </style>
 </head>
@@ -84,8 +171,8 @@
       <div class="nav-dropdown">
         <a href="#" class="dropbtn" style="color: white;">Add</a>
         <div class="dropdown-content">
-          <a href="add-user.html">Add User</a>
-          <a href="assign-card.html">Assign Card</a>
+          <a href="add-user.html" id="addUserLink">Add User</a>
+          <a href="assign-card.html" id="assignCardLink">Assign Card</a>
           <a href="assign-student.html">Assign Student</a>
         </div>
       </div>
@@ -129,6 +216,14 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     console.log("✅ assign-student.js loaded!");
+
+    // Hide "Add User" and "Assign Card" links for viewer or support users
+    if (user?.type === "support" || user?.type === "viewer") {
+      const addUserLink = document.getElementById("addUserLink");
+      const assignCardLink = document.getElementById("assignCardLink");
+      if (addUserLink) addUserLink.style.display = "none";
+      if (assignCardLink) assignCardLink.style.display = "none";
+    }
 
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
@@ -203,7 +298,8 @@
     assignBtn.addEventListener("click", async () => {
       if (!selectedParent || !selectedStudent) {
         statusMessage.textContent = "Please select both a parent and a student.";
-        statusMessage.style.color = "red";
+        statusMessage.classList.remove("success");
+        statusMessage.classList.add("error");
         return;
       }
 
@@ -225,7 +321,8 @@
         if (!res.ok) throw new Error(result.message || "Failed to assign student.");
 
         statusMessage.textContent = result.message || "✅ Student assigned successfully!";
-        statusMessage.style.color = "green";
+        statusMessage.classList.remove("error");
+        statusMessage.classList.add("success");
 
         parentSearch.value = "";
         studentSearch.value = "";
@@ -239,8 +336,20 @@
           anotherBtn.textContent = "Assign Another Student";
           anotherBtn.style.marginTop = "12px";
           anotherBtn.style.width = "100%";
-          anotherBtn.style.padding = "10px";
-          anotherBtn.style.fontSize = "1rem";
+          anotherBtn.style.padding = "12px 16px";
+          anotherBtn.style.fontSize = "0.95rem";
+          anotherBtn.style.background = "#6b7280";
+          anotherBtn.style.border = "none";
+          anotherBtn.style.color = "#fff";
+          anotherBtn.style.borderRadius = "6px";
+          anotherBtn.style.cursor = "pointer";
+          anotherBtn.style.transition = "background-color 0.2s ease";
+          anotherBtn.addEventListener("mouseover", () => {
+            anotherBtn.style.background = "#4b5563";
+          });
+          anotherBtn.addEventListener("mouseout", () => {
+            anotherBtn.style.background = "#6b7280";
+          });
           statusMessage.insertAdjacentElement("afterend", anotherBtn);
 
           anotherBtn.addEventListener("click", () => {
@@ -249,6 +358,7 @@
             selectedParent = null;
             selectedStudent = null;
             statusMessage.textContent = "";
+            statusMessage.classList.remove("success", "error");
             anotherBtn.remove();
           });
         }
@@ -256,13 +366,15 @@
       } catch (err) {
         console.error("❌ Assignment failed:", err);
         statusMessage.textContent = err.message || "❌ Failed to assign student.";
-        statusMessage.style.color = "red";
+        statusMessage.classList.remove("success");
+        statusMessage.classList.add("error");
       }
     });
 
     document.querySelectorAll("input").forEach(el => {
       el.addEventListener("input", () => {
         statusMessage.textContent = "";
+        statusMessage.classList.remove("success", "error");
         const resetBtn = document.getElementById("assignAnotherBtn");
         if (resetBtn) resetBtn.remove();
       });
