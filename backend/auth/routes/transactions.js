@@ -223,11 +223,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       t.note,
       t.created_at,
       CASE
-        WHEN t.note = 'Received from Government Assistance' THEN 'Government Assistance'
-        WHEN t.type = 'credit' THEN COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
-        WHEN t.type = 'debit' THEN COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
-        ELSE 'Unknown'
-      END AS counterparty_name
+  WHEN t.note = 'Received from Government Assistance' THEN 'Government Assistance'
+  WHEN t.type = 'credit' THEN COALESCE(sender.first_name || ' ' || sender.last_name, 'Government Assistance')
+  WHEN t.type = 'debit' THEN COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
+  ELSE 'Unknown'
+END AS counterparty_name
     FROM transactions t
     LEFT JOIN users sender ON sender.id = t.added_by
     LEFT JOIN wallets w ON w.id = t.wallet_id
