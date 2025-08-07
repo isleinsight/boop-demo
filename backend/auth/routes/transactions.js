@@ -244,12 +244,14 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.sender_id,
         t.recipient_id,
         CASE
-          WHEN t.type = 'credit' THEN
-            COALESCE(senders.first_name || ' ' || COALESCE(senders.last_name, ''), 'Government Assistance')
-          WHEN t.type = 'debit' THEN
-            COALESCE(recipients.first_name || ' ' || COALESCE(recipients.last_name, ''), 'Unknown Recipient')
-          ELSE 'Unknown'
-        END AS counterparty_name
+  WHEN t.type = 'credit' AND t.sender_id IS NULL THEN 'Government Assistance'
+  WHEN t.type = 'credit' THEN
+    COALESCE(senders.first_name || ' ' || COALESCE(senders.last_name, ''), 'Unknown Sender')
+  WHEN t.type = 'debit' AND t.recipient_id IS NULL THEN 'Unknown Recipient'
+  WHEN t.type = 'debit' THEN
+    COALESCE(recipients.first_name || ' ' || COALESCE(recipients.last_name, ''), 'Unknown Recipient')
+  ELSE 'Unknown'
+END AS counterparty_name
       FROM transactions t
       LEFT JOIN users senders ON senders.id = t.sender_id
       LEFT JOIN users recipients ON recipients.id = t.recipient_id
