@@ -5,7 +5,7 @@
   <title>Dashboard - BOOP Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="../assets/styles.css" />
-   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <style>
     .loginContainer {
       max-width: 600px;
@@ -58,7 +58,7 @@
 </head>
 <body>
   
-   <!-- Top Nav -->
+  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -70,7 +70,7 @@
         <div class="nav-dropdown">
           <a href="#" class="dropbtn" style="color: white;">Add</a>
           <div class="dropdown-content">
-            <a href="add-user.html">Add User</a>
+            <a href="add-user.html" id="addUserLink">Add User</a>
             <a href="assign-card.html">Assign Card</a>
             <a href="assign-student.html">Assign Student</a>
           </div>
@@ -90,7 +90,7 @@
     <div class="dashboard-buttons-wrapper">
       <div class="dashboard-buttons">
         <a href="admin-actions.html">Admin Actions</a>
-        <a href="add-user.html">Add New User</a>
+        <a href="add-user.html" id="addUserButton">Add New User</a>
         <a href="assign-card.html">Assign Card</a>
         <a href="view-users.html">View Users</a>
       </div>
@@ -98,32 +98,40 @@
   </div>
 
   <!-- Auth Script -->
-<script>
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  const allowedTypes = ["super_admin", "admin", "support"];
+  <script>
+    const user = JSON.parse(localStorage.getItem("boopUser"));
+    const allowedTypes = ["super_admin", "admin", "support"];
 
-  const isAuthorized =
-    user &&
-    typeof user === "object" &&
-    user.role === "admin" &&
-    allowedTypes.includes(user.type);
+    const isAuthorized =
+      user &&
+      typeof user === "object" &&
+      user.role === "admin" &&
+      allowedTypes.includes(user.type);
 
-  if (!isAuthorized) {
-    window.location.href = "login.html"; // Redirect non-authorized users
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("admin.js has loaded!");
-
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        localStorage.removeItem("boopUser");
-        window.location.href = "login.html";
-      });
+    if (!isAuthorized) {
+      window.location.href = "login.html"; // Redirect non-authorized users
     }
-  });
-</script>
+
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("admin.js has loaded!");
+
+      // Hide "Add User" links for viewer or support users
+      if (user?.type === "support" || user?.type === "viewer") {
+        const addUserLink = document.getElementById("addUserLink");
+        const addUserButton = document.getElementById("addUserButton");
+        if (addUserLink) addUserLink.style.display = "none";
+        if (addUserButton) addUserButton.style.display = "none";
+      }
+
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          localStorage.removeItem("boopUser");
+          window.location.href = "login.html";
+        });
+      }
+    });
+  </script>
 </body>
 </html>
