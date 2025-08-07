@@ -219,9 +219,23 @@ if (pageTransactions.length === 0) {
       ? `$${(tx.amount_cents / 100).toFixed(2)}`
       : "-";
     const isCredit = tx.type === "credit";
-    const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type || "-";
-    const counterparty = tx.counterparty_name || "Unknown";
-    const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
+let direction = "-";
+let name = "-";
+
+if (isCredit) {
+  direction = "Received";
+  name = tx.counterparty_name === `${currentUserData.first_name} ${currentUserData.last_name}`
+    ? "From Government"
+    : `From ${tx.counterparty_name}`;
+} else if (tx.type === "debit") {
+  direction = "Sent";
+  name = tx.counterparty_name === `${currentUserData.first_name} ${currentUserData.last_name}`
+    ? "To Government"
+    : `To ${tx.counterparty_name}`;
+} else {
+  direction = tx.type || "-";
+  name = "Unknown";
+}
     const noteBtn = typeof tx.note === "string" && tx.note
       ? `<button class="btn-view-note" data-note="${tx.note.replace(/"/g, '&quot;')}">View</button>`
       : "-";
