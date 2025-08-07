@@ -4,91 +4,202 @@
   <meta charset="UTF-8" />
   <title>Admin Actions – BOOP Accounts</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
+      background: #f5f8fb;
+      margin: 0;
+      color: #333;
     }
 
     .container {
-      max-width: 1100px;
-      margin: 50px auto;
-      background: white;
-      padding: 30px 40px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      max-width: 1200px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 24px 32px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 24px;
+      color: #1a2b4a;
     }
 
-    th, td {
-      padding: 12px 14px;
-      border-bottom: 1px solid #ddd;
-      font-size: 0.95em;
+    /* Navigation Dropdown */
+    .nav-dropdown {
+      position: relative;
+      display: inline-block;
     }
 
-    th {
+    .dropbtn {
+      padding: 10px 16px;
+      text-decoration: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background: #fff;
+      min-width: 160px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1;
+    }
+
+    .dropdown-content a {
+      color: #333;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      font-size: 0.95rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content a:hover {
       background-color: #f0f4f8;
-      text-align: left;
+      color: #2f80ed;
     }
 
+    .nav-dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    /* Filters */
     .filters {
       display: flex;
       flex-wrap: wrap;
-      gap: 15px;
-      margin-bottom: 20px;
+      gap: 12px;
+      margin-bottom: 24px;
+      align-items: center;
     }
 
     .filters input,
     .filters select {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-family: inherit;
+      padding: 10px 14px;
+      border: 1px solid #d1d9e6;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background: #fff;
+      transition: border-color 0.2s ease;
     }
 
-    .pagination {
-      margin-top: 20px;
-      text-align: right;
+    .filters input:focus,
+    .filters select:focus {
+      outline: none;
+      border-color: #2f80ed;
     }
 
-    .pagination button {
-      background: #007bff;
-      color: white;
+    .filters button {
+      padding: 10px 20px;
+      background: #2f80ed;
+      color: #fff;
       border: none;
-      padding: 6px 12px;
-      margin-left: 5px;
+      border-radius: 6px;
+      font-size: 0.95rem;
       cursor: pointer;
-      border-radius: 4px;
+      transition: background-color 0.2s ease;
     }
 
-    .pagination button:disabled {
-      background: #ccc;
-      cursor: default;
+    .filters button:hover {
+      background: #1c6fd8;
     }
 
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f4f8;
+      color: #1a2b4a;
+      font-weight: 600;
+    }
+
+    tr {
+      transition: background-color 0.2s ease;
+    }
+
+    tr:nth-child(even) {
+      background: #fafbfc;
+    }
+
+    tr:hover {
+      background: #f5f8fb;
+    }
+
+    td {
+      border-bottom: 1px solid #e6ebf1;
+    }
+
+    /* Pagination */
     .pagination-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  margin-top: 30px;
-}
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+    }
 
-    .status-pending { color: orange; }
-    .status-completed { color: green; }
-    .status-error { color: red; }
+    .pagination-container button {
+      padding: 10px 20px;
+      background: #2f80ed;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
 
+    .pagination-container button:disabled {
+      background: #d1d9e6;
+      cursor: not-allowed;
+    }
+
+    .pagination-container button:hover:not(:disabled) {
+      background: #1c6fd8;
+    }
+
+    .pagination-container span {
+      font-size: 0.95rem;
+      color: #1a2b4a;
+    }
+
+    /* Status Colors */
+    .status-pending { color: #f4a261; font-weight: 500; }
+    .status-completed { color: #2ecc71; font-weight: 500; }
+    .status-error { color: #e63946; font-weight: 500; }
+
+    /* Status Message */
     .status-message {
       margin-top: 20px;
-      font-weight: bold;
-      color: red;
+      padding: 12px 16px;
+      background: #fef3f2;
+      color: #e63946;
+      border: 1px solid #f8c4c1;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    .status-message.show {
+      display: block;
     }
   </style>
 </head>
@@ -106,8 +217,8 @@
         <div class="nav-dropdown">
           <a href="#" class="dropbtn" style="color: white;">Add</a>
           <div class="dropdown-content">
-            <a href="add-user.html">Add User</a>
-            <a href="assign-card.html">Assign Card</a>
+            <a href="add-user.html" id="addUserLink">Add User</a>
+            <a href="assign-card.html" id="assignCardLink">Assign Card</a>
             <a href="assign-student.html">Assign Student</a>
           </div>
         </div>
@@ -151,10 +262,10 @@
   </table>
 
   <div class="pagination-container">
-  <button id="prevPage">Previous</button>
-  <span id="pageIndicator">Page 1</span>
-  <button id="nextPage">Next</button>
-</div>
+    <button id="prevPage">Previous</button>
+    <span id="pageIndicator">Page 1</span>
+    <button id="nextPage">Next</button>
+  </div>
 
   <div id="statusMessage" class="status-message"></div>
 </div>
@@ -217,14 +328,15 @@
 
       pageIndicator.textContent = `Page ${currentPage}`;
 
-      // ✅ Hide/show pagination buttons appropriately
       prevBtn.style.display = currentPage <= 1 ? "none" : "inline-block";
       nextBtn.style.display = currentPage * limit >= totalCount ? "none" : "inline-block";
 
+      statusMessage.classList.remove("show");
     } catch (err) {
       console.error("❌", err);
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Error loading data.</td></tr>`;
       statusMessage.textContent = err.message;
+      statusMessage.classList.add("show");
     }
   }
 
@@ -246,6 +358,14 @@
   });
 
   document.addEventListener("DOMContentLoaded", () => {
+    // Hide "Add User" and "Assign Card" links for viewer or support users
+    if (user?.type === "support" || user?.type === "viewer") {
+      const addUserLink = document.getElementById("addUserLink");
+      const assignCardLink = document.getElementById("assignCardLink");
+      if (addUserLink) addUserLink.style.display = "none";
+      if (assignCardLink) assignCardLink.style.display = "none";
+    }
+
     loadAdminActions();
 
     document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
