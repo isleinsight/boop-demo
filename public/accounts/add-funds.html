@@ -1,351 +1,271 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Add Funds – BOOP Accounts</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/styles.css" />
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
+const express = require('express');
+const router = express.Router();
+const pool = require('../../db');
+const { authenticateToken } = require('../middleware/authMiddleware');
+
+// 🔍 GET /api/transactions/recent
+router.get('/recent', authenticateToken, async (req, res) => {
+  const { role, type } = req.user;
+  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+  try {
+    const result = await pool.query(`
+      SELECT
+        t.id,
+        t.user_id,
+        t.wallet_id,
+        t.type,
+        t.amount_cents,
+        t.note,
+        t.created_at,
+        COALESCE(
+          v.business_name,
+          u.first_name || ' ' || u.last_name,
+          'System'
+        ) AS counterparty_name
+      FROM transactions t
+      LEFT JOIN vendors v ON v.id = t.vendor_id
+      LEFT JOIN users u ON u.id = t.added_by
+      ORDER BY t.created_at DESC
+      LIMIT 50
+    `);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('❌ Failed to load transactions:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve transactions.' });
+  }
+});
+
+// 👤 GET /api/transactions/mine
+router.get('/mine', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        wallet_id,
+        type,
+        amount_cents,
+        note,
+        created_at
+      FROM transactions
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT 50
+    `, [userId]);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('❌ Failed to load user transactions:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve your transactions.' });
+  }
+});
+
+// 📊 GET /api/transactions/report
+router.get('/report', authenticateToken, async (req, res) => {
+  const { role, type } = req.user;
+  const { start, end, type: filterType } = req.query;
+  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+  const values = [];
+  const conditions = [];
+  if (start) {
+    values.push(start);
+    conditions.push(`t.created_at >= $${values.length}`);
+  }
+  if (end) {
+    values.push(end);
+    conditions.push(`t.created_at <= $${values.length}`);
+  }
+  if (filterType) {
+    values.push(filterType);
+    conditions.push(`t.type = $${values.length}`);
+  }
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  try {
+    const result = await pool.query(`
+      SELECT
+        t.id,
+        t.user_id,
+        t.wallet_id,
+        t.type,
+        t.amount_cents,
+        t.note,
+        t.created_at,
+        COALESCE(
+          v.business_name,
+          u.first_name || ' ' || u.last_name,
+          'System'
+        ) AS counterparty_name
+      FROM transactions t
+      LEFT JOIN vendors v ON v.id = t.vendor_id
+      LEFT JOIN users u ON u.id = t.added_by
+      ${whereClause}
+      ORDER BY t.created_at DESC
+      LIMIT 200
+    `, values);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('❌ Error loading transaction report:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve report transactions.' });
+  }
+});
+
+// 💸 POST /api/transactions/add-funds
+router.post('/add-funds', authenticateToken, async (req, res) => {
+  const { role, type, id: adminId } = req.user;
+  const { wallet_id, user_id, amount, note, added_by } = req.body;
+
+  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Missing or invalid fields' });
+  }
+
+  if (added_by !== adminId) {
+    return res.status(403).json({ error: 'Invalid added_by: must match authenticated user' });
+  }
+
+  const transferAmount = parseFloat(amount);
+  const amount_cents = Math.round(transferAmount * 100);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // ✅ Get treasury wallet
+    const { rows: treasuryRows } = await client.query(
+      `SELECT * FROM wallets WHERE id = $1`,
+      [wallet_id]
+    );
+    if (!treasuryRows.length) throw new Error('Treasury wallet not found');
+    const treasuryWallet = treasuryRows[0];
+
+    // ✅ Ensure funds available
+    if (parseFloat(treasuryWallet.balance) < transferAmount) {
+      throw new Error('Insufficient funds in treasury wallet');
     }
-    .container-small {
-      max-width: 500px;
-      background: white;
-      margin: 50px auto;
-      padding: 30px 40px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+    // ✅ Get recipient wallet
+    const { rows: recipientRows } = await client.query(
+      `SELECT * FROM wallets WHERE user_id = $1`,
+      [user_id]
+    );
+    if (!recipientRows.length) throw new Error('Recipient wallet not found');
+    const recipientWallet = recipientRows[0];
+
+    // ✅ Validate user
+    const { rows: userRows } = await client.query(
+      `SELECT role FROM users WHERE id = $1`,
+      [user_id]
+    );
+    const userRole = userRows[0]?.role;
+    if (!userRole) throw new Error('User not found');
+
+    if (['student', 'assistance'].includes(userRole) && note?.toLowerCase().includes('transfer to bank')) {
+      throw new Error('This user type cannot receive bank transfers');
     }
-    .input-group {
-      margin-bottom: 20px;
-    }
-    input, select, textarea, button {
-      width: 100%;
-      padding: 10px;
-      font-size: calc(0.8vw + 0.4rem);
-      box-sizing: border-box;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #2f80ed;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      border: none;
-    }
-    button:hover {
-      background: #1c6fd8;
-    }
-    .status {
-      text-align: center;
-      margin-top: 20px;
-      color: #333;
-    }
-    #userSuggestions div {
-      padding: 8px 12px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-    }
-    #userSuggestions div:hover {
-      background-color: #f0f0f0;
-    }
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 6px;
-      text-align: center;
-    }
-    .modal-content button {
-      padding: 8px 16px;
-      margin: 5px;
-    }
-    #cancelModalBtn {
-      background: #e74c3c;
-    }
-    #cancelModalBtn:hover {
-      background: #c0392b;
-    }
-  </style>
-</head>
-<body>
-  <!-- Permissions check -->
-  <script>
-    (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        console.log("JWT Token:", token);
-        const res = await fetch("/api/me", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const meData = await res.json();
-        console.log("Response from /api/me:", res.status, meData);
-        if (!res.ok) {
-          throw new Error(`HTTP error ${res.status}`);
-        }
-        if (!meData || meData.role !== "admin" || !["accountant"].includes(meData.type)) {
-          throw new Error("Not authorized");
-        }
-        localStorage.setItem("boopUser", JSON.stringify(meData));
-      } catch (err) {
-        console.warn("🔒 Not authorized:", err);
-        localStorage.clear();
-        window.location.href = "login.html";
+
+    // ✅ Transfer funds
+    await client.query(`UPDATE wallets SET balance = balance - $1 WHERE id = $2`, [transferAmount, treasuryWallet.id]);
+    await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [transferAmount, recipientWallet.id]);
+
+    // ✅ Insert debit (admin action — audit logs will pick this up)
+    const debitNote = note ? `${note} [user_id:${user_id}]` : `Fund transfer to user ${user_id} [user_id:${user_id}]`;
+    console.log(`Debit transaction note: ${debitNote}`); // Debugging
+    await client.query(
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5)`,
+      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId]
+    );
+
+    // ✅ Insert credit (from Government — no added_by)
+    await client.query(
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by)
+       VALUES ($1, $2, 'credit', $3, 'Received from Government', NOW(), NULL)`,
+      [recipientWallet.id, user_id, amount_cents]
+    );
+
+    await client.query('COMMIT');
+    res.status(201).json({ success: true, message: 'Funds transferred successfully' });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('❌ Failed to add funds:', err.message);
+    res.status(500).json({ error: err.message || 'Server error while adding funds' });
+  } finally {
+    client.release();
+  }
+});
+
+// 📄 GET /api/transactions/user/:userId
+router.get('/user/:userId', authenticateToken, async (req, res) => {
+  const { role } = req.user;
+  const { userId } = req.params;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = parseInt(req.query.offset) || 0;
+
+  if (role !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT
+        t.id,
+        t.wallet_id,
+        t.type,
+        t.amount_cents,
+        t.note,
+        t.created_at,
+        CASE
+          WHEN t.note ILIKE '%Government Assistance%' OR t.note = 'Received from Government' THEN 'Government Assistance'
+          WHEN t.type = 'credit' THEN
+            COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
+          WHEN t.type = 'debit' AND t.note ILIKE '%[user_id:%]' THEN
+            COALESCE(
+              (SELECT u.first_name || ' ' || u.last_name
+               FROM users u
+               WHERE u.id::text = REGEXP_REPLACE(t.note, '.*\\[user_id:(\\d+)\\].*', '\\1')),
+              'Unknown Recipient'
+            )
+          WHEN t.type = 'debit' THEN
+            COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
+          ELSE 'Unknown'
+        END AS counterparty_name
+      FROM transactions t
+      LEFT JOIN users sender ON sender.id = t.added_by
+      LEFT JOIN wallets w ON w.id = t.wallet_id
+      LEFT JOIN users receiver ON w.user_id = receiver.id
+      WHERE t.user_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [userId, limit, offset]);
+
+    // Debugging: Log notes for debit transactions
+    result.rows.forEach(row => {
+      if (row.type === 'debit') {
+        console.log(`Debit transaction ID ${row.id} note: "${row.note}"`);
       }
-    })();
-  </script>
-
-  <!-- Top Nav -->
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      <div class="nav-right">
-        <a href="index.html">Dashboard</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Accounts</a>
-          <div class="dropdown-content">
-            <a href="add-funds.html">Add Funds</a>
-            <a href="transfer.html">Transfer</a>
-            <a href="reports.html">Reports</a>
-            <a href="add-user.html" id="addUserLink">Add User</a>
-            <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
-          </div>
-        </div>
-        <a href="view-users.html">View Users</a>
-        <a href="transactions.html">Transactions</a>
-        <a href="#" id="logoutBtn">Log Out</a>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Main Form -->
-  <div class="container-small">
-    <h3>Add Funds</h3>
-
-    <div class="input-group">
-      <label for="userSearch">Search User</label>
-      <input type="text" id="userSearch" placeholder="Type name or email..." autocomplete="off" />
-      <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
-    </div>
-    <div class="input-group">
-      <label for="amount">Amount</label>
-      <input type="number" id="amount" min="0.01" step="0.01" placeholder="Enter amount..." />
-    </div>
-    <div class="input-group">
-      <label for="note">Note</label>
-      <textarea id="note" rows="3" placeholder="Optional note..."></textarea>
-    </div>
-    <div class="input-group">
-      <label for="treasuryAccount">Source Treasury Account</label>
-      <select id="treasuryAccount" required>
-        <option value="" disabled selected>Select a treasury account</option>
-      </select>
-    </div>
-    <button id="addFundsBtn">Add Funds</button>
-    <div class="status" id="status"></div>
-  </div>
-
-  <!-- Confirmation Modal -->
-  <div id="modal" class="modal">
-    <div class="modal-content">
-      <p>Confirm transfer of $<span id="modalAmount"></span> from <span id="modalTreasury"></span> to user <span id="modalUser"></span>?</p>
-      <button id="confirmModalBtn">Confirm</button>
-      <button id="cancelModalBtn">Cancel</button>
-    </div>
-  </div>
-
-  <script type="module">
-    document.addEventListener("DOMContentLoaded", async () => {
-      const user = JSON.parse(localStorage.getItem("boopUser"));
-      const token = localStorage.getItem("boop_jwt");
-
-      const userSearch = document.getElementById("userSearch");
-      const suggestions = document.getElementById("userSuggestions");
-      const treasuryAccount = document.getElementById("treasuryAccount");
-      const amount = document.getElementById("amount");
-      const note = document.getElementById("note");
-      const addFundsBtn = document.getElementById("addFundsBtn");
-      const statusEl = document.getElementById("status");
-      const logoutBtn = document.getElementById("logoutBtn");
-      const manageTreasuryLink = document.getElementById("manageTreasuryLink");
-      const addUserLink = document.getElementById("addUserLink");
-
-      const modal = document.getElementById("modal");
-      const modalAmount = document.getElementById("modalAmount");
-      const modalTreasury = document.getElementById("modalTreasury");
-      const modalUser = document.getElementById("modalUser");
-      const confirmModalBtn = document.getElementById("confirmModalBtn");
-      const cancelModalBtn = document.getElementById("cancelModalBtn");
-
-      let selectedUser = null;
-
-      // Show/hide nav links based on user type
-      if (user?.type === "treasury") {
-        manageTreasuryLink.style.display = "block";
-        addUserLink.style.display = "none";
-      } else if (user?.type === "accountant") {
-        addUserLink.style.display = "block";
-      }
-
-      // 🚀 Load treasury wallet(s)
-      async function populateTreasuryAccounts() {
-        try {
-          if (user.type === "treasury") {
-            const res = await fetch('/api/treasury/wallet-id', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (!res.ok || !data.wallet_id) throw new Error(data.message || "Wallet not found");
-            treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
-            treasuryAccount.disabled = true;
-          } else if (user.type === "accountant") {
-            const res = await fetch('/api/treasury/treasury-wallets', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (!res.ok || !Array.isArray(data)) throw new Error("Failed to load treasury wallets");
-
-            treasuryAccount.innerHTML = `
-              <option value="" disabled selected>Select a treasury account</option>
-              ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
-            `;
-            treasuryAccount.disabled = false;
-          }
-        } catch (err) {
-          console.error("❌ Treasury account load error:", err);
-          statusEl.textContent = `❌ ${err.message}`;
-          statusEl.style.color = "red";
-          addFundsBtn.disabled = true;
-        }
-      }
-
-      await populateTreasuryAccounts();
-
-      // 👤 Search for user
-      userSearch.addEventListener("input", async () => {
-        const query = userSearch.value.trim();
-        if (query.length < 2) {
-          suggestions.style.display = "none";
-          return;
-        }
-
-        try {
-          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const users = await res.json();
-          suggestions.innerHTML = users.length
-            ? users.map(u => `
-                <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-                  ${u.first_name} ${u.last_name} (${u.email})
-                </div>`).join("")
-            : "<div>No results found</div>";
-          suggestions.style.display = "block";
-        } catch (err) {
-          console.error("❌ User search error:", err);
-          suggestions.innerHTML = "<div>Error loading suggestions</div>";
-          suggestions.style.display = "block";
-        }
-      });
-
-      // 👤 Select user from suggestion
-      suggestions.addEventListener("click", (e) => {
-        const item = e.target.closest(".user-suggestion");
-        if (!item) return;
-        selectedUser = {
-          id: item.dataset.id,
-          wallet_id: item.dataset.wallet,
-          name: item.textContent
-        };
-        userSearch.value = item.textContent;
-        suggestions.style.display = "none";
-      });
-
-      document.addEventListener("click", (e) => {
-        if (!suggestions.contains(e.target) && e.target !== userSearch) {
-          suggestions.style.display = "none";
-        }
-      });
-
-      // 💸 Add Funds flow
-      addFundsBtn.addEventListener("click", async () => {
-        if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value) || amount.value <= 0) {
-          statusEl.textContent = "❌ Please complete all required fields.";
-          statusEl.style.color = "red";
-          return;
-        }
-
-        modalAmount.textContent = parseFloat(amount.value).toFixed(2);
-        modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex]?.text || "Treasury";
-        modalUser.textContent = selectedUser.name;
-        modal.style.display = "flex";
-
-        try {
-          const confirmed = await new Promise((resolve, reject) => {
-            confirmModalBtn.onclick = () => { modal.style.display = "none"; resolve(true); };
-            cancelModalBtn.onclick = () => { modal.style.display = "none"; reject(new Error("Cancelled")); };
-          });
-
-          const res = await fetch("/api/transactions/add-funds", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              wallet_id: selectedUser.wallet_id,
-              user_id: selectedUser.id,
-              amount: parseFloat(amount.value),
-              note: note.value,
-              added_by: user.id,
-              treasury_wallet_id: treasuryAccount.value
-            })
-          });
-
-          const result = await res.json();
-          if (res.ok) {
-            statusEl.textContent = "✅ Funds transferred successfully!";
-            statusEl.style.color = "green";
-            userSearch.value = "";
-            amount.value = "";
-            note.value = "";
-            selectedUser = null;
-            treasuryAccount.selectedIndex = 0;
-          } else {
-            throw new Error(result.error || "Transfer failed.");
-          }
-        } catch (err) {
-          console.error("❌ Fund transfer error:", err);
-          statusEl.textContent = `❌ ${err.message}`;
-          statusEl.style.color = "red";
-        }
-      });
-
-      logoutBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try { await fetch("/api/logout", { method: "POST" }); } catch {}
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
-
-      console.log("✅ Add Funds script ready");
     });
-  </script>
-</body>
-</html>
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
+      [userId]
+    );
+
+    res.status(200).json({
+      transactions: result.rows,
+      totalCount: parseInt(countRes.rows[0].count, 10)
+    });
+  } catch (err) {
+    console.error('❌ Failed to load target user transactions:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve transactions.' });
+  }
+});
+
+module.exports = router;
