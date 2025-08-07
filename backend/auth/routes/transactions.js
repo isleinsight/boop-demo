@@ -190,8 +190,8 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
   `INSERT INTO transactions (
      wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
    )
-   VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, $4, $2)`,
-  [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id]
+   VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, $4, $5)`,
+  [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id, user_id]
 );
 
     await client.query('COMMIT');
