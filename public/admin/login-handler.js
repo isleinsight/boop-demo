@@ -22,6 +22,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     const { token, user } = data;
 
+    // 🔒 Allow only Admins with type = "accountant" OR "treasury"
+    if (user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
+      statusEl.style.color = 'red';
+      statusEl.textContent = "Access denied. This login is for authorized Admins only.";
+      return;
+    }
+
     // ✅ Save session data locally
     localStorage.setItem("admin_id", user.id);
     localStorage.setItem("boop_jwt", token);
@@ -43,7 +50,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` // 🔐 Crucial for middleware
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           email: user.email,
