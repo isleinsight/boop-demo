@@ -1,5 +1,3 @@
-// transactions.js
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../../db');
@@ -226,6 +224,14 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
           WHEN t.note ILIKE '%Government Assistance%' OR t.note = 'Received from Government' THEN 'Government Assistance'
           WHEN t.type = 'credit' THEN
             COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
+          WHEN t.type = 'debit' AND t.note ILIKE 'Fund transfer to user%' THEN
+            COALESCE(
+              (SELECT u.first_name || ' ' || u.last_name
+               FROM users u
+               WHERE u.id::text = REGEXP_REPLACE(t.note, '.*Fund transfer to user (\\d+).*', '\\1')
+               AND t.note ILIKE 'Fund transfer to user%'),
+              'Unknown Recipient'
+            )
           WHEN t.type = 'debit' THEN
             COALESCE(receiver.first_name || ' ' || receiver.last_name, 'Unknown Recipient')
           ELSE 'Unknown'
