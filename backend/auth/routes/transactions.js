@@ -212,23 +212,22 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         CASE
-          WHEN t.type = 'credit' THEN 'Government'
-          ELSE COALESCE(
-            v.business_name,
-            TRIM(u.first_name || ' ' || u.last_name),
-            'System'
-          )
+          WHEN t.type = 'credit' AND t.note ILIKE '%from government%' THEN 'Government'
+          WHEN t.type = 'credit' THEN COALESCE(u_sender.first_name || ' ' || u_sender.last_name, 'Sender')
+          WHEN t.type = 'debit' THEN COALESCE(u_receiver.first_name || ' ' || u_receiver.last_name, 'Recipient')
+          ELSE 'Unknown'
         END AS counterparty_name
       FROM transactions t
-      LEFT JOIN vendors v ON v.id = t.vendor_id
-      LEFT JOIN users u ON u.id = t.added_by
-      WHERE t.user_id = $1 AND t.type = 'credit'
+      LEFT JOIN users u_sender ON u_sender.id = t.added_by
+      LEFT JOIN wallets w ON w.id = t.wallet_id
+      LEFT JOIN users u_receiver ON w.user_id = u_receiver.id
+      WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
     const countRes = await pool.query(
-      `SELECT COUNT(*) FROM transactions WHERE user_id = $1 AND type = 'credit'`,
+      `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
       [userId]
     );
 
@@ -237,7 +236,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       totalCount: parseInt(countRes.rows[0].count, 10)
     });
   } catch (err) {
-    console.error('❌ Failed to load filtered transactions:', err.message);
+    console.error('❌ Failed to load user transactions:', err.message);
     res.status(500).json({ message: 'Failed to retrieve transactions.' });
   }
 });
