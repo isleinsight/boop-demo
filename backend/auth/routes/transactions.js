@@ -169,19 +169,23 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     await client.query(`UPDATE wallets SET balance = balance - $1 WHERE id = $2`, [transferAmount, treasuryWallet.id]);
     await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [transferAmount, recipientWallet.id]);
 
-    // ✅ Insert debit transaction (from Government -> user)
-    await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id)
-       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, NULL, $6)`,
-      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, note || `Fund transfer to user ${user_id}`, adminId, user_id]
-    );
+    // ✅ Insert debit transaction (treasury sends to recipient)
+await client.query(
+  `INSERT INTO transactions (
+     wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
+   )
+   VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, $6, $7)`,
+  [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId, treasuryWallet.user_id, user_id]
+);
 
-    // ✅ Insert credit transaction (to user from Government)
-    await client.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id)
-       VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, NULL, $4)`,
-      [recipientWallet.id, user_id, amount_cents, user_id]
-    );
+// ✅ Insert credit transaction (recipient receives from treasury)
+await client.query(
+  `INSERT INTO transactions (
+     wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
+   )
+   VALUES ($1, $2, 'credit', $3, 'Received from Government', NOW(), NULL, $4, $5)`,
+  [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id, user_id]
+);
 
     await client.query('COMMIT');
     res.status(201).json({ success: true, message: 'Funds transferred successfully' });
