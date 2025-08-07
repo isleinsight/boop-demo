@@ -43,9 +43,6 @@
           headers: { Authorization: `Bearer ${token}` }
         });
         const meData = await res.json();
-
-        if (!meData || meData.role !== "admin" || !["accountant", "treasury", "viewer"].includes(meData.type)) {
-          throw new Error("Not authorized");
         }
 
         // Store user data for link-hiding logic
