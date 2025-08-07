@@ -43,7 +43,8 @@
           headers: { Authorization: `Bearer ${token}` }
         });
         const meData = await res.json();
-        }
+      }
+    }
 
         // Store user data for link-hiding logic
         localStorage.setItem("boopUser", JSON.stringify(meData));
