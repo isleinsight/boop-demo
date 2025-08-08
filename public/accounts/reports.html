@@ -11,7 +11,6 @@
       font-family: 'Poppins', sans-serif;
       background: #f4f7fa;
     }
-
     .container {
       max-width: 1050px;
       margin: 50px auto;
@@ -20,7 +19,6 @@
       border-radius: 12px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     }
-
     .filters {
       display: flex;
       flex-wrap: wrap;
@@ -31,7 +29,6 @@
       flex: 1;
       min-width: 180px;
     }
-
     input, select, button {
       width: 100%;
       padding: 10px;
@@ -40,7 +37,6 @@
       border: 1px solid #ccc;
       box-sizing: border-box;
     }
-
     button {
       background-color: #2f80ed;
       color: white;
@@ -52,12 +48,10 @@
     button:hover {
       background-color: #1c6fd8;
     }
-
     .export-btn {
       float: right;
       margin-bottom: 14px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -81,54 +75,45 @@
     tr:hover {
       background: #f5f8fb;
     }
-
+    /* -------- Pagination, like View Users page -------- */
     .pagination {
       display: flex;
-      justify-content: center;
+      justify-content: flex-end;
       align-items: center;
-      gap: 13px;
+      gap: 10px;
       margin: 22px 0 10px 0;
     }
     .pagination button {
-      background: #fff;
-      color: #2f80ed;
-      border: 1.5px solid #2f80ed;
-      padding: 7px 18px;
-      border-radius: 7px;
-      font-size: 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background .15s, color .15s, border .15s;
-      outline: none;
-    }
-    .pagination button:hover:not(:disabled) {
-      background: #2f80ed;
+      padding: 7px 16px;
+      background: #6b7280;
       color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: background 0.2s;
+      min-width: 80px;
+      box-shadow: none;
     }
     .pagination button:disabled {
-      background: #f0f0f0;
+      background: #e5e7eb;
       color: #bbb;
-      border-color: #eee;
       cursor: not-allowed;
     }
     #paginationInfo {
-      font-weight: 500;
-      color: #222;
+      font-size: 0.96rem;
+      color: #4b5563;
       background: transparent;
-      padding: 7px 16px;
-      border-radius: 7px;
-      border: none;
-      font-size: 1rem;
-      letter-spacing: 0.04em;
+      font-weight: 500;
+      padding: 0 6px;
     }
-
     .status {
       text-align: center;
       margin-top: 22px;
       font-weight: 500;
       color: #e74c3c;
     }
-
     @media (max-width: 900px) {
       .container {
         padding: 16px 2vw;
@@ -143,6 +128,7 @@
       th, td { padding: 7px 7px; }
       .filters { flex-direction: column; gap: 10px; }
       .export-btn { float: none; width: 100%; }
+      .pagination { justify-content: center; }
     }
   </style>
 </head>
@@ -251,14 +237,12 @@
       let page = 1;
       let limit = 25;
 
-      // --- Pagination Controls ---
       function updatePagination() {
         const totalPages = Math.max(1, Math.ceil(totalCount / limit));
         paginationInfo.textContent = `Page ${page} of ${totalPages}`;
         prevPageBtn.disabled = page === 1;
         nextPageBtn.disabled = page === totalPages || totalPages === 0;
       }
-
       prevPageBtn.onclick = () => { if (page > 1) { page--; fetchTransactions(); } };
       nextPageBtn.onclick = () => {
         const totalPages = Math.ceil(totalCount / limit);
