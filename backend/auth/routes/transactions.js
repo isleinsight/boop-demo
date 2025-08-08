@@ -182,76 +182,97 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 });
 
-// 💰 POST /api/transactions/add-funds  (treasury/accountant action)
-// Body: { wallet_id, user_id, amount, note, added_by, treasury_wallet_id }
-router.post('/add-funds', authenticateToken, async (req, res) => {
-  const { role, type } = req.user;
-  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    return res.status(403).json({ message: 'You do not have permission to add funds.' });
-  }
+// 💰 POST /api/transactions/add-funds
+router.post("/add-funds", authMiddleware, async (req, res) => {
+  const client = await db.connect();
 
-  const client = await pool.connect();
   try {
+    const { role, type, id: adminId } = req.user;
+
+    // Only accountants or treasury admins can do this
+    if (role !== "admin" || !["accountant", "treasury"].includes(type)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const { wallet_id, user_id, amount, note, added_by, treasury_wallet_id } = req.body;
 
+    if (!treasury_wallet_id || !wallet_id || !user_id || !amount) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
+
+    console.log("📥 Incoming Add Funds Request:");
+    console.log("Treasury Wallet ID:", treasury_wallet_id);
+    console.log("Recipient Wallet ID:", wallet_id);
+    console.log("Recipient User ID:", user_id);
+    console.log("Amount:", amount);
+    console.log("Note:", note);
+    console.log("Added By (Admin ID):", added_by || adminId);
+
     const amount_cents = Math.round(parseFloat(amount) * 100);
-    const debitNote  = note || 'Funds issued';
-    const creditNote = 'Received from Government Assistance';
+    const debitNote = note || "Funds issued";
+    const creditNote = "Received from Government Assistance";
 
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
-    // Who owns the treasury wallet? (we’ll mark them as sender)
-    const treas = await client.query(
+    // 🔎 Get treasury wallet owner (they are the sender)
+    const treasuryResult = await client.query(
       `SELECT user_id FROM wallets WHERE id = $1`,
       [treasury_wallet_id]
     );
-    if (treas.rowCount === 0) throw new Error('Treasury wallet not found');
 
-    const treasuryUserId = treas.rows[0].user_id;
+    if (treasuryResult.rowCount === 0) {
+      throw new Error("Treasury wallet not found");
+    }
 
-    // 1) Debit from Treasury wallet
+    const treasuryUserId = treasuryResult.rows[0].user_id;
+    console.log("🧾 Treasury wallet owned by user:", treasuryUserId);
+
+    // 💸 Debit from treasury
     await client.query(
       `INSERT INTO transactions (
-         wallet_id, user_id, type, amount_cents, note, created_at,
-         added_by, sender_id, receiver_id
-       )
-       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, $6, $7)`,
+        wallet_id, user_id, type, amount_cents, note, created_at,
+        added_by, sender_id, recipient_id
+      )
+      VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, $6, $7)`,
       [
-        treasury_wallet_id,           // wallet_id (treasury)
-        treasuryUserId,               // user_id   (owner of treasury wallet)
+        treasury_wallet_id,           // wallet being debited
+        treasuryUserId,               // owner of treasury wallet
         amount_cents,
         debitNote,
-        added_by || req.user.id,      // record which admin did it
-        treasuryUserId,               // sender = treasury user
-        user_id                       // receiver = target user
+        added_by || adminId,          // admin who performed this
+        treasuryUserId,               // sender = treasury owner
+        user_id                        // recipient = target user
       ]
     );
+    console.log("✅ Treasury debit transaction inserted");
 
-    // 2) Credit to Recipient's wallet
+    // 💰 Credit to user
     await client.query(
       `INSERT INTO transactions (
-         wallet_id, user_id, type, amount_cents, note, created_at,
-         added_by, sender_id, receiver_id
-       )
-       VALUES ($1, $2, 'credit', $3, $4, NOW(), $5, $6, $7)`,
+        wallet_id, user_id, type, amount_cents, note, created_at,
+        added_by, sender_id, recipient_id
+      )
+      VALUES ($1, $2, 'credit', $3, $4, NOW(), $5, $6, $7)`,
       [
-        wallet_id,                    // wallet_id (recipient)
-        user_id,                      // user_id   (recipient)
+        wallet_id,                     // wallet being credited
+        user_id,                        // recipient user
         amount_cents,
         creditNote,
-        added_by || req.user.id,
-        treasuryUserId,               // sender = treasury user (again, for clarity)
-        user_id                       // receiver = recipient user
+        added_by || adminId,
+        treasuryUserId,                 // sender = treasury owner
+        user_id                          // recipient = target user
       ]
     );
+    console.log("✅ Recipient credit transaction inserted");
 
-    await client.query('COMMIT');
-    return res.status(200).json({ message: 'Funds added successfully' });
+    await client.query("COMMIT");
+
+    res.status(200).json({ message: "Funds added successfully" });
 
   } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('❌ Add Funds Error:', err);
-    return res.status(500).json({ error: err.message });
+    await client.query("ROLLBACK");
+    console.error("❌ Add Funds Error:", err.message);
+    res.status(500).json({ error: err.message });
   } finally {
     client.release();
   }
