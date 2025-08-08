@@ -1,3 +1,7 @@
+console.log("🧭 treasury.js loaded");
+router.get('/ping', (req, res) => res.json({ ok: true }));
+
+
 const path = require('path');
 const dotenvPath = path.resolve(__dirname, '../.env');
 console.log('Attempting to load .env from:', dotenvPath);
