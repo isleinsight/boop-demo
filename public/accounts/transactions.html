@@ -95,7 +95,43 @@
       font-weight: 500;
     }
 
-  
+  .pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 10px 0;
+}
+
+.pagination button {
+  width: auto !important;     /* ← keep buttons compact */
+  min-width: 80px;
+  padding: 7px 16px;
+  background: #6b7280;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.2s;
+  box-shadow: none;
+}
+
+.pagination button:disabled {
+  background: #e5e7eb;
+  color: #bbb;
+  cursor: not-allowed;
+}
+
+#paginationInfo {
+  font-size: 0.96rem;
+  color: #4b5563;
+  font-weight: 500;
+  padding: 0 6px;
+  background: none;
+  display: inline-block;
+}
 
     /* Modal */
     .modal {
@@ -183,6 +219,12 @@
       </tbody>
     </table>
   </div>
+
+  <div class="pagination">
+  <button id="prevPageBtn">Previous</button>
+  <span id="paginationInfo">Page 1 of 1</span>
+  <button id="nextPageBtn">Next</button>
+</div>
 
   <!-- Note Modal -->
   <div id="noteModal" class="modal">
