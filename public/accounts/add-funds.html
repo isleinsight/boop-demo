@@ -7,79 +7,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-    }
-    .container-small {
-      max-width: 500px;
-      background: white;
-      margin: 50px auto;
-      padding: 30px 40px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .input-group {
-      margin-bottom: 20px;
-    }
-    input, select, textarea, button {
-      width: 100%;
-      padding: 10px;
-      font-size: calc(0.8vw + 0.4rem);
-      box-sizing: border-box;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #2f80ed;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      border: none;
-    }
-    button:hover {
-      background: #1c6fd8;
-    }
-    .status {
-      text-align: center;
-      margin-top: 20px;
-      color: #333;
-    }
-    #userSuggestions div {
-      padding: 8px 12px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-    }
-    #userSuggestions div:hover {
-      background-color: #f0f0f0;
-    }
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 6px;
-      text-align: center;
-    }
-    .modal-content button {
-      padding: 8px 16px;
-      margin: 5px;
-    }
-    #cancelModalBtn {
-      background: #e74c3c;
-    }
-    #cancelModalBtn:hover {
-      background: #c0392b;
-    }
+    body { font-family: 'Poppins', sans-serif; background: #f4f7fa; }
+    .container-small { max-width: 500px; background: #fff; margin: 50px auto; padding: 30px 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .input-group { margin-bottom: 20px; }
+    input, select, textarea, button { width: 100%; padding: 10px; font-size: calc(0.8vw + 0.4rem); box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; }
+    button { background: #2f80ed; color: white; font-weight: bold; cursor: pointer; border: none; }
+    button:hover { background: #1c6fd8; }
+    .status { text-align: center; margin-top: 20px; color: #333; }
+    #userSuggestions div { padding: 8px 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+    #userSuggestions div:hover { background-color: #f0f0f0; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 20px; border-radius: 6px; text-align: center; }
+    .modal-content button { padding: 8px 16px; margin: 5px; }
+    #cancelModalBtn { background: #e74c3c; } #cancelModalBtn:hover { background: #c0392b; }
   </style>
 </head>
 <body>
@@ -88,16 +28,11 @@
     (async () => {
       try {
         const token = localStorage.getItem("boop_jwt");
-        console.log("JWT Token:", token);
-        const res = await fetch("/api/me", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
         const meData = await res.json();
-        console.log("Response from /api/me:", res.status, meData);
-        if (!res.ok) {
-          throw new Error(`HTTP error ${res.status}`);
-        }
-        if (!meData || meData.role !== "admin" || !["accountant"].includes(meData.type)) {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // ✅ allow accountant OR treasury
+        if (!meData || meData.role !== "admin" || !["accountant", "treasury"].includes(meData.type)) {
           throw new Error("Not authorized");
         }
         localStorage.setItem("boopUser", JSON.stringify(meData));
@@ -124,7 +59,7 @@
             <a href="transfer.html">Transfer</a>
             <a href="reports.html">Reports</a>
             <a href="add-user.html" id="addUserLink">Add User</a>
-            <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
+            <a href="manage-treasury.html" id="manageTreasuryLink" style="display:none;">Manage Treasury</a>
           </div>
         </div>
         <a href="view-users.html">View Users</a>
@@ -139,24 +74,28 @@
     <h3>Add Funds</h3>
 
     <div class="input-group">
-      <label for="userSearch">Search User</label>
+      <label for="userSearch">Search Assistance User</label>
       <input type="text" id="userSearch" placeholder="Type name or email..." autocomplete="off" />
-      <div id="userSuggestions" style="border: 1px solid #ccc; display: none;"></div>
+      <div id="userSuggestions" style="border:1px solid #ccc; display:none;"></div>
     </div>
+
     <div class="input-group">
       <label for="amount">Amount</label>
       <input type="number" id="amount" min="0.01" step="0.01" placeholder="Enter amount..." />
     </div>
+
     <div class="input-group">
       <label for="note">Note</label>
       <textarea id="note" rows="3" placeholder="Optional note..."></textarea>
     </div>
+
     <div class="input-group">
       <label for="treasuryAccount">Source Treasury Account</label>
       <select id="treasuryAccount" required>
         <option value="" disabled selected>Select a treasury account</option>
       </select>
     </div>
+
     <button id="addFundsBtn">Add Funds</button>
     <div class="status" id="status"></div>
   </div>
@@ -207,20 +146,15 @@
       async function populateTreasuryAccounts() {
         try {
           if (user.type === "treasury") {
-            const res = await fetch('/api/treasury/wallet-id', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await fetch('/api/treasury/wallet-id', { headers: { Authorization: `Bearer ${token}` }});
             const data = await res.json();
             if (!res.ok || !data.wallet_id) throw new Error(data.message || "Wallet not found");
             treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
             treasuryAccount.disabled = true;
           } else if (user.type === "accountant") {
-            const res = await fetch('/api/treasury/treasury-wallets', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await fetch('/api/treasury/treasury-wallets', { headers: { Authorization: `Bearer ${token}` }});
             const data = await res.json();
             if (!res.ok || !Array.isArray(data)) throw new Error("Failed to load treasury wallets");
-
             treasuryAccount.innerHTML = `
               <option value="" disabled selected>Select a treasury account</option>
               ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
@@ -234,27 +168,24 @@
           addFundsBtn.disabled = true;
         }
       }
-
       await populateTreasuryAccounts();
 
-      // 👤 Search for user
+      // 👤 Search for assistance user (must have wallet)
       userSearch.addEventListener("input", async () => {
         const query = userSearch.value.trim();
-        if (query.length < 2) {
-          suggestions.style.display = "none";
-          return;
-        }
+        if (query.length < 2) { suggestions.style.display = "none"; return; }
 
         try {
           const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const users = await res.json();
-          suggestions.innerHTML = users.length
+          suggestions.innerHTML = (Array.isArray(users) && users.length)
             ? users.map(u => `
                 <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
                   ${u.first_name} ${u.last_name} (${u.email})
-                </div>`).join("")
+                </div>
+              `).join("")
             : "<div>No results found</div>";
           suggestions.style.display = "block";
         } catch (err) {
@@ -264,7 +195,7 @@
         }
       });
 
-      // 👤 Select user from suggestion
+      // 👆 Pick a user
       suggestions.addEventListener("click", (e) => {
         const item = e.target.closest(".user-suggestion");
         if (!item) return;
@@ -277,6 +208,7 @@
         suggestions.style.display = "none";
       });
 
+      // Hide suggestions on outside click
       document.addEventListener("click", (e) => {
         if (!suggestions.contains(e.target) && e.target !== userSearch) {
           suggestions.style.display = "none";
@@ -285,13 +217,26 @@
 
       // 💸 Add Funds flow
       addFundsBtn.addEventListener("click", async () => {
-        if (!selectedUser?.wallet_id || !amount.value || isNaN(amount.value) || amount.value <= 0) {
-          statusEl.textContent = "❌ Please complete all required fields.";
+        // Basic validation
+        if (!selectedUser?.wallet_id) {
+          statusEl.textContent = "❌ Please select a user from the list.";
+          statusEl.style.color = "red";
+          return;
+        }
+        if (!treasuryAccount.value) {
+          statusEl.textContent = "❌ Please select the source treasury account.";
+          statusEl.style.color = "red";
+          return;
+        }
+        const amt = parseFloat(amount.value);
+        if (!amt || isNaN(amt) || amt <= 0) {
+          statusEl.textContent = "❌ Please enter a valid amount.";
           statusEl.style.color = "red";
           return;
         }
 
-        modalAmount.textContent = parseFloat(amount.value).toFixed(2);
+        // Confirm modal
+        modalAmount.textContent = amt.toFixed(2);
         modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex]?.text || "Treasury";
         modalUser.textContent = selectedUser.name;
         modal.style.display = "flex";
@@ -302,6 +247,9 @@
             cancelModalBtn.onclick = () => { modal.style.display = "none"; reject(new Error("Cancelled")); };
           });
 
+          if (!confirmed) return;
+
+          // ✅ IMPORTANT: send BOTH recipient wallet & treasury wallet
           const res = await fetch("/api/transactions/add-funds", {
             method: "POST",
             headers: {
@@ -309,12 +257,13 @@
               Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({
-  wallet_id: treasuryAccount.value,         // treasury wallet used
-  user_id: selectedUser.id,                 // recipient user ID
-  amount: parseFloat(amount.value),         // actual amount (number)
-  note: note.value,                         // optional
-  added_by: user.id                         // current admin ID
-})
+              wallet_id: selectedUser.wallet_id,     // recipient wallet (credit)
+              user_id: selectedUser.id,              // recipient user
+              amount: amt,
+              note: note.value,
+              added_by: user.id,                     // admin performing action
+              treasury_wallet_id: treasuryAccount.value // SOURCE treasury wallet (debit)
+            })
           });
 
           const result = await res.json();
@@ -325,17 +274,23 @@
             amount.value = "";
             note.value = "";
             selectedUser = null;
-            treasuryAccount.selectedIndex = 0;
+            if (!treasuryAccount.disabled) treasuryAccount.selectedIndex = 0;
           } else {
             throw new Error(result.error || "Transfer failed.");
           }
         } catch (err) {
-          console.error("❌ Fund transfer error:", err);
-          statusEl.textContent = `❌ ${err.message}`;
-          statusEl.style.color = "red";
+          if (err.message !== "Cancelled") {
+            console.error("❌ Fund transfer error:", err);
+            statusEl.textContent = `❌ ${err.message}`;
+            statusEl.style.color = "red";
+          } else {
+            statusEl.textContent = "⚠️ Transfer cancelled.";
+            statusEl.style.color = "#555";
+          }
         }
       });
 
+      // Logout
       logoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         try { await fetch("/api/logout", { method: "POST" }); } catch {}
