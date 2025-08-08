@@ -113,44 +113,90 @@ router.get('/report', authenticateToken, async (req, res) => {
 });
 
 
-// 📄 POST /api/transactions/add-funds
-router.post('/add-funds', authenticateToken, async (req, res) => {
+const express = require("express");
+const router = express.Router();
+const db = require("../../db");
+const { authMiddleware } = require("../../middleware/auth");
+
+router.post("/add-funds", authMiddleware, async (req, res) => {
+  const client = await db.connect();
   try {
-    const { recipientUserId, amountCents, note } = req.body;
-    const ADMIN_ID = req.user.id; // The admin doing it
-    const GOV_ID = '00000000-0000-0000-0000-000000000000';
+    const { wallet_id, user_id, amount, note, added_by, treasury_wallet_id } = req.body;
 
-    console.log('💸 Add Funds Request:', { recipientUserId, amountCents, note, ADMIN_ID });
+    console.log("📥 Incoming Add Funds Request:");
+    console.log("Recipient Wallet ID:", wallet_id);
+    console.log("Recipient User ID:", user_id);
+    console.log("Amount:", amount);
+    console.log("Note:", note);
+    console.log("Added By (Admin ID):", added_by);
+    console.log("Treasury Wallet ID:", treasury_wallet_id);
 
-    // Get recipient wallet
-    const walletRes = await pool.query('SELECT id FROM wallets WHERE user_id = $1', [recipientUserId]);
-    if (walletRes.rowCount === 0) {
-      console.error('❌ No wallet found for recipient');
-      return res.status(400).json({ message: 'No wallet found for recipient' });
+    const amount_cents = Math.round(parseFloat(amount) * 100);
+    const debitNote = note || "Funds issued";
+
+    await client.query("BEGIN");
+
+    // 🔎 Get treasury wallet owner
+    const treasuryResult = await client.query(
+      `SELECT user_id FROM wallets WHERE id = $1`,
+      [treasury_wallet_id]
+    );
+
+    if (treasuryResult.rowCount === 0) {
+      throw new Error("Treasury wallet not found");
     }
-    const walletId = walletRes.rows[0].id;
 
-    // Insert credit transaction
-    const result = await pool.query(`
-      INSERT INTO transactions (
-        user_id, wallet_id, type, amount_cents, currency,
-        note, added_by, sender_id, recipient_id
+    const treasuryUserId = treasuryResult.rows[0].user_id;
+    console.log("🧾 Treasury wallet owned by user:", treasuryUserId);
+
+    // 💸 Debit from treasury
+    await client.query(
+      `INSERT INTO transactions (
+        wallet_id, user_id, type, amount_cents, note, created_at,
+        added_by, sender_id, recipient_id
       )
-      VALUES ($1, $2, 'credit', $3, 'BMD', $4, $5, $6, $7)
-      RETURNING *
-    `, [
-      recipientUserId, walletId, amountCents, note || 'Received from Government Assistance',
-      ADMIN_ID, GOV_ID, recipientUserId
-    ]);
+      VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, $6, $7)`,
+      [
+        treasury_wallet_id,
+        treasuryUserId,
+        amount_cents,
+        debitNote,
+        added_by,
+        treasuryUserId,
+        user_id
+      ]
+    );
+    console.log("✅ Treasury debit transaction inserted");
 
-    console.log('✅ Credit transaction inserted:', result.rows[0]);
-    res.status(200).json({ message: 'Funds added', transaction: result.rows[0] });
+    // 💰 Credit to user
+    await client.query(
+      `INSERT INTO transactions (
+        wallet_id, user_id, type, amount_cents, note, created_at,
+        added_by, sender_id, recipient_id
+      )
+      VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, NULL, $2)`,
+      [
+        wallet_id,
+        user_id,
+        amount_cents
+      ]
+    );
+    console.log("✅ Recipient credit transaction inserted");
+
+    await client.query("COMMIT");
+
+    res.status(200).json({ message: "Funds added successfully" });
 
   } catch (err) {
-    console.error('🔥 Error in add-funds:', err.message);
-    res.status(500).json({ message: 'Server error' });
+    await client.query("ROLLBACK");
+    console.error("❌ Add Funds Error:", err.message);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
+
+module.exports = router;
 
 // 📄 GET /api/transactions/user/:userId
 router.get('/user/:userId', authenticateToken, async (req, res) => {
@@ -164,47 +210,43 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 
   try {
-    console.log(`🔍 Fetching transactions for user ${userId} with limit ${limit} and offset ${offset}`);
-
     const result = await pool.query(`
       SELECT
         t.id,
+        t.wallet_id,
         t.type,
         t.amount_cents,
-        t.currency,
         t.note,
         t.created_at,
         t.sender_id,
         t.recipient_id,
-        t.user_id,
-        t.wallet_id,
 
-        -- FROM name logic
+        -- 🧠 Get sender name, fallback to 'Government Assistance'
         CASE
-          WHEN t.sender_id = '00000000-0000-0000-0000-000000000000' THEN 'Government Assistance'
-          ELSE CONCAT_WS(' ', senders.first_name, senders.last_name)
-        END AS from_user_name,
+          WHEN senders.id IS NOT NULL THEN
+            senders.first_name || ' ' || COALESCE(senders.last_name, '')
+          ELSE 'Government Assistance'
+        END AS sender_name,
 
-        -- TO name logic
+        -- 🧠 Get recipient name, fallback to 'Unknown'
         CASE
-          WHEN t.recipient_id = '00000000-0000-0000-0000-000000000000' THEN 'Government Assistance'
-          ELSE CONCAT_WS(' ', recipients.first_name, recipients.last_name)
-        END AS to_user_name
+          WHEN recipients.id IS NOT NULL THEN
+            recipients.first_name || ' ' || COALESCE(recipients.last_name, '')
+          ELSE 'Unknown Recipient'
+        END AS recipient_name
 
       FROM transactions t
-      LEFT JOIN users senders ON t.sender_id = senders.id
-      LEFT JOIN users recipients ON t.recipient_id = recipients.id
-
+      LEFT JOIN users senders ON senders.id = t.sender_id
+      LEFT JOIN users recipients ON recipients.id = t.recipient_id
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    console.log(`✅ Loaded ${result.rowCount} transactions`);
+    console.log(`📦 Fetching transactions for user ${userId} - Found ${result.rows.length} transactions`);
 
-    // Log each transaction row
-    result.rows.forEach(tx => {
-      console.log(`🔁 TX: ${tx.id} | FROM: ${tx.from_user_name} | TO: ${tx.to_user_name} | $${(tx.amount_cents / 100).toFixed(2)} ${tx.currency}`);
+    result.rows.forEach(row => {
+      console.log(`🔁 TX ${row.id}: FROM ${row.sender_name} TO ${row.recipient_name} | $${(row.amount_cents / 100).toFixed(2)}`);
     });
 
     const countRes = await pool.query(
@@ -218,7 +260,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
     });
 
   } catch (err) {
-    console.error('🔥 Failed to load transactions:', err.message);
+    console.error('❌ Failed to load target user transactions:', err.message);
     res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
   }
 });
