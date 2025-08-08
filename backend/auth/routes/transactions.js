@@ -99,13 +99,12 @@ router.get('/report', authenticateToken, async (req, res) => {
     const { rows } = await pool.query(`
       SELECT
         t.id,
-        t.user_id,
-        t.wallet_id,
         t.type,
         t.amount_cents,
         t.note,
         t.created_at,
-        ${NAME_FIELDS_SQL}
+        COALESCE(s.first_name || ' ' || s.last_name, 'System') AS sender_name,
+        COALESCE(r.first_name || ' ' || r.last_name, 'Unknown') AS recipient_name
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
