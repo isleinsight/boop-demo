@@ -112,16 +112,17 @@ router.get('/report', authenticateToken, async (req, res) => {
   }
 });
 
+
 // 💸 POST /api/transactions/add-funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
-  const { recipient_wallet_id, user_id, amount, note, added_by, treasury_wallet_id } = req.body;
+  const { wallet_id, user_id, amount, note, added_by } = req.body;
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ error: 'You do not have permission to perform this action.' });
   }
 
-  if (!recipient_wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0 || !treasury_wallet_id) {
+  if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Please provide all required fields with valid values.' });
   }
 
@@ -138,10 +139,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     await client.query('BEGIN');
 
     // ✅ Get treasury wallet
-    const { rows: treasuryRows } = await client.query(
-      `SELECT * FROM wallets WHERE id = $1`,
-      [treasury_wallet_id]
-    );
+    const { rows: treasuryRows } = await client.query(`SELECT * FROM wallets WHERE id = $1`, [wallet_id]);
     if (!treasuryRows.length) throw new Error('Treasury wallet not found');
     const treasuryWallet = treasuryRows[0];
 
@@ -151,10 +149,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     }
 
     // ✅ Get recipient wallet
-    const { rows: recipientRows } = await client.query(
-      `SELECT * FROM wallets WHERE id = $1 AND user_id = $2`,
-      [recipient_wallet_id, user_id]
-    );
+    const { rows: recipientRows } = await client.query(`SELECT * FROM wallets WHERE user_id = $1`, [user_id]);
     if (!recipientRows.length) throw new Error('Recipient wallet not found');
     const recipientWallet = recipientRows[0];
 
@@ -164,7 +159,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       [user_id]
     );
     const userRole = userRows[0]?.role;
-    const recipientName = userRows[0]?.first_name ? `${userRows[0].first_name} ${userRows[0].last_name || ''}`.trim() : 'Unknown';
     if (!userRole) throw new Error('Recipient user not found');
 
     if (['student', 'assistance'].includes(userRole) && note?.toLowerCase().includes('transfer to bank')) {
@@ -175,24 +169,23 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     await client.query(`UPDATE wallets SET balance = balance - $1 WHERE id = $2`, [transferAmount, treasuryWallet.id]);
     await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [transferAmount, recipientWallet.id]);
 
-    // ✅ Insert debit transaction (treasury sends to recipient)
-    const debitNote = note ? `${note} [user_id:${user_id}]` : `Government Assistance to user ${user_id} [user_id:${user_id}]`;
-    console.log(`Debit transaction note: ${debitNote}, sender_id: NULL (Government Assistance), recipient_id: ${user_id} (${recipientName})`);
+    // ✅ Insert debit transaction
+    const debitNote = note ? `${note} [user_id:${user_id}]` : `Fund transfer to user ${user_id} [user_id:${user_id}]`;
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
        )
-       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, NULL, $6)`,
-      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId, user_id]
+       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, $6, $7)`,
+      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId, treasuryWallet.user_id, user_id]
     );
 
-    // ✅ Insert credit transaction (recipient receives from Government Assistance)
+    // ✅ Insert credit transaction
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
        )
-       VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, NULL, $4)`,
-      [recipientWallet.id, user_id, amount_cents, user_id]
+       VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, $4, $2)`,
+      [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id]
     );
 
     await client.query('COMMIT');
@@ -212,9 +205,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       userErrorMessage = 'The recipient user could not be found.';
     } else if (err.message === 'This user type cannot receive bank transfers') {
       userErrorMessage = 'This user type is not eligible for bank transfers.';
-    } else if (err instanceof ReferenceError) {
-      userErrorMessage = 'An internal configuration error occurred. Please contact support.';
-      console.error('ReferenceError details:', err.stack);
     }
     res.status(500).json({ error: userErrorMessage });
   } finally {
@@ -245,41 +235,19 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.sender_id,
         t.recipient_id,
         CASE
-          WHEN t.type = 'credit' AND t.sender_id IS NULL THEN 'Government Assistance'
           WHEN t.type = 'credit' THEN
-            COALESCE(
-              (SELECT u.first_name || ' ' || COALESCE(u.last_name, '') 
-               FROM users u WHERE u.id = t.sender_id),
-              'Unknown Sender'
-            )
+            COALESCE(senders.first_name || ' ' || senders.last_name, 'Government Assistance')
           WHEN t.type = 'debit' THEN
-            COALESCE(
-              (SELECT u.first_name || ' ' || COALESCE(u.last_name, '') 
-               FROM users u WHERE u.id = t.recipient_id),
-              'Unknown Recipient'
-            )
+            COALESCE(recipients.first_name || ' ' || recipients.last_name, 'Unknown Recipient')
           ELSE 'Unknown'
         END AS counterparty_name
       FROM transactions t
+      LEFT JOIN users senders ON senders.id = t.sender_id
+      LEFT JOIN users recipients ON recipients.id = t.recipient_id
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
-
-    // Debugging: Log sender_id, recipient_id, and counterparty_name with names
-    for (const row of result.rows) {
-      const senderName = row.sender_id 
-        ? (await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.sender_id])).rows[0]?.first_name 
-          ? `${(await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.sender_id])).rows[0].first_name} ${(await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.sender_id])).rows[0].last_name || ''}`.trim() 
-          : 'Unknown'
-        : 'Government Assistance';
-      const recipientName = row.recipient_id 
-        ? (await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.recipient_id])).rows[0]?.first_name 
-          ? `${(await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.recipient_id])).rows[0].first_name} ${(await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.recipient_id])).rows[0].last_name || ''}`.trim() 
-          : 'Unknown'
-        : 'None';
-      console.log(`Transaction ID ${row.id}, type: ${row.type}, sender_id: ${row.sender_id} (${senderName}), recipient_id: ${row.recipient_id} (${recipientName}), counterparty_name: ${row.counterparty_name}`);
-    }
 
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
@@ -291,7 +259,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       totalCount: parseInt(countRes.rows[0].count, 10)
     });
   } catch (err) {
-    console.error('❌ Failed to load target user transactions:', err.message);
+    console.error('❌ Failed to load user transactions:', err.message);
     res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
   }
 });
