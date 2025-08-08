@@ -153,9 +153,11 @@
       <thead>
         <tr>
           <th>Date</th>
-          <th>User</th>
+          <th>Transaction ID</th>
           <th>Type</th>
           <th>Amount</th>
+          <th>Sender</th>
+          <th>Recipient</th>
           <th>Note</th>
         </tr>
       </thead>
@@ -207,12 +209,13 @@
         transactions.forEach(tx => {
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td>${new Date(tx.created_at).toLocaleString()}</td>
-            <td>${tx.user_name || tx.performed_by || "—"}</td>
-            <td>${tx.type}</td>
-            <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
-            <td>${tx.note || ""}</td>
-          `;
+  <td>${tx.id}</td>
+  <td>${tx.type}</td>
+  <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
+  <td>${tx.sender_name || "—"}</td>
+  <td>${tx.recipient_name || "—"}</td>
+  <td>${tx.note || ""}</td>
+`;
           tableBody.appendChild(row);
         });
       } catch (err) {
@@ -225,14 +228,15 @@
     function exportCSV() {
       if (!transactions.length) return;
 
-      const headers = ["Date", "User", "Type", "Amount", "Note"];
-      const rows = transactions.map(tx => [
-        new Date(tx.created_at).toISOString(),
-        tx.user_name || tx.performed_by || "",
-        tx.type,
-        (tx.amount_cents / 100).toFixed(2),
-        tx.note?.replace(/,/g, "") || ""
-      ]);
+      const headers = ["Transaction ID", "Type", "Amount", "Sender", "Recipient", "Note"];
+const rows = transactions.map(tx => [
+  tx.id,
+  tx.type,
+  (tx.amount_cents / 100).toFixed(2),
+  tx.sender_name || "",
+  tx.recipient_name || "",
+  tx.note?.replace(/,/g, "") || ""
+]);
 
       const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
       const blob = new Blob([csvContent], { type: "text/csv" });
