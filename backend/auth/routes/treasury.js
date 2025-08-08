@@ -1,5 +1,8 @@
-console.log("🧭 treasury.js loaded");
-router.get('/ping', (req, res) => res.json({ ok: true }));
+// backend/auth/routes/treasury.js
+const express = require('express');
+const router = express.Router();
+const pool = require('../../db');
+const { authenticateToken } = require('../middleware/authMiddleware'); // ✅ use this name
 
 
 const path = require('path');
