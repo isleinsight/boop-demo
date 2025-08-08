@@ -210,6 +210,14 @@
     const noteContent = document.getElementById("noteContent");
     const modalClose = modal.querySelector(".close");
 
+    // Show/hide nav links based on user type
+      if (user?.type === "treasury") {
+        manageTreasuryLink.style.display = "block";
+        addUserLink.style.display = "none";
+      } else if (user?.type === "accountant") {
+        addUserLink.style.display = "block";
+      }
+
     // Permissions: keep this page for admin accountant/treasury monitors
     if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
       window.location.href = "../login.html";
