@@ -80,7 +80,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
 // 📊 GET /api/transactions/report
 router.get('/report', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
-  const { start, end, type: filterType } = req.query;
+  const { start, end, type: filterType, limit = 25, offset = 0 } = req.query;
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ message: 'You do not have permission to view these transactions.' });
@@ -96,6 +96,19 @@ router.get('/report', authenticateToken, async (req, res) => {
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
+    // Get total count for pagination
+    const countResult = await pool.query(`
+      SELECT COUNT(*) FROM transactions t
+      LEFT JOIN users s ON s.id = t.sender_id
+      LEFT JOIN users r ON r.id = t.recipient_id
+      ${whereClause}
+    `, values);
+    const totalCount = parseInt(countResult.rows[0].count, 10);
+
+    // Add limit/offset to values
+    values.push(parseInt(limit, 10));
+    values.push(parseInt(offset, 10));
+
     const { rows } = await pool.query(`
       SELECT
         t.id,
@@ -110,10 +123,15 @@ router.get('/report', authenticateToken, async (req, res) => {
       LEFT JOIN users r ON r.id = t.recipient_id
       ${whereClause}
       ORDER BY t.created_at DESC
-      LIMIT 200
+      LIMIT $${values.length - 1} OFFSET $${values.length}
     `, values);
 
-    return res.status(200).json(rows);
+    return res.status(200).json({
+      transactions: rows,
+      totalCount,
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10)
+    });
   } catch (err) {
     console.error('❌ Error loading transaction report:', err);
     return res.status(500).json({ message: 'An error occurred while retrieving report transactions.' });
