@@ -1,9 +1,9 @@
-// routes/transactions.js
+// backend/auth/routes/transactions.js
 const express = require('express');
 const router = express.Router();
+const pool = require('../../db');
+const { authenticateToken } = require('../middleware/authMiddleware'); // ✅
 
-const pool = require('../../db'); // <-- your pg Pool
-const { authenticateToken } = require('../middleware/authMiddleware'); // <-- your auth
 
 // Helper fragment used in multiple queries to resolve names
 const NAME_FIELDS_SQL = `
