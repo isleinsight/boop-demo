@@ -76,32 +76,42 @@
       background: #f5f8fb;
     }
     .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      margin-top: 20px;
-    }
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 10px 0;
+}
 
-    .pagination button {
-      padding: 8px 16px;
-      background: #6b7280;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: background-color 0.2s ease;
-    }
+.pagination button {
+  width: auto !important;     /* ← keep buttons compact */
+  min-width: 80px;
+  padding: 7px 16px;
+  background: #6b7280;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.2s;
+  box-shadow: none;
+}
 
-    .pagination button:hover {
-      background: #4b5563;
-    }
+.pagination button:disabled {
+  background: #e5e7eb;
+  color: #bbb;
+  cursor: not-allowed;
+}
 
-    #paginationInfo {
-      font-size: 0.9rem;
-      color: #4b5563;
-    }
+#paginationInfo {
+  font-size: 0.96rem;
+  color: #4b5563;
+  font-weight: 500;
+  padding: 0 6px;
+  background: none;
+  display: inline-block;
+}
     .status {
       text-align: center;
       margin-top: 22px;
@@ -195,12 +205,13 @@
       <tbody></tbody>
     </table>
 
-    <!-- Pagination -->
-      <div class="pagination">
-        <button id="prevBtn">Previous</button>
-        <span id="paginationInfo">Page 1</span>
-        <button id="nextBtn">Next</button>
-      </div>
+    <div class="pagination">
+      <button id="prevPageBtn">Previous</button>
+      <span id="paginationInfo">Page 1 of 1</span>
+      <button id="nextPageBtn">Next</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
 
   <script type="module">
     document.addEventListener("DOMContentLoaded", () => {
