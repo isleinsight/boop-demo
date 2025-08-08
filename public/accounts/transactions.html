@@ -10,37 +10,89 @@
     body {
       font-family: 'Poppins', sans-serif;
       background-color: #f5f7fa;
+      margin: 0;
     }
 
     .container {
       max-width: 1000px;
       margin: 40px auto;
-      background: white;
+      background: #fff;
       padding: 30px;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
+    .notice {
+      margin: 0 0 14px 0;
+      padding: 10px 12px;
+      background: #f7fafd;
+      border: 1px solid #e6ebf1;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #1a2b4a;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+    .notice a { color: #2f80ed; text-decoration: none; }
+    .notice a:hover { text-decoration: underline; }
+
+    .chips {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .chip {
+      border: 1px solid #d1d9e6;
+      background: #fff;
+      border-radius: 14px;
+      padding: 4px 10px;
+      font-size: 0.85rem;
+      color: #1a2b4a;
+    }
+    .chip-btn {
+      border: 1px solid #2f80ed;
+      color: #2f80ed;
+      background: #fff;
+      border-radius: 14px;
+      padding: 5px 12px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .chip-btn:hover { background: #2f80ed; color: #fff; }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-top: 12px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
     }
-
     th, td {
       padding: 12px 16px;
       text-align: left;
       border-bottom: 1px solid #eee;
+      font-size: 0.95rem;
+      white-space: nowrap;
     }
-
     th {
-      background-color: #f0f0f0;
-      font-weight: bold;
+      background-color: #f7fafd;
+      font-weight: 600;
+      color: #1a2b4a;
+      letter-spacing: .02em;
     }
+    tr:hover { background: #f5f8fb; }
 
     .status {
-      color: red;
+      color: #c0392b;
       text-align: center;
+      padding: 16px;
+      font-weight: 500;
     }
 
     .nav-right a.active {
@@ -48,7 +100,7 @@
       color: #2f80ed;
     }
 
-    /* 🔲 Modal Styles */
+    /* Modal */
     .modal {
       display: none;
       position: fixed;
@@ -57,26 +109,25 @@
       width: 100%; height: 100%;
       background-color: rgba(0, 0, 0, 0.4);
     }
-
     .modal-content {
       background-color: #fff;
-      margin: 15% auto;
+      margin: 10% auto;
       padding: 20px;
       border: 1px solid #888;
-      width: 80%;
-      max-width: 500px;
-      border-radius: 8px;
+      width: 90%;
+      max-width: 520px;
+      border-radius: 10px;
       position: relative;
     }
-
     .close {
       position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 28px;
-      font-weight: bold;
+      top: 10px; right: 15px;
+      font-size: 28px; font-weight: bold;
       cursor: pointer;
     }
+
+    /* Make only pagination/notice buttons compact even if global styles set buttons to 100% elsewhere */
+    .chip-btn, .chip { width: auto; }
   </style>
 </head>
 <body>
@@ -99,7 +150,7 @@
           </div>
         </div>
         <a href="view-users.html">View Users</a>
-        <a href="transactions.html">Transactions</a>
+        <a class="active" href="transactions.html">Transactions</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
     </div>
@@ -107,14 +158,25 @@
 
   <!-- Main Content -->
   <div class="container">
-    <h2>Recent Transactions</h2>
+    <h2 style="margin-top:0;">Recent Transactions</h2>
+
+    <!-- Live feed notice -->
+    <div class="notice">
+      Showing the latest <span id="limitLabel" class="chip">100</span> transactions (system-wide).
+      For full history and exports, see <a href="reports.html">Reports</a>.
+      <div class="chips">
+        <span id="lastUpdated" class="chip">Last updated: —</span>
+        <button id="toggleLive" class="chip-btn">Pause Live</button>
+      </div>
+    </div>
+
     <table id="transactionsTable">
       <thead>
         <tr>
-          <th>User</th>
-          <th>Email</th>
           <th>Type</th>
-          <th>Amount (BMD)</th>
+          <th>Amount</th>
+          <th>From</th>
+          <th>To</th>
           <th>Time</th>
           <th>Note</th>
         </tr>
@@ -125,88 +187,163 @@
     </table>
   </div>
 
-  <!-- 🧾 Modal for Viewing Note -->
+  <!-- Note Modal -->
   <div id="noteModal" class="modal">
     <div class="modal-content">
       <span class="close">&times;</span>
-      <h3>Transaction Note</h3>
-      <p id="noteContent" style="white-space: pre-wrap; color: #333;"></p>
+      <h3 style="margin:0 0 10px;">Transaction Note</h3>
+      <p id="noteContent" style="white-space: pre-wrap; color: #333; margin:0;"></p>
     </div>
   </div>
 
   <script type="module">
+    const LIMIT = 100; // what we show in the banner + fetch query
+    const REFRESH_MS = 15000; // 15s feels live without hammering server
+
     const user = JSON.parse(localStorage.getItem("boopUser"));
     const token = localStorage.getItem("boop_jwt");
     const tbody = document.getElementById("transactionsBody");
     const logoutBtn = document.getElementById("logoutBtn");
+
+    const limitLabel = document.getElementById("limitLabel");
+    const lastUpdated = document.getElementById("lastUpdated");
+    const toggleLive = document.getElementById("toggleLive");
+
     const modal = document.getElementById("noteModal");
     const noteContent = document.getElementById("noteContent");
     const modalClose = modal.querySelector(".close");
 
-    if (!user || user.role !== "admin" || !["accountant", "treasury", "viewer"].includes(user.type)) {
+    // Permissions: keep this page for admin accountant/treasury monitors
+    if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
       window.location.href = "../login.html";
+    }
+
+    limitLabel.textContent = LIMIT.toString();
+
+    let live = true;
+    let intervalId = null;
+
+    function setLastUpdated() {
+      lastUpdated.textContent = "Last updated: " + new Date().toLocaleTimeString();
+    }
+
+    function startLive() {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        if (live && document.visibilityState === "visible") {
+          loadTransactions();
+        }
+      }, REFRESH_MS);
+    }
+
+    function formatAmount(cents) {
+      if (typeof cents !== "number") return "0.00";
+      return "$" + (cents / 100).toFixed(2);
+    }
+
+    function safeName(userObj) {
+      if (!userObj) return null;
+      const first = userObj.first_name || "";
+      const last = userObj.last_name || "";
+      const name = (first + " " + last).trim();
+      return name || null;
+    }
+
+    // Map whatever the backend sends into From/To columns.
+    function resolveParties(tx) {
+      // Preferred: explicit sender/recipient names
+      const sender = tx.sender_name || tx.from_name || tx.counterparty_from || null;
+      const recipient = tx.recipient_name || tx.to_name || tx.counterparty_to || null;
+
+      // Fallbacks: if your API sometimes returns user_name/email for one side
+      const userSide = tx.user_name || tx.userEmail || tx.user_email || null;
+
+      return {
+        from: sender || (tx.type === 'debit' ? (userSide || '—') : (tx.counterparty_name || '—')),
+        to: recipient || (tx.type === 'credit' ? (userSide || '—') : '—')
+      };
     }
 
     async function loadTransactions() {
       try {
-        const res = await fetch("/api/transactions/recent", {
+        const res = await fetch(`/api/transactions/recent?limit=${LIMIT}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const data = await res.json();
+
+        // API may return array or {transactions:[...]}
+        const payload = await res.json();
+        const data = Array.isArray(payload) ? payload : (payload.transactions || []);
 
         if (!res.ok || !Array.isArray(data)) {
-          throw new Error(data.message || "Failed to load transactions.");
+          throw new Error(payload.message || "Failed to load transactions.");
         }
 
         if (data.length === 0) {
           tbody.innerHTML = `<tr><td colspan="6" class="status">No transactions found.</td></tr>`;
+          setLastUpdated();
           return;
         }
 
-        tbody.innerHTML = data.map(tx => `
-          <tr>
-            <td>${tx.user_name || 'N/A'}</td>
-            <td>${tx.user_email || 'N/A'}</td>
-            <td>${tx.type || '-'}</td>
-            <td>${(tx.amount_cents / 100).toFixed(2)}</td>
-            <td>${new Date(tx.created_at).toLocaleString()}</td>
-            <td><button onclick="showNoteModal(\`${tx.note || 'No note'}\`)">View</button></td>
-          </tr>
-        `).join("");
+        const rows = data.map(tx => {
+          const parties = resolveParties(tx);
+          const noteText = tx.note || 'No note';
+          const created = tx.created_at ? new Date(tx.created_at).toLocaleString() : "—";
+          return `
+            <tr>
+              <td>${tx.type || '—'}</td>
+              <td>${formatAmount(tx.amount_cents)}</td>
+              <td>${parties.from || '—'}</td>
+              <td>${parties.to || '—'}</td>
+              <td>${created}</td>
+              <td><button class="chip-btn" onclick="showNoteModal(\`${(noteText + '').replace(/`/g, '\\`')}\`)">View</button></td>
+            </tr>
+          `;
+        }).join("");
+
+        tbody.innerHTML = rows;
+        setLastUpdated();
       } catch (err) {
+        console.error("❌ Recent transactions error:", err);
         tbody.innerHTML = `<tr><td colspan="6" class="status">❌ ${err.message}</td></tr>`;
       }
     }
 
-    // 🔍 View note modal
+    // Expose for inline onclick
     window.showNoteModal = function(note) {
-      noteContent.textContent = note;
+      noteContent.textContent = note || "No note";
       modal.style.display = "block";
     };
 
-    modalClose.onclick = () => modal.style.display = "none";
-    window.onclick = e => {
-      if (e.target === modal) modal.style.display = "none";
-    };
+    modalClose.onclick = () => (modal.style.display = "none");
+    window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 
-    // 🔁 On page load
-    document.addEventListener("DOMContentLoaded", () => {
-      loadTransactions();
-      setInterval(loadTransactions, 60000); // auto-refresh
-
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", async (e) => {
-          e.preventDefault();
-          try {
-            await fetch("/api/logout", { method: "POST" });
-          } catch (err) {
-            console.warn("Logout API error:", err);
-          }
-          localStorage.clear();
-          window.location.href = "login.html";
-        });
+    // Live toggle
+    toggleLive.addEventListener("click", () => {
+      live = !live;
+      toggleLive.textContent = live ? "Pause Live" : "Resume Live";
+      if (live) {
+        loadTransactions();
       }
     });
+
+    // Init
+    document.addEventListener("visibilitychange", () => {
+      // Refresh when tab becomes visible again
+      if (document.visibilityState === "visible" && live) loadTransactions();
+    });
+
+    loadTransactions();
+    startLive();
+
+    // Logout
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try { await fetch("/api/logout", { method: "POST" }); } catch {}
+        localStorage.clear();
+        window.location.href = "login.html";
+      });
+    }
   </script>
 </body>
 </html>
