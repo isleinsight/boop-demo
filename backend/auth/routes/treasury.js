@@ -13,23 +13,30 @@ const pool = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const logAdminAction = require('../middleware/log-admin-action');
 
-// GET /api/treasury/wallet-id — Fetch treasury admin's wallet ID
+// GET /api/treasury/wallet-id — for a TREASURY admin: return *their* treasury wallet
 router.get('/wallet-id', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
+  const { role, type, id: userId } = req.user;
+  if (role !== 'admin' || type !== 'treasury') {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+
   try {
-    const result = await pool.query(
-      'SELECT id FROM wallets WHERE user_id = $1',
-[userId]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Wallet not found for this user.' });
-    }
-    res.json({ wallet_id: result.rows[0].id });
+    const q = `
+      SELECT id, COALESCE(name,'Treasury Wallet') AS name
+      FROM wallets
+      WHERE user_id = $1 AND (is_treasury = true OR name ILIKE 'treasury%')
+      ORDER BY created_at ASC
+      LIMIT 1
+    `;
+    const { rows } = await pool.query(q, [userId]);
+    if (!rows.length) return res.status(404).json({ message: 'No treasury wallet for this user.' });
+    res.json({ wallet_id: rows[0].id, name: rows[0].name });
   } catch (err) {
-    console.error('❌ Error fetching wallet ID:', err.message);
+    console.error('❌ Error fetching wallet ID:', err);
     res.status(500).json({ message: 'Failed to retrieve wallet ID' });
   }
 });
+
 
 // GET treasury balance for current user
 router.get('/balance', authenticateToken, async (req, res) => {
@@ -114,29 +121,6 @@ router.get('/recent', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/treasury/treasury-wallets — Fetch HSBC and Butterfield wallets from .env
-router.get('/treasury-wallets', authenticateToken, async (req, res) => {
-  const { role, type } = req.user;
 
-  console.log("🧠 Auth user:", req.user);
-  console.log("💵 HSBC:", process.env.TREASURY_WALLET_ID_HSBC);
-  console.log("💵 BUTTERFIELD:", process.env.TREASURY_WALLET_ID_BUTTERFIELD);
-
-  try {
-    const treasuryWallets = [
-      { id: process.env.TREASURY_WALLET_ID_HSBC, name: 'HSBC Treasury' },
-      { id: process.env.TREASURY_WALLET_ID_BUTTERFIELD, name: 'Butterfield Treasury' }
-    ].filter(w => w.id);
-
-    if (treasuryWallets.length === 0) {
-      throw new Error('No treasury wallets configured');
-    }
-
-    return res.status(200).json(treasuryWallets);
-  } catch (err) {
-    console.error('❌ Error fetching treasury wallets:', err.message);
-    return res.status(500).json({ error: 'Failed to fetch treasury wallets' });
-  }
-});
 
 module.exports = router;
