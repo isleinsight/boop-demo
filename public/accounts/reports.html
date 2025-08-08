@@ -91,101 +91,138 @@
   </div>
 
   <script type="module">
-    document.addEventListener("DOMContentLoaded", () => {
-      const user = JSON.parse(localStorage.getItem("boopUser"));
-      const manageLink = document.getElementById("manageTreasuryLink");
-      if (user?.type === "treasury") { manageLink.style.display = "block"; }
+document.addEventListener("DOMContentLoaded", () => {
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  const manageLink = document.getElementById("manageTreasuryLink");
+  if (user?.type === "treasury") { manageLink.style.display = "block"; }
 
-      if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
-        window.location.href = "login.html";
-        return;
-      }
+  if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
+    window.location.href = "login.html";
+    return;
+  }
 
-      const startDate = document.getElementById("startDate");
-      const endDate = document.getElementById("endDate");
-      const typeFilter = document.getElementById("typeFilter");
-      const filterBtn = document.getElementById("filterBtn");
-      const exportBtn = document.getElementById("exportBtn");
-      const tableBody = document.querySelector("#reportTable tbody");
-      const statusEl = document.getElementById("status");
+  const startDate = document.getElementById("startDate");
+  const endDate = document.getElementById("endDate");
+  const typeFilter = document.getElementById("typeFilter");
+  const filterBtn = document.getElementById("filterBtn");
+  const exportBtn = document.getElementById("exportBtn");
+  const tableBody = document.querySelector("#reportTable tbody");
+  const statusEl = document.getElementById("status");
 
-      let transactions = [];
+  // --- PAGINATION STATE ---
+  let transactions = [];
+  let totalCount = 0;
+  let page = 1;
+  let limit = 25; // You can change this to whatever page size you like
 
-      async function fetchTransactions() {
-        let query = [];
-        if (startDate.value) query.push(`start=${startDate.value}`);
-        if (endDate.value) query.push(`end=${endDate.value}`);
-        if (typeFilter.value) query.push(`type=${typeFilter.value}`);
-        const queryStr = query.length ? `?${query.join("&")}` : "";
+  // --- Pagination Controls ---
+  function renderPagination() {
+    const totalPages = Math.ceil(totalCount / limit);
+    let html = "";
 
-        try {
-          const res = await fetch(`/api/transactions/report${queryStr}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("boop_jwt")}` }
-          });
-          transactions = await res.json();
+    html += `<button id="prevPageBtn" ${page === 1 ? "disabled" : ""}>Previous</button>`;
+    html += `<span style="margin: 0 8px;">Page ${page} of ${totalPages || 1}</span>`;
+    html += `<button id="nextPageBtn" ${page === totalPages || totalPages === 0 ? "disabled" : ""}>Next</button>`;
 
-          tableBody.innerHTML = "";
-          if (!transactions.length) {
-            tableBody.innerHTML = `<tr><td colspan="7">No records found.</td></tr>`;
-            return;
-          }
+    let paginationDiv = document.getElementById("pagination");
+    if (!paginationDiv) {
+      paginationDiv = document.createElement("div");
+      paginationDiv.id = "pagination";
+      paginationDiv.style.marginTop = "16px";
+      paginationDiv.style.textAlign = "center";
+      document.querySelector(".container").appendChild(paginationDiv);
+    }
+    paginationDiv.innerHTML = html;
 
-          transactions.forEach(tx => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
-              <td>${tx.id}</td>
-              <td>${tx.type}</td>
-              <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
-              <td>${tx.sender_name || "—"}</td>
-              <td>${tx.recipient_name || "—"}</td>
-              <td>${tx.note || ""}</td>
-            `;
-            tableBody.appendChild(row);
-          });
-        } catch (err) {
-          console.error("❌ Fetch failed:", err);
-          statusEl.textContent = "Failed to load transactions.";
-          statusEl.style.color = "red";
-        }
-      }
+    // Attach handlers
+    document.getElementById("prevPageBtn").onclick = () => {
+      if (page > 1) { page--; fetchTransactions(); }
+    };
+    document.getElementById("nextPageBtn").onclick = () => {
+      if (page < Math.ceil(totalCount / limit)) { page++; fetchTransactions(); }
+    };
+  }
 
-      function exportCSV() {
-        if (!transactions.length) return;
+  async function fetchTransactions() {
+    let query = [];
+    if (startDate.value) query.push(`start=${startDate.value}`);
+    if (endDate.value) query.push(`end=${endDate.value}`);
+    if (typeFilter.value) query.push(`type=${typeFilter.value}`);
+    query.push(`limit=${limit}`);
+    query.push(`offset=${(page - 1) * limit}`);
+    const queryStr = query.length ? `?${query.join("&")}` : "";
 
-        const headers = ["Date", "Transaction ID", "Type", "Amount", "Sender", "Recipient", "Note"];
-        const rows = transactions.map(tx => [
-          tx.created_at ? new Date(tx.created_at).toISOString() : "",
-          tx.id,
-          tx.type,
-          (tx.amount_cents / 100).toFixed(2),
-          tx.sender_name || "",
-          tx.recipient_name || "",
-          tx.note?.replace(/,/g, "") || ""
-        ]);
-        const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "boop-transactions.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-
-      filterBtn.addEventListener("click", fetchTransactions);
-      exportBtn.addEventListener("click", exportCSV);
-
-      document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try { await fetch("/api/logout", { method: "POST" }); } catch {}
-        localStorage.clear();
-        window.location.href = "login.html";
+    try {
+      const res = await fetch(`/api/transactions/report${queryStr}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("boop_jwt")}` }
       });
+      const data = await res.json();
+      transactions = data.transactions || [];
+      totalCount = data.totalCount || 0;
 
-      fetchTransactions();
-    });
-  </script>
+      tableBody.innerHTML = "";
+      if (!transactions.length) {
+        tableBody.innerHTML = `<tr><td colspan="7">No records found.</td></tr>`;
+      } else {
+        transactions.forEach(tx => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
+            <td>${tx.id}</td>
+            <td>${tx.type}</td>
+            <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
+            <td>${tx.sender_name || "—"}</td>
+            <td>${tx.recipient_name || "—"}</td>
+            <td>${tx.note || ""}</td>
+          `;
+          tableBody.appendChild(row);
+        });
+      }
+
+      renderPagination();
+    } catch (err) {
+      console.error("❌ Fetch failed:", err);
+      statusEl.textContent = "Failed to load transactions.";
+      statusEl.style.color = "red";
+    }
+  }
+
+  function exportCSV() {
+    if (!transactions.length) return;
+
+    const headers = ["Date", "Transaction ID", "Type", "Amount", "Sender", "Recipient", "Note"];
+    const rows = transactions.map(tx => [
+      tx.created_at ? new Date(tx.created_at).toISOString() : "",
+      tx.id,
+      tx.type,
+      (tx.amount_cents / 100).toFixed(2),
+      tx.sender_name || "",
+      tx.recipient_name || "",
+      tx.note?.replace(/,/g, "") || ""
+    ]);
+    const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "boop-transactions.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  filterBtn.addEventListener("click", () => { page = 1; fetchTransactions(); });
+  exportBtn.addEventListener("click", exportCSV);
+
+  document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try { await fetch("/api/logout", { method: "POST" }); } catch {}
+    localStorage.clear();
+    window.location.href = "login.html";
+  });
+
+  fetchTransactions();
+});
+</script>
 </body>
 </html>
