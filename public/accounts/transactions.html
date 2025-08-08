@@ -73,10 +73,6 @@
       border-radius: 8px;
       overflow: hidden;
     }
-    #transactionsTable {
-      overflow-y: visible; /* Ensure no vertical scrollbar */
-      overflow-x: auto; /* Keep horizontal scrollbar */
-    }
     th, td {
       padding: 12px 16px;
       text-align: left;
@@ -98,6 +94,8 @@
       padding: 16px;
       font-weight: 500;
     }
+
+  
 
     /* Modal */
     .modal {
@@ -125,11 +123,12 @@
       cursor: pointer;
     }
 
-    /* Make only pagination/notice buttons compact */
+    /* Make only pagination/notice buttons compact even if global styles set buttons to 100% elsewhere */
     .chip-btn, .chip { width: auto; }
   </style>
 </head>
 <body>
+
   <!-- Top Nav -->
   <nav>
     <div class="nav-container">
@@ -144,8 +143,8 @@
             <a href="add-funds.html">Add Funds</a>
             <a href="transfer.html">Transfer</a>
             <a href="reports.html">Reports</a>
+            <a href="add-user.html" id="addUserLink">Add User</a>
             <a href="manage-treasury.html" id="manageTreasuryLink" style="display:none;">Manage Treasury</a>
-            <a href="add-user.html" id="addUserLink" style="display:none;">Add User</a>
           </div>
         </div>
         <a href="view-users.html">View Users</a>
@@ -157,6 +156,7 @@
   <!-- Main Content -->
   <div class="container">
     <h2 style="margin-top:0;">Recent Transactions</h2>
+
     <!-- Live feed notice -->
     <div class="notice">
       Showing the latest <span id="limitLabel" class="chip">100</span> transactions (system-wide).
@@ -166,6 +166,7 @@
         <button id="toggleLive" class="chip-btn">Pause Live</button>
       </div>
     </div>
+
     <table id="transactionsTable">
       <thead>
         <tr>
@@ -182,6 +183,7 @@
       </tbody>
     </table>
   </div>
+
   <!-- Note Modal -->
   <div id="noteModal" class="modal">
     <div class="modal-content">
@@ -190,36 +192,35 @@
       <p id="noteContent" style="white-space: pre-wrap; color: #333; margin:0;"></p>
     </div>
   </div>
+
   <script type="module">
-    const LIMIT = 100;
-    const REFRESH_MS = 15000;
+    const LIMIT = 100; // what we show in the banner + fetch query
+    const REFRESH_MS = 15000; // 15s feels live without hammering server
 
     const user = JSON.parse(localStorage.getItem("boopUser"));
     const token = localStorage.getItem("boop_jwt");
     const tbody = document.getElementById("transactionsBody");
     const logoutBtn = document.getElementById("logoutBtn");
+
     const limitLabel = document.getElementById("limitLabel");
     const lastUpdated = document.getElementById("lastUpdated");
     const toggleLive = document.getElementById("toggleLive");
+
     const modal = document.getElementById("noteModal");
     const noteContent = document.getElementById("noteContent");
     const modalClose = modal.querySelector(".close");
-    const manageTreasuryLink = document.getElementById("manageTreasuryLink");
-    const addUserLink = document.getElementById("addUserLink");
 
-    // Permissions
+    // Show/hide nav links based on user type
+      if (user?.type === "treasury") {
+        manageTreasuryLink.style.display = "block";
+        addUserLink.style.display = "none";
+      } else if (user?.type === "accountant") {
+        addUserLink.style.display = "block";
+      }
+
+    // Permissions: keep this page for admin accountant/treasury monitors
     if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
       window.location.href = "../login.html";
-      return;
-    }
-
-    // Show/hide nav links
-    if (user?.type === "treasury") {
-      if (manageTreasuryLink) manageTreasuryLink.style.display = "block";
-      if (addUserLink) addUserLink.style.display = "none";
-    } else if (user?.type === "accountant") {
-      if (addUserLink) addUserLink.style.display = "block";
-      if (manageTreasuryLink) manageTreasuryLink.style.display = "none";
     }
 
     limitLabel.textContent = LIMIT.toString();
@@ -245,20 +246,6 @@
       return "$" + (cents / 100).toFixed(2);
     }
 
-    async function fetchJSON(url) {
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.status === 401 || res.status === 403) {
-        window.location.href = "../login.html";
-        throw new Error("Unauthorized");
-      }
-      if (!res.ok) {
-        throw new Error((await res.json()).message || "Failed to fetch");
-      }
-      return await res.json();
-    }
-
     function safeName(userObj) {
       if (!userObj) return null;
       const first = userObj.first_name || "";
@@ -267,40 +254,33 @@
       return name || null;
     }
 
-    async function resolveParties(tx) {
-      let from = tx.counterparty_name || "Unknown";
-      let to = "Unknown";
+    // Map whatever the backend sends into From/To columns.
+    function resolveParties(tx) {
+      // Preferred: explicit sender/recipient names
+      const sender = tx.sender_name || tx.from_name || tx.counterparty_from || null;
+      const recipient = tx.recipient_name || tx.to_name || tx.counterparty_to || null;
 
-      // For credits, fetch recipient's name (user_id)
-      if (tx.type === "credit" && tx.user_id) {
-        try {
-          const userRes = await fetchJSON(`/api/users/${tx.user_id}`);
-          to = safeName(userRes) || "Unknown";
-          from = tx.from_user_id ? (await fetchJSON(`/api/users/${tx.from_user_id}`)).first_name + " " + (await fetchJSON(`/api/users/${tx.from_user_id}`)).last_name : "Government";
-        } catch (err) {
-          console.warn(`Failed to fetch user ${tx.user_id}:`, err);
-        }
-      } else if (tx.type === "debit" && tx.user_id) {
-        // For debits, user_id is the sender
-        try {
-          const userRes = await fetchJSON(`/api/users/${tx.user_id}`);
-          from = safeName(userRes) || "Unknown";
-          to = tx.to_user_id ? (await fetchJSON(`/api/users/${tx.to_user_id}`)).first_name + " " + (await fetchJSON(`/api/users/${tx.to_user_id}`)).last_name : "Government";
-        } catch (err) {
-          console.warn(`Failed to fetch user ${tx.user_id}:`, err);
-        }
-      }
+      // Fallbacks: if your API sometimes returns user_name/email for one side
+      const userSide = tx.user_name || tx.userEmail || tx.user_email || null;
 
-      return { from, to };
+      return {
+        from: sender || (tx.type === 'debit' ? (userSide || '—') : (tx.counterparty_name || '—')),
+        to: recipient || (tx.type === 'credit' ? (userSide || '—') : '—')
+      };
     }
 
     async function loadTransactions() {
       try {
-        const res = await fetchJSON(`/api/transactions/recent?limit=${LIMIT}`);
-        const data = Array.isArray(res) ? res : (res.transactions || []);
+        const res = await fetch(`/api/transactions/recent?limit=${LIMIT}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-        if (!Array.isArray(data)) {
-          throw new Error("Invalid response format");
+        // API may return array or {transactions:[...]}
+        const payload = await res.json();
+        const data = Array.isArray(payload) ? payload : (payload.transactions || []);
+
+        if (!res.ok || !Array.isArray(data)) {
+          throw new Error(payload.message || "Failed to load transactions.");
         }
 
         if (data.length === 0) {
@@ -309,12 +289,11 @@
           return;
         }
 
-        const rows = [];
-        for (const tx of data) {
-          const parties = await resolveParties(tx);
+        const rows = data.map(tx => {
+          const parties = resolveParties(tx);
           const noteText = tx.note || 'No note';
           const created = tx.created_at ? new Date(tx.created_at).toLocaleString() : "—";
-          rows.push(`
+          return `
             <tr>
               <td>${tx.type || '—'}</td>
               <td>${formatAmount(tx.amount_cents)}</td>
@@ -323,10 +302,10 @@
               <td>${created}</td>
               <td><button class="chip-btn" onclick="showNoteModal(\`${(noteText + '').replace(/`/g, '\\`')}\`)">View</button></td>
             </tr>
-          `);
-        }
+          `;
+        }).join("");
 
-        tbody.innerHTML = rows.join("");
+        tbody.innerHTML = rows;
         setLastUpdated();
       } catch (err) {
         console.error("❌ Recent transactions error:", err);
@@ -334,6 +313,7 @@
       }
     }
 
+    // Expose for inline onclick
     window.showNoteModal = function(note) {
       noteContent.textContent = note || "No note";
       modal.style.display = "block";
@@ -342,30 +322,31 @@
     modalClose.onclick = () => (modal.style.display = "none");
     window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 
+    // Live toggle
     toggleLive.addEventListener("click", () => {
       live = !live;
       toggleLive.textContent = live ? "Pause Live" : "Resume Live";
       if (live) {
         loadTransactions();
-        startLive();
-      } else {
-        clearInterval(intervalId);
       }
     });
 
+    // Init
     document.addEventListener("visibilitychange", () => {
+      // Refresh when tab becomes visible again
       if (document.visibilityState === "visible" && live) loadTransactions();
     });
 
     loadTransactions();
     startLive();
 
+    // Logout
     if (logoutBtn) {
       logoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         try { await fetch("/api/logout", { method: "POST" }); } catch {}
         localStorage.clear();
-        window.location.href = "../login.html";
+        window.location.href = "login.html";
       });
     }
   </script>
