@@ -7,18 +7,127 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
-    body { font-family: 'Poppins', sans-serif; background: #f4f7fa; }
-    .container { max-width: 1000px; margin: 50px auto; background: white; padding: 30px 40px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);}
-    .filters { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
-    .filters > div { flex: 1; min-width: 180px; }
-    input, select, button { width: 100%; padding: 10px; font-size: 1rem; border-radius: 6px; border: 1px solid #ccc; }
-    button { background-color: #2f80ed; color: white; font-weight: bold; border: none; cursor: pointer; }
-    button:hover { background-color: #1c6fd8; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 0.95em; }
-    th { background-color: #f0f4f8; }
-    .status { text-align: center; margin-top: 20px; font-weight: bold; }
-    .export-btn { float: right; margin-top: 10px; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f7fa;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .filters > div {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #2f80ed;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #1c6fd8;
+    }
+
+    .export-btn {
+      float: right;
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border: 1px solid #e3e7ec;
+      text-align: left;
+      font-size: 0.97em;
+      white-space: nowrap;
+    }
+
+    th {
+      background-color: #f7fafd;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      font-weight: bold;
+      color: #c0392b;
+    }
+
+    /* --- PAGINATION --- */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin: 32px 0 12px 0;
+    }
+    .pagination-btn {
+      background: #f4f7fa;
+      color: #2f80ed;
+      border: 1.5px solid #2f80ed;
+      padding: 7px 18px;
+      border-radius: 7px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, color .15s, border .15s;
+      outline: none;
+    }
+    .pagination-btn:hover:not(:disabled) {
+      background: #2f80ed;
+      color: #fff;
+    }
+    .pagination-btn:disabled {
+      background: #f0f0f0;
+      color: #bbb;
+      border-color: #eee;
+      cursor: not-allowed;
+    }
+    .pagination-current {
+      font-weight: bold;
+      color: #222;
+      background: #e8f0fe;
+      padding: 7px 16px;
+      border-radius: 7px;
+      border: none;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+    }
   </style>
 </head>
 <body>
@@ -48,6 +157,7 @@
 
   <div class="container">
     <h2>Transaction Reports</h2>
+
     <div class="filters">
       <div>
         <label for="startDate">Start Date</label>
@@ -70,9 +180,11 @@
         <button id="filterBtn">Apply Filters</button>
       </div>
     </div>
+
     <div class="export-btn">
       <button id="exportBtn" style="margin-bottom: 20px;">Export CSV</button>
     </div>
+
     <table id="reportTable">
       <thead>
         <tr>
@@ -92,138 +204,135 @@
   </div>
 
   <script type="module">
-document.addEventListener("DOMContentLoaded", () => {
-  const user = JSON.parse(localStorage.getItem("boopUser"));
-  const manageLink = document.getElementById("manageTreasuryLink");
-  if (user?.type === "treasury") { manageLink.style.display = "block"; }
+    document.addEventListener("DOMContentLoaded", () => {
+      const user = JSON.parse(localStorage.getItem("boopUser"));
+      const manageLink = document.getElementById("manageTreasuryLink");
+      if (user?.type === "treasury") manageLink.style.display = "block";
 
-  if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  const startDate = document.getElementById("startDate");
-  const endDate = document.getElementById("endDate");
-  const typeFilter = document.getElementById("typeFilter");
-  const filterBtn = document.getElementById("filterBtn");
-  const exportBtn = document.getElementById("exportBtn");
-  const tableBody = document.querySelector("#reportTable tbody");
-  const statusEl = document.getElementById("status");
-
-  // --- PAGINATION STATE ---
-  let transactions = [];
-  let totalCount = 0;
-  let page = 1;
-  let limit = 25; // You can change this to whatever page size you like
-
-  // --- Pagination Controls ---
-  function renderPagination() {
-    const totalPages = Math.ceil(totalCount / limit);
-    let html = "";
-
-    html += `<button id="prevPageBtn" ${page === 1 ? "disabled" : ""}>Previous</button>`;
-    html += `<span style="margin: 0 8px;">Page ${page} of ${totalPages || 1}</span>`;
-    html += `<button id="nextPageBtn" ${page === totalPages || totalPages === 0 ? "disabled" : ""}>Next</button>`;
-
-    let paginationDiv = document.getElementById("pagination");
-    if (!paginationDiv) {
-      paginationDiv = document.createElement("div");
-      paginationDiv.id = "pagination";
-      paginationDiv.style.marginTop = "16px";
-      paginationDiv.style.textAlign = "center";
-      document.querySelector(".container").appendChild(paginationDiv);
-    }
-    paginationDiv.innerHTML = html;
-
-    // Attach handlers
-    document.getElementById("prevPageBtn").onclick = () => {
-      if (page > 1) { page--; fetchTransactions(); }
-    };
-    document.getElementById("nextPageBtn").onclick = () => {
-      if (page < Math.ceil(totalCount / limit)) { page++; fetchTransactions(); }
-    };
-  }
-
-  async function fetchTransactions() {
-    let query = [];
-    if (startDate.value) query.push(`start=${startDate.value}`);
-    if (endDate.value) query.push(`end=${endDate.value}`);
-    if (typeFilter.value) query.push(`type=${typeFilter.value}`);
-    query.push(`limit=${limit}`);
-    query.push(`offset=${(page - 1) * limit}`);
-    const queryStr = query.length ? `?${query.join("&")}` : "";
-
-    try {
-      const res = await fetch(`/api/transactions/report${queryStr}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("boop_jwt")}` }
-      });
-      const data = await res.json();
-      transactions = data.transactions || [];
-      totalCount = data.totalCount || 0;
-
-      tableBody.innerHTML = "";
-      if (!transactions.length) {
-        tableBody.innerHTML = `<tr><td colspan="7">No records found.</td></tr>`;
-      } else {
-        transactions.forEach(tx => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
-            <td>${tx.id}</td>
-            <td>${tx.type}</td>
-            <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
-            <td>${tx.sender_name || "—"}</td>
-            <td>${tx.recipient_name || "—"}</td>
-            <td>${tx.note || ""}</td>
-          `;
-          tableBody.appendChild(row);
-        });
+      if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
+        window.location.href = "login.html";
+        return;
       }
 
-      renderPagination();
-    } catch (err) {
-      console.error("❌ Fetch failed:", err);
-      statusEl.textContent = "Failed to load transactions.";
-      statusEl.style.color = "red";
-    }
-  }
+      const startDate = document.getElementById("startDate");
+      const endDate = document.getElementById("endDate");
+      const typeFilter = document.getElementById("typeFilter");
+      const filterBtn = document.getElementById("filterBtn");
+      const exportBtn = document.getElementById("exportBtn");
+      const tableBody = document.querySelector("#reportTable tbody");
+      const statusEl = document.getElementById("status");
 
-  function exportCSV() {
-    if (!transactions.length) return;
+      // --- PAGINATION STATE ---
+      let transactions = [];
+      let totalCount = 0;
+      let page = 1;
+      let limit = 25; // Change for bigger/smaller pages
 
-    const headers = ["Date", "Transaction ID", "Type", "Amount", "Sender", "Recipient", "Note"];
-    const rows = transactions.map(tx => [
-      tx.created_at ? new Date(tx.created_at).toISOString() : "",
-      tx.id,
-      tx.type,
-      (tx.amount_cents / 100).toFixed(2),
-      tx.sender_name || "",
-      tx.recipient_name || "",
-      tx.note?.replace(/,/g, "") || ""
-    ]);
-    const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "boop-transactions.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+      // --- Render Pagination Controls ---
+      function renderPagination() {
+        const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+        let html = `<div class="pagination">`;
 
-  filterBtn.addEventListener("click", () => { page = 1; fetchTransactions(); });
-  exportBtn.addEventListener("click", exportCSV);
+        html += `<button class="pagination-btn" id="prevPageBtn" ${page === 1 ? "disabled" : ""}>Previous</button>`;
+        html += `<span class="pagination-current">Page ${page} of ${totalPages}</span>`;
+        html += `<button class="pagination-btn" id="nextPageBtn" ${page === totalPages ? "disabled" : ""}>Next</button>`;
 
-  document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    try { await fetch("/api/logout", { method: "POST" }); } catch {}
-    localStorage.clear();
-    window.location.href = "login.html";
-  });
+        html += `</div>`;
 
-  fetchTransactions();
-});
-</script>
+        let paginationDiv = document.getElementById("pagination");
+        if (!paginationDiv) {
+          paginationDiv = document.createElement("div");
+          paginationDiv.id = "pagination";
+          document.querySelector(".container").appendChild(paginationDiv);
+        }
+        paginationDiv.innerHTML = html;
+
+        document.getElementById("prevPageBtn").onclick = () => {
+          if (page > 1) { page--; fetchTransactions(); }
+        };
+        document.getElementById("nextPageBtn").onclick = () => {
+          if (page < totalPages) { page++; fetchTransactions(); }
+        };
+      }
+
+      async function fetchTransactions() {
+        let query = [];
+        if (startDate.value) query.push(`start=${startDate.value}`);
+        if (endDate.value) query.push(`end=${endDate.value}`);
+        if (typeFilter.value) query.push(`type=${typeFilter.value}`);
+        query.push(`limit=${limit}`);
+        query.push(`offset=${(page - 1) * limit}`);
+        const queryStr = query.length ? `?${query.join("&")}` : "";
+
+        try {
+          const res = await fetch(`/api/transactions/report${queryStr}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("boop_jwt")}` }
+          });
+          const data = await res.json();
+          transactions = data.transactions || [];
+          totalCount = data.totalCount || 0;
+
+          tableBody.innerHTML = "";
+          if (!transactions.length) {
+            tableBody.innerHTML = `<tr><td colspan="7">No records found.</td></tr>`;
+          } else {
+            transactions.forEach(tx => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
+                <td>${tx.id}</td>
+                <td>${tx.type}</td>
+                <td>$${(tx.amount_cents / 100).toFixed(2)}</td>
+                <td>${tx.sender_name || "—"}</td>
+                <td>${tx.recipient_name || "—"}</td>
+                <td>${tx.note || ""}</td>
+              `;
+              tableBody.appendChild(row);
+            });
+          }
+          renderPagination();
+        } catch (err) {
+          console.error("❌ Fetch failed:", err);
+          statusEl.textContent = "Failed to load transactions.";
+          statusEl.style.color = "red";
+        }
+      }
+
+      function exportCSV() {
+        if (!transactions.length) return;
+        const headers = ["Date", "Transaction ID", "Type", "Amount", "Sender", "Recipient", "Note"];
+        const rows = transactions.map(tx => [
+          tx.created_at ? new Date(tx.created_at).toISOString() : "",
+          tx.id,
+          tx.type,
+          (tx.amount_cents / 100).toFixed(2),
+          tx.sender_name || "",
+          tx.recipient_name || "",
+          tx.note?.replace(/,/g, "") || ""
+        ]);
+        const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "boop-transactions.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      filterBtn.addEventListener("click", () => { page = 1; fetchTransactions(); });
+      exportBtn.addEventListener("click", exportCSV);
+
+      document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try { await fetch("/api/logout", { method: "POST" }); } catch {}
+        localStorage.clear();
+        window.location.href = "login.html";
+      });
+
+      fetchTransactions();
+    });
+  </script>
 </body>
 </html>
