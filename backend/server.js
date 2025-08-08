@@ -34,7 +34,27 @@ try {
   app.use('/api/user-students', require('./auth/routes/userStudents'));
   app.use('/api/sessions', require('./auth/routes/sessions'));
   app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
-  app.use('/api/treasury', require('./auth/routes/treasury')); // Ensure treasury-wallets works
+// API routes
+app.use('/api/users', require('./auth/routes/users'));
+app.use('/api/cards', require('./auth/routes/cards'));
+app.use('/api/wallets', require('./auth/routes/wallets'));
+app.use('/api/vendors', require('./auth/routes/vendors'));
+app.use('/api/students', require('./auth/routes/students'));
+app.use('/api/user-students', require('./auth/routes/userStudents'));
+app.use('/api/sessions', require('./auth/routes/sessions'));
+app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
+
+// Mount treasury with explicit logging so we can see if it fails to load
+try {
+  const treasuryRoutes = require('./auth/routes/treasury');
+  console.log('✅ treasury routes required OK');
+  app.use('/api/treasury', treasuryRoutes);
+  console.log('✅ treasury routes mounted at /api/treasury');
+} catch (err) {
+  console.error('❌ Route load failure (treasury):', err && err.stack || err);
+}
+
+app.use('/api/admin-actions', require('./auth/routes/admin-actions'));
   app.use('/api/admin-actions', require('./auth/routes/admin-actions'));
 } catch (err) {
   console.error("❌ Route load failure:", err.message);
