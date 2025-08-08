@@ -309,13 +309,12 @@
               Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({
-              wallet_id: selectedUser.wallet_id,
-              user_id: selectedUser.id,
-              amount: parseFloat(amount.value),
-              note: note.value,
-              added_by: user.id,
-              treasury_wallet_id: treasuryAccount.value
-            })
+  wallet_id: treasuryAccount.value,         // treasury wallet used
+  user_id: selectedUser.id,                 // recipient user ID
+  amount: parseFloat(amount.value),         // actual amount (number)
+  note: note.value,                         // optional
+  added_by: user.id                         // current admin ID
+})
           });
 
           const result = await res.json();
