@@ -115,13 +115,13 @@ router.get('/report', authenticateToken, async (req, res) => {
 // 💸 POST /api/transactions/add-funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
-  const { wallet_id, user_id, amount, note, added_by } = req.body;
+  const { recipient_wallet_id, user_id, amount, note, added_by, treasury_wallet_id } = req.body;
 
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ error: 'You do not have permission to perform this action.' });
   }
 
-  if (!wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0) {
+  if (!recipient_wallet_id || !user_id || !amount || isNaN(amount) || amount <= 0 || !treasury_wallet_id) {
     return res.status(400).json({ error: 'Please provide all required fields with valid values.' });
   }
 
@@ -140,7 +140,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     // ✅ Get treasury wallet
     const { rows: treasuryRows } = await client.query(
       `SELECT * FROM wallets WHERE id = $1`,
-      [wallet_id]
+      [treasury_wallet_id]
     );
     if (!treasuryRows.length) throw new Error('Treasury wallet not found');
     const treasuryWallet = treasuryRows[0];
@@ -152,8 +152,8 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
     // ✅ Get recipient wallet
     const { rows: recipientRows } = await client.query(
-      `SELECT * FROM wallets WHERE user_id = $1`,
-      [user_id]
+      `SELECT * FROM wallets WHERE id = $1 AND user_id = $2`,
+      [recipient_wallet_id, user_id]
     );
     if (!recipientRows.length) throw new Error('Recipient wallet not found');
     const recipientWallet = recipientRows[0];
@@ -164,6 +164,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       [user_id]
     );
     const userRole = userRows[0]?.role;
+    const recipientName = userRows[0]?.first_name ? `${userRows[0].first_name} ${userRows[0].last_name || ''}`.trim() : 'Unknown';
     if (!userRole) throw new Error('Recipient user not found');
 
     if (['student', 'assistance'].includes(userRole) && note?.toLowerCase().includes('transfer to bank')) {
@@ -175,23 +176,23 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [transferAmount, recipientWallet.id]);
 
     // ✅ Insert debit transaction (treasury sends to recipient)
-    const debitNote = note ? `${note} [user_id:${user_id}]` : `Fund transfer to user ${user_id} [user_id:${user_id}]`;
-    console.log(`Debit transaction note: ${debitNote}, sender_id: ${treasuryWallet.user_id}, recipient_id: ${user_id}`); // Debugging
+    const debitNote = note ? `${note} [user_id:${user_id}]` : `Government Assistance to user ${user_id} [user_id:${user_id}]`;
+    console.log(`Debit transaction note: ${debitNote}, sender_id: NULL (Government Assistance), recipient_id: ${user_id} (${recipientName})`);
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
        )
-       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, $6, $7)`,
-      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId, treasuryWallet.user_id, user_id]
+       VALUES ($1, $2, 'debit', $3, $4, NOW(), $5, NULL, $6)`,
+      [treasuryWallet.id, treasuryWallet.user_id, amount_cents, debitNote, adminId, user_id]
     );
 
-    // ✅ Insert credit transaction (recipient receives from treasury)
+    // ✅ Insert credit transaction (recipient receives from Government Assistance)
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
        )
-       VALUES ($1, $2, 'credit', $3, 'Received from Treasury', NOW(), NULL, $4, $5)`,
-      [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id, user_id]
+       VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, NULL, $4)`,
+      [recipientWallet.id, user_id, amount_cents, user_id]
     );
 
     await client.query('COMMIT');
@@ -244,11 +245,12 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.sender_id,
         t.recipient_id,
         CASE
+          WHEN t.type = 'credit' AND t.sender_id IS NULL THEN 'Government Assistance'
           WHEN t.type = 'credit' THEN
             COALESCE(
               (SELECT u.first_name || ' ' || COALESCE(u.last_name, '') 
                FROM users u WHERE u.id = t.sender_id),
-              'Treasury'
+              'Unknown Sender'
             )
           WHEN t.type = 'debit' THEN
             COALESCE(
@@ -264,10 +266,20 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    // Debugging: Log sender_id, recipient_id, and counterparty_name for transactions
-    result.rows.forEach(row => {
-      console.log(`Transaction ID ${row.id}, type: ${row.type}, sender_id: ${row.sender_id}, recipient_id: ${row.recipient_id}, counterparty_name: ${row.counterparty_name}`);
-    });
+    // Debugging: Log sender_id, recipient_id, and counterparty_name with names
+    for (const row of result.rows) {
+      const senderName = row.sender_id 
+        ? (await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.sender_id])).rows[0]?.first_name 
+          ? `${(await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.sender_id])).rows[0].first_name} ${(await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.sender_id])).rows[0].last_name || ''}`.trim() 
+          : 'Unknown'
+        : 'Government Assistance';
+      const recipientName = row.recipient_id 
+        ? (await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.recipient_id])).rows[0]?.first_name 
+          ? `${(await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.recipient_id])).rows[0].first_name} ${(await pool.query('SELECT first_name, last_name FROM users WHERE id = $1', [row.recipient_id])).rows[0].last_name || ''}`.trim() 
+          : 'Unknown'
+        : 'None';
+      console.log(`Transaction ID ${row.id}, type: ${row.type}, sender_id: ${row.sender_id} (${senderName}), recipient_id: ${row.recipient_id} (${recipientName}), counterparty_name: ${row.counterparty_name}`);
+    }
 
     const countRes = await pool.query(
       `SELECT COUNT(*) FROM transactions WHERE user_id = $1`,
