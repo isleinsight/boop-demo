@@ -179,25 +179,23 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 
   try {
     const result = await pool.query(`
-      SELECT
-        t.id,
-        t.wallet_id,
-        t.user_id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        t.sender_id,
-        t.recipient_id,
-        COALESCE(senders.first_name || ' ' || senders.last_name, 'Government Assistance') AS from_user_name,
-        COALESCE(recipients.first_name || ' ' || recipients.last_name, 'Unknown Recipient') AS to_user_name
-      FROM transactions t
-      LEFT JOIN users senders ON senders.id = t.sender_id
-      LEFT JOIN users recipients ON recipients.id = t.recipient_id
-      WHERE t.user_id = $1
-      ORDER BY t.created_at DESC
-      LIMIT $2 OFFSET $3
-    `, [userId, limit, offset]);
+  SELECT
+    t.*,
+    CASE
+      WHEN t.sender_id IS NULL THEN 'Government Assistance'
+      ELSE CONCAT_WS(' ', senders.first_name, senders.last_name)
+    END AS from_user_name,
+    CASE
+      WHEN t.recipient_id IS NULL THEN 'Unknown Recipient'
+      ELSE CONCAT_WS(' ', recipients.first_name, recipients.last_name)
+    END AS to_user_name
+  FROM transactions t
+  LEFT JOIN users senders ON senders.id = t.sender_id
+  LEFT JOIN users recipients ON recipients.id = t.recipient_id
+  WHERE t.user_id = $1
+  ORDER BY t.created_at DESC
+  LIMIT $2 OFFSET $3
+`, [userId, limit, offset]);
 
     result.rows.forEach(tx => {
       console.log(`🧾 TX ${tx.id} | ${tx.type.toUpperCase()} | From: ${tx.from_user_name} (${tx.sender_id}) → To: ${tx.to_user_name} (${tx.recipient_id})`);
