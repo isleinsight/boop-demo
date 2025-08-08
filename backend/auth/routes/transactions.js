@@ -19,34 +19,46 @@ const NAME_FIELDS_SQL = `
   ) AS receiver_name
 `;
 
-// 🔍 GET /api/transactions/recent  (admin: accountant/treasury)
-router.get('/recent', authenticateToken, async (req, res) => {
+// 🔍 GET /api/transactions/recent  (admins: accountant or treasury)
+router.get('/recent', authMiddleware, async (req, res) => {
   const { role, type } = req.user;
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
     return res.status(403).json({ message: 'You do not have permission to view these transactions.' });
   }
 
   try {
-    const { rows } = await pool.query(`
+    const { rows } = await db.query(`
       SELECT
         t.id,
         t.user_id,
         t.wallet_id,
-        t.type,
+        t.type,                 -- 'debit' | 'credit'
         t.amount_cents,
         t.note,
         t.created_at,
-        ${NAME_FIELDS_SQL}
+        t.sender_id,
+        t.recipient_id,
+
+        -- Names
+        (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))::text AS sender_name,
+        (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))::text AS recipient_name,
+
+        -- Legacy field many pages expect
+        CASE
+          WHEN t.type = 'debit'  THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
+          WHEN t.type = 'credit' THEN (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
+          ELSE (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
+        END::text AS counterparty_name
       FROM transactions t
-      LEFT JOIN users sender   ON sender.id   = t.sender_id
-      LEFT JOIN users receiver ON receiver.id = t.receiver_id
+      LEFT JOIN users s ON s.id = t.sender_id
+      LEFT JOIN users r ON r.id = t.recipient_id
       ORDER BY t.created_at DESC
       LIMIT 50
     `);
 
     return res.status(200).json(rows);
   } catch (err) {
-    console.error('❌ Failed to load transactions:', err);
+    console.error('❌ Failed to load recent transactions:', err);
     return res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
   }
 });
@@ -132,19 +144,19 @@ router.get('/report', authenticateToken, async (req, res) => {
   }
 });
 
-// 📄 GET /api/transactions/user/:userId  (admin)
-router.get('/user/:userId', authenticateToken, async (req, res) => {
+// 📄 GET /api/transactions/user/:userId  (admin only)
+router.get('/user/:userId', authMiddleware, async (req, res) => {
   const { role } = req.user;
-  const { userId } = req.params;
-  const limit  = parseInt(req.query.limit, 10)  || 10;
-  const offset = parseInt(req.query.offset, 10) || 0;
-
   if (role !== 'admin') {
     return res.status(403).json({ message: 'You do not have permission to view these transactions.' });
   }
 
+  const { userId } = req.params;
+  const limit  = parseInt(req.query.limit, 10)  || 10;
+  const offset = parseInt(req.query.offset, 10) || 0;
+
   try {
-    const txRes = await pool.query(`
+    const txRes = await db.query(`
       SELECT
         t.id,
         t.wallet_id,
@@ -152,32 +164,41 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.amount_cents,
         t.note,
         t.created_at,
-        ${NAME_FIELDS_SQL}
+        t.sender_id,
+        t.recipient_id,
+
+        (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))::text AS sender_name,
+        (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))::text AS recipient_name,
+
+        CASE
+          WHEN t.type = 'debit'  THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
+          WHEN t.type = 'credit' THEN (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
+          ELSE (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
+        END::text AS counterparty_name
       FROM transactions t
-      LEFT JOIN users sender   ON sender.id   = t.sender_id
-      LEFT JOIN users receiver ON receiver.id = t.receiver_id
+      LEFT JOIN users s ON s.id = t.sender_id
+      LEFT JOIN users r ON r.id = t.recipient_id
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    const countRes = await pool.query(
+    const countRes = await db.query(
       `SELECT COUNT(*)::int AS count FROM transactions WHERE user_id = $1`,
       [userId]
     );
 
-    // Optional: server-side logging to confirm names
+    // Optional debugging
     txRes.rows.forEach(row => {
-      console.log(`🔁 TX ${row.id}: FROM ${row.sender_name} TO ${row.receiver_name} | $${(row.amount_cents / 100).toFixed(2)}`);
+      console.log(`🔁 TX ${row.id}: ${row.type.toUpperCase()} | FROM ${row.sender_name} → TO ${row.recipient_name} | $${(row.amount_cents/100).toFixed(2)}`);
     });
 
     return res.status(200).json({
       transactions: txRes.rows,
       totalCount: countRes.rows[0].count
     });
-
   } catch (err) {
-    console.error('❌ Failed to load target user transactions:', err);
+    console.error('❌ Failed to load user transactions:', err);
     return res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
   }
 });
