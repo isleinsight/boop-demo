@@ -222,46 +222,36 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const offset = parseInt(req.query.offset) || 0;
 
-  console.log(`📥 Fetching transactions for user ${userId} with limit ${limit} and offset ${offset}`);
-
   if (role !== 'admin') {
-    console.warn('❌ Unauthorized access to user transactions');
-    return res.status(403).json({ message: 'Unauthorized' });
+    return res.status(403).json({ message: 'You do not have permission to view these transactions.' });
   }
+
+  console.log(`📥 Fetching transactions for user ${userId} with limit ${limit} and offset ${offset}`);
 
   try {
     const result = await pool.query(`
       SELECT
         t.id,
         t.wallet_id,
+        t.user_id,
         t.type,
         t.amount_cents,
         t.note,
         t.created_at,
         t.sender_id,
         t.recipient_id,
-        CASE
-          WHEN t.type = 'credit' THEN
-            CASE
-              WHEN t.sender_id IS NULL THEN 'Government Assistance'
-              ELSE COALESCE(sender.first_name || ' ' || sender.last_name, 'Unknown Sender')
-            END
-          WHEN t.type = 'debit' THEN
-            COALESCE(recipient.first_name || ' ' || recipient.last_name, 'Unknown Recipient')
-          ELSE 'Unknown'
-        END AS counterparty_name
+        COALESCE(senders.first_name || ' ' || senders.last_name, 'Government Assistance') AS from_user_name,
+        COALESCE(recipients.first_name || ' ' || recipients.last_name, 'Unknown Recipient') AS to_user_name
       FROM transactions t
-      LEFT JOIN users sender ON sender.id = t.sender_id
-      LEFT JOIN users recipient ON recipient.id = t.recipient_id
+      LEFT JOIN users senders ON senders.id = t.sender_id
+      LEFT JOIN users recipients ON recipients.id = t.recipient_id
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    console.log(`📦 Loaded ${result.rows.length} transactions`);
-
-    result.rows.forEach((row, index) => {
-      console.log(`[${index + 1}] Transaction ID: ${row.id}, Type: ${row.type}, Sender ID: ${row.sender_id}, Recipient ID: ${row.recipient_id}, Counterparty: ${row.counterparty_name}`);
+    result.rows.forEach(tx => {
+      console.log(`🧾 TX ${tx.id} | ${tx.type.toUpperCase()} | From: ${tx.from_user_name} (${tx.sender_id}) → To: ${tx.to_user_name} (${tx.recipient_id})`);
     });
 
     const countRes = await pool.query(
@@ -274,8 +264,8 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       totalCount: parseInt(countRes.rows[0].count, 10)
     });
   } catch (err) {
-    console.error('❌ Error loading transactions:', err.message);
-    res.status(500).json({ message: 'Error loading transactions.' });
+    console.error('❌ Failed to load transactions:', err.message);
+    res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
   }
 });
 
