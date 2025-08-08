@@ -75,38 +75,32 @@
     tr:hover {
       background: #f5f8fb;
     }
-    /* -------- Pagination, like View Users page -------- */
     .pagination {
       display: flex;
-      justify-content: flex-end;
+      justify-content: center;
       align-items: center;
-      gap: 10px;
-      margin: 22px 0 10px 0;
+      gap: 12px;
+      margin-top: 20px;
     }
+
     .pagination button {
-      padding: 7px 16px;
+      padding: 8px 16px;
       background: #6b7280;
       color: #fff;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.95rem;
-      font-weight: 500;
-      transition: background 0.2s;
-      min-width: 80px;
-      box-shadow: none;
+      font-size: 0.9rem;
+      transition: background-color 0.2s ease;
     }
-    .pagination button:disabled {
-      background: #e5e7eb;
-      color: #bbb;
-      cursor: not-allowed;
+
+    .pagination button:hover {
+      background: #4b5563;
     }
+
     #paginationInfo {
-      font-size: 0.96rem;
+      font-size: 0.9rem;
       color: #4b5563;
-      background: transparent;
-      font-weight: 500;
-      padding: 0 6px;
     }
     .status {
       text-align: center;
