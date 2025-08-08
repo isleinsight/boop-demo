@@ -192,13 +192,15 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     );
     console.log('📝 Debit transaction inserted:', debitResult.rows[0]);
 
-    // Credit transaction
-    const creditResult = await client.query(
-      `INSERT INTO transactions (
-         wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
-       ) VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, $4, $2) RETURNING *`,
-      [recipientWallet.id, user_id, amount_cents, treasuryWallet.user_id]
-    );
+   // ✅ Insert credit transaction (recipient receives from treasury)
+const creditResult = await client.query(
+  `INSERT INTO transactions (
+     wallet_id, user_id, type, amount_cents, note, created_at, added_by, sender_id, recipient_id
+   )
+   VALUES ($1, $2, 'credit', $3, 'Received from Government Assistance', NOW(), NULL, NULL, $2) RETURNING *`,
+  [recipientWallet.id, user_id, amount_cents]
+);
+console.log('🧾 Credit transaction inserted:', creditResult.rows[0]);
     console.log('📝 Credit transaction inserted:', creditResult.rows[0]);
 
     await client.query('COMMIT');
