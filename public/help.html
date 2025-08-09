@@ -4,39 +4,40 @@
   <meta charset="UTF-8" />
   <title>Help – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="assets/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root{
       --ink:#102a43;
       --muted:#6b7c93;
       --blue:#2f80ed;
       --blue-dark:#1a5fcc;
-      --stroke:#e5e7eb;
+      --stroke:#dcdcdc;
       --bg:#ffffff;
       --nav:#102a43;
       --grad1: rgba(47,128,237,.18);
       --grad2: rgba(16,185,129,.15);
-      --green:#16a34a;
-      --red:#dc2626;
     }
+
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* NAV */
+    /* NAV (matches cardholder pages) */
     nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
-    .nav-left img{ height:36px; display:block }
+    .nav-left img{ height:36px; display:block; }
     .nav-right{ display:flex; align-items:center; gap:18px; }
     .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; }
+    .nav-right a[aria-current="page"]{ text-decoration:underline; opacity:1; }
     .nav-right a:hover{ opacity:1 }
 
-    /* Mobile menu */
     .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
     .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
     .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
     .hamburger.active span:nth-child(2){ opacity:0; }
     .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
     .nav-panel{ display:none; }
+
     @media (max-width: 768px){
       .nav-right{ display:none; }
       .hamburger{ display:flex; }
@@ -47,155 +48,223 @@
       }
       .nav-panel.active{ right:0; }
       .nav-panel a{ display:block; color:#111827; text-decoration:none; padding:12px 8px; border-radius:8px; margin-bottom:6px; font-weight:600; }
+      .nav-panel a[aria-current="page"]{ background:#eef2f7; }
       .nav-panel a:hover{ background:#f3f4f6; }
       .nav-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55; }
       .nav-overlay.active{ display:block; }
     }
 
-    .container {
-      max-width: 900px;
-      margin: 30px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    /* HERO BAND (matches style) */
+    .hero-band{
+      background:
+        radial-gradient(1000px 600px at 85% -10%, var(--grad1), transparent 60%),
+        radial-gradient(700px 500px at -10% 110%, var(--grad2), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0d1220 40%, #0b1220 100%);
+      color:#eef2ff; padding:28px 0 24px;
     }
+    .hero-inner{ max-width:1100px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .hero-title{ margin:0; font-size:clamp(20px, 3.2vw, 28px); font-weight:600; letter-spacing:.2px; }
+    .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
 
-    h1 {
-      font-size: 1.8rem;
-      margin-bottom: 20px;
-    }
+    /* MAIN */
+    .container{ max-width:1100px; margin:20px auto 40px; padding:0 20px; }
 
-    .faq-item {
-      margin-bottom: 20px;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 15px;
+    .card{
+      background:#fff; border:1px solid var(--stroke); border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,.04);
+      padding:18px 16px; margin-bottom:14px;
     }
+    .card h2{ margin:0 0 8px 0; font-size:1.15rem; }
+    .muted{ color:#6b7c93; }
 
-    .faq-question {
-      font-weight: 600;
-      font-size: 1.1rem;
-      color: #102a43;
-      margin-bottom: 8px;
+    /* FAQ */
+    .faq{ display:grid; gap:10px; }
+    details{
+      background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:12px 14px;
     }
+    details summary{
+      list-style:none; cursor:pointer; font-weight:600; color:#102a43; outline:none;
+    }
+    details summary::-webkit-details-marker{ display:none; }
+    details[open] summary{ color:#0b1530; }
+    .faq p{ margin:8px 0 0; color:#4b5563; line-height:1.55; }
 
-    .faq-answer {
-      font-size: 0.95rem;
-      color: #4b5563;
-      line-height: 1.5;
+    .contact{
+      background:#f9fafb; border:1px solid var(--stroke); border-radius:12px; padding:16px;
     }
-
-    .contact-box {
-      margin-top: 30px;
-      padding: 20px;
-      background: #f9fafb;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-    }
-
-    .contact-box h2 {
-      font-size: 1.2rem;
-      margin-bottom: 10px;
-    }
-
-    .contact-box p {
-      margin: 0;
-      color: #4b5563;
-    }
-
-    .contact-box a {
-      color: #2f80ed;
-      text-decoration: none;
-    }
-
-    .contact-box a:hover {
-      text-decoration: underline;
-    }
+    .contact a{ color:var(--blue); text-decoration:none; }
+    .contact a:hover{ text-decoration:underline; }
   </style>
 </head>
 <body>
 
- <!-- NAV -->
+  <!-- NAV -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="cardholder.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
+        <a href="wallet.html" aria-label="BOOP home">
+          <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
+        </a>
       </div>
-      <div class="nav-right">
+
+      <div class="nav-right" aria-label="Primary">
         <a href="cardholder.html">Home</a>
         <a href="send-request.html">Send / Request</a>
         <a href="wallet.html">Wallet</a>
-        <a href="activity.html" aria-current="page">Activity</a>
-        <a href="help.html">Help</a>
+        <a href="activity.html">Activity</a>
+        <a href="help.html" aria-current="page">Help</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
+
       <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
         <span></span><span></span><span></span>
       </button>
     </div>
+
     <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
     <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
       <a href="cardholder.html">Home</a>
       <a href="send-request.html">Send / Request</a>
       <a href="wallet.html">Wallet</a>
-      <a href="activity.html" aria-current="page">Activity</a>
-      <a href="help.html">Help</a>
+      <a href="activity.html">Activity</a>
+      <a href="help.html" aria-current="page">Help</a>
       <a href="#" id="logoutBtnMobile">Log Out</a>
     </div>
   </nav>
 
-<!-- Main Container -->
-<div class="container">
-  <h1>Help & FAQs</h1>
-
-  <div class="faq-item">
-    <div class="faq-question">How do I send money?</div>
-    <div class="faq-answer">
-      Go to the <strong>Send / Request</strong> page, search for another cardholder, enter the amount, and click <em>Send</em>.
+  <!-- HERO -->
+  <section class="hero-band">
+    <div class="hero-inner">
+      <div>
+        <h1 class="hero-title">Help & FAQs</h1>
+        <p class="hero-sub">Quick answers to common questions—and how to reach us.</p>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="faq-item">
-    <div class="faq-question">How do I request money?</div>
-    <div class="faq-answer">
-      On the <strong>Send / Request</strong> page, search for a cardholder, enter the amount, and click <em>Request</em>.
-    </div>
-  </div>
+  <!-- MAIN -->
+  <main class="container">
 
-  <div class="faq-item">
-    <div class="faq-question">Where can I see my past transactions?</div>
-    <div class="faq-answer">
-      Visit the <strong>Activity</strong> page to view your recent transactions and filter them by date range.
-    </div>
-  </div>
+    <!-- Quick cards -->
+    <section class="card">
+      <h2>Getting Started</h2>
+      <div class="muted">A few basics to help you move money with confidence.</div>
+    </section>
 
-  <div class="faq-item">
-    <div class="faq-question">Can I transfer money to my bank?</div>
-    <div class="faq-answer">
-      Not at this time. Bank transfers will be available in a future update.
-    </div>
-  </div>
+    <!-- FAQ -->
+    <section class="faq" aria-label="Frequently asked questions">
+      <details>
+        <summary>How do I send money?</summary>
+        <p>Go to <strong>Send / Request</strong>, search for the person, enter the amount, and tap <em>Send</em>. You’ll see a confirmation before it goes.</p>
+      </details>
 
-  <div class="faq-item">
-    <div class="faq-question">What if I sent money to the wrong person?</div>
-    <div class="faq-answer">
-      Please contact BOOP Support immediately. We may be able to help if the funds have not been used yet.
-    </div>
-  </div>
+      <details>
+        <summary>How do I request money?</summary>
+        <p>On <strong>Send / Request</strong>, search for who you’re requesting from, enter the amount, and tap <em>Request</em>. They’ll get a notification in BOOP.</p>
+      </details>
 
-  <div class="contact-box">
-    <h2>Need more help?</h2>
-    <p>Email us at <a href="mailto:support@boop.com">support@boop.com</a> or call <strong>(441) 555-1234</strong>.</p>
-  </div>
-</div>
+      <details>
+        <summary>Where can I see my past activity?</summary>
+        <p>Open <strong>Activity</strong> to see your recent transactions. Use the quick filters (7, 30, 90 days) or a custom date range. You can also export CSV.</p>
+      </details>
 
-<script>
-  // Logout handler
-  document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.clear();
-    window.location.href = "cardholder-login.html";
-  });
-</script>
+      <details>
+        <summary>Can I move money to my bank?</summary>
+        <p>Not yet. Bank transfers are coming soon.</p>
+      </details>
 
+      <details>
+        <summary>I sent money to the wrong person—what do I do?</summary>
+        <p>Contact Support immediately. If the funds haven’t been used, we may be able to help.</p>
+      </details>
+    </section>
+
+    <!-- Contact -->
+    <section class="contact" style="margin-top:14px;">
+      <h2 style="margin:0 0 6px 0;">Still need help?</h2>
+      <div>We’re here for you. Email <a href="mailto:support@boop.com">support@boop.com</a> or call <strong>(441) 555-1234</strong>.</div>
+    </section>
+
+  </main>
+
+  <!-- Permissions gate (cardholder / cardholder_assistance only) -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+        const me = await res.json();
+        if (res.status === 401 || res.status === 403) throw new Error("Unauthorized");
+        const role = (me.role||"").toLowerCase();
+        const type = (me.type||"").toLowerCase();
+        const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
+        if (!ok) throw new Error("Not a cardholder");
+        localStorage.setItem("boopUser", JSON.stringify(me));
+      } catch (err) {
+        localStorage.clear();
+        window.location.href = "cardholder-login.html";
+      }
+    })();
+  </script>
+
+  <!-- Mobile menu + logout -->
+  <script>
+    (function(){
+      const hamburger = document.getElementById('hamburger');
+      const panel = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('navOverlay');
+      const logoutDesktop = document.getElementById('logoutBtn');
+      const logoutMobile = document.getElementById('logoutBtnMobile');
+
+      function openMenu(){
+        hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active');
+        hamburger.setAttribute('aria-expanded','true'); document.body.style.overflow='hidden';
+      }
+      function closeMenu(){
+        hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active');
+        hamburger.setAttribute('aria-expanded','false'); document.body.style.overflow='';
+      }
+      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active') ? closeMenu() : openMenu());
+      overlay?.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+      function attachLogout(el){
+        if (!el) return;
+        el.addEventListener('click', async (e)=>{
+          e.preventDefault();
+          try { await fetch('/api/logout', { method:'POST' }); } catch {}
+          localStorage.clear();
+          window.location.href = 'cardholder-login.html';
+        });
+      }
+      attachLogout(logoutDesktop);
+      attachLogout(logoutMobile);
+    })();
+  </script>
+
+  <!-- Optional: force sign-out polling (kept consistent with app) -->
+  <script>
+    (async () => {
+      const token = localStorage.getItem("boop_jwt");
+      const boopUser = JSON.parse(localStorage.getItem("boopUser") || "{}");
+      const email = boopUser.email;
+      if (!token || !email) return;
+
+      async function checkForceSignOut() {
+        try {
+          const res = await fetch(`/api/sessions/force-check/${email}`);
+          const data = await res.json();
+          if (res.ok && data.force_signed_out) {
+            alert("⚠️ You have been signed out by an administrator.");
+            localStorage.clear();
+            try { await fetch(`/api/sessions/${email}`, { method: "DELETE" }); } catch {}
+            try { await fetch(`/api/sessions/force-clear/${email}`, { method: "PATCH" }); } catch {}
+            window.location.href = "cardholder-login.html";
+          }
+        } catch {}
+      }
+      setInterval(checkForceSignOut, 10000);
+    })();
+  </script>
 </body>
 </html>
