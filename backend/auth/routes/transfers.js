@@ -211,4 +211,33 @@ router.patch('/:id/complete', requireAccountsRole, async (req, res) => {
   }
 });
 
+// ./auth/routes/transfers.js
+const express = require('express');
+const router = express.Router();
+const { authenticateToken } = require('../middleware/authMiddleware');
+// const db = require('../../db');
+
+// ... your existing routes here ...
+
+router.get('/mine/latest', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    // TODO: replace with real query
+    // const row = await db.oneOrNone(
+    //   `SELECT id, created_at, status, amount_cents
+    //    FROM transfers
+    //    WHERE user_id=$1
+    //    ORDER BY created_at DESC
+    //    LIMIT 1`, [userId]
+    // );
+    const row = null; // placeholder when none
+    if (!row) return res.json({});
+    res.json(row);
+  } catch (e) {
+    console.error('transfers/mine/latest error', e);
+    res.status(500).json({ message: 'Failed to load latest transfer.' });
+  }
+});
+
+
 module.exports = router;
