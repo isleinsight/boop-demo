@@ -35,6 +35,7 @@ try {
   app.use('/api/sessions', require('./auth/routes/sessions'));
   app.use('/api/transactions', require('./auth/routes/transactions'));
   app.use('/api/transfers', require('./auth/routes/transfers'));
+  app.use('/api/bank-accounts', require('./auth/routes/bank-accounts'));
 
 
 // Mount treasury with explicit logging so we can see if it fails to load
