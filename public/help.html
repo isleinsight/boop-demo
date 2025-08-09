@@ -4,20 +4,12 @@
   <meta charset="UTF-8" />
   <title>Help – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="assets/styles.css" />
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-      margin: 0;
-      padding: 0;
-    }
-
     nav {
-      background-color: #102a43;
+      background: linear-gradient(90deg, #2f80ed, #56ccf2);
       padding: 12px 20px;
     }
-
     .nav-container {
       max-width: 1100px;
       margin: auto;
@@ -25,176 +17,167 @@
       justify-content: space-between;
       align-items: center;
     }
-
     .nav-left {
       display: flex;
       align-items: center;
     }
-
     .nav-left img {
       height: 36px;
       margin-right: 20px;
     }
-
     .nav-links a {
       margin-right: 16px;
       text-decoration: none;
       color: white;
       font-size: 0.95em;
     }
-
     .nav-links a:hover {
       text-decoration: underline;
     }
-
     .nav-right a {
+      margin-left: 16px;
       text-decoration: none;
       color: white;
       font-size: 0.95em;
     }
-
-    .container {
-      max-width: 700px;
-      margin: 40px auto;
-      background: white;
-      border-radius: 10px;
-      padding: 30px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    .nav-right a:hover {
+      text-decoration: underline;
     }
 
-    h2 {
-      color: #102a43;
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      font-size: 1.8rem;
       margin-bottom: 20px;
     }
 
     .faq-item {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 15px;
     }
 
-    .faq-item h4 {
-      color: #2f80ed;
-      margin: 0 0 8px;
+    .faq-question {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #102a43;
+      margin-bottom: 8px;
     }
 
-    .faq-item p {
-      margin: 0;
-      font-size: 0.95em;
-      color: #333;
+    .faq-answer {
+      font-size: 0.95rem;
+      color: #4b5563;
+      line-height: 1.5;
     }
 
     .contact-box {
-      margin-top: 40px;
-      background: #eef1f7;
+      margin-top: 30px;
       padding: 20px;
+      background: #f9fafb;
       border-radius: 8px;
-      text-align: center;
+      border: 1px solid #e5e7eb;
+    }
+
+    .contact-box h2 {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
     }
 
     .contact-box p {
-      margin-bottom: 10px;
-      color: #333;
+      margin: 0;
+      color: #4b5563;
     }
 
-    .contact-box button {
-      background-color: #2f80ed;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1em;
+    .contact-box a {
+      color: #2f80ed;
+      text-decoration: none;
     }
 
-    .contact-box button:hover {
-      background-color: #1b6fd6;
+    .contact-box a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="wallet.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-        <div class="nav-links">
-          <a href="cardholder.html">Home</a>
-          <a href="send-request.html">Send / Request</a>
-          <a href="wallet.html">Wallet</a>
-          <a href="activity.html">Activity</a>
-          <a href="help.html">Help</a>
-        </div>
-      </div>
-      <div class="nav-right">
-        <a href="#" id="logoutBtn">Log Out</a>
+
+<!-- Top Nav -->
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <a href="wallet.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
+      <div class="nav-links">
+        <a href="cardholder.html">Home</a>
+        <a href="send-request.html">Send / Request</a>
+        <a href="wallet.html">Wallet</a>
+        <a href="activity.html">Activity</a>
+        <a href="help.html">Help</a>
       </div>
     </div>
-  </nav>
-
-  <div class="container">
-    <h2>Need Help?</h2>
-
-    <div class="faq-item">
-      <h4>How do I send or request money?</h4>
-      <p>Use the "Send / Request" page to look up a user, enter the amount, and choose whether to send or request. You'll receive confirmation once it's complete.</p>
+    <div class="nav-right">
+      <a href="#" id="logoutBtn">Log Out</a>
     </div>
+  </div>
+</nav>
 
-    <div class="faq-item">
-      <h4>Where do I see my transactions?</h4>
-      <p>All transactions are listed in the "Activity" section. You can filter by date or search for specific names or amounts.</p>
-    </div>
+<!-- Main Container -->
+<div class="container">
+  <h1>Help & FAQs</h1>
 
-    <div class="faq-item">
-      <h4>Is BOOP secure?</h4>
-      <p>Yes! BOOP uses end-to-end encryption, two-factor authentication, and secure Firebase authentication for all users.</p>
-    </div>
-
-    <div class="faq-item">
-      <h4>How do I transfer to my bank?</h4>
-      <p>On the Wallet page, tap "Transfer" and enter your amount. Bank transfer support is currently in beta and will be rolling out soon.</p>
-    </div>
-
-    <div class="faq-item">
-      <h4>I can’t find someone in search</h4>
-      <p>Make sure they have an account and are not currently on government assistance, as those accounts are restricted from transactions.</p>
-    </div>
-
-    <div class="contact-box">
-      <p>Still need help?</p>
-      <button onclick="alert('This will open support chat or email in the future.')">Contact Support</button>
+  <div class="faq-item">
+    <div class="faq-question">How do I send money?</div>
+    <div class="faq-answer">
+      Go to the <strong>Send / Request</strong> page, search for another cardholder, enter the amount, and click <em>Send</em>.
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  <div class="faq-item">
+    <div class="faq-question">How do I request money?</div>
+    <div class="faq-answer">
+      On the <strong>Send / Request</strong> page, search for a cardholder, enter the amount, and click <em>Request</em>.
+    </div>
+  </div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-    };
+  <div class="faq-item">
+    <div class="faq-question">Where can I see my past transactions?</div>
+    <div class="faq-answer">
+      Visit the <strong>Activity</strong> page to view your recent transactions and filter them by date range.
+    </div>
+  </div>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+  <div class="faq-item">
+    <div class="faq-question">Can I transfer money to my bank?</div>
+    <div class="faq-answer">
+      Not at this time. Bank transfers will be available in a future update.
+    </div>
+  </div>
 
-    const logoutBtn = document.getElementById("logoutBtn");
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      });
-    });
+  <div class="faq-item">
+    <div class="faq-question">What if I sent money to the wrong person?</div>
+    <div class="faq-answer">
+      Please contact BOOP Support immediately. We may be able to help if the funds have not been used yet.
+    </div>
+  </div>
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "index.html";
-      }
-    });
-  </script>
+  <div class="contact-box">
+    <h2>Need more help?</h2>
+    <p>Email us at <a href="mailto:support@boop.com">support@boop.com</a> or call <strong>(441) 555-1234</strong>.</p>
+  </div>
+</div>
+
+<script>
+  // Logout handler
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.clear();
+    window.location.href = "cardholder-login.html";
+  });
+</script>
+
 </body>
 </html>
