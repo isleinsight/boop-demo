@@ -211,14 +211,7 @@ router.patch('/:id/complete', requireAccountsRole, async (req, res) => {
   }
 });
 
-// ./auth/routes/transfers.js
-const express = require('express');
-const router = express.Router();
-const { authenticateToken } = require('../middleware/authMiddleware');
-// const db = require('../../db');
-
-// ... your existing routes here ...
-
+// GET mine/latest
 router.get('/mine/latest', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
