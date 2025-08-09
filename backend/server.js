@@ -23,7 +23,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 try {
   // Auth-related routes
   app.use('/auth/login', require('./auth/routes/login'));
-  app.use('/logout', require('./auth/routes/logout'));
+  app.use('/api/logout', require('./auth/routes/logout'));
 
   // API routes
   app.use('/api/users', require('./auth/routes/users'));
@@ -48,7 +48,6 @@ try {
 }
 
 app.use('/api/admin-actions', require('./auth/routes/admin-actions'));
-  app.use('/api/admin-actions', require('./auth/routes/admin-actions'));
 } catch (err) {
   console.error("❌ Route load failure:", err.message);
 }
