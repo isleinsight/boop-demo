@@ -209,234 +209,237 @@
     </div>
   </div>
 
-  <!-- Permissions: cardholder / assistance -->
-  <script>
-    (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
-        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-        const me = await res.json();
-        const role = (me.role||"").toLowerCase(), type = (me.type||"").toLowerCase();
-        const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
-        if (!ok) throw new Error("Not a cardholder");
-        localStorage.setItem("boopUser", JSON.stringify(me));
-      } catch {
-        localStorage.clear();
-        window.location.href = "cardholder-login.html";
-      }
-    })();
-  </script>
-
-  <!-- Page logic -->
-  <script>
-    (function(){
-      // Mobile nav
-      const hamburger = document.getElementById('hamburger');
-      const panel = document.getElementById('mobileMenu');
-      const overlay = document.getElementById('navOverlay');
-      function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
-      function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
-      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
-      overlay?.addEventListener('click', closeMenu);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-
-      // Logout both places
-      function attachLogout(el){
-        if (!el) return;
-        el.addEventListener('click', async (e)=>{ e.preventDefault(); try{ await fetch('/api/logout',{method:'POST'}) }catch{} localStorage.clear(); window.location.href='cardholder-login.html'; });
-      }
-      attachLogout(document.getElementById('logoutBtn'));
-      attachLogout(document.getElementById('logoutBtnMobile'));
-
-      // Elements
+ <!-- Permissions: cardholder / assistance -->
+<script>
+  (async () => {
+    try {
       const token = localStorage.getItem("boop_jwt");
-      const flash = document.getElementById('flash');
+      if (!token) throw new Error("No token");
+      const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+      const me = await res.json();
+      const role = (me.role||"").toLowerCase(), type = (me.type||"").toLowerCase();
+      const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
+      if (!ok) throw new Error("Not a cardholder");
+      localStorage.setItem("boopUser", JSON.stringify(me));
+    } catch {
+      localStorage.clear();
+      window.location.href = "cardholder-login.html";
+    }
+  })();
+</script>
 
-      const destination = document.getElementById('destination');
-      const addBankBtn = document.getElementById('addBankBtn');
-      const amountEl = document.getElementById('amount');
-      const memoEl = document.getElementById('memo');
+<!-- Page logic -->
+<script>
+  (function(){
+    // Mobile nav
+    const hamburger = document.getElementById('hamburger');
+    const panel = document.getElementById('mobileMenu');
+    const overlay = document.getElementById('navOverlay');
+    function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+    function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+    hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
+    overlay?.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
 
-      const previewBox = document.getElementById('previewBox');
-      const pAmount = document.getElementById('pAmount');
-      const pFee = document.getElementById('pFee');
-      const pNet = document.getElementById('pNet');
-      const pArrival = document.getElementById('pArrival');
+    // Logout both places
+    function attachLogout(el){
+      if (!el) return;
+      el.addEventListener('click', async (e)=>{ e.preventDefault(); try{ await fetch('/api/logout',{method:'POST'}) }catch{} localStorage.clear(); window.location.href='cardholder-login.html'; });
+    }
+    attachLogout(document.getElementById('logoutBtn'));
+    attachLogout(document.getElementById('logoutBtnMobile'));
 
-      const reviewBtn = document.getElementById('reviewBtn');
-      const formMsg = document.getElementById('formMsg');
+    // Elements
+    const token = localStorage.getItem("boop_jwt");
+    const flash = document.getElementById('flash');
 
-      const reviewModal = document.getElementById('reviewModal');
-      const mTo = document.getElementById('mTo');
-      const mAmount = document.getElementById('mAmount');
-      const mFee = document.getElementById('mFee');
-      const mNet = document.getElementById('mNet');
-      const mArrival = document.getElementById('mArrival');
-      const mMemo = document.getElementById('mMemo');
-      const confirmBtn = document.getElementById('confirmBtn');
-      const cancelBtn = document.getElementById('cancelBtn');
-      const modalMsg = document.getElementById('modalMsg');
+    const destination = document.getElementById('destination');
+    const addBankBtn = document.getElementById('addBankBtn');
+    const amountEl = document.getElementById('amount');
+    const memoEl = document.getElementById('memo');
 
-      const balanceTxt = document.getElementById('balanceTxt');
-      const latestBox = document.getElementById('latestBox');
+    const previewBox = document.getElementById('previewBox');
+    const pAmount = document.getElementById('pAmount');
+    const pFee = document.getElementById('pFee');
+    const pNet = document.getElementById('pNet');
+    const pArrival = document.getElementById('pArrival');
 
-      let balanceCents = 0;
-      let banks = [];
-      let selectedBank = null;
+    const reviewBtn = document.getElementById('reviewBtn');
+    const formMsg = document.getElementById('formMsg');
 
-      function dollars(c){ return `$${(Number(c||0)/100).toFixed(2)}`; }
-      function showFlash(msg, ok=true){
-        flash.textContent = msg;
-        flash.className = "alert " + (ok ? "ok" : "bad");
-        flash.style.display = "block";
-        setTimeout(()=> flash.style.display = "none", 4000);
-      }
-      function randomKey(){ return 'ikey_' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+    const reviewModal = document.getElementById('reviewModal');
+    const mTo = document.getElementById('mTo');
+    const mAmount = document.getElementById('mAmount');
+    const mFee = document.getElementById('mFee');
+    const mNet = document.getElementById('mNet');
+    const mArrival = document.getElementById('mArrival');
+    const mMemo = document.getElementById('mMemo');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const modalMsg = document.getElementById('modalMsg');
 
-      async function loadBalance(){
-        try{
-          const r = await fetch('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token}` }});
-          const j = await r.json();
-          balanceCents = Number(j?.balance_cents||0);
-          balanceTxt.textContent = dollars(balanceCents);
-        }catch{}
-      }
+    const balanceTxt = document.getElementById('balanceTxt');
+    const latestBox = document.getElementById('latestBox');
 
-      async function loadBanks(){
-        destination.innerHTML = `<option disabled selected>Loading…</option>`;
-        try{
-          const r = await fetch('/api/bank-accounts/mine', { headers:{ Authorization:`Bearer ${token}` }});
-const j = await r.json();
-banks = Array.isArray(j) ? j : [];
-          if (!banks.length){
-            destination.innerHTML = `<option disabled selected>No bank accounts yet</option>`;
-            return;
-          }
-          destination.innerHTML = banks.map(b => `<option value="${b.id}">${b.bank_name} •••• ${b.last4}</option>`).join('');
-          selectedBank = banks[0]?.id || null;
-        }catch{
-          destination.innerHTML = `<option disabled selected>Failed to load</option>`;
-        }
-      }
+    let balanceCents = 0;
+    let banks = [];
+    let selectedBank = null;
 
-      destination.addEventListener('change', (e)=> selectedBank = e.target.value);
+    function dollars(c){ return `$${(Number(c||0)/100).toFixed(2)}`; }
+    function showFlash(msg, ok=true){
+      flash.textContent = msg;
+      flash.className = "alert " + (ok ? "ok" : "bad");
+      flash.style.display = "block";
+      setTimeout(()=> flash.style.display = "none", 4000);
+    }
+    function randomKey(){ return 'ikey_' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
-      // Simple “add bank” inline flow (temporary collect & save)
-      addBankBtn.addEventListener('click', async ()=>{
-        const holder = prompt("Account holder name");
-        if (!holder) return;
-        const bank = prompt("Bank name");
-        if (!bank) return;
-        const account = prompt("Account number (will be masked)");
-        if (!account) return;
-        const routing = prompt("Routing / sort code");
-        if (!routing) return;
+    async function loadBalance(){
+      try{
+        const r = await fetch('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token}` }});
+        const j = await r.json();
+        balanceCents = Number(j?.balance_cents||0);
+        balanceTxt.textContent = dollars(balanceCents);
+      }catch{}
+    }
 
-        try{
-          const res = await fetch('/api/bank-accounts', {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-            body: JSON.stringify({ holder_name: holder, bank_name: bank, account_number: account, routing_number: routing })
-          });
-          const saved = await res.json();
-          if (!res.ok) throw new Error(saved.message || 'Failed to add bank.');
-          showFlash('Bank account saved.', true);
-          await loadBanks();
-        }catch(e){ showFlash(e.message || 'Could not save bank.', false); }
-      });
-
-      // Preview calc (flat fee = 0 for now; tweak later)
-      function updatePreview(){
-        const amt = Number(amountEl.value);
-        if (!selectedBank || !amt || amt <= 0){ previewBox.style.display='none'; reviewBtn.disabled = true; return; }
-        const fee = 0; // set a number if you want temporary fee
-        if (amt*100 > balanceCents){
-          formMsg.textContent = "Amount exceeds available balance.";
-          reviewBtn.disabled = true;
-          previewBox.style.display = 'none';
+    async function loadBanks(){
+      destination.innerHTML = `<option disabled selected>Loading…</option>`;
+      try{
+        const r = await fetch('/api/bank-accounts/mine', { headers:{ Authorization:`Bearer ${token}` }});
+        const j = await r.json();
+        banks = Array.isArray(j) ? j : [];
+        if (!banks.length){
+          destination.innerHTML = `<option disabled selected>No bank accounts yet</option>`;
           return;
         }
-        formMsg.textContent = "";
-        pAmount.textContent = dollars(amt*100);
-        pFee.textContent = dollars(fee);
-        pNet.textContent = dollars(amt*100 - fee);
-        pArrival.textContent = "1–2 business days";
-        previewBox.style.display = 'block';
-        reviewBtn.disabled = false;
+        destination.innerHTML = banks.map(b => `<option value="${b.id}">${b.bank_name} •••• ${b.last4}</option>`).join('');
+        selectedBank = banks[0]?.id || null;
+      }catch{
+        destination.innerHTML = `<option disabled selected>Failed to load</option>`;
       }
-      amountEl.addEventListener('input', updatePreview);
+    }
 
-      // Review modal
-      reviewBtn.addEventListener('click', ()=>{
-        const bank = banks.find(b => b.id === selectedBank);
-        if (!bank) return;
-        mTo.textContent = `${bank.bank_name} •••• ${bank.last4}`;
-        mAmount.textContent = pAmount.textContent;
-        mFee.textContent = pFee.textContent;
-        mNet.textContent = pNet.textContent;
-        mArrival.textContent = pArrival.textContent;
-        mMemo.textContent = memoEl.value || "—";
-        reviewModal.style.display = 'flex';
-      });
-      cancelBtn.addEventListener('click', ()=> reviewModal.style.display = 'none');
+    destination.addEventListener('change', (e)=> selectedBank = e.target.value);
 
-      // Submit request (creates approval item for Accounts)
-      confirmBtn.addEventListener('click', async ()=>{
-        confirmBtn.disabled = true; modalMsg.textContent = "Submitting…";
-        const amtCents = Math.round(Number(amountEl.value) * 100);
-        try{
-          const res = await fetch('/api/transfers', {
-            method:'POST',
-            headers:{
-              'Content-Type':'application/json',
-              'X-Idempotency-Key': randomKey(),
-              Authorization:`Bearer ${token}`
-            },
-            body: JSON.stringify({
-              bank_account_id: selectedBank,
-              amount_cents: amtCents,
-              memo: memoEl.value || ""
-            })
-          });
-          const json = await res.json();
-          if (!res.ok) throw new Error(json.message || 'Request failed.');
-          reviewModal.style.display = 'none';
-          showFlash('Transfer request submitted for review.', true);
-          amountEl.value = ""; memoEl.value = ""; updatePreview();
-          // Optionally refresh latest
-          loadLatest();
-          // and refresh balance if you deduct holds now (optional)
-        }catch(e){
-          modalMsg.textContent = e.message || "Error";
-        }finally{
-          confirmBtn.disabled = false;
-        }
-      });
+    // Simple “add bank” inline flow (temporary collect & save)
+    addBankBtn.addEventListener('click', async ()=>{
+      const holder = prompt("Account holder name");
+      if (!holder) return;
+      const bank = prompt("Bank name");
+      if (!bank) return;
+      const account = prompt("Account number (will be masked)");
+      if (!account) return;
+      const routing = prompt("Routing / sort code");
+      if (!routing) return;
 
-      // Latest request (optional)
-      async function loadLatest(){
-        try{
-          const r = await fetch('/api/transfers/mine/latest', {
-          const j = await r.json();
-          if (!j || !j.id){ latestBox.textContent = "No requests yet."; return; }
-          latestBox.innerHTML = `
-            <div class="summary">
-              <div class="line"><span>Requested</span><strong>${new Date(j.created_at).toLocaleString()}</strong></div>
-              <div class="line"><span>Amount</span><strong>${dollars(j.amount_cents)}</strong></div>
-              <div class="line"><span>Status</span><strong>${(j.status||'submitted')}</strong></div>
-            </div>
-          `;
-        }catch{ /* ignore */ }
+      try{
+        const res = await fetch('/api/bank-accounts', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          body: JSON.stringify({ holder_name: holder, bank_name: bank, account_number: account, routing_number: routing })
+        });
+        const saved = await res.json();
+        if (!res.ok) throw new Error(saved.message || 'Failed to add bank.');
+        showFlash('Bank account saved.', true);
+        await loadBanks();
+      }catch(e){ showFlash(e.message || 'Could not save bank.', false); }
+    });
+
+    // Preview calc (flat fee = 0 for now; tweak later)
+    function updatePreview(){
+      const amt = Number(amountEl.value);
+      if (!selectedBank || !amt || amt <= 0){ previewBox.style.display='none'; reviewBtn.disabled = true; return; }
+      const fee = 0; // placeholder fee
+      if (amt*100 > balanceCents){
+        formMsg.textContent = "Amount exceeds available balance.";
+        reviewBtn.disabled = true;
+        previewBox.style.display = 'none';
+        return;
       }
+      formMsg.textContent = "";
+      pAmount.textContent = dollars(amt*100);
+      pFee.textContent = dollars(fee);
+      pNet.textContent = dollars(amt*100 - fee);
+      pArrival.textContent = "1–2 business days";
+      previewBox.style.display = 'block';
+      reviewBtn.disabled = false;
+    }
+    amountEl.addEventListener('input', updatePreview);
 
-      // Go
-      (async function init(){
-        await Promise.all([loadBalance(), loadBanks()]);
-        updatePreview();
+    // Review modal
+    reviewBtn.addEventListener('click', ()=>{
+      const bank = banks.find(b => b.id === selectedBank);
+      if (!bank) return;
+      mTo.textContent = `${bank.bank_name} •••• ${bank.last4}`;
+      mAmount.textContent = pAmount.textContent;
+      mFee.textContent = pFee.textContent;
+      mNet.textContent = pNet.textContent;
+      mArrival.textContent = pArrival.textContent;
+      mMemo.textContent = memoEl.value || "—";
+      reviewModal.style.display = 'flex';
+    });
+    cancelBtn.addEventListener('click', ()=> reviewModal.style.display = 'none');
+
+    // Submit request → backend
+    confirmBtn.addEventListener('click', async ()=>{
+      confirmBtn.disabled = true; modalMsg.textContent = "Submitting…";
+      const amtCents = Math.round(Number(amountEl.value) * 100);
+      try{
+        const res = await fetch('/api/transfers', {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'X-Idempotency-Key': randomKey(),
+            Authorization:`Bearer ${token}`
+          },
+          body: JSON.stringify({
+            bank_account_id: selectedBank,
+            amount_cents: amtCents,
+            memo: memoEl.value || ""
+          })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.message || 'Request failed.');
+        reviewModal.style.display = 'none';
+        showFlash('Transfer request submitted for review.', true);
+        amountEl.value = ""; memoEl.value = ""; updatePreview();
         loadLatest();
-      })();
+      }catch(e){
+        modalMsg.textContent = e.message || "Error";
+      }finally{
+        confirmBtn.disabled = false;
+      }
+    });
+
+    // Latest request (optional)
+    async function loadLatest(){
+      try{
+        const r = await fetch('/api/transfers/mine/latest', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const j = await r.json();
+        if (!j || !j.id){
+          latestBox.textContent = "No requests yet.";
+          return;
+        }
+        latestBox.innerHTML = `
+          <div class="summary">
+            <div class="line"><span>Requested</span><strong>${new Date(j.created_at).toLocaleString()}</strong></div>
+            <div class="line"><span>Amount</span><strong>${dollars(j.amount_cents)}</strong></div>
+            <div class="line"><span>Status</span><strong>${(j.status||'submitted')}</strong></div>
+          </div>
+        `;
+      }catch{ /* ignore */ }
+    }
+
+    // Go
+    (async function init(){
+      await Promise.all([loadBalance(), loadBanks()]);
+      updatePreview();
+      loadLatest();
     })();
-  </script>
+  })();
+</script>
 </body>
 </html>
