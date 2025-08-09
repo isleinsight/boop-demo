@@ -4,6 +4,25 @@ const router = express.Router();
 const pool = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
+// Public ping for debugging
+router.get('/ping', (req, res) => {
+  res.json({ ok: true, message: 'Transfers route is alive' });
+});
+
+// Protected routes below here
+router.use(authenticateToken);
+
+// Example existing route
+router.get('/', async (req, res) => {
+  try {
+    // ...existing transfer list logic...
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to load transfers.' });
+  }
+});
+
+
 // --- helpers ---------------------------------------------------------------
 function requireAdmin(req, res) {
   const { role, type } = req.user || {};
