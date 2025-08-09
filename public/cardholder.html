@@ -1,3 +1,79 @@
+<!-- 🔐 Cardholder permissions gate (debug mode) -->
+<script>
+  (async () => {
+    const token = localStorage.getItem("boop_jwt");
+
+    // 1) Quick token sanity check
+    if (!token) {
+      console.warn("🔒 No JWT in localStorage (boop_jwt missing)");
+      alert("No token found. Please log in again.");
+      localStorage.clear();
+      return (window.location.href = "cardholder-login.html");
+    }
+
+    try {
+      const res = await fetch("/api/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Grab raw text too in case JSON parse fails
+      const raw = await res.text();
+      let me;
+      try { me = JSON.parse(raw); } catch { me = { parseError: true, raw }; }
+
+      console.group("🔎 /api/me debug");
+      console.log("HTTP", res.status);
+      console.log("Body", me);
+      console.groupEnd();
+
+      if (!res.ok) {
+        alert(`Auth check failed (HTTP ${res.status}). Body: ${raw.slice(0,200)}`);
+        localStorage.clear();
+        return (window.location.href = "cardholder-login.html");
+      }
+
+      // 2) Accept common variants of “cardholder”
+      const role = (me.role || "").toLowerCase();
+      const type = (me.type || "").toLowerCase();
+      const isCardholder =
+        ["cardholder", "cardholder_assistance"].includes(role) ||
+        ["cardholder", "cardholder_assistance"].includes(type);
+
+      if (!isCardholder) {
+        alert(`Not a cardholder.\nrole="${me.role}" type="${me.type}"`);
+        localStorage.clear();
+        return (window.location.href = "cardholder-login.html");
+      }
+
+      // 3) Persist and hydrate UI bits
+      localStorage.setItem("boopUser", JSON.stringify(me));
+
+      const first =
+        me.first_name ||
+        (me.name && me.name.split && me.name.split(" ")[0]) ||
+        (me.email ? me.email.split("@")[0] : "") ||
+        "Friend";
+
+      const firstEl = document.getElementById("cardholderFirstName");
+      const emailEl = document.getElementById("cardholderEmail");
+      const passportEl = document.getElementById("passportId");
+
+      if (firstEl) firstEl.textContent = first;
+      if (emailEl && me.email) emailEl.textContent = me.email;
+      if (passportEl) passportEl.textContent = me.passport_id || "—";
+
+      // Optional: show actions if your logic depends on role
+      const btns = document.getElementById("sendReceiveButtons");
+      if (btns) btns.classList.remove("hidden");
+
+    } catch (err) {
+      console.error("❌ /api/me threw:", err);
+      alert(`Fetching user type error:\n${(err && err.message) || err}`);
+      localStorage.clear();
+      window.location.href = "cardholder-login.html";
+    }
+  })();
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
