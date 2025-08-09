@@ -92,6 +92,56 @@
     .amount{ font-weight:600; color:var(--blue); }
   </style>
 </head>
+  <!-- 🔐 Cardholder permissions gate -->
+<script>
+  (async () => {
+    try {
+      const token = localStorage.getItem("boop_jwt");
+      if (!token) throw new Error("No token");
+
+      const res = await fetch("/api/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const me = await res.json();
+
+      if (!res.ok) throw new Error(me?.error || `HTTP ${res.status}`);
+
+      // ✅ Require cardholder role (adjust if your API returns role/type differently)
+      // Examples:
+      //   me.role === "cardholder"
+      //   or me.role === "user" && me.type === "cardholder"
+      const isCardholder =
+        me?.role === "cardholder" ||
+        (me?.role === "user" && me?.type === "cardholder");
+
+      if (!isCardholder) throw new Error("Not a cardholder");
+
+      // Stash for the rest of the page (first name, email, passport, etc.)
+      localStorage.setItem("boopUser", JSON.stringify(me));
+
+      // Populate the friendly bits if they exist
+      const first =
+        me.first_name ||
+        (me.name?.split?.(" ")[0]) ||
+        (me.email ? me.email.split("@")[0] : "") ||
+        "Friend";
+
+      const firstEl = document.getElementById("cardholderFirstName");
+      const emailEl = document.getElementById("cardholderEmail");
+      const passportEl = document.getElementById("passportId");
+
+      if (firstEl) firstEl.textContent = first;
+      if (emailEl && me.email) emailEl.textContent = me.email;
+      if (passportEl) passportEl.textContent = me.passport_id || "—";
+
+    } catch (err) {
+      console.warn("🔒 Cardholder gate failed:", err?.message || err);
+      // Clear and kick to login
+      localStorage.clear();
+      window.location.href = "cardholder-login.html";
+    }
+  })();
+</script>
 <body>
 
   <!-- Top Nav -->
