@@ -6,137 +6,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <meta name="description" content="BOOP is Bermuda’s Official Onboarding Payments platform for secure, real-time assistance disbursements." />
+  <meta name="description" content="BOOP helps Bermuda move assistance funds quickly and safely." />
   <style>
     :root{
-      --brand:#2f80ed;
-      --brand-dark:#1c6fd8;
-      --ink:#1a2b4a;
-      --muted:#6b7280;
-      --bg:#0b1220;
-      --card:#0f172a;
-      --glass:rgba(255,255,255,0.08);
-      --ring:rgba(47,128,237,0.35);
-      --success:#10b981;
-      --border:rgba(255,255,255,0.08);
-      --white:#fff;
+      --brand:#2f80ed; --brand-dark:#1c6fd8; --ink:#1a2b4a; --muted:#6b7280;
+      --bg:#0b1220; --card:#0f172a; --glass:rgba(255,255,255,0.08);
+      --ring:rgba(47,128,237,0.35); --success:#10b981; --border:rgba(255,255,255,0.08); --white:#fff;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+      margin:0; font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       color:#eef2ff;
       background:
         radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
         radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
         linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
     }
-
-    /* NAV */
-    nav{
-      position:sticky;top:0;z-index:10;
-      background:rgba(11,18,32,.5);
-      backdrop-filter: blur(6px);
-      border-bottom:1px solid var(--border);
-    }
-    .nav-container{
-      max-width:1100px;margin:0 auto;
-      display:flex;align-items:center;justify-content:space-between;
-      padding:14px 18px;
-    }
-    .brand{
-      display:flex;align-items:center;gap:10px;
-      font-weight:700;color:#e5e7eb;text-decoration:none;
-      letter-spacing:.2px;
-    }
-    .brand img{height:34px;display:block}
-    .nav-actions a{
-      color:#e5e7eb;text-decoration:none;font-weight:500;
-      padding:8px 14px;border-radius:10px;border:1px solid transparent;
-    }
+    nav{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.5);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);}
+    .nav-container{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:#e5e7eb;text-decoration:none;letter-spacing:.2px;}
+    .brand img{height:34px}
+    .nav-actions a{color:#e5e7eb;text-decoration:none;font-weight:500;padding:8px 14px;border-radius:10px;border:1px solid transparent;}
     .nav-actions a:hover{border-color:var(--border)}
-    .nav-actions .outline{
-      border-color:var(--border);
-      color:#cbd5e1;
-    }
-    .nav-actions .primary{
-      background:var(--brand);color:var(--white);border-color:transparent;
-    }
+    .nav-actions .outline{border-color:var(--border);color:#cbd5e1;}
+    .nav-actions .primary{background:var(--brand);color:var(--white);border-color:transparent;}
     .nav-actions .primary:hover{background:var(--brand-dark)}
-
-    /* HERO */
-    .hero{
-      max-width:1100px;margin:42px auto 24px;padding:0 18px;
-      display:grid;grid-template-columns:1.1fr .9fr;gap:30px;
-    }
+    .hero{max-width:1100px;margin:42px auto 24px;padding:0 18px;display:grid;grid-template-columns:1.1fr .9fr;gap:30px;}
     @media (max-width: 900px){ .hero{grid-template-columns:1fr} }
-    .hero h1{
-      margin:10px 0 12px 0;font-size:clamp(28px,5vw,44px);
-      line-height:1.15;font-weight:700;letter-spacing:.2px;
-    }
-    .hero p.lead{
-      margin:0;color:#cbd5e1;font-size:clamp(15px,2.3vw,18px);
-    }
+    .hero h1{margin:10px 0 12px 0;font-size:clamp(28px,5vw,44px);line-height:1.15;font-weight:700;letter-spacing:.2px;}
+    .hero p.lead{margin:0;color:#cbd5e1;font-size:clamp(15px,2.3vw,18px);}
     .cta-row{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;
-      gap:8px;padding:12px 18px;border-radius:12px;
-      text-decoration:none;font-weight:600;border:1px solid transparent;
-      box-shadow: 0 10px 24px rgba(47,128,237,.15);
-    }
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:600;border:1px solid transparent;box-shadow:0 10px 24px rgba(47,128,237,.15);}
     .btn.primary{background:var(--brand);color:var(--white)}
     .btn.primary:hover{background:var(--brand-dark)}
     .btn.ghost{border-color:var(--border);color:#e5e7eb;background:transparent}
     .btn.ghost:hover{border-color:#93c5fd;color:#fff}
-
-    /* CARD (login portals) */
-    .portal-card{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-      border:1px solid var(--border);
-      border-radius:16px;padding:20px;
-      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
-    }
+    .portal-card{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);}
     .portal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .pill{
-      font-size:.78rem;color:#a5b4fc;border:1px solid var(--border);
-      background:var(--glass);padding:4px 10px;border-radius:999px;
-    }
+    .pill{font-size:.78rem;color:#a5b4fc;border:1px solid var(--border);background:var(--glass);padding:4px 10px;border-radius:999px;}
     .portal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
     @media (max-width:560px){ .portal-grid{grid-template-columns:1fr} }
-    .portal-grid a{
-      border:1px solid var(--border); border-radius:12px; padding:12px 14px;
-      text-align:center; text-decoration:none; color:#e5e7eb; font-weight:600;
-      background:rgba(255,255,255,.02);
-    }
+    .portal-grid a{border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center;text-decoration:none;color:#e5e7eb;font-weight:600;background:rgba(255,255,255,.02);}
     .portal-grid a:hover{border-color:#93c5fd;color:#fff}
-
-    /* TRUST / FEATURES */
-    .section{
-      max-width:1100px;margin:18px auto 40px;padding:0 18px;
-      display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
-    }
+    .section{max-width:1100px;margin:18px auto 40px;padding:0 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
     @media (max-width: 900px){ .section{grid-template-columns:1fr} }
-    .feature{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-      border:1px solid var(--border);border-radius:16px;padding:18px;
-    }
+    .feature{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));border:1px solid var(--border);border-radius:16px;padding:18px;}
     .feature h3{margin:0 0 8px 0;font-size:1.05rem}
     .feature p{margin:0;color:#cbd5e1;font-size:.95rem}
-
-    /* FOOTER */
-    footer{
-      border-top:1px solid var(--border);
-      color:#9ca3af;text-align:center;padding:18px;margin-top:28px;
-      font-size:.9rem;
-    }
-
-    /* Accent ring behind hero */
-    .ring{
-      position:absolute; inset: -120px auto auto -120px; width:380px;height:380px;
-      background: radial-gradient(closest-side, var(--ring), transparent 70%);
-      border-radius:50%; filter: blur(6px); pointer-events:none;
-    }
+    footer{border-top:1px solid var(--border);color:#9ca3af;text-align:center;padding:18px;margin-top:28px;font-size:.9rem;}
+    .ring{position:absolute; inset: -120px auto auto -120px; width:380px;height:380px;background: radial-gradient(closest-side, var(--ring), transparent 70%);border-radius:50%;filter: blur(6px);pointer-events:none;}
   </style>
 </head>
 <body>
@@ -157,21 +76,21 @@
 
   <header class="hero" role="banner">
     <div>
-      <h1>Bermuda’s Official Onboarding Payments.</h1>
+      <h1>Move help faster.</h1>
       <p class="lead">
-        Fast, accountable disbursements for government programs—designed for transparency,
-        auditability, and real-time control.
+        BOOP is how Bermuda sends and tracks program funds. Simple to use, quick to audit,
+        and built for real life.
       </p>
       <div class="cta-row" role="group" aria-label="Primary actions">
-        <a class="btn primary" href="signup.html" aria-label="Create a new BOOP account">Create Account</a>
-        <a class="btn ghost" href="cardholder-login.html" aria-label="Log in to BOOP">Cardholder Login</a>
-        <a class="btn ghost" href="parent-login.html" aria-label="Open the Parent Portal">Parent Portal</a>
+        <a class="btn primary" href="signup.html" aria-label="Create a new BOOP account">Create account</a>
+        <a class="btn ghost" href="cardholder-login.html" aria-label="Log in to BOOP">Log in</a>
+        <a class="btn ghost" href="parent-login.html" aria-label="Open the Parent Portal">Parent portal</a>
       </div>
 
       <div class="portal-card" style="margin-top:20px;">
         <div class="portal-header">
-          <strong>Portals</strong>
-          <span class="pill">Secure • Real-time • PCI aware</span>
+          <strong>Pick your portal</strong>
+          <span class="pill">Fast. Clear. Secure.</span>
         </div>
         <div class="portal-grid">
           <a href="cardholder-login.html">Cardholder Login</a>
@@ -182,33 +101,32 @@
       </div>
     </div>
 
-    <div class="portal-card" aria-label="Security & availability overview">
+    <div class="portal-card" aria-label="What BOOP does">
       <img src="assets/Boop-Logo-Black.png" alt="BOOP wordmark" style="height:46px;opacity:.9;margin-bottom:10px;">
       <p style="color:#cbd5e1;line-height:1.6;margin:0 0 12px;">
-        BOOP unifies onboarding and payments for assistance programs—reducing fraud and manual work while
-        giving agencies clear, exportable audit trails. Treasury-grade double-entry records, per-transaction
-        visibility, and role-based controls keep every dollar accountable.
+        BOOP keeps everyone on the same page. Add funds, see what was spent, and export a report—
+        all in a few clicks. No chasing emails. No guessing where money went.
       </p>
       <ul style="margin:0;color:#cbd5e1;padding-left:18px;line-height:1.6;">
-        <li>Instant wallet funding & merchant-safe cards</li>
-        <li>Live transaction feed with structured reporting</li>
-        <li>Granular permissions for Treasury, Accounting & Case Teams</li>
+        <li>Send funds instantly to a card</li>
+        <li>See every transaction in one place</li>
+        <li>Download clean reports anytime</li>
       </ul>
     </div>
   </header>
 
   <section class="section" aria-label="Highlights">
     <div class="feature">
-      <h3>Real-time Controls</h3>
-      <p>Fund, pause, or restrict spend categories on the spot. Full ledger with sender/recipient attribution.</p>
+      <h3>Easy to use</h3>
+      <p>Clear buttons. Short steps. Works great on mobile and desktop.</p>
     </div>
     <div class="feature">
-      <h3>Audit-Ready</h3>
-      <p>Consistent cents-based accounting, CSV exports, and immutable transaction history designed for compliance.</p>
+      <h3>Built for oversight</h3>
+      <p>Every dollar has a trail. Filter, search, and export whenever you need.</p>
     </div>
     <div class="feature">
-      <h3>Government-Grade Security</h3>
-      <p>Role-based access, JWT sessions, encryption in transit, and rigorous operational logging.</p>
+      <h3>Secure by default</h3>
+      <p>Modern login, roles for your team, and best-practice protection for data.</p>
     </div>
   </section>
 
@@ -217,7 +135,6 @@
   </footer>
 
   <script>
-    // tiny enhancement: current year in footer
     document.getElementById('year').textContent = new Date().getFullYear();
   </script>
 </body>
