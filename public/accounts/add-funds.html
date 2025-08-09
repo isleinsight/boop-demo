@@ -8,22 +8,28 @@
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
     body { font-family: 'Poppins', sans-serif; background: #f4f7fa; }
-    .container-small { max-width: 500px; background: #fff; margin: 50px auto; padding: 30px 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .container-small {
+      max-width: 500px; background: #fff; margin: 50px auto;
+      padding: 30px 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    }
     .input-group { margin-bottom: 20px; }
-    input, select, textarea, button { width: 100%; padding: 10px; font-size: calc(0.8vw + 0.4rem); box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; }
-    button { background: #2f80ed; color: white; font-weight: bold; cursor: pointer; border: none; }
+    input, select, textarea, button {
+      width: 100%; padding: 10px; font-size: calc(0.8vw + 0.4rem);
+      box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc;
+    }
+    button { background: #2f80ed; color: #fff; font-weight: bold; cursor: pointer; border: none; }
     button:hover { background: #1c6fd8; }
     .status { text-align: center; margin-top: 20px; color: #333; }
     #userSuggestions div { padding: 8px 12px; border-bottom: 1px solid #eee; cursor: pointer; }
     #userSuggestions div:hover { background-color: #f0f0f0; }
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; justify-content: center; align-items: center; }
-    .modal-content { background: white; padding: 20px; border-radius: 6px; text-align: center; }
+    .modal-content { background: #fff; padding: 20px; border-radius: 6px; text-align: center; }
     .modal-content button { padding: 8px 16px; margin: 5px; }
     #cancelModalBtn { background: #e74c3c; } #cancelModalBtn:hover { background: #c0392b; }
   </style>
 </head>
 <body>
-  <!-- Permissions check -->
+  <!-- Permissions check (ACCOUNTANTS ONLY) -->
   <script>
     (async () => {
       try {
@@ -31,8 +37,7 @@
         const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
         const meData = await res.json();
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        // ✅ allow accountant OR treasury
-        if (!meData || meData.role !== "admin" || !["accountant", "treasury"].includes(meData.type)) {
+        if (!meData || meData.role !== "admin" || meData.type !== "accountant") {
           throw new Error("Not authorized");
         }
         localStorage.setItem("boopUser", JSON.stringify(meData));
@@ -54,12 +59,7 @@
         <a href="index.html">Dashboard</a>
         <div class="nav-dropdown">
           <a href="#" class="dropbtn" style="color: white;">Accounts</a>
-          <div class="dropdown-content">
-            <a href="add-funds.html">Add Funds</a>
-            <a href="transfer.html">Transfer</a>
-            <a href="reports.html">Reports</a>
-            <a href="manage-treasury.html" id="manageTreasuryLink" style="display:none;">Manage Treasury</a>
-          </div>
+          <div class="dropdown-content" id="accountsMenu"><!-- dynamic --></div>
         </div>
         <a href="view-users.html">View Users</a>
         <a href="transactions.html">Transactions</a>
@@ -113,6 +113,17 @@
       const user = JSON.parse(localStorage.getItem("boopUser"));
       const token = localStorage.getItem("boop_jwt");
 
+      // Build Accounts menu dynamically (no "Add User", correct visibility)
+      const accountsMenu = document.getElementById("accountsMenu");
+      if (accountsMenu) {
+        accountsMenu.innerHTML = `
+          <a href="add-funds.html">Add Funds</a>
+          <a href="transfer.html">Transfer</a>
+          <a href="reports.html">Reports</a>
+        `;
+        // This page is accountant-only; no Manage Treasury item here
+      }
+
       const userSearch = document.getElementById("userSearch");
       const suggestions = document.getElementById("userSuggestions");
       const treasuryAccount = document.getElementById("treasuryAccount");
@@ -121,8 +132,6 @@
       const addFundsBtn = document.getElementById("addFundsBtn");
       const statusEl = document.getElementById("status");
       const logoutBtn = document.getElementById("logoutBtn");
-      const manageTreasuryLink = document.getElementById("manageTreasuryLink");
-      const addUserLink = document.getElementById("addUserLink");
 
       const modal = document.getElementById("modal");
       const modalAmount = document.getElementById("modalAmount");
@@ -133,33 +142,20 @@
 
       let selectedUser = null;
 
-      // Show/hide nav links based on user type
-      if (user?.type === "treasury") {
-        manageTreasuryLink.style.display = "block";
-        addUserLink.style.display = "none";
-      } else if (user?.type === "accountant") {
-        addUserLink.style.display = "block";
-      }
-
-      // 🚀 Load treasury wallet(s)
+      // 🚀 Load treasury wallets (accountant selects source)
       async function populateTreasuryAccounts() {
         try {
-          if (user.type === "treasury") {
-            const res = await fetch('/api/treasury/wallet-id', { headers: { Authorization: `Bearer ${token}` }});
-            const data = await res.json();
-            if (!res.ok || !data.wallet_id) throw new Error(data.message || "Wallet not found");
-            treasuryAccount.innerHTML = `<option value="${data.wallet_id}" selected>${user.email}'s Treasury</option>`;
-            treasuryAccount.disabled = true;
-          } else if (user.type === "accountant") {
-            const res = await fetch('/api/treasury/treasury-wallets', { headers: { Authorization: `Bearer ${token}` }});
-            const data = await res.json();
-            if (!res.ok || !Array.isArray(data)) throw new Error("Failed to load treasury wallets");
-            treasuryAccount.innerHTML = `
-              <option value="" disabled selected>Select a treasury account</option>
-              ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
-            `;
-            treasuryAccount.disabled = false;
-          }
+          const res = await fetch('/api/treasury/treasury-wallets', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (!res.ok || !Array.isArray(data)) throw new Error("Failed to load treasury wallets");
+
+          treasuryAccount.innerHTML = `
+            <option value="" disabled selected>Select a treasury account</option>
+            ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
+          `;
+          treasuryAccount.disabled = false;
         } catch (err) {
           console.error("❌ Treasury account load error:", err);
           statusEl.textContent = `❌ ${err.message}`;
@@ -194,7 +190,7 @@
         }
       });
 
-      // 👆 Pick a user
+      // 👆 Pick user
       suggestions.addEventListener("click", (e) => {
         const item = e.target.closest(".user-suggestion");
         if (!item) return;
@@ -245,10 +241,9 @@
             confirmModalBtn.onclick = () => { modal.style.display = "none"; resolve(true); };
             cancelModalBtn.onclick = () => { modal.style.display = "none"; reject(new Error("Cancelled")); };
           });
-
           if (!confirmed) return;
 
-          // ✅ IMPORTANT: send BOTH recipient wallet & treasury wallet
+          // ✅ Send BOTH recipient & source wallets
           const res = await fetch("/api/transactions/add-funds", {
             method: "POST",
             headers: {
@@ -256,11 +251,11 @@
               Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({
-              wallet_id: selectedUser.wallet_id,     // recipient wallet (credit)
-              user_id: selectedUser.id,              // recipient user
+              wallet_id: selectedUser.wallet_id,       // recipient wallet (credit)
+              user_id: selectedUser.id,                // recipient user
               amount: amt,
               note: note.value,
-              added_by: user.id,                     // admin performing action
+              added_by: user.id,                       // admin performing action
               treasury_wallet_id: treasuryAccount.value // SOURCE treasury wallet (debit)
             })
           });
