@@ -4,80 +4,166 @@
   <meta charset="UTF-8" />
   <title>Cardholder Dashboard - BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="assets/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-nav {
-  background-color: #102a43;
-  padding: 12px 20px;
-}
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      background-color: #ffffff;
+      color: #102a43;
+    }
 
-.nav-container {
-  max-width: 1100px;
-  margin: auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+    /* ===== Top Nav ===== */
+    nav {
+      background-color: #102a43;
+      padding: 12px 20px;
+    }
 
-.nav-left {
-  display: flex;
-  align-items: center;
-}
+    .nav-container {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-.nav-left img {
-  height: 36px;
-  margin-right: 20px;
-}
+    .nav-left {
+      display: flex;
+      align-items: center;
+    }
 
-.nav-links a {
-  margin-right: 16px;
-  text-decoration: none;
-  color: white;
-  font-size: 0.95em;
-}
+    .nav-left img {
+      height: 36px;
+      margin-right: 20px;
+    }
 
-.nav-links a:hover {
-  text-decoration: underline;
-}
+    .nav-links a {
+      margin-right: 16px;
+      text-decoration: none;
+      color: white;
+      font-size: 0.95em;
+    }
 
-.nav-right a {
-  margin-left: 16px;
-  text-decoration: none;
-  color: white;
-  font-size: 0.95em;
-}
+    .nav-links a:hover {
+      opacity: 0.8;
+    }
 
-.nav-right a:hover {
-  text-decoration: underline;
-}
+    .nav-right a {
+      margin-left: 16px;
+      text-decoration: none;
+      color: white;
+      font-size: 0.95em;
+    }
 
+    /* ===== Main Container ===== */
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+    }
+
+    .user-details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .user-details-grid div {
+      background: #f8f9fa;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .label {
+      display: block;
+      font-size: 0.85em;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      font-weight: 600;
+      font-size: 1.05em;
+    }
+
+    /* ===== Buttons ===== */
     .action-buttons {
       display: flex;
-      justify-content: left;
-      gap: 20px;
-      margin: 30px 0;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 40px;
     }
 
     .action-buttons button {
       background-color: #2f80ed;
       color: white;
       border: none;
-      padding: 12px 24px;
-      font-size: 1em;
+      padding: 10px 18px;
+      font-size: 0.95em;
       border-radius: 6px;
       cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: all 0.2s ease;
     }
 
     .action-buttons button:hover {
-      background-color: #155d6b;
+      background-color: #1b64c1;
+      transform: translateY(-1px);
     }
 
-    .hidden {
-      display: none;
+    /* ===== Recent Activity ===== */
+    .section-title {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .activity-list {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .activity-item {
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95em;
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-item span {
+      display: inline-block;
+    }
+
+    .activity-item .amount {
+      font-weight: 600;
+      color: #2f80ed;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .nav-links {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
+
 <!-- Top Nav -->
 <nav>
   <div class="nav-container">
@@ -97,39 +183,42 @@ nav {
   </div>
 </nav>
 
-  <!-- Main Container -->
-  <div class="container">
-    <h1>Welcome, <span id="cardholderName">Cardholder</span></h1>
+<!-- Main Container -->
+<div class="container">
+  <h1>Welcome, <span id="cardholderName">Cardholder</span></h1>
 
-    <div class="user-details-grid">
-      <div>
-        <span class="label">Email</span>
-        <span class="value" id="cardholderEmail">-</span>
-      </div>
-      <div>
-        <span class="label">Wallet ID</span>
-        <span class="value" id="walletId">-</span>
-      </div>
-      <div>
-        <span class="label">Balance</span>
-        <span class="value" id="walletBalance">$0.00</span>
-      </div>
+  <div class="user-details-grid">
+    <div>
+      <span class="label">Email</span>
+      <span class="value" id="cardholderEmail">-</span>
     </div>
-
-    <!-- ✅ Action Buttons (conditionally shown) -->
-    <div class="action-buttons hidden" id="sendReceiveButtons">
-      <button id="sendMoneyBtn">Send Money</button>
-      <button id="receiveMoneyBtn">Request Money</button>
-      <button id="transferFundsBtn">Transfer</button>
+    <div>
+      <span class="label">Wallet ID</span>
+      <span class="value" id="walletId">-</span>
     </div>
+    <div>
+      <span class="label">Balance</span>
+      <span class="value" id="walletBalance">$0.00</span>
+    </div>
+  </div>
 
-   
-    <div class="section-title">Recent Activity</div>
-<div class="activity-list" id="transactionBody">
-  <div class="activity-item">Loading...</div>
+  <!-- Action Buttons -->
+  <div class="action-buttons hidden" id="sendReceiveButtons">
+    <button id="sendMoneyBtn">Send Money</button>
+    <button id="receiveMoneyBtn">Request Money</button>
+    <button id="transferFundsBtn">Transfer</button>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="section-title">Recent Activity</div>
+  <div class="activity-list" id="transactionBody">
+    <div class="activity-item"><span>Loading...</span></div>
+  </div>
 </div>
+
 <script type="module" src="cardholder.js"></script>
 
+<!-- Force Sign-Out Script -->
 <script>
 (async () => {
   const token = localStorage.getItem("boop_jwt");
@@ -147,29 +236,15 @@ nav {
         alert("⚠️ You have been signed out by an administrator.");
         localStorage.clear();
 
-        // 🧹 Optionally delete the session row
-        try {
-          await fetch(`/api/sessions/${email}`, { method: "DELETE" });
-        } catch (err) {
-          console.warn("🧹 Failed to delete session:", err);
-        }
-
-        // ✅ Clear force_signed_out flag
-        try {
-          await fetch(`/api/sessions/force-clear/${email}`, { method: "PATCH" });
-        } catch (err) {
-          console.warn("🧼 Failed to clear force_signed_out:", err);
-        }
+        try { await fetch(`/api/sessions/${email}`, { method: "DELETE" }); } catch {}
+        try { await fetch(`/api/sessions/force-clear/${email}`, { method: "PATCH" }); } catch {}
 
         window.location.href = "cardholder-login.html";
       }
-
     } catch (err) {
       console.error("❌ Force sign-out check failed:", err);
     }
   }
-
-  // 🔁 Poll every 10 seconds
   setInterval(checkForceSignOut, 10000);
 })();
 </script>
