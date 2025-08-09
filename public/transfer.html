@@ -417,7 +417,7 @@ banks = Array.isArray(j) ? j : [];
       // Latest request (optional)
       async function loadLatest(){
         try{
-          const r = await fetch('/api/transfers/mine/latest', { ... })
+          const r = await fetch('/api/transfers/mine/latest', {
           const j = await r.json();
           if (!j || !j.id){ latestBox.textContent = "No requests yet."; return; }
           latestBox.innerHTML = `
