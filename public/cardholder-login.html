@@ -2,32 +2,128 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Cardholder Login - BOOP</title>
+  <title>Cardholder Login – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="assets/styles.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="description" content="Log in to your BOOP cardholder account." />
+  <style>
+    :root{
+      --brand:#2f80ed; --brand-dark:#1c6fd8; --border:rgba(255,255,255,0.08);
+      --glass:rgba(255,255,255,0.08); --text:#e5e7eb; --muted:#cbd5e1; --white:#fff;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:#eef2ff;
+      background:
+        radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
+        radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
+    }
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.5);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);}
+    .nav-container{max-width:1100px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none;font-weight:700}
+    .brand img{height:34px}
+    .nav-actions a{color:var(--text);text-decoration:none;padding:8px 14px;border-radius:10px;border:1px solid transparent;font-weight:500}
+    .nav-actions a:hover{border-color:var(--border)}
+
+    /* LAYOUT */
+    .wrap{max-width:1100px;margin:56px auto;padding:0 18px;display:grid;grid-template-columns:1fr 1fr;gap:32px}
+    @media (max-width: 900px){ .wrap{grid-template-columns:1fr;margin:36px auto} }
+
+    /* Left side text */
+    .intro h1{margin:0 0 10px;font-size:clamp(28px,5vw,40px)}
+    .intro p{margin:0;color:var(--muted)}
+
+    /* Card */
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:22px;
+      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .card h2{margin:0 0 14px;font-size:1.25rem}
+
+    /* Form */
+    form{display:grid;gap:12px}
+    label{font-size:.9rem;color:#dbe3ff}
+    input{
+      width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border);
+      background:rgba(255,255,255,.02); color:#fff; outline:none;
+    }
+    input::placeholder{color:#9fb0d1}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      padding:12px 16px;border-radius:12px;border:0;cursor:pointer;font-weight:600;
+      background:var(--brand); color:var(--white); box-shadow:0 10px 24px rgba(47,128,237,.15);
+    }
+    .btn:hover{background:var(--brand-dark)}
+    .helper{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+    .helper a{color:#9cc2ff;text-decoration:none;font-size:.9rem}
+    .helper a:hover{color:#fff;text-decoration:underline}
+    .status{min-height:20px;margin-top:8px;font-size:.95rem}
+    .status.error{color:#ffb4b4}
+    .status.ok{color:#a7f3d0}
+
+    /* Tiny ring accent */
+    .ring{position:absolute;inset:-120px auto auto -120px;width:300px;height:300px;border-radius:50%;
+      background:radial-gradient(closest-side, rgba(47,128,237,.35), transparent 70%);filter:blur(6px);pointer-events:none}
+  </style>
 </head>
 <body>
-
-  <!-- Navbar with Logo -->
   <nav>
     <div class="nav-container">
-      <div class="nav-left">
-        <a href="cardholder.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
+      <a href="index.html" class="brand">
+        <img src="assets/Boop-Logo.png" alt="BOOP logo" />
+        BOOP
+      </a>
+      <div class="nav-actions">
+        <a href="index.html">Home</a>
       </div>
     </div>
   </nav>
 
-  <div class="loginContainer" style="margin-top: 30px;">
-    <h1>Cardholder Login</h1>
-    <form id="loginForm" data-role="cardholder" data-redirect="cardholder.html">
-      <input type="email" id="email" placeholder="Email" required />
-      <input type="password" id="password" placeholder="Password" required />
-      <button type="submit">Login</button>
-    </form>
-    <p id="loginStatus" style="color: red;"></p>
-  </div>
+  <div class="ring" aria-hidden="true"></div>
 
-  <!-- Login logic -->
+  <main class="wrap">
+    <section class="intro">
+      <h1>Welcome back.</h1>
+      <p>Log in to view your balance, recent activity, and card details.</p>
+      <div class="card" style="margin-top:16px">
+        <p style="margin:0;color:#cbd5e1;line-height:1.6">
+          Need help? Visit the <a href="parent-login.html" style="color:#9cc2ff;text-decoration:none">Parent Portal</a> or contact support.
+        </p>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Cardholder login">
+      <h2>Cardholder Login</h2>
+      <form id="loginForm" data-role="cardholder" data-redirect="cardholder.html" novalidate>
+        <div>
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <button class="btn" type="submit">Log in</button>
+        <div class="helper">
+          <a href="forgot-password.html">Forgot your password?</a>
+          <a href="signup.html">Create an account</a>
+        </div>
+        <p id="loginStatus" class="status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <!-- Existing login logic -->
   <script type="module" src="login-handler.js"></script>
-</body> 
+</body>
 </html>
