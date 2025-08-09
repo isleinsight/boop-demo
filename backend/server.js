@@ -33,16 +33,9 @@ try {
   app.use('/api/students', require('./auth/routes/students'));
   app.use('/api/user-students', require('./auth/routes/userStudents'));
   app.use('/api/sessions', require('./auth/routes/sessions'));
-  app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
-// API routes
-app.use('/api/users', require('./auth/routes/users'));
-app.use('/api/cards', require('./auth/routes/cards'));
-app.use('/api/wallets', require('./auth/routes/wallets'));
-app.use('/api/vendors', require('./auth/routes/vendors'));
-app.use('/api/students', require('./auth/routes/students'));
-app.use('/api/user-students', require('./auth/routes/userStudents'));
-app.use('/api/sessions', require('./auth/routes/sessions'));
-app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
+  app.use('/api/transactions', require('./auth/routes/transactions'));
+  app.use('/api/transfers', require('./auth/routes/transfers'));
+
 
 // Mount treasury with explicit logging so we can see if it fails to load
 try {
