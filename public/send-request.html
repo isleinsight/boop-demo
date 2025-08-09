@@ -2,367 +2,439 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Send & Request – BOOP</title>
+  <title>Send / Request – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f4f7fa;
-      margin: 0;
-      padding: 0;
+    :root{
+      --ink:#102a43;
+      --muted:#6b7c93;
+      --blue:#2f80ed;
+      --blue-dark:#1a5fcc;
+      --green:#16a34a;
+      --stroke:#dcdcdc;
+      --bg:#ffffff;
+      --nav:#102a43;
+      --grad1: rgba(47,128,237,.18);
+      --grad2: rgba(16,185,129,.15);
+      --danger:#dc2626;
+    }
+    *{box-sizing:border-box}
+    body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
+
+    /* NAV */
+    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img{ height:36px; display:block }
+    .nav-right{ display:flex; align-items:center; gap:18px; }
+    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; }
+    .nav-right a:hover{ opacity:1 }
+
+    /* Mobile menu */
+    .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
+    .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
+    .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
+    .hamburger.active span:nth-child(2){ opacity:0; }
+    .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
+    .nav-panel{ display:none; }
+    @media (max-width: 768px){
+      .nav-right{ display:none; }
+      .hamburger{ display:flex; }
+      .nav-panel{
+        display:block; position:fixed; top:0; right:-100%; height:100vh; width:260px;
+        background:#ffffff; color:#111827; box-shadow:-4px 0 14px rgba(0,0,0,.18);
+        transition:right .3s ease; z-index:60; padding:80px 20px 20px;
+      }
+      .nav-panel.active{ right:0; }
+      .nav-panel a{ display:block; color:#111827; text-decoration:none; padding:12px 8px; border-radius:8px; margin-bottom:6px; font-weight:600; }
+      .nav-panel a:hover{ background:#f3f4f6; }
+      .nav-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55; }
+      .nav-overlay.active{ display:block; }
     }
 
-    nav {
-      background-color: #102a43;
-      padding: 12px 20px;
+    /* HERO BAND */
+    .hero-band{
+      background:
+        radial-gradient(1000px 600px at 85% -10%, var(--grad1), transparent 60%),
+        radial-gradient(700px 500px at -10% 110%, var(--grad2), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0d1220 40%, #0b1220 100%);
+      color:#eef2ff; padding:26px 0 22px;
+    }
+    .hero-inner{ max-width:1100px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .hero-title{ margin:0; font-size:clamp(20px, 3.2vw, 28px); font-weight:600; }
+    .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
+
+    /* MAIN */
+    .container{ max-width:1100px; margin:18px auto 40px; padding:0 20px; }
+    .card{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:18px; }
+
+    .grid{ display:grid; grid-template-columns:1.2fr 1fr; gap:18px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
+
+    label{ display:block; font-size:.9rem; color:#475569; margin-bottom:6px; }
+    input, textarea, select, button{
+      width:100%; padding:12px 12px; border:1px solid #dcdcdc; border-radius:8px; font-size:.95rem; outline:none;
+    }
+    input:focus, textarea:focus, select:focus{ border-color:var(--blue); }
+
+    .toggle{
+      display:inline-flex; border:1px solid var(--stroke); border-radius:10px; overflow:hidden; margin-bottom:10px;
+    }
+    .toggle button{
+      width:auto; flex:1; border:0; padding:10px 14px; background:#f8fafc; color:#111827; cursor:pointer; font-weight:600;
+    }
+    .toggle button.active-send{ background:var(--blue); color:#fff; }
+    .toggle button.active-request{ background:var(--green); color:#fff; }
+
+    .suggestions{
+      display:none; position:absolute; left:0; right:0; top:100%;
+      background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-top:6px; z-index:10; max-height:250px; overflow:auto;
+    }
+    .suggestions .item{
+      padding:10px 12px; display:flex; align-items:center; gap:10px; cursor:pointer;
+    }
+    .suggestions .item:hover{ background:#f3f4f6; }
+    .avatar{
+      width:28px; height:28px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155;
+    }
+    .row{ margin-bottom:14px; position:relative; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--stroke); border-radius:999px; background:#f8fafc; font-size:.9rem;
     }
 
-    .nav-container {
-      max-width: 1100px;
-      margin: auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    .actions{ display:flex; gap:10px; }
+    .btn-primary{ background:var(--blue); color:#fff; border:1px solid var(--blue); cursor:pointer; }
+    .btn-primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
+    .btn-ghost{ background:#fff; border:1px solid var(--stroke); color:#0f172a; cursor:pointer; }
+    .btn-ghost:hover{ background:#f8fafc; }
 
-    .nav-left {
-      display: flex;
-      align-items: center;
-    }
+    .status{ margin-top:10px; font-size:.92rem; }
+    .status.ok{ color:var(--green); }
+    .status.err{ color:var(--danger); }
 
-    .nav-left img {
-      height: 36px;
-      margin-right: 20px;
-    }
-
-    .nav-links a {
-      margin-right: 16px;
-      text-decoration: none;
-      color: white;
-      font-size: 0.95em;
-    }
-
-    .nav-links a:hover {
-      text-decoration: underline;
-    }
-
-    .nav-right a {
-      text-decoration: none;
-      color: white;
-      font-size: 0.95em;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 40px auto;
-      background: white;
-      border-radius: 10px;
-      padding: 30px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-
-    .tabs {
-      display: flex;
-      border-bottom: 2px solid #ddd;
-      margin-bottom: 20px;
-      justify-content: center;
-    }
-
-    .tab {
-      padding: 10px 20px;
-      cursor: pointer;
-      font-weight: 500;
-      border-bottom: 3px solid transparent;
-    }
-
-    .tab.active {
-      border-bottom: 3px solid #2f80ed;
-      color: #2f80ed;
-    }
-
-    .search-row {
-      display: flex;
-      justify-content: center;
-      align-items: stretch;
-      gap: 0;
-      width: 100%;
-      max-width: 500px;
-      margin: 0 auto 20px;
-    }
-
-    .search-row input {
-      flex-grow: 1;
-      padding: 10px 14px;
-      font-size: 1em;
-      border: 1px solid #ccc;
-      border-right: none;
-      border-radius: 6px 0 0 6px;
-      height: 45px;
-      box-sizing: border-box;
-    }
-
-    .search-row button {
-      padding: 0 20px;
-      font-size: 1em;
-      background-color: #2f80ed;
-      color: white;
-      border: 1px solid #2f80ed;
-      border-radius: 0 6px 6px 0;
-      height: 45px;
-      cursor: pointer;
-      box-sizing: border-box;
-    }
-
-    #resultsTitle {
-      font-weight: bold;
-      margin-bottom: 10px;
-      display: none;
-      text-align: center;
-    }
-
-    .result-item {
-      background: #eef1f7;
-      padding: 12px 16px;
-      border-radius: 6px;
-      margin-bottom: 8px;
-      font-size: 0.95em;
-      color: #333;
-      text-align: center;
-      max-width: 100%;
-    }
-
-    .result-item:hover {
-      background: #d9e6f2;
-      cursor: pointer;
-    }
-
-    .amount-row {
-      display: none;
-      justify-content: center;
-      align-items: stretch;
-      width: 100%;
-      max-width: 600px;
-      margin: 20px auto 0;
-    }
-
-    .amount-row input {
-      flex-grow: 1;
-      padding: 10px 14px;
-      font-size: 1em;
-      border: 1px solid #ccc;
-      border-right: none;
-      border-radius: 6px 0 0 6px;
-      height: 45px;
-      box-sizing: border-box;
-    }
-
-    .amount-row button {
-      padding: 0 20px;
-      font-size: 1em;
-      background-color: #2f80ed;
-      color: white;
-      border: 1px solid #2f80ed;
-      height: 45px;
-      cursor: pointer;
-      border-left: none;
-      border-radius: 0 6px 6px 0;
-      display: none;
-    }
-
-    .notes-section {
-      display: none;
-      margin-top: 20px;
-      text-align: center;
-    }
-
-    .notes-section textarea {
-      width: 95%;
-      max-width: 600px;
-      padding: 10px;
-      font-size: 1em;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
+    /* Modal */
+    .modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; align-items:center; justify-content:center; }
+    .modal .box{ background:#fff; width:min(480px, 92vw); border-radius:12px; border:1px solid var(--stroke); padding:18px; }
+    .modal .box h3{ margin:0 0 10px; font-size:1.1rem; }
+    .modal .box .grid2{ display:grid; grid-template-columns:120px 1fr; gap:10px; font-size:.95rem; }
+    .modal .box .grid2 div{ padding:6px 0; border-bottom:1px solid #f1f5f9; }
+    .modal .box .row-btns{ display:flex; gap:10px; margin-top:16px; }
   </style>
 </head>
 <body>
+
+  <!-- NAV -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="cardholder.html"><img src="Boop-Logo.png" alt="BOOP Logo" /></a>
-        <div class="nav-links" id="navLinks">
-          <a href="cardholder.html">Home</a>
-          <a href="send-request.html">Send / Request</a>
-          <a href="wallet.html">Wallet</a>
-          <a href="activity.html">Activity</a>
-          <a href="help.html">Help</a>
-        </div>
+        <a href="cardholder.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
+        <a href="cardholder.html">Home</a>
+        <a href="send-request.html" aria-current="page">Send / Request</a>
+        <a href="wallet.html">Wallet</a>
+        <a href="activity.html">Activity</a>
+        <a href="help.html">Help</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+    <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
+      <a href="cardholder.html">Home</a>
+      <a href="send-request.html" aria-current="page">Send / Request</a>
+      <a href="wallet.html">Wallet</a>
+      <a href="activity.html">Activity</a>
+      <a href="help.html">Help</a>
+      <a href="#" id="logoutBtnMobile">Log Out</a>
     </div>
   </nav>
 
-  <div class="container">
-    <div class="tabs">
-      <div class="tab active" id="sendTab">Send</div>
-      <div class="tab" id="requestTab">Request</div>
+  <!-- HERO -->
+  <section class="hero-band">
+    <div class="hero-inner">
+      <div>
+        <h1 class="hero-title">Send or Request Money</h1>
+        <p class="hero-sub">Find another BOOP member and move money securely.</p>
+      </div>
     </div>
+  </section>
 
-    <div class="search-row">
-      <input type="text" id="recipientInput" placeholder="Search by name or email..." />
-      <button id="searchBtn">Search</button>
+  <!-- MAIN -->
+  <main class="container">
+    <div class="grid">
+      <!-- Left: form -->
+      <div class="card">
+        <div class="row">
+          <label>Action</label>
+          <div class="toggle" role="tablist" aria-label="Send or Request">
+            <button id="btnSend" class="active-send" aria-selected="true">Send</button>
+            <button id="btnRequest">Request</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="userSearch">Search user</label>
+          <input id="userSearch" type="text" placeholder="Type name or email…" autocomplete="off" />
+          <div id="suggestions" class="suggestions"></div>
+        </div>
+
+        <div class="row">
+          <label for="amount">Amount</label>
+          <input id="amount" type="number" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+
+        <div class="row">
+          <label for="note">Note (optional)</label>
+          <textarea id="note" rows="3" placeholder="What is this for?"></textarea>
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" id="submitBtn">Continue</button>
+          <button class="btn-ghost" id="clearBtn" type="button">Clear</button>
+        </div>
+        <div class="status" id="status"></div>
+      </div>
+
+      <!-- Right: selection summary -->
+      <div class="card">
+        <h3 style="margin:0 0 10px;font-size:1.05rem;">Selected</h3>
+        <div id="selectedUser" class="pill" aria-live="polite">No recipient selected</div>
+        <div style="margin-top:10px; font-size:.9rem; color:#64748b;">
+          • Admins, Students, and Parents cannot receive money.
+        </div>
+      </div>
     </div>
+  </main>
 
-    <div id="resultsTitle">Results</div>
-    <div id="resultsList"></div>
-
-    <div class="amount-row" id="amountSection">
-      <input type="number" id="amountInput" placeholder="Enter amount" />
-      <button id="sendBtn">Send</button>
-      <button id="requestBtn">Request</button>
-    </div>
-
-    <div class="notes-section" id="notesSection">
-      <textarea id="noteInput" rows="3" placeholder="Add a note (optional)"></textarea>
+  <!-- Confirm Modal -->
+  <div class="modal" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="box">
+      <h3 id="confirmTitle">Confirm</h3>
+      <div class="grid2">
+        <div>Action</div><div id="cAction">—</div>
+        <div>To</div><div id="cTo">—</div>
+        <div>Amount</div><div id="cAmount">—</div>
+        <div>Note</div><div id="cNote">—</div>
+      </div>
+      <div class="row-btns">
+        <button class="btn-primary" id="confirmYes">Confirm</button>
+        <button class="btn-ghost" id="confirmNo">Cancel</button>
+      </div>
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      getDocs,
-      query,
-      where
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <!-- Permissions gate (cardholder only) -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+        const me = await res.json();
+        if (!res.ok) throw new Error(me?.error || `HTTP ${res.status}`);
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDwXCiL7elRCyywSjVgwQtklq_98OPWZm0",
-      authDomain: "boop-becff.firebaseapp.com",
-      projectId: "boop-becff",
-      storageBucket: "boop-becff.appspot.com",
-      messagingSenderId: "570567453336",
-      appId: "1:570567453336:web:43ac40b4cd9d5b517fbeed"
-    };
+        const role = (me.role||"").toLowerCase();
+        const type = (me.type||"").toLowerCase();
+        const isCardholder = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
+        if (!isCardholder) throw new Error("Not a cardholder");
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let currentUserUID = "";
-    let currentUserEmail = "";
-
-    const logoutBtn = document.getElementById("logoutBtn");
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      });
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "index.html";
-        return;
+        localStorage.setItem("boopUser", JSON.stringify(me));
+      } catch (err) {
+        console.warn("🔒 Gate failed:", err);
+        localStorage.clear();
+        window.location.href = "cardholder-login.html";
       }
-      currentUserUID = user.uid;
-      currentUserEmail = user.email;
-    });
+    })();
+  </script>
 
-    const recipientInput = document.getElementById("recipientInput");
-    const searchBtn = document.getElementById("searchBtn");
-    const resultsList = document.getElementById("resultsList");
-    const resultsTitle = document.getElementById("resultsTitle");
-    const amountSection = document.getElementById("amountSection");
-    const notesSection = document.getElementById("notesSection");
-    const sendBtn = document.getElementById("sendBtn");
-    const requestBtn = document.getElementById("requestBtn");
+  <!-- Page logic -->
+  <script>
+    (function(){
+      // Mobile nav
+      const hamburger = document.getElementById('hamburger');
+      const panel = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('navOverlay');
+      function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+      function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
+      overlay?.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
 
-    let selectedTab = "send";
+      // Elements
+      const token = localStorage.getItem("boop_jwt");
+      const statusEl = document.getElementById('status');
+      const userSearch = document.getElementById('userSearch');
+      const suggestions = document.getElementById('suggestions');
+      const selectedUserEl = document.getElementById('selectedUser');
+      const amountEl = document.getElementById('amount');
+      const noteEl = document.getElementById('note');
+      const btnSend = document.getElementById('btnSend');
+      const btnRequest = document.getElementById('btnRequest');
+      const submitBtn = document.getElementById('submitBtn');
+      const clearBtn = document.getElementById('clearBtn');
 
-    searchBtn.addEventListener("click", async () => {
-      const queryVal = recipientInput.value.trim().toLowerCase();
-      resultsList.innerHTML = "";
-      resultsTitle.style.display = "none";
-      amountSection.style.display = "none";
-      notesSection.style.display = "none";
-      sendBtn.style.display = "none";
-      requestBtn.style.display = "none";
+      const modal = document.getElementById('confirmModal');
+      const cAction = document.getElementById('cAction');
+      const cTo = document.getElementById('cTo');
+      const cAmount = document.getElementById('cAmount');
+      const cNote = document.getElementById('cNote');
+      const confirmYes = document.getElementById('confirmYes');
+      const confirmNo = document.getElementById('confirmNo');
 
-      if (queryVal.length === 0) return;
+      // State
+      let mode = 'send'; // 'send' | 'request'
+      let selectedUser = null;
+      let timer;
 
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("role", "==", "cardholder"), where("onAssistance", "==", false));
-      const snapshot = await getDocs(q);
+      // Toggle
+      function setMode(newMode){
+        mode = newMode;
+        btnSend.classList.toggle('active-send', mode==='send');
+        btnRequest.classList.toggle('active-request', mode==='request');
+      }
+      btnSend.addEventListener('click', ()=> setMode('send'));
+      btnRequest.addEventListener('click', ()=> setMode('request'));
 
-      let found = false;
+      // Search (debounced)
+      userSearch.addEventListener('input', ()=>{
+        const q = userSearch.value.trim();
+        clearTimeout(timer);
+        if (q.length < 2){ suggestions.style.display='none'; return; }
+        timer = setTimeout(()=> searchUsers(q), 220);
+      });
 
-      snapshot.forEach((doc) => {
-        const user = doc.data();
-        if (doc.id === currentUserUID) return;
-
-        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.toLowerCase();
-        const email = (user.email ?? "").toLowerCase();
-
-        const match =
-          fullName.includes(queryVal) ||
-          (user.firstName ?? "").toLowerCase().includes(queryVal) ||
-          (user.lastName ?? "").toLowerCase().includes(queryVal) ||
-          email.includes(queryVal);
-
-        if (match) {
-          const div = document.createElement("div");
-          div.className = "result-item";
-          div.textContent = `${user.firstName} ${user.lastName} (${user.email})`;
-          div.addEventListener("click", () => {
-            amountSection.style.display = "flex";
-            notesSection.style.display = "block";
-            if (selectedTab === "send") {
-              sendBtn.style.display = "inline-block";
-              requestBtn.style.display = "none";
-            } else {
-              requestBtn.style.display = "inline-block";
-              sendBtn.style.display = "none";
-            }
+      async function searchUsers(q){
+        try{
+          const res = await fetch(`/api/users?search=${encodeURIComponent(q)}&hasWallet=true`, {
+            headers: { Authorization: `Bearer ${token}` }
           });
-          resultsList.appendChild(div);
-          resultsTitle.style.display = "block";
-          found = true;
+          const list = await res.json();
+
+          // Filter out Admins, Students, Parents (client-side guard)
+          const blocked = new Set(['admin','student','parent']);
+          const results = (Array.isArray(list)? list: []).filter(u=>{
+            const role = (u.role||'').toLowerCase();
+            return !blocked.has(role);
+          });
+
+          suggestions.innerHTML = results.length
+            ? results.map(u=>{
+                const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email || 'Unknown';
+                const initial = (name[0]||'U').toUpperCase();
+                return `<div class="item" data-id="${u.id}" data-name="${name}">
+                  <div class="avatar">${initial}</div>
+                  <div>
+                    <div style="font-weight:600;">${name}</div>
+                    <div style="font-size:.86rem; color:#64748b;">${u.email || ''}</div>
+                  </div>
+                </div>`;
+              }).join('')
+            : `<div class="item" style="cursor:default;opacity:.7;">No results</div>`;
+
+          suggestions.style.display = 'block';
+        }catch(err){
+          console.error('search error', err);
+          suggestions.innerHTML = `<div class="item" style="cursor:default;color:#b91c1c;">Error searching</div>`;
+          suggestions.style.display = 'block';
+        }
+      }
+
+      suggestions.addEventListener('click', (e)=>{
+        const item = e.target.closest('.item');
+        if (!item || !item.dataset.id) return;
+        selectedUser = { id: item.dataset.id, name: item.dataset.name };
+        selectedUserEl.innerHTML = `<span class="avatar">${(selectedUser.name[0]||'U').toUpperCase()}</span> ${selectedUser.name}`;
+        suggestions.style.display = 'none';
+        userSearch.value = selectedUser.name;
+      });
+
+      document.addEventListener('click', (e)=>{
+        if (!suggestions.contains(e.target) && e.target !== userSearch){
+          suggestions.style.display='none';
         }
       });
 
-      if (!found) {
-        resultsList.innerHTML = '<div class="result-item">No results found</div>';
-        resultsTitle.style.display = "block";
+      // Submit flow
+      submitBtn.addEventListener('click', ()=>{
+        const amt = parseFloat(amountEl.value);
+        if (!selectedUser){ return setStatus('Please pick a recipient.', true); }
+        if (!amt || isNaN(amt) || amt <= 0){ return setStatus('Enter a valid amount.', true); }
+
+        // Fill confirm modal
+        cAction.textContent = mode === 'send' ? 'Send' : 'Request';
+        cTo.textContent = selectedUser.name;
+        cAmount.textContent = `$${amt.toFixed(2)}`;
+        cNote.textContent = noteEl.value || '—';
+        openModal();
+      });
+
+      confirmYes.addEventListener('click', async ()=>{
+        try{
+          const payload = {
+            mode,                   // 'send' or 'request'
+            to_user_id: selectedUser.id,
+            amount: parseFloat(amountEl.value),
+            note: noteEl.value
+          };
+
+          // 🔌 Adjust this endpoint/body if your backend differs
+          const res = await fetch('/api/transactions/transfer', {
+            method:'POST',
+            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.message || data?.error || 'Transfer failed');
+
+          setStatus('✅ Success!', false);
+          clearForm();
+        }catch(err){
+          console.error('submit error', err);
+          setStatus(`❌ ${err.message}`, true);
+        }finally{
+          closeModal();
+        }
+      });
+
+      confirmNo.addEventListener('click', closeModal);
+
+      clearBtn.addEventListener('click', clearForm);
+
+      function clearForm(){
+        selectedUser = null;
+        userSearch.value='';
+        selectedUserEl.textContent='No recipient selected';
+        amountEl.value='';
+        noteEl.value='';
+        setMode('send');
+        setStatus('');
       }
-    });
 
-    const sendTab = document.getElementById("sendTab");
-    const requestTab = document.getElementById("requestTab");
+      function setStatus(msg, isErr=false){
+        statusEl.textContent = msg || '';
+        statusEl.className = 'status' + (isErr ? ' err' : msg ? ' ok' : '');
+      }
 
-    sendTab.addEventListener("click", () => {
-      selectedTab = "send";
-      sendTab.classList.add("active");
-      requestTab.classList.remove("active");
-      sendBtn.style.display = "inline-block";
-      requestBtn.style.display = "none";
-    });
+      function openModal(){ modal.style.display='flex'; }
+      function closeModal(){ modal.style.display='none'; }
 
-    requestTab.addEventListener("click", () => {
-      selectedTab = "request";
-      requestTab.classList.add("active");
-      sendTab.classList.remove("active");
-      requestBtn.style.display = "inline-block";
-      sendBtn.style.display = "none";
-    });
+      // Logout links
+      function attachLogout(el){
+        if (!el) return;
+        el.addEventListener('click', async (e)=>{
+          e.preventDefault();
+          try { await fetch('/api/logout', { method:'POST' }); } catch {}
+          localStorage.clear();
+          window.location.href = 'cardholder-login.html';
+        });
+      }
+      attachLogout(document.getElementById('logoutBtn'));
+      attachLogout(document.getElementById('logoutBtnMobile'));
+    })();
   </script>
 </body>
 </html>
