@@ -26,25 +26,66 @@
     }
 
     /* ───────── NAV ───────── */
-    nav{
-      background: var(--nav);
-      color:#fff;
-    }
+    nav{ background: var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .nav-container{
       max-width:1100px; margin:0 auto; padding:12px 20px;
       display:flex; align-items:center; justify-content:space-between;
     }
-    .nav-left img{height:36px; display:block}
+    .nav-left{ display:flex; align-items:center; gap:12px; }
+    .nav-left img{ height:36px; display:block }
+
+    /* Desktop nav links */
     .nav-right{
       display:flex; align-items:center; gap:18px;
     }
     .nav-right a{
-      color:#fff; text-decoration:none; font-size:.95rem;
-      opacity:.95;
+      color:#fff; text-decoration:none; font-size:.95rem; opacity:.95;
     }
-    .nav-right a:hover{opacity:1}
+    .nav-right a:hover{ opacity:1 }
 
-    /* ───────── HERO BAND (subtle gradient like index) ───────── */
+    /* Hamburger button (hidden on desktop) */
+    .hamburger{
+      display:none; flex-direction:column; justify-content:space-between;
+      width:26px; height:20px; background:none; border:0; cursor:pointer;
+    }
+    .hamburger span{
+      width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s;
+    }
+    .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
+    .hamburger.active span:nth-child(2){ opacity:0; }
+    .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
+
+    /* Mobile panel */
+    .nav-panel{
+      display:none;
+    }
+
+    @media (max-width: 768px){
+      .nav-right{ display:none; } /* hide desktop links */
+      .hamburger{ display:flex; }
+
+      .nav-panel{
+        display:block;
+        position:fixed; top:0; right:-100%; height:100vh; width:260px;
+        background:#ffffff; color:#111827; box-shadow:-4px 0 14px rgba(0,0,0,.18);
+        transition:right .3s ease; z-index:60; padding:80px 20px 20px;
+      }
+      .nav-panel.active{ right:0; }
+
+      .nav-panel a{
+        display:block; color:#111827; text-decoration:none; padding:12px 8px; border-radius:8px;
+        margin-bottom:6px; font-weight:600;
+      }
+      .nav-panel a:hover{ background:#f3f4f6; }
+
+      /* overlay behind the panel */
+      .nav-overlay{
+        display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55;
+      }
+      .nav-overlay.active{ display:block; }
+    }
+
+    /* ───────── HERO BAND ───────── */
     .hero-band{
       background:
         radial-gradient(1000px 600px at 85% -10%, var(--grad1), transparent 60%),
@@ -58,19 +99,13 @@
       display:flex; align-items:center; justify-content:space-between; gap:16px;
     }
     .hero-title{
-      margin:0; font-size: clamp(20px, 3.2vw, 28px); font-weight:600;
-      letter-spacing:.2px;
+      margin:0; font-size: clamp(20px, 3.2vw, 28px); font-weight:600; letter-spacing:.2px;
     }
-    .hero-sub{
-      margin:6px 0 0; color:#cbd5e1; font-size: .95rem;
-    }
+    .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
 
     /* ───────── MAIN ───────── */
-    .container{
-      max-width:1100px; margin:20px auto 40px; padding:0 20px;
-    }
+    .container{ max-width:1100px; margin:20px auto 40px; padding:0 20px; }
 
-    /* Info cards (crisp stroke, no heavy shadow) */
     .user-details-grid{
       display:grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
       gap:18px; margin:18px 0 26px;
@@ -78,36 +113,26 @@
     .user-details-grid div{
       background:#fff; border:1px solid var(--stroke); border-radius:10px; padding:14px 16px;
     }
-    .label{display:block; font-size:.86rem; color:var(--muted); margin-bottom:6px}
-    .value{font-size:1.08rem; font-weight:600; color:var(--ink)}
+    .label{ display:block; font-size:.86rem; color:var(--muted); margin-bottom:6px }
+    .value{ font-size:1.08rem; font-weight:600; color:var(--ink) }
 
-    /* Action buttons */
     .action-buttons{
-      display:flex; flex-wrap:wrap; gap:12px; margin: 6px 0 28px;
+      display:flex; flex-wrap:wrap; gap:12px; margin:6px 0 28px;
     }
     .action-buttons button{
       background:var(--blue); color:#fff; border:1px solid var(--blue);
-      padding:10px 18px; font-size:.95rem; border-radius:8px; cursor:pointer;
-      transition:all .2s ease;
+      padding:10px 18px; font-size:.95rem; border-radius:8px; cursor:pointer; transition:all .2s ease;
     }
-    .action-buttons button:hover{background:var(--blue-dark); border-color:var(--blue-dark); transform:translateY(-1px)}
-    .hidden{display:none}
+    .action-buttons button:hover{ background:var(--blue-dark); border-color:var(--blue-dark); transform:translateY(-1px) }
+    .hidden{ display:none }
 
-    /* Recent activity (Stripe-y list) */
-    .section-title{
-      font-size:1.1rem; font-weight:600; margin:0 0 12px 0;
-    }
-    .activity-list{display:grid; gap:10px}
+    .section-title{ font-size:1.1rem; font-weight:600; margin:0 0 12px 0; }
+    .activity-list{ display:grid; gap:10px }
     .activity-item{
-      background:#fff; border:1px solid var(--stroke); border-radius:10px; padding:12px 14px;
-      display:flex; align-items:center; justify-content:space-between;
-      font-size:.95rem;
+      background:#fff; border:1px solid var(--stroke); border-radius:10px;
+      padding:12px 14px; display:flex; align-items:center; justify-content:space-between; font-size:.95rem;
     }
-    .amount{font-weight:600; color:var(--blue)}
-
-    @media (max-width:640px){
-      .hero-inner{flex-direction:column; align-items:flex-start}
-    }
+    .amount{ font-weight:600; color:var(--blue) }
   </style>
 </head>
 <body>
@@ -116,9 +141,13 @@
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="wallet.html"><img src="assets/Boop-Logo.png" alt="BOOP Logo" /></a>
+        <a href="wallet.html" aria-label="BOOP home">
+          <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
+        </a>
       </div>
-      <div class="nav-right">
+
+      <!-- Desktop links -->
+      <div class="nav-right" aria-label="Primary">
         <a href="cardholder.html">Home</a>
         <a href="send-request.html" id="sendRequestLink">Send / Request</a>
         <a href="wallet.html">Wallet</a>
@@ -126,6 +155,22 @@
         <a href="help.html">Help</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
+
+      <!-- Hamburger for mobile -->
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Mobile slide-out panel -->
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+    <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
+      <a href="cardholder.html">Home</a>
+      <a href="send-request.html" id="sendRequestLinkMobile">Send / Request</a>
+      <a href="wallet.html">Wallet</a>
+      <a href="activity.html">Activity</a>
+      <a href="help.html">Help</a>
+      <a href="#" id="logoutBtnMobile">Log Out</a>
     </div>
   </nav>
 
@@ -172,6 +217,52 @@
 
   <!-- Your existing logic -->
   <script type="module" src="cardholder.js"></script>
+
+  <!-- Hamburger + mobile menu logic -->
+  <script>
+    (function(){
+      const hamburger = document.getElementById('hamburger');
+      const panel = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('navOverlay');
+      const logoutDesktop = document.getElementById('logoutBtn');
+      const logoutMobile = document.getElementById('logoutBtnMobile');
+
+      function openMenu(){
+        hamburger.classList.add('active');
+        panel.classList.add('active');
+        overlay.classList.add('active');
+        hamburger.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeMenu(){
+        hamburger.classList.remove('active');
+        panel.classList.remove('active');
+        overlay.classList.remove('active');
+        hamburger.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      }
+
+      hamburger.addEventListener('click', () => {
+        const isOpen = hamburger.classList.contains('active');
+        isOpen ? closeMenu() : openMenu();
+      });
+      overlay.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+
+      // mirror logout behavior on mobile
+      function attachLogout(el){
+        if (!el) return;
+        el.addEventListener('click', async (e) => {
+          e.preventDefault();
+          try { await fetch('/api/logout', { method: 'POST' }); } catch {}
+          localStorage.clear();
+          window.location.href = 'cardholder-login.html';
+        });
+      }
+      attachLogout(logoutDesktop);
+      attachLogout(logoutMobile);
+    })();
+  </script>
 
   <!-- Force Sign-Out Script (unchanged) -->
   <script>
