@@ -20,119 +20,76 @@
 
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      background: var(--bg); color: var(--ink);
-    }
+    body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* ───────── NAV ───────── */
-    nav{ background: var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
-    .nav-container{
-      max-width:1100px; margin:0 auto; padding:12px 20px;
-      display:flex; align-items:center; justify-content:space-between;
-    }
-    .nav-left{ display:flex; align-items:center; gap:12px; }
-    .nav-left img{ height:36px; display:block }
-
-    /* Desktop nav links */
-    .nav-right{
-      display:flex; align-items:center; gap:18px;
-    }
-    .nav-right a{
-      color:#fff; text-decoration:none; font-size:.95rem; opacity:.95;
-    }
+    /* NAV */
+    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img{ height:36px; display:block; }
+    .nav-right{ display:flex; align-items:center; gap:18px; }
+    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; }
     .nav-right a:hover{ opacity:1 }
 
-    /* Hamburger button (hidden on desktop) */
-    .hamburger{
-      display:none; flex-direction:column; justify-content:space-between;
-      width:26px; height:20px; background:none; border:0; cursor:pointer;
-    }
-    .hamburger span{
-      width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s;
-    }
+    .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
+    .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
     .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
     .hamburger.active span:nth-child(2){ opacity:0; }
     .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
-
-    /* Mobile panel */
-    .nav-panel{
-      display:none;
-    }
+    .nav-panel{ display:none; }
 
     @media (max-width: 768px){
-      .nav-right{ display:none; } /* hide desktop links */
+      .nav-right{ display:none; }
       .hamburger{ display:flex; }
-
       .nav-panel{
-        display:block;
-        position:fixed; top:0; right:-100%; height:100vh; width:260px;
+        display:block; position:fixed; top:0; right:-100%; height:100vh; width:260px;
         background:#ffffff; color:#111827; box-shadow:-4px 0 14px rgba(0,0,0,.18);
         transition:right .3s ease; z-index:60; padding:80px 20px 20px;
       }
       .nav-panel.active{ right:0; }
-
-      .nav-panel a{
-        display:block; color:#111827; text-decoration:none; padding:12px 8px; border-radius:8px;
-        margin-bottom:6px; font-weight:600;
-      }
+      .nav-panel a{ display:block; color:#111827; text-decoration:none; padding:12px 8px; border-radius:8px; margin-bottom:6px; font-weight:600; }
       .nav-panel a:hover{ background:#f3f4f6; }
-
-      /* overlay behind the panel */
-      .nav-overlay{
-        display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55;
-      }
+      .nav-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55; }
       .nav-overlay.active{ display:block; }
     }
 
-    /* ───────── HERO BAND ───────── */
+    /* HERO BAND */
     .hero-band{
       background:
         radial-gradient(1000px 600px at 85% -10%, var(--grad1), transparent 60%),
         radial-gradient(700px 500px at -10% 110%, var(--grad2), transparent 60%),
         linear-gradient(180deg, #0b1220 0%, #0d1220 40%, #0b1220 100%);
-      color:#eef2ff;
-      padding:28px 0 24px;
+      color:#eef2ff; padding:28px 0 24px;
     }
-    .hero-inner{
-      max-width:1100px; margin:0 auto; padding:0 20px;
-      display:flex; align-items:center; justify-content:space-between; gap:16px;
-    }
-    .hero-title{
-      margin:0; font-size: clamp(20px, 3.2vw, 28px); font-weight:600; letter-spacing:.2px;
-    }
+    .hero-inner{ max-width:1100px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .hero-title{ margin:0; font-size:clamp(20px, 3.2vw, 28px); font-weight:600; letter-spacing:.2px; }
     .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
 
-    /* ───────── MAIN ───────── */
+    /* MAIN */
     .container{ max-width:1100px; margin:20px auto 40px; padding:0 20px; }
 
     .user-details-grid{
       display:grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
       gap:18px; margin:18px 0 26px;
     }
-    .user-details-grid div{
-      background:#fff; border:1px solid var(--stroke); border-radius:10px; padding:14px 16px;
-    }
-    .label{ display:block; font-size:.86rem; color:var(--muted); margin-bottom:6px }
-    .value{ font-size:1.08rem; font-weight:600; color:var(--ink) }
+    .user-details-grid div{ background:#fff; border:1px solid var(--stroke); border-radius:10px; padding:14px 16px; }
+    .label{ display:block; font-size:.86rem; color:var(--muted); margin-bottom:6px; }
+    .value{ font-size:1.08rem; font-weight:600; color:var(--ink); }
 
-    .action-buttons{
-      display:flex; flex-wrap:wrap; gap:12px; margin:6px 0 28px;
-    }
+    .action-buttons{ display:flex; flex-wrap:wrap; gap:12px; margin:6px 0 28px; }
     .action-buttons button{
       background:var(--blue); color:#fff; border:1px solid var(--blue);
       padding:10px 18px; font-size:.95rem; border-radius:8px; cursor:pointer; transition:all .2s ease;
     }
-    .action-buttons button:hover{ background:var(--blue-dark); border-color:var(--blue-dark); transform:translateY(-1px) }
-    .hidden{ display:none }
+    .action-buttons button:hover{ background:var(--blue-dark); border-color:var(--blue-dark); transform:translateY(-1px); }
+    .hidden{ display:none; }
 
     .section-title{ font-size:1.1rem; font-weight:600; margin:0 0 12px 0; }
-    .activity-list{ display:grid; gap:10px }
+    .activity-list{ display:grid; gap:10px; }
     .activity-item{
-      background:#fff; border:1px solid var(--stroke); border-radius:10px;
-      padding:12px 14px; display:flex; align-items:center; justify-content:space-between; font-size:.95rem;
+      background:#fff; border:1px solid var(--stroke); border-radius:10px; padding:12px 14px;
+      display:flex; align-items:center; justify-content:space-between; font-size:.95rem;
     }
-    .amount{ font-weight:600; color:var(--blue) }
+    .amount{ font-weight:600; color:var(--blue); }
   </style>
 </head>
 <body>
@@ -178,7 +135,8 @@
   <section class="hero-band" role="region" aria-label="Account summary">
     <div class="hero-inner">
       <div>
-        <h1 class="hero-title">Welcome, <span id="cardholderName">Cardholder</span></h1>
+        <!-- 👇 First name goes here -->
+        <h1 class="hero-title">Welcome, <span id="cardholderFirstName">Friend</span></h1>
         <p class="hero-sub">Your balance and recent activity are below.</p>
       </div>
     </div>
@@ -189,12 +147,13 @@
     <div class="user-details-grid">
       <div>
         <span class="label">Email</span>
-        <span class="value" id="cardholderEmail">-</span>
+        <span class="value" id="cardholderEmail">—</span>
       </div>
       <div>
-  <span class="label">Passport ID</span>
-  <span class="value" id="passportId">—</span>
-</div>
+        <span class="label">Passport ID</span>
+        <!-- 👇 Placeholder until you wire Passport IDs -->
+        <span class="value" id="passportId">—</span>
+      </div>
       <div>
         <span class="label">Balance</span>
         <span class="value" id="walletBalance">$0.00</span>
@@ -215,6 +174,32 @@
     </div>
   </main>
 
+  <!-- Your existing logic -->
+  <script type="module" src="cardholder.js"></script>
+
+  <!-- Enhance: set first name + placeholder passport from localStorage -->
+  <script>
+    (function(){
+      const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
+      const firstNameEl = document.getElementById("cardholderFirstName");
+      const emailEl = document.getElementById("cardholderEmail");
+      const passportEl = document.getElementById("passportId");
+
+      // Try multiple fields for first name, fallback to the email username
+      const first =
+        user.first_name ||
+        (user.name?.split?.(" ")[0]) ||
+        (user.email ? user.email.split("@")[0] : "") ||
+        "Friend";
+
+      firstNameEl.textContent = first;
+      if (user.email) emailEl.textContent = user.email;
+
+      // Placeholder for passport until you add it to user profile
+      passportEl.textContent = user.passport_id || "—";
+    })();
+  </script>
+
   <!-- Hamburger + mobile menu logic -->
   <script>
     (function(){
@@ -225,28 +210,18 @@
       const logoutMobile = document.getElementById('logoutBtnMobile');
 
       function openMenu(){
-        hamburger.classList.add('active');
-        panel.classList.add('active');
-        overlay.classList.add('active');
-        hamburger.setAttribute('aria-expanded', 'true');
-        document.body.style.overflow = 'hidden';
+        hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active');
+        hamburger.setAttribute('aria-expanded', 'true'); document.body.style.overflow = 'hidden';
       }
       function closeMenu(){
-        hamburger.classList.remove('active');
-        panel.classList.remove('active');
-        overlay.classList.remove('active');
-        hamburger.setAttribute('aria-expanded', 'false');
-        document.body.style.overflow = '';
+        hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active');
+        hamburger.setAttribute('aria-expanded', 'false'); document.body.style.overflow = '';
       }
 
-      hamburger.addEventListener('click', () => {
-        const isOpen = hamburger.classList.contains('active');
-        isOpen ? closeMenu() : openMenu();
-      });
+      hamburger.addEventListener('click', () => hamburger.classList.contains('active') ? closeMenu() : openMenu());
       overlay.addEventListener('click', closeMenu);
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 
-      // mirror logout behavior on mobile
       function attachLogout(el){
         if (!el) return;
         el.addEventListener('click', async (e) => {
