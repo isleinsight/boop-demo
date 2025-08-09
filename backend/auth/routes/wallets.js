@@ -4,39 +4,39 @@ const router = express.Router();
 const db = require("../../db");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
-/**
- * GET /api/wallets/mine
- * Returns the current user's wallet summary for the UI.
- * Front-end expects: { wallet_id, balance_cents }
- */
+const { authenticateToken } = require("../middleware/authMiddleware");
+
+// GET /api/wallets/mine
 router.get("/mine", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.userId || req.user.id;
+    console.log("wallets/mine req.user =", req.user);
 
-    // Adjust columns if yours differ (e.g., balance vs balance_cents)
+    const userId = req.user?.userId ?? req.user?.id;
+    if (!userId) {
+      return res.status(400).json({ message: "No user id in token." });
+    }
+
     const q = `
-      SELECT id, user_id,
-             -- If your table stores dollars as decimal, convert to cents:
-             -- (balance * 100)::bigint AS balance_cents
-             COALESCE(balance_cents, (balance * 100))::bigint AS balance_cents
+      SELECT id, balance
       FROM wallets
       WHERE user_id = $1
+      ORDER BY created_at ASC
       LIMIT 1
     `;
     const { rows } = await db.query(q, [userId]);
 
     if (!rows.length) {
-      return res.json({ wallet_id: null, balance_cents: 0 });
+      return res.json({ wallet_id: null, balance: 0 });
     }
 
     const w = rows[0];
-    res.json({
+    return res.json({
       wallet_id: w.id,
-      balance_cents: Number(w.balance_cents || 0)
+      balance: Number(w.balance || 0) // already in cents per your schema
     });
   } catch (err) {
-    console.error("❌ wallets/mine error:", err);
-    res.status(500).json({ message: "Failed to load wallet." });
+    console.error("❌ wallets/mine error:", err.stack || err);
+    return res.status(500).json({ message: "Failed to load wallet." });
   }
 });
 
