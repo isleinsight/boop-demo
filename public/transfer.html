@@ -307,7 +307,8 @@
         destination.innerHTML = `<option disabled selected>Loading…</option>`;
         try{
           const r = await fetch('/api/bank-accounts/mine', { headers:{ Authorization:`Bearer ${token}` }});
-          banks = Array.isArray(await r.json()) ? await r.json() : [];
+const j = await r.json();
+banks = Array.isArray(j) ? j : [];
           if (!banks.length){
             destination.innerHTML = `<option disabled selected>No bank accounts yet</option>`;
             return;
@@ -385,7 +386,7 @@
         confirmBtn.disabled = true; modalMsg.textContent = "Submitting…";
         const amtCents = Math.round(Number(amountEl.value) * 100);
         try{
-          const res = await fetch('/api/payout-requests', {
+          const res = await fetch('/api/transfers', {
             method:'POST',
             headers:{
               'Content-Type':'application/json',
