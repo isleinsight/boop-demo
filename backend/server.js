@@ -23,7 +23,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 try {
   // Auth-related routes
   app.use('/auth/login', require('./auth/routes/login'));
-  app.use('/api/logout', require('./auth/routes/logout'));
+  app.use('/logout', require('./auth/routes/logout'));
 
   // API routes
   app.use('/api/users', require('./auth/routes/users'));
@@ -33,11 +33,16 @@ try {
   app.use('/api/students', require('./auth/routes/students'));
   app.use('/api/user-students', require('./auth/routes/userStudents'));
   app.use('/api/sessions', require('./auth/routes/sessions'));
-  app.use('/api/transactions', require('./auth/routes/transactions'));
-  app.use('/api/transfers', require('./auth/routes/transfers'));
-  app.use('/api/bank-accounts', require('./auth/routes/bank-accounts'));
-  app.use('/auth/password', require('./auth/routes/password'));
-
+  app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
+// API routes
+app.use('/api/users', require('./auth/routes/users'));
+app.use('/api/cards', require('./auth/routes/cards'));
+app.use('/api/wallets', require('./auth/routes/wallets'));
+app.use('/api/vendors', require('./auth/routes/vendors'));
+app.use('/api/students', require('./auth/routes/students'));
+app.use('/api/user-students', require('./auth/routes/userStudents'));
+app.use('/api/sessions', require('./auth/routes/sessions'));
+app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
 
 // Mount treasury with explicit logging so we can see if it fails to load
 try {
@@ -50,6 +55,7 @@ try {
 }
 
 app.use('/api/admin-actions', require('./auth/routes/admin-actions'));
+  app.use('/api/admin-actions', require('./auth/routes/admin-actions'));
 } catch (err) {
   console.error("❌ Route load failure:", err.message);
 }
