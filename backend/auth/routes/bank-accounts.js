@@ -2,14 +2,25 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/authMiddleware');
-// const db = require('../../db');
+const db = require('../../db');
 
+// GET /api/bank-accounts/mine  → list saved bank destinations for the logged-in user
 router.get('/mine', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
-    // TODO: replace with real query
-    // const rows = await db.any('SELECT id, bank_name, last4 FROM bank_accounts WHERE user_id=$1 AND deleted_at IS NULL ORDER BY created_at DESC', [userId]);
-    const rows = []; // placeholder
+
+    const { rows } = await db.query(
+      `
+      SELECT id, bank_name, 
+             RIGHT(account_number, 4) AS last4
+      FROM bank_accounts
+      WHERE user_id = $1
+        AND (deleted_at IS NULL)
+      ORDER BY created_at DESC
+      `,
+      [userId]
+    );
+
     res.json(rows);
   } catch (e) {
     console.error('bank-accounts/mine error', e);
@@ -17,6 +28,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/bank-accounts  → create a saved destination
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
@@ -26,16 +38,19 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields.' });
     }
 
-    const last4 = String(account_number).slice(-4);
-    // TODO: store securely (hash/encrypt account_number & routing_number)
-    // const row = await db.one(
-    //   `INSERT INTO bank_accounts (user_id, holder_name, bank_name, account_number_enc, routing_enc, last4)
-    //    VALUES ($1,$2,$3,encrypt($4),encrypt($5),$6) RETURNING id, bank_name, last4`,
-    //   [userId, holder_name, bank_name, account_number, routing_number, last4]
-    // );
+    // NOTE: for production, store sensitive fields encrypted.
+    const { rows } = await db.query(
+      `
+      INSERT INTO bank_accounts
+        (user_id, holder_name, bank_name, account_number, routing_number, last4)
+      VALUES
+        ($1,      $2,          $3,        $4,             $5,            RIGHT($4,4))
+      RETURNING id, bank_name, last4
+      `,
+      [userId, holder_name, bank_name, account_number, routing_number]
+    );
 
-    const row = { id: 'temp_' + Date.now(), bank_name, last4 }; // placeholder
-    res.status(201).json(row);
+    res.status(201).json(rows[0]);
   } catch (e) {
     console.error('bank-accounts POST error', e);
     res.status(500).json({ message: 'Failed to save bank account.' });
