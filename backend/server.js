@@ -25,15 +25,6 @@ try {
   app.use('/auth/login', require('./auth/routes/login'));
   app.use('/logout', require('./auth/routes/logout'));
 
-  // API routes
-  app.use('/api/users', require('./auth/routes/users'));
-  app.use('/api/cards', require('./auth/routes/cards'));
-  app.use('/api/wallets', require('./auth/routes/wallets'));
-  app.use('/api/vendors', require('./auth/routes/vendors'));
-  app.use('/api/students', require('./auth/routes/students'));
-  app.use('/api/user-students', require('./auth/routes/userStudents'));
-  app.use('/api/sessions', require('./auth/routes/sessions'));
-  app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
 // API routes
 app.use('/api/users', require('./auth/routes/users'));
 app.use('/api/cards', require('./auth/routes/cards'));
