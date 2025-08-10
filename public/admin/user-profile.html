@@ -44,13 +44,13 @@
     }
 
     .user-details-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #e6ebf1;
-    }
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e6ebf1;
+}
 
     .user-details-grid div {
       display: flex;
@@ -271,7 +271,6 @@
     }
 
     .dropdown-content a:hover {
-      background-color: #f0f4f8;
       color: #2f80ed;
     }
 
@@ -430,27 +429,34 @@
   </script>
 
   <!-- Top Nav -->
-<nav>
-  <div class="nav-container">
-    <div class="nav-left">
-      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-    </div>
-    <div class="nav-right">
-      <a href="index.html">Dashboard</a>
-      <a href="admin-actions.html">Admin Actions</a>
-      <div class="nav-dropdown">
-        <a href="#" class="dropbtn" style="color: white;">Add</a>
-        <div class="dropdown-content">
-          <a href="add-user.html" id="addUserLink">Add User</a>
-          <a href="assign-card.html" id="assignCardLink">Assign Card</a>
-          <a href="assign-student.html">Assign Student</a>
-        </div>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
-      <a href="view-users.html">View Users</a>
-      <a href="#" id="logoutBtn">Log Out</a>
+      <button class="hamburger" aria-label="Toggle mobile menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <div class="nav-dropdown">
+          <a href="#" class="dropbtn" style="color: white;">Accounts</a>
+          <div class="dropdown-content">
+            <a href="add-funds.html" id="addFundsLink">Add Funds</a>
+            <a href="transfer.html">Transfer</a>
+            <a href="reports.html">Reports</a>
+            <a href="add-user.html" id="addUserLink">Add User</a>
+            <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
+          </div>
+        </div>
+        <a href="view-users.html">View Users</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
     </div>
-  </div>
-</nav>
+  </nav>
 
   <div class="profile-container user-profile-page">
     <a href="view-users.html" class="back-button">← Back to Users</a>
