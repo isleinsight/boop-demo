@@ -1,7 +1,7 @@
 // backend/auth/routes/transfers.js
 const express = require('express');
 const router = express.Router();
-const pool = require('../../db'); // adjust if your pool is exported elsewhere
+const db = require('../../db');                 // <— use your db helper
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 // --- Health ---
@@ -23,7 +23,7 @@ function requireAccountsRole(req, res, next) {
 
 /**
  * GET /api/transfers
- * Query: status=pending|claimed|completed (default pending)
+ * Query: status=pending|claimed|completed|rejected (default pending)
  *        start=YYYY-MM-DD, end=YYYY-MM-DD, bank=HSBC|BUTTERFIELD
  *        limit=25, offset=0
  * Returns: { items: [...], total: number }
@@ -46,7 +46,6 @@ router.get('/', requireAccountsRole, async (req, res) => {
       values.push(status.toLowerCase());
       where.push(`t.status = $${values.length}`);
     }
-
     if (start) {
       values.push(start);
       where.push(`t.requested_at >= $${values.length}`);
@@ -62,9 +61,9 @@ router.get('/', requireAccountsRole, async (req, res) => {
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-    // total count
+    // total
     const countSql = `SELECT COUNT(*)::int AS total FROM transfers t ${whereSql};`;
-    const { rows: countRows } = await pool.query(countSql, values);
+    const { rows: countRows } = await db.query(countSql, values);
     const total = countRows[0]?.total || 0;
 
     // page
@@ -81,7 +80,7 @@ router.get('/', requireAccountsRole, async (req, res) => {
         t.destination_masked,
         t.status,
         t.claimed_by,
-        cb.email AS claimed_by_email,
+        cb.first_name || ' ' || cb.last_name AS claimed_by_name,
         t.claimed_at,
         t.completed_at,
         t.bank_reference
@@ -92,7 +91,7 @@ router.get('/', requireAccountsRole, async (req, res) => {
       ORDER BY t.requested_at DESC
       LIMIT $${values.length-1} OFFSET $${values.length};
     `;
-    const { rows: items } = await pool.query(listSql, values);
+    const { rows: items } = await db.query(listSql, values);
 
     res.json({ items, total });
   } catch (err) {
@@ -101,136 +100,116 @@ router.get('/', requireAccountsRole, async (req, res) => {
   }
 });
 
-/**
- * PATCH /api/transfers/:id/claim
- * Body: none
- * Locks the transfer to this accountant (only if still pending or already claimed by them)
- */
-router.patch('/:id/claim', requireAccountsRole, async (req, res) => {
+/** helper so POST and PATCH hit the same logic */
+function wrap(handler) {
+  return (req, res, next) => handler(req, res).catch(next);
+}
+
+/** CLAIM — allow PATCH and POST (front-end currently sends POST) */
+async function doClaim(req, res) {
   const id = req.params.id;
   const me = req.user.userId || req.user.id;
 
-  try {
-    // Lock row if pending OR already claimed by me
-    const { rows } = await pool.query(
-      `
-      UPDATE transfers t
-      SET status = 'claimed',
-          claimed_by = $2,
-          claimed_at = NOW()
-      WHERE t.id = $1
-        AND (t.status = 'pending' OR (t.status = 'claimed' AND t.claimed_by = $2))
-      RETURNING t.id, t.status, t.claimed_by, t.claimed_at;
-      `,
-      [id, me]
-    );
+  const { rows } = await db.query(
+    `
+    UPDATE transfers t
+    SET status = 'claimed',
+        claimed_by = $2,
+        claimed_at = NOW()
+    WHERE t.id = $1
+      AND (t.status = 'pending' OR (t.status = 'claimed' AND t.claimed_by = $2))
+    RETURNING t.id, t.status, t.claimed_by, t.claimed_at;
+    `,
+    [id, me]
+  );
+  if (!rows.length) return res.status(409).json({ message: 'Transfer is not available to claim.' });
+  res.json({ ok: true, transfer: rows[0] });
+}
+router.patch('/:id/claim', requireAccountsRole, wrap(doClaim));
+router.post('/:id/claim',  requireAccountsRole, wrap(doClaim));  // <— POST alias
 
-    if (!rows.length) {
-      return res.status(409).json({ message: 'Transfer is not available to claim.' });
-    }
-
-    res.json({ ok: true, transfer: rows[0] });
-  } catch (err) {
-    console.error('❌ claim error:', err);
-    res.status(500).json({ message: 'Failed to claim transfer.' });
-  }
-});
-
-/**
- * PATCH /api/transfers/:id/release
- * Body: none
- * Unlock a claimed transfer (only by the same user who claimed it and still not completed)
- */
-router.patch('/:id/release', requireAccountsRole, async (req, res) => {
+/** RELEASE — allow PATCH and POST */
+async function doRelease(req, res) {
   const id = req.params.id;
   const me = req.user.userId || req.user.id;
 
-  try {
-    const { rows } = await pool.query(
-      `
-      UPDATE transfers t
-      SET status = 'pending',
-          claimed_by = NULL,
-          claimed_at = NULL
-      WHERE t.id = $1
-        AND t.status = 'claimed'
-        AND t.claimed_by = $2
-      RETURNING t.id, t.status;
-      `,
-      [id, me]
-    );
+  const { rows } = await db.query(
+    `
+    UPDATE transfers t
+    SET status = 'pending',
+        claimed_by = NULL,
+        claimed_at = NULL
+    WHERE t.id = $1
+      AND t.status = 'claimed'
+      AND t.claimed_by = $2
+    RETURNING t.id, t.status;
+    `,
+    [id, me]
+  );
+  if (!rows.length) return res.status(409).json({ message: 'Only the claimer can release this transfer.' });
+  res.json({ ok: true, transfer: rows[0] });
+}
+router.patch('/:id/release', requireAccountsRole, wrap(doRelease));
+router.post('/:id/release',  requireAccountsRole, wrap(doRelease)); // <— POST alias
 
-    if (!rows.length) {
-      return res.status(409).json({ message: 'Only the claimer can release this transfer.' });
-    }
-
-    res.json({ ok: true, transfer: rows[0] });
-  } catch (err) {
-    console.error('❌ release error:', err);
-    res.status(500).json({ message: 'Failed to release transfer.' });
-  }
-});
-
-/**
- * PATCH /api/transfers/:id/complete
- * Body: { bank_reference: string }
- * Marks as completed, stores reference & completed_at. Only the claimer can complete.
- */
-router.patch('/:id/complete', requireAccountsRole, async (req, res) => {
+/** COMPLETE — allow PATCH and POST */
+async function doComplete(req, res) {
   const id = req.params.id;
   const me = req.user.userId || req.user.id;
-  const { bank_reference } = req.body || {};
-
+  const { bank_reference, internal_note, treasury_wallet_id } = req.body || {};
   if (!bank_reference || String(bank_reference).trim().length < 4) {
     return res.status(400).json({ message: 'bank_reference is required.' });
   }
 
-  try {
-    const { rows } = await pool.query(
-      `
-      UPDATE transfers t
-      SET status = 'completed',
-          bank_reference = $3,
-          completed_at = NOW()
-      WHERE t.id = $1
-        AND t.status = 'claimed'
-        AND t.claimed_by = $2
-      RETURNING t.id, t.status, t.bank_reference, t.completed_at;
-      `,
-      [id, me, bank_reference.trim()]
-    );
+  // (optional) you can log internal_note / treasury_wallet_id in a journal table
 
-    if (!rows.length) {
-      return res.status(409).json({ message: 'Only the claimer can complete this transfer (or it is not in claimed state).' });
-    }
-
-    res.json({ ok: true, transfer: rows[0] });
-  } catch (err) {
-    console.error('❌ complete error:', err);
-    res.status(500).json({ message: 'Failed to complete transfer.' });
+  const { rows } = await db.query(
+    `
+    UPDATE transfers t
+    SET status = 'completed',
+        bank_reference = $3,
+        completed_at = NOW()
+    WHERE t.id = $1
+      AND t.status = 'claimed'
+      AND t.claimed_by = $2
+    RETURNING t.id, t.status, t.bank_reference, t.completed_at;
+    `,
+    [id, me, bank_reference.trim()]
+  );
+  if (!rows.length) {
+    return res.status(409).json({ message: 'Only the claimer can complete this transfer (or it is not in claimed state).' });
   }
-});
+  res.json({ ok: true, transfer: rows[0] });
+}
+router.patch('/:id/complete', requireAccountsRole, wrap(doComplete));
+router.post('/:id/complete',  requireAccountsRole, wrap(doComplete)); // <— POST alias
 
-// GET mine/latest
-router.get('/mine/latest', authenticateToken, async (req, res) => {
+// --- Cardholder view: latest request
+router.get('/mine/latest', async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
-    // TODO: replace with real query
-    // const row = await db.oneOrNone(
-    //   `SELECT id, created_at, status, amount_cents
-    //    FROM transfers
-    //    WHERE user_id=$1
-    //    ORDER BY created_at DESC
-    //    LIMIT 1`, [userId]
-    // );
-    const row = null; // placeholder when none
-    if (!row) return res.json({});
-    res.json(row);
+
+    const { rows } = await db.query(
+      `
+      SELECT
+        id,
+        requested_at AS created_at,
+        status,
+        amount_cents
+      FROM transfers
+      WHERE user_id = $1
+      ORDER BY requested_at DESC
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (!rows.length) return res.json({});
+    res.json(rows[0]);
   } catch (e) {
     console.error('transfers/mine/latest error', e);
     res.status(500).json({ message: 'Failed to load latest transfer.' });
   }
 });
-
 
 module.exports = router;
