@@ -4,17 +4,11 @@ const router = express.Router();
 const db = require("../../db");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
-const { authenticateToken } = require("../middleware/authMiddleware");
-
-// GET /api/wallets/mine
+// GET /api/wallets/mine  — current user's wallet summary
 router.get("/mine", authenticateToken, async (req, res) => {
   try {
-    console.log("wallets/mine req.user =", req.user);
-
     const userId = req.user?.userId ?? req.user?.id;
-    if (!userId) {
-      return res.status(400).json({ message: "No user id in token." });
-    }
+    if (!userId) return res.status(400).json({ message: "No user id in token." });
 
     const q = `
       SELECT id, balance
@@ -26,13 +20,14 @@ router.get("/mine", authenticateToken, async (req, res) => {
     const { rows } = await db.query(q, [userId]);
 
     if (!rows.length) {
-      return res.json({ wallet_id: null, balance: 0 });
+      // return the shape your client expects
+      return res.json({ wallet_id: null, balance_cents: 0 });
     }
 
     const w = rows[0];
     return res.json({
       wallet_id: w.id,
-      balance: Number(w.balance || 0) // already in cents per your schema
+      balance_cents: Number(w.balance || 0) // your schema stores cents in integer
     });
   } catch (err) {
     console.error("❌ wallets/mine error:", err.stack || err);
@@ -41,22 +36,13 @@ router.get("/mine", authenticateToken, async (req, res) => {
 });
 
 /**
- * GET /api/wallets/user/:userId
- * Your existing route (unchanged)
+ * GET /api/wallets/user/:userId — keep your existing route
  */
 router.get("/user/:userId", async (req, res) => {
   const { userId } = req.params;
-
   try {
-    const result = await db.query(
-      `SELECT * FROM wallets WHERE user_id = $1`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Wallet not found" });
-    }
-
+    const result = await db.query(`SELECT * FROM wallets WHERE user_id = $1`, [userId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Wallet not found" });
     res.json(result.rows[0]);
   } catch (err) {
     console.error("❌ Error fetching wallet:", err);
