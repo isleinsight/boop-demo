@@ -400,10 +400,10 @@ if (resetBtn) {
       // Call your backend route that creates a reset token and emails the user.
       // If you used the routes I suggested earlier, this is the one:
       //   POST /api/password/reset/initiate  { user_id }
-      await fetchJSON("/api/password/reset/initiate", {
-        method: "POST",
-        body: JSON.stringify({ user_id: currentUserId })
-      });
+      await fetchJSON("/api/password/admin/initiate-reset", {
+  method: "POST",
+  body: JSON.stringify({ user_id: currentUserId })
+});
 
       if (resetStatus) resetStatus.textContent = "Reset email sent ✅";
       setTimeout(() => { if (resetStatus) resetStatus.textContent = ""; }, 6000);
