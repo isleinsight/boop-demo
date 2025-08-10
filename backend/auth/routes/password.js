@@ -56,6 +56,56 @@ async function sendResetEmail(to, link) {
 // ───────────────── routes ─────────────────
 
 /**
+ * POST /auth/password/admin/initiate-reset
+ * Admin only. Body: { user_id } or { email }
+ * Creates a reset token and emails the link (same flow as forgot-password).
+ */
+router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
+  try {
+    const { role, type } = req.user || {};
+    const isAdmin = role === 'admin' && ['super_admin','support','accountant','viewer','treasury'].includes((type||'').toLowerCase());
+    if (!isAdmin) return res.status(403).json({ message: 'Not authorized.' });
+
+    const userIdFromBody = req.body?.user_id;
+    const emailFromBody = normalizeEmail(req.body?.email);
+
+    // look up the user by id or email
+    let userRow = null;
+    if (userIdFromBody) {
+      const { rows } = await db.query('SELECT id, email FROM users WHERE id=$1 LIMIT 1', [userIdFromBody]);
+      userRow = rows[0];
+    } else if (emailFromBody) {
+      const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [emailFromBody]);
+      userRow = rows[0];
+    } else {
+      return res.status(400).json({ message: 'Provide user_id or email.' });
+    }
+
+    if (!userRow) return res.status(404).json({ message: 'User not found.' });
+
+    // create token
+    const raw = generateToken();
+    const tokenHash = hashToken(raw);
+    const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
+
+    await db.query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+       VALUES ($1,$2,$3)`,
+      [userRow.id, tokenHash, expiresAt]
+    );
+
+    const link = `${APP_URL.replace(/\/+$/,'')}/reset-password.html?token=${raw}`;
+    await sendResetEmail(userRow.email, link);
+
+    // don’t leak the link in production responses
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('admin/initiate-reset error', err);
+    return res.status(500).json({ message: 'Failed to initiate reset.' });
+  }
+});
+
+/**
  * POST /auth/password/forgot-password
  * Body: { email }
  * Always 200. If user exists, creates token + emails link.
