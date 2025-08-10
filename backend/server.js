@@ -33,8 +33,7 @@ try {
   app.use('/api/sessions', require('./auth/routes/sessions'));
   app.use('/api/transactions', require('./auth/routes/transactions')); // Updated transactions.js
   app.use('/api/transfers',     require('./auth/routes/transfers'));
-app.use('/api/bank-accounts', require('./auth/routes/bank-accounts'));
-app.use('/api/password',      require('./auth/routes/password'));
+
 // API routes
 app.use('/api/users', require('./auth/routes/users'));
 app.use('/api/cards', require('./auth/routes/cards'));
