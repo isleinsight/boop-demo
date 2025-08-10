@@ -383,6 +383,39 @@ dropdown.addEventListener("change", async () => {
 
 userInfo.appendChild(dropdown);
 
+// --- Reset Password (admin-triggered email link)
+const resetBtn = document.getElementById("resetPasswordBtn");
+const resetStatus = document.getElementById("resetPwStatus");
+
+if (resetBtn) {
+  resetBtn.addEventListener("click", async () => {
+    // Safety: confirm and guard
+    const email = currentUserData?.email || "this user";
+    if (!confirm(`Send a password reset link to ${email}?`)) return;
+
+    try {
+      resetBtn.disabled = true;
+      if (resetStatus) resetStatus.textContent = "Sending…";
+
+      // Call your backend route that creates a reset token and emails the user.
+      // If you used the routes I suggested earlier, this is the one:
+      //   POST /api/password/reset/initiate  { user_id }
+      await fetchJSON("/api/password/reset/initiate", {
+        method: "POST",
+        body: JSON.stringify({ user_id: currentUserId })
+      });
+
+      if (resetStatus) resetStatus.textContent = "Reset email sent ✅";
+      setTimeout(() => { if (resetStatus) resetStatus.textContent = ""; }, 6000);
+    } catch (err) {
+      if (resetStatus) resetStatus.textContent = "Failed to send reset ❌";
+      alert(err.message || "Failed to send reset link.");
+    } finally {
+      resetBtn.disabled = false;
+    }
+  });
+}
+
 // === Student View ===
 if (user.role === "student") {
   const s = user.student_profile;
