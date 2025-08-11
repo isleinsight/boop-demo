@@ -18,7 +18,6 @@ if (currentAdmin?.role === "admin" && ["viewer", "accountant"].includes(currentA
 
 let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
 
-// 🚫 Remove any accidental whitespace or malformed characters from UUID
 currentUserId = currentUserId?.replace(/\s+/g, ''); 
   let currentUserData = null;
   let isEditMode = false;
@@ -51,7 +50,7 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
   const res = await fetch(url, fetchOptions);
 
   if (res.status === 401 || res.status === 403) {
-    console.warn("⚠️ Token rejected or expired");
+    console.warn("Token rejected or expired");
     if (options.autoRedirect !== false) {
       window.location.href = "login.html";
     }
@@ -78,9 +77,9 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 let user;
 try {
   user = await fetchJSON(`/api/users/${currentUserId}`);
-  console.log("✅ User loaded:", user);
+  console.log("User loaded:", user);
 } catch (err) {
-  console.error("❌ Error during fetchJSON:", err.message);
+  console.error("Error during fetchJSON:", err.message);
   throw err;
 }
       currentUserData = user;
@@ -88,7 +87,7 @@ try {
 
       let walletHTML = "";
 
-// ✅ All Cards: Transit & Spending (safely skip for users with no wallet)
+// All Cards: Transit & Spending (safely skip for users with no wallet)
 if (user.wallet_id || user.wallet?.id) {
   try {
 let allCards = [];
@@ -97,10 +96,10 @@ if (user.wallet_id || user.wallet?.id) {
   try {
     allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
   } catch (err) {
-    console.warn("🟡 Failed to load cards:", err.message);
+    console.warn("Failed to load cards:", err.message);
   }
 } else {
-  console.info("ℹ️ Skipping card fetch — user has no wallet.");
+  console.info("Skipping card fetch — user has no wallet.");
 }
     const transitCards = allCards.filter(c => c.type === "transit");
     const spendingCards = allCards.filter(c => c.type === "spending");
@@ -114,14 +113,14 @@ if (user.wallet_id || user.wallet?.id) {
       walletHTML += `<div><span class="label">Transit Card</span><span class="value">None</span></div>`;
     }
 
-    // Show Spending Card (optional)
+    // Show Spending Card
     if (spendingCards.length > 0) {
       spendingCards.forEach(card => {
         walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
       });
     }
   } catch (err) {
-    console.warn("🟡 Failed to load cards:", err.message);
+    console.warn("Failed to load cards:", err.message);
     walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
   }
 } else {
@@ -153,7 +152,7 @@ try {
     walletBalance = `$${balanceNum.toFixed(2)}`;
   }
 } catch (err) {
-  console.warn("⚠️ Could not load wallet balance:", err.message);
+  console.warn("Could not load wallet balance:", err.message);
 }
       
 userInfo.innerHTML = `
@@ -181,12 +180,12 @@ userInfo.innerHTML = `
 
   ${walletHTML}
 `;
-console.log("👀 Attempting to load transactions for user:", user.id);
+console.log("Attempting to load transactions for user:", user.id);
 
 const transactionTableBody = document.querySelector("#transactionTable tbody");
 if (!transactionTableBody) {
-  console.error("❌ Transaction table body not found in DOM");
-  return; // Stop here but don't throw to avoid breaking profile
+  console.error("Transaction table body not found in DOM");
+  return; 
 }
 
 transactionTableBody.innerHTML = "";
@@ -197,9 +196,9 @@ try {
   const offset = (currentPage - 1) * transactionsPerPage;
   const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage + 1}&offset=${offset}`);
   transactions = res.transactions || [];
-  console.log("💳 Loaded transactions:", transactions);
+  console.log("Loaded transactions:", transactions);
 } catch (err) {
-  console.error("❌ Failed to fetch transactions:", err.message);
+  console.error("Failed to fetch transactions:", err.message);
 }
 
 const pageTransactions = transactions.slice(0, transactionsPerPage);
@@ -239,7 +238,7 @@ if (pageTransactions.length === 0) {
       `;
       transactionTableBody.appendChild(row);
     } catch (err) {
-      console.error("❌ Error creating transaction row:", err.message, tx);
+      console.error("Error creating transaction row:", err.message, tx);
     }
   }
 }
@@ -252,10 +251,10 @@ try {
     });
   });
 } catch (err) {
-  console.error("❌ Error attaching note button listeners:", err.message);
+  console.error("Error attaching note button listeners:", err.message);
 }  
 
-// === PAGINATION CONTROLS ===
+// Pagination
 const pageIndicator = document.getElementById("transactionPageIndicator");
 const prevBtn = document.getElementById("prevTransactions");
 const nextBtn = document.getElementById("nextTransactions");
@@ -270,13 +269,11 @@ if (nextBtn) {
   nextBtn.style.display = transactions.length > transactionsPerPage ? "inline-block" : "none";
 }
 
-// ✅ Restore assist dropdown logic
+// Dropdown
 const assistDropdown = document.getElementById("editAssistance");
 if (assistDropdown) {
   assistDropdown.value = user.on_assistance ? "true" : "false";
 }
-
-      // ✅ dropdown
 
 const dropdown = document.createElement("select");
 dropdown.innerHTML = `
@@ -296,7 +293,7 @@ dropdown.addEventListener("change", async () => {
     return;
   }
 
-  // ✅ Load current user info for email (like View Users does)
+
   let adminUser = null;
   try {
     const meRes = await fetch("/api/me", {
@@ -351,7 +348,7 @@ dropdown.addEventListener("change", async () => {
         throw new Error(err.message || "Force sign-out failed");
       }
 
-      alert("✅ User signed out.");
+      alert("User signed out.");
 
     } else if (action === "delete") {
       res = await fetch(`/api/users/${currentUserId}`, {
@@ -360,7 +357,7 @@ dropdown.addEventListener("change", async () => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ uid: adminUser?.id }) // Just in case the backend checks this
+        body: JSON.stringify({ uid: adminUser?.id }) 
       });
 
       if (!res.ok) {
@@ -376,14 +373,14 @@ dropdown.addEventListener("change", async () => {
     await loadUserProfile();
 
   } catch (err) {
-    console.error("❌ Action failed:", err);
-    alert("❌ Action failed: " + err.message);
+    console.error("Action failed:", err);
+    alert("Action failed: " + err.message);
   }
 });
 
 userInfo.appendChild(dropdown);
 
-// --- Reset Password (admin-triggered email link)
+// --- Reset Password 
 const resetBtn = document.getElementById("resetPasswordBtn");
 const resetStatus = document.getElementById("resetPwStatus");
 
@@ -397,10 +394,9 @@ if (resetBtn) {
       resetBtn.disabled = true;
       if (resetStatus) resetStatus.textContent = "Sending…";
 
-      // Call your backend route that creates a reset token and emails the user.
-      // If you used the routes I suggested earlier, this is the one:
+
       //   POST /api/password/reset/initiate  { user_id }
-      console.log("🔐 sending reset for user:", currentUserId, currentUserData?.email);
+      console.log("sending reset for user:", currentUserId, currentUserData?.email);
 if (!currentUserId || currentUserId.length < 6) {
   alert("No valid user ID available for reset.");
   return;
@@ -409,17 +405,17 @@ if (!currentUserId || currentUserId.length < 6) {
 await fetchJSON("/api/password/admin/initiate-reset", {
   method: "POST",
   body: JSON.stringify({
-    // send ALL common shapes so whatever your server expects will be present
+
     user_id: currentUserId,
     userId: currentUserId,
     email: currentUserData?.email || undefined
   })
 });
 
-      if (resetStatus) resetStatus.textContent = "Reset email sent ✅";
+      if (resetStatus) resetStatus.textContent = "Reset email sent";
       setTimeout(() => { if (resetStatus) resetStatus.textContent = ""; }, 6000);
     } catch (err) {
-      if (resetStatus) resetStatus.textContent = "Failed to send reset ❌";
+      if (resetStatus) resetStatus.textContent = "Failed to send reset";
       alert(err.message || "Failed to send reset link.");
     } finally {
       resetBtn.disabled = false;
@@ -427,7 +423,7 @@ await fetchJSON("/api/password/admin/initiate-reset", {
   });
 }
 
-// === Student View ===
+// Student View
 if (user.role === "student") {
   const s = user.student_profile;
 
@@ -463,7 +459,7 @@ if (user.role === "student") {
 
     studentInfoSection.style.display = "block";
 
-    // ✅ Attach Edit + Save handlers
+    // Attach Edit and Save handlers
     const editStudentBtn = document.getElementById("editStudentBtn");
     const saveStudentBtn = document.getElementById("saveStudentBtn");
 
@@ -492,7 +488,7 @@ if (user.role === "student") {
           expiry_date: document.getElementById("editExpiry")?.value,
         };
 
-        console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
+        console.log("PATCHing to:", `/api/students/${currentUserId}`);
 
         try {
           await fetchJSON(`/api/students/${currentUserId}`, {
@@ -500,18 +496,18 @@ if (user.role === "student") {
             body: JSON.stringify(studentData)
           });
 
-          alert("✅ Student info saved.");
+          alert("Student info saved.");
           isEditMode = false;
           saveStudentBtn.style.display = "none";
           loadUserProfile();
         } catch (err) {
-          console.error("❌ Failed to save student data:", err);
+          console.error("Failed to save student data:", err);
           alert("Failed to save student info.");
         }
       };
     }
 
-    // ✅ Fetch and display parent info
+    // Fetch and display parent info
     try {
       const parents = await fetchJSON(`/api/user-students/parents/${user.id}`);
 
@@ -527,12 +523,12 @@ if (user.role === "student") {
         document.getElementById("parentSection").style.display = "block";
       }
     } catch (err) {
-      console.warn("❌ Could not load parent info:", err.message);
+      console.warn("Could not load parent info:", err.message);
     }
   }
 }
       
-// === Parent View ===
+// Parent View 
 if (user.role === "parent" && Array.isArray(user.assigned_students)) {
   studentInfoSection.innerHTML = `
     <div class="section-title">Assigned Students</div>
@@ -559,7 +555,7 @@ if (user.role === "parent" && Array.isArray(user.assigned_students)) {
   studentInfoSection.style.display = "block";
 }
       
-      // === Edit Profile Setup ===
+      // Edit Profile
 editBtn.onclick = () => {
   isEditMode = true;
 
@@ -599,7 +595,7 @@ editBtn.onclick = () => {
 saveBtn.onclick = async () => {
   let hadError = false;
 
-  // ✅ Update user base info
+  // Update user info
   try {
     await fetchJSON(`/api/users/${currentUserId}`, {
       method: "PATCH",
@@ -616,12 +612,12 @@ saveBtn.onclick = async () => {
     });
   } catch (err) {
     hadError = true;
-    console.warn("❌ User update failed:", err);
+    console.warn("User update failed:", err);
   }
 
   
 
-  // ✅ Vendor update
+  // Vendor update
   if (currentUserData.role === "vendor") {
     try {
       await fetchJSON(`/api/vendors/${currentUserId}`, {
@@ -634,15 +630,15 @@ saveBtn.onclick = async () => {
       });
     } catch (err) {
       hadError = true;
-      console.warn("❌ Vendor update failed:", err);
+      console.warn("Vendor update failed:", err);
     }
   }
 
-  // ✅ Final outcome
+
   if (hadError) {
     alert("Some changes were saved, but not all.");
   } else {
-    alert("✅ All changes saved.");
+    alert("All changes saved.");
     isEditMode = false;
     saveBtn.style.display = "none";
 
@@ -670,7 +666,7 @@ saveBtn.onclick = async () => {
       
 
     } catch (err) {
-  console.error("❌ Failed to load user:", err);
+  console.error("Failed to load user:", err);
   alert("Error loading user: " + err.message);
 }
   }
@@ -682,7 +678,7 @@ saveBtn.onclick = async () => {
   });
 isEditMode = false;
 
-// ✅ Check if current user has been force signed out
+// Check if current user has been force signed out
 (async () => {
   const token = localStorage.getItem("boop_jwt");
   if (!token) return;
@@ -706,10 +702,10 @@ isEditMode = false;
 
         // ignore 404 (session already gone)
         if (sessionRes.status !== 200 && sessionRes.status !== 404) {
-          console.warn("🧹 Session deletion failed:", await sessionRes.text());
+          console.warn("Session deletion failed:", await sessionRes.text());
         }
       } catch (err) {
-        console.warn("🧹 Session cleanup failed:", err);
+        console.warn("Session cleanup failed:", err);
       }
 
       window.location.href = "login.html";
