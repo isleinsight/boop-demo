@@ -8,31 +8,32 @@
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
     :root { 
+      --ink: #1a2b4a;
       --muted: #6b7280; 
       --stroke: #d1d9e6; 
     }
 
     h3 {
       font-size: 1.6rem;
-      color: #1a2b4a;
+      color: var(--ink);
       margin-bottom: 16px;
     }
 
     p {
       font-size: 0.9rem;
-      color: #4b5563;
+      color: var(--muted);
       margin: 0 0 20px;
       line-height: 1.5;
     }
 
     p strong {
-      color: #1a2b4a;
+      color: var(--ink);
     }
 
     label {
       display: block;
       font-size: 0.95rem;
-      color: #1a2b4a;
+      color: var(--ink);
       margin-bottom: 8px;
       font-weight: 500;
     }
@@ -55,7 +56,7 @@
 
     select {
       appearance: none;
-      background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMi4wMDAwNiA1LjY2NjdMOC4wMDAwNiAxMS42NjY3TDE0LjAwMDEgNS42NjY3IiBzdHJva2U9IiM2Yjc1N2QiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+') no-repeat right 12px center;
+      background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMi4wMDAwNiA1LjY2NjdMOC4wMDAwNiAxMS42NjY3TDE0Lj00MDEgNS42NjY3IiBzdHJva2U9IiM2Yjc1N2QiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+') no-repeat right 12px center;
       background-size: 16px;
     }
 
@@ -82,7 +83,7 @@
       display: flex;
       align-items: center;
       font-size: 0.95rem;
-      color: #1a2b4a;
+      color: var(--ink);
       margin-top: 12px;
       cursor: pointer;
     }
@@ -101,6 +102,9 @@
       justify-content: space-between;
       position: relative;
       padding: 10px 20px;
+      min-height: 60px;
+      box-sizing: border-box;
+      background: var(--ink);
     }
 
     .hamburger {
@@ -114,17 +118,21 @@
       cursor: pointer;
       padding: 0;
       z-index: 1100;
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
     }
 
     .hamburger span {
       width: 100%;
       height: 3px;
-      background: #ffffff; /* White for dark navbar background */
+      background: #ffffff;
       transition: all 0.3s ease;
     }
 
     .hamburger.active span {
-      background: #1a2b4a; /* Dark color for X when menu is open */
+      background: var(--ink);
     }
 
     .hamburger.active span:nth-child(1) {
@@ -147,7 +155,7 @@
     .dropbtn {
       padding: 10px 16px;
       text-decoration: none;
-      color: #ffffff; /* White for dark navbar background */
+      color: #ffffff;
       transition: background-color 0.2s ease;
     }
 
@@ -181,10 +189,6 @@
     @media (max-width: 768px) {
       .hamburger {
         display: flex;
-        position: absolute;
-        top: 50%;
-        right: 20px;
-        transform: translateY(-50%);
       }
 
       .nav-right {
@@ -235,7 +239,7 @@
       }
 
       .nav-dropdown:hover .dropdown-content {
-        display: none; /* Prevent hover on mobile */
+        display: none;
       }
     }
 
