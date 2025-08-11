@@ -115,13 +115,13 @@
 
   let selectedUser = null;
 
-  // 🔧 Generate UID
+  // Generate UID
   generateBtn.addEventListener("click", () => {
     const uid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     cardUID.value = uid;
   });
 
-  // 👤 Autocomplete
+  // Autocomplete
   userSearch.addEventListener("input", async () => {
     const query = userSearch.value.trim();
     if (query.length < 2) {
@@ -167,7 +167,7 @@
     }
   });
 
-  // 📨 Assign card
+  // Assign card
   assignBtn.addEventListener("click", async () => {
     const uid = cardUID.value.trim();
     const admin = JSON.parse(localStorage.getItem("boopUser"));
@@ -205,18 +205,18 @@
 
       if (!res.ok) {
         if (result.message?.toLowerCase().includes("already has")) {
-          throw new Error("⚠️ This user already has a spending card.");
+          throw new Error("This user already has a spending card.");
         }
         if (result.message?.toLowerCase().includes("uid")) {
-          throw new Error("⚠️ This card UID is already assigned to another user.");
+          throw new Error("This card UID is already assigned to another user.");
         }
         throw new Error(result.message || "Card assignment failed.");
       }
 
-      console.log("✅ Card assigned:", result);
+      console.log("Card assigned:", result);
 
-      // ✅ Success message
-      statusEl.textContent = "✅ Card assigned successfully!";
+      // Success message
+      statusEl.textContent = "Card assigned successfully!";
       statusEl.classList.remove("error");
       statusEl.classList.add("success");
 
@@ -224,7 +224,7 @@
       userSearch.value = "";
       selectedUser = null;
 
-      // ✅ Create & show "Assign New Card" button
+      // Create & show "Assign New Card" button
       let newBtn = document.getElementById("assignNewCardBtn");
       if (!newBtn) {
         newBtn = document.createElement("button");
@@ -259,7 +259,7 @@
       }
 
     } catch (err) {
-      console.error("❌ Error:", err);
+      console.error("Error:", err);
       statusEl.textContent = err.message || "Unknown error occurred.";
       statusEl.classList.remove("success");
       statusEl.classList.add("error");
