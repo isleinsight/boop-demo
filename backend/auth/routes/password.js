@@ -6,7 +6,7 @@ const db = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 // ── Postmark setup ────────────────────────────────────────────────────────────
-const { ServerClient } = require('@postmark/node');
+const { ServerClient } = require('@postmark');
 
 const APP_URL = (process.env.APP_URL || 'http://localhost:8080').replace(/\/+$/, '');
 const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || '';
