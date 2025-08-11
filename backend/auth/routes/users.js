@@ -7,6 +7,43 @@ const {
   authenticateToken
 } = require("../middleware/authMiddleware"); // ✅ THIS IS THE FIX
 
+const crypto = require("crypto");
+
+// Postmark setup
+const { ServerClient } = require("@postmark/node");
+const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || "";
+const APP_URL = (process.env.APP_URL || "https://boopcard.com").replace(/\/+$/, "");
+const FROM_EMAIL = process.env.SENDER_EMAIL || "davon.campbell@boopcard.com";
+const postmark = POSTMARK_TOKEN ? new ServerClient(POSTMARK_TOKEN) : null;
+
+const TOKEN_TTL_MIN = Number(process.env.PASSWORD_RESET_TTL_MIN || 30);
+
+// helpers
+function generateToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+function hashToken(raw) {
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}
+async function sendResetEmail(to, link) {
+  if (!postmark) {
+    console.warn("[email] Postmark token missing; link:", link);
+    return;
+  }
+  await postmark.sendEmail({
+    From: FROM_EMAIL,
+    To: to,
+    Subject: "Reset your BOOP password",
+    HtmlBody: `
+      <p>Hello,</p>
+      <p>Your BOOP account was created. Please set your password using the link below:</p>
+      <p><a href="${link}">${link}</a></p>
+      <p>This link expires in ${TOKEN_TTL_MIN} minutes.</p>
+    `,
+    MessageStream: "outbound",
+  });
+}
+
 const logAdminAction = require("../middleware/log-admin-action");
 
 const rolesWithWallet = ["cardholder", "student", "senior", "vendor", "parent"];
