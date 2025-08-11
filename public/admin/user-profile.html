@@ -23,7 +23,7 @@
         }
         localStorage.setItem("boopUser", JSON.stringify(meData));
       } catch (err) {
-        console.warn("🔒 Not authorized or error fetching user:", err);
+        console.warn("Not authorized or error fetching user:", err);
         localStorage.removeItem("boop_jwt");
         localStorage.removeItem("boopUser");
         window.location.href = "login.html";
