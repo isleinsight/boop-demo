@@ -1,18 +1,19 @@
+// public/admin/add-user.js
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("✅ add-user.js loaded");
+  console.log("✅ add-user.js loaded (no password field)");
 
+  // Require logged-in admin
   const token = localStorage.getItem("boop_jwt");
   if (!token) {
-    console.warn("🔐 No token found. Redirecting to login.");
     window.location.href = "login.html";
     return;
   }
 
+  // Elements
   const form = document.getElementById("addUserForm");
   const roleSelect = document.getElementById("role");
   const adminTypeContainer = document.getElementById("adminTypeContainer");
   const emailInput = document.getElementById("email");
-  const passwordInput = document.getElementById("password");
   const firstNameInput = document.getElementById("firstName");
   const middleNameInput = document.getElementById("middleName");
   const lastNameInput = document.getElementById("lastName");
@@ -32,53 +33,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   const studentGradeLevel = document.getElementById("studentGradeLevel");
   const expiryDateInput = document.getElementById("expiryDate");
 
-  // Hide/disable the password field (we'll generate a temp one)
-  const pwLabel = document.querySelector('label[for="password"]');
-  if (pwLabel) pwLabel.style.display = "none";
-  if (passwordInput) {
-    passwordInput.disabled = true;
-    passwordInput.style.display = "none";
-  }
-
-  // Strong, unguessable temp password
-  function generateTempPassword(length = 20) {
-    const alphabet =
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{};:,.<>?";
-    // Use secure RNG if available
-    if (window.crypto && window.crypto.getRandomValues) {
-      const array = new Uint32Array(length);
-      window.crypto.getRandomValues(array);
-      let pw = "";
-      for (let i = 0; i < length; i++) pw += alphabet[array[i] % alphabet.length];
-      return pw;
-    }
-    // Fallback (less ideal)
-    let pw = "";
-    for (let i = 0; i < length; i++) {
-      pw += alphabet[Math.floor(Math.random() * alphabet.length)];
-    }
-    return pw;
-  }
-
+  // Gate access by admin type
   let currentUserType = null;
-
   try {
-    const res = await fetch("/api/me", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const user = await res.json();
-    currentUserType = user.type;
+    const meRes = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
+    if (!meRes.ok) throw new Error("Unauthorized");
+    const me = await meRes.json();
+    currentUserType = me.type;
 
-    if (["viewer", "support"].includes(currentUserType)) {
+    if (!["super_admin", "admin"].includes(currentUserType)) {
       alert("You do not have permission to access this page.");
+      localStorage.clear();
       window.location.href = "login.html";
       return;
     }
   } catch (e) {
-    console.error("Failed to fetch current user info:", e);
+    console.error("Failed to fetch /api/me:", e);
+    localStorage.clear();
+    window.location.href = "login.html";
+    return;
   }
 
-  // Role options
+  // Build role options
   const baseRoles = [
     { value: "student", label: "Student" },
     { value: "parent", label: "Parent" },
@@ -89,39 +65,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (currentUserType === "super_admin") {
     baseRoles.unshift({ value: "admin", label: "Admin" });
   }
-
-  // Populate role dropdown
   roleSelect.innerHTML =
     `<option value="">Select Role</option>` +
-    baseRoles.map((r) => `<option value="${r.value}">${r.label}</option>`).join("");
+    baseRoles.map(r => `<option value="${r.value}">${r.label}</option>`).join("");
 
-  // Conditional fields
-  const updateConditionalFields = () => {
+  // Toggle conditional sections
+  function updateConditionalFields() {
     const role = roleSelect.value;
     vendorFields.style.display = role === "vendor" ? "block" : "none";
     studentFields.style.display = role === "student" ? "block" : "none";
     assistanceContainer.style.display = role === "cardholder" ? "block" : "none";
     adminTypeContainer.style.display = role === "admin" ? "block" : "none";
+
+    // student requirements
     studentSchoolName.required = role === "student";
     expiryDateInput.required = role === "student";
-  };
+  }
   roleSelect.addEventListener("change", updateConditionalFields);
   updateConditionalFields();
 
   // Logout
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("boopUser");
-      localStorage.removeItem("boop_jwt");
-      window.location.href = "login.html";
-    });
-  }
+  logoutBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    localStorage.clear();
+    window.location.href = "login.html";
+  });
 
   // Submit
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    statusDiv.textContent = "Creating user...";
-    statusDiv.style.color = "black";
+    statusDiv.className = "status-message";
+    statusDiv.textContent = "Creating user…";
+    statusDiv.style.display = "block";
 
     const email = emailInput.value.trim();
     const first_name = firstNameInput.value.trim();
@@ -131,19 +106,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const on_assistance = onAssistanceCheckbox.checked;
     const adminType = document.getElementById("adminType")?.value || null;
 
-    // Basic required fields (no password required here anymore)
     if (!email || !first_name || !last_name || !role) {
+      statusDiv.classList.add("error");
       statusDiv.textContent = "Please fill in all required fields.";
-      statusDiv.style.color = "red";
       return;
     }
 
-    // Generate unguessable temp password
-    const tempPw = generateTempPassword(22);
-
-    const userPayload = {
+    const payload = {
       email,
-      password: tempPw, // 👈 temp password saved in DB
+      // no password provided; backend should generate a random temp password
       first_name,
       middle_name,
       last_name,
@@ -153,24 +124,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     if (role === "vendor") {
-      userPayload.vendor = {
-        name: businessNameInput.value.trim(),
-        phone: vendorPhoneInput.value.trim(),
-        category: vendorCategoryInput.value.trim(),
-        approved: vendorApprovedSelect ? vendorApprovedSelect.value === "true" : false
+      payload.vendor = {
+        name: (businessNameInput.value || "").trim(),
+        phone: (vendorPhoneInput.value || "").trim(),
+        category: (vendorCategoryInput.value || "").trim(),
+        approved: (vendorApprovedSelect?.value || "false") === "true"
       };
     }
 
     if (role === "student") {
       const school_name = studentSchoolName.value.trim();
-      const grade_level = studentGradeLevel.value.trim();
+      const grade_level = (studentGradeLevel.value || "").trim();
       const expiry_date = expiryDateInput.value;
       if (!school_name || !expiry_date) {
+        statusDiv.classList.add("error");
         statusDiv.textContent = "Missing school name or expiry date for student.";
-        statusDiv.style.color = "red";
         return;
       }
-      userPayload.student = { school_name, grade_level, expiry_date };
+      payload.student = { school_name, grade_level, expiry_date };
     }
 
     try {
@@ -181,12 +152,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(userPayload)
+        body: JSON.stringify(payload)
       });
       const result = await resUser.json();
       if (!resUser.ok) throw new Error(result.message || "Failed to create user");
 
-      // (Optional) Create transit wallet
+      const newUser = result.user || result; // adjust to your API shape
+      const newUserId = newUser.id;
+
+      // (Optional) Create transit wallet (ignore failures)
       try {
         const resTransit = await fetch("/api/transit-wallets", {
           method: "POST",
@@ -194,18 +168,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ user_id: result.user.id })
+          body: JSON.stringify({ user_id: newUserId })
         });
         if (!resTransit.ok) {
-          console.warn("🟡 Transit wallet creation failed:", await resTransit.text());
-        } else {
-          console.log("✅ Transit wallet created.");
+          console.warn("Transit wallet creation failed:", await resTransit.text());
         }
-      } catch (err) {
-        console.error("❌ Failed to create transit wallet:", err);
+      } catch (e) {
+        console.warn("Transit wallet creation error:", e);
       }
 
-      // Immediately send reset email to new user
+      // Trigger password reset email for the new user
       try {
         const resReset = await fetch("/api/password/admin/initiate-reset", {
           method: "POST",
@@ -213,29 +185,22 @@ document.addEventListener("DOMContentLoaded", async () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ user_id: result.user.id })
+          body: JSON.stringify({ user_id: newUserId })
         });
         if (!resReset.ok) {
-          console.warn("🟡 Could not send reset email:", await resReset.text());
-          statusDiv.textContent =
-            "User created. (Reset email could not be sent — check email setup.)";
-          statusDiv.style.color = "#b45309"; // amber
-        } else {
-          statusDiv.textContent = "✅ User created and reset email sent.";
-          statusDiv.style.color = "green";
+          const msg = await resReset.text();
+          console.warn("Password reset email failed:", msg);
         }
-      } catch (err) {
-        console.error("❌ Reset initiation failed:", err);
-        statusDiv.textContent =
-          "User created. (Reset email failed — check server email config.)";
-        statusDiv.style.color = "#b45309";
+      } catch (e) {
+        console.warn("Password reset request error:", e);
       }
 
-      // Reset form UI
+      statusDiv.classList.add("success");
+      statusDiv.textContent = "✅ User created. Password reset email sent.";
       form.reset();
       updateConditionalFields();
 
-      // Add “Add Another User” button if not present
+      // "Add another" helper button
       let addBtn = document.getElementById("addAnotherBtn");
       if (!addBtn) {
         addBtn = document.createElement("button");
@@ -243,31 +208,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         addBtn.type = "button";
         addBtn.textContent = "Add Another User";
         addBtn.style.marginTop = "10px";
-        addBtn.style.display = "inline-block";
-        addBtn.style.padding = "10px";
-        addBtn.style.width = "100%";
-        addBtn.style.fontSize = "1rem";
-        addBtn.style.cursor = "pointer";
         statusDiv.insertAdjacentElement("afterend", addBtn);
         addBtn.addEventListener("click", () => {
           statusDiv.textContent = "";
-          statusDiv.style.color = "";
+          statusDiv.className = "status-message";
           addBtn.remove();
           form.reset();
           updateConditionalFields();
         });
       }
     } catch (err) {
-      console.error("❌ Error:", err);
-      statusDiv.textContent = err.message;
-      statusDiv.style.color = "red";
+      console.error(err);
+      statusDiv.classList.add("error");
+      statusDiv.textContent = err.message || "Something went wrong creating the user.";
     }
   });
 
-  // Clear status on input
-  document.querySelectorAll("input, select").forEach((el) => {
+  // Clear status on input changes
+  document.querySelectorAll("input, select").forEach(el => {
     el.addEventListener("input", () => {
       statusDiv.textContent = "";
+      statusDiv.className = "status-message";
     });
   });
 });
