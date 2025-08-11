@@ -98,7 +98,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("✅ assign-student.js loaded!");
+    console.log("assign-student.js loaded!");
 
     // Hide "Add User" and "Assign Card" links for viewer or support users
     if (user?.type === "support" || user?.type === "viewer") {
@@ -155,7 +155,7 @@
 
           suggestionBox.style.display = "block";
         } catch (err) {
-          console.error("❌ Error fetching suggestions:", err);
+          console.error("Error fetching suggestions:", err);
         }
       });
 
@@ -203,7 +203,7 @@
 
         if (!res.ok) throw new Error(result.message || "Failed to assign student.");
 
-        statusMessage.textContent = result.message || "✅ Student assigned successfully!";
+        statusMessage.textContent = result.message || "Student assigned successfully!";
         statusMessage.classList.remove("error");
         statusMessage.classList.add("success");
 
@@ -247,8 +247,8 @@
         }
 
       } catch (err) {
-        console.error("❌ Assignment failed:", err);
-        statusMessage.textContent = err.message || "❌ Failed to assign student.";
+        console.error("Assignment failed:", err);
+        statusMessage.textContent = err.message || "Failed to assign student.";
         statusMessage.classList.remove("success");
         statusMessage.classList.add("error");
       }
