@@ -7,12 +7,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
-    :root { 
-      --ink: #1a2b4a; 
-      --muted: #6b7280; 
-      --stroke: #e6ebf1; 
-    }
-
     body {
       font-family: 'Poppins', sans-serif;
       background: #f5f8fb;
@@ -32,49 +26,10 @@
     h2 {
       font-size: 1.8rem;
       margin-bottom: 24px;
-      color: var(--ink);
+      color: #1a2b4a;
     }
 
-    .nav-container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: relative;
-      padding: 10px 20px;
-    }
-
-    .hamburger {
-      display: none;
-      flex-direction: column;
-      justify-content: space-between;
-      width: 24px;
-      height: 20px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      z-index: 1100;
-    }
-
-    .hamburger span {
-      width: 100%;
-      height: 3px;
-      background: #ffffff;
-      transition: all 0.3s ease;
-    }
-
-    .hamburger.active span:nth-child(1) {
-      transform: rotate(45deg) translate(5px, 5px);
-    }
-
-    .hamburger.active span:nth-child(2) {
-      opacity: 0;
-    }
-
-    .hamburger.active span:nth-child(3) {
-      transform: rotate(-45deg) translate(7px, -7px);
-    }
-
+    /* Navigation Dropdown */
     .nav-dropdown {
       position: relative;
       display: inline-block;
@@ -83,7 +38,6 @@
     .dropbtn {
       padding: 10px 16px;
       text-decoration: none;
-      color: #ffffff;
       transition: background-color 0.2s ease;
     }
 
@@ -114,67 +68,7 @@
       display: block;
     }
 
-    @media (max-width: 768px) {
-      .hamburger {
-        display: flex;
-        position: absolute;
-        top: 50%;
-        right: 20px;
-        transform: translateY(-50%);
-      }
-
-      .nav-right {
-        position: fixed;
-        top: 0;
-        right: -100%;
-        width: 250px;
-        height: 100%;
-        background: #fff;
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 80px 20px;
-        transition: right 0.3s ease;
-        box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
-      }
-
-      .nav-right.active {
-        right: 0;
-      }
-
-      .nav-right a {
-        color: #333;
-        font-size: 1rem;
-        padding: 12px 0;
-        width: 100%;
-        text-align: left;
-        text-decoration: none;
-      }
-
-      .dropdown-content {
-        display: none;
-        position: static;
-        background: none;
-        box-shadow: none;
-        width: 100%;
-        transition: opacity 0.3s ease;
-        opacity: 0;
-      }
-
-      .nav-right.active .dropdown-content.active {
-        display: block;
-        opacity: 1;
-      }
-
-      .nav-dropdown a {
-        color: #333;
-      }
-
-      .nav-dropdown:hover .dropdown-content {
-        display: none; /* Prevent hover on mobile */
-      }
-    }
-
+    /* Filters */
     .filters {
       display: flex;
       flex-wrap: wrap;
@@ -186,7 +80,7 @@
     .filters input,
     .filters select {
       padding: 10px 14px;
-      border: 1px solid var(--stroke);
+      border: 1px solid #d1d9e6;
       border-radius: 6px;
       font-size: 0.95rem;
       background: #fff;
@@ -214,6 +108,7 @@
       background: #1c6fd8;
     }
 
+    /* Table */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -231,7 +126,7 @@
 
     th {
       background: #f0f4f8;
-      color: var(--ink);
+      color: #1a2b4a;
       font-weight: 600;
     }
 
@@ -248,9 +143,10 @@
     }
 
     td {
-      border-bottom: 1px solid var(--stroke);
+      border-bottom: 1px solid #e6ebf1;
     }
 
+    /* Pagination */
     .pagination-container {
       display: flex;
       justify-content: center;
@@ -271,7 +167,7 @@
     }
 
     .pagination-container button:disabled {
-      background: var(--stroke);
+      background: #d1d9e6;
       cursor: not-allowed;
     }
 
@@ -281,13 +177,15 @@
 
     .pagination-container span {
       font-size: 0.95rem;
-      color: var(--ink);
+      color: #1a2b4a;
     }
 
+    /* Status Colors */
     .status-pending { color: #f4a261; font-weight: 500; }
     .status-completed { color: #2ecc71; font-weight: 500; }
     .status-error { color: #e63946; font-weight: 500; }
 
+    /* Status Message */
     .status-message {
       margin-top: 20px;
       padding: 12px 16px;
@@ -305,22 +203,18 @@
   </style>
 </head>
 <body>
-  <!-- Top Nav -->
+
+<!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
         <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
-      <button class="hamburger" aria-label="Toggle navigation">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
       <div class="nav-right">
         <a href="index.html">Dashboard</a>
         <a href="admin-actions.html">Admin Actions</a>
         <div class="nav-dropdown">
-          <a href="#" class="dropbtn">Add</a>
+          <a href="#" class="dropbtn" style="color: white;">Add</a>
           <div class="dropdown-content">
             <a href="add-user.html" id="addUserLink">Add User</a>
             <a href="assign-card.html" id="assignCardLink">Assign Card</a>
@@ -333,184 +227,191 @@
     </div>
   </nav>
 
-  <div class="container">
-    <h2>Admin Actions</h2>
+<div class="container">
+  <h2>Admin Actions</h2>
 
-    <div class="filters">
-      <input type="date" id="startDate" />
-      <input type="date" id="endDate" />
-      <select id="statusFilter">
-        <option value="">All Statuses</option>
-        <option value="pending">Pending</option>
-        <option value="completed">Completed</option>
-        <option value="error">Error</option>
-      </select>
-      <input type="text" id="searchInput" placeholder="Search name/email..." />
-      <button id="applyFilters">Apply</button>
-    </div>
-
-    <table id="adminActionsTable">
-      <thead>
-        <tr>
-          <th>Action</th>
-          <th>Status</th>
-          <th>Performed By</th>
-          <th>Target</th>
-          <th>Requested At</th>
-          <th>Completed At</th>
-          <th>Error Message</th>
-        </tr>
-      </thead>
-      <tbody id="adminActionsBody">
-        <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
-      </tbody>
-    </table>
-
-    <div class="pagination-container">
-      <button id="prevPage">Previous</button>
-      <span id="pageIndicator">Page 1</span>
-      <button id="nextPage">Next</button>
-    </div>
-
-    <div id="statusMessage" class="status-message"></div>
+  <div class="filters">
+    <input type="date" id="startDate" />
+    <input type="date" id="endDate" />
+    <select id="statusFilter">
+      <option value="">All Statuses</option>
+      <option value="pending">Pending</option>
+      <option value="completed">Completed</option>
+      <option value="error">Error</option>
+    </select>
+    <input type="text" id="searchInput" placeholder="Search name/email..." />
+    <button id="applyFilters">Apply</button>
   </div>
 
-  <script type="module">
-    const user = JSON.parse(localStorage.getItem("boopUser"));
-    const token = localStorage.getItem("boop_jwt");
-    const tbody = document.getElementById("adminActionsBody");
-    const statusMessage = document.getElementById("statusMessage");
-    const prevBtn = document.getElementById("prevPage");
-    const nextBtn = document.getElementById("nextPage");
-    const pageIndicator = document.getElementById("pageIndicator");
+  <table id="adminActionsTable">
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>Status</th>
+        <th>Performed By</th>
+        <th>Target</th>
+        <th>Requested At</th>
+        <th>Completed At</th>
+        <th>Error Message</th>
+      </tr>
+    </thead>
+    <tbody id="adminActionsBody">
+      <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
+    </tbody>
+  </table>
 
-    const allowedTypes = ["super_admin", "admin", "support"];
-    if (!user || user.role !== "admin" || !allowedTypes.includes(user.type)) {
-      window.location.href = "login.html";
+  <div class="pagination-container">
+    <button id="prevPage">Previous</button>
+    <span id="pageIndicator">Page 1</span>
+    <button id="nextPage">Next</button>
+  </div>
+
+  <div id="statusMessage" class="status-message"></div>
+</div>
+
+<script type="module">
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  const token = localStorage.getItem("boop_jwt");
+  const tbody = document.getElementById("adminActionsBody");
+  const statusMessage = document.getElementById("statusMessage");
+  const prevBtn = document.getElementById("prevPage");
+  const nextBtn = document.getElementById("nextPage");
+  const pageIndicator = document.getElementById("pageIndicator");
+
+  const allowedTypes = ["super_admin", "admin", "support"];
+  if (!user || user.role !== "admin" || !allowedTypes.includes(user.type)) {
+    window.location.href = "login.html";
+  }
+
+  let currentPage = 1;
+  const limit = 20;
+
+  async function loadAdminActions() {
+    const start = document.getElementById("startDate")?.value;
+    const end = document.getElementById("endDate")?.value;
+    const status = document.getElementById("statusFilter")?.value;
+    const search = document.getElementById("searchInput")?.value;
+
+    const query = new URLSearchParams({
+      page: currentPage,
+      limit,
+      ...(start && { start }),
+      ...(end && { end }),
+      ...(status && { status }),
+      ...(search && { search })
+    });
+
+    try {
+      const res = await fetch(`/api/admin-actions?${query.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Failed to load actions.");
+
+      const { actions, totalCount } = data;
+
+      tbody.innerHTML = actions.length
+        ? actions.map(action => `
+          <tr>
+            <td>${action.action}</td>
+            <td class="status-${action.status}">${action.status}</td>
+            <td>${action.performed_by_name || "—"}<br><small>${action.performed_by_email || ""}</small></td>
+            <td>${action.target_name || "—"}<br><small>${action.target_email || ""}</small></td>
+            <td>${new Date(action.requested_at).toLocaleString()}</td>
+            <td>${action.completed_at ? new Date(action.completed_at).toLocaleString() : "—"}</td>
+            <td>${action.error_message || ""}</td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="7" style="text-align:center;">No results found.</td></tr>`;
+
+      pageIndicator.textContent = `Page ${currentPage}`;
+
+      prevBtn.style.display = currentPage <= 1 ? "none" : "inline-block";
+      nextBtn.style.display = currentPage * limit >= totalCount ? "none" : "inline-block";
+
+      statusMessage.classList.remove("show");
+    } catch (err) {
+      console.error("❌", err);
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Error loading data.</td></tr>`;
+      statusMessage.textContent = err.message;
+      statusMessage.classList.add("show");
+    }
+  }
+
+  document.getElementById("applyFilters")?.addEventListener("click", () => {
+    currentPage = 1;
+    loadAdminActions();
+  });
+
+  prevBtn?.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadAdminActions();
+    }
+  });
+
+  nextBtn?.addEventListener("click", () => {
+    currentPage++;
+    loadAdminActions();
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // Hide "Add User" and "Assign Card" links for viewer or support users
+    if (user?.type === "support" || user?.type === "viewer") {
+      const addUserLink = document.getElementById("addUserLink");
+      const assignCardLink = document.getElementById("assignCardLink");
+      if (addUserLink) addUserLink.style.display = "none";
+      if (assignCardLink) assignCardLink.style.display = "none";
     }
 
-    let currentPage = 1;
-    const limit = 20;
+    loadAdminActions();
 
-    async function loadAdminActions() {
-      const start = document.getElementById("startDate")?.value;
-      const end = document.getElementById("endDate")?.value;
-      const status = document.getElementById("statusFilter")?.value;
-      const search = document.getElementById("searchInput")?.value;
-
-      const query = new URLSearchParams({
-        page: currentPage,
-        limit,
-        ...(start && { start }),
-        ...(end && { end }),
-        ...(status && { status }),
-        ...(search && { search })
-      });
-
+    document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
+      e.preventDefault();
       try {
-        const res = await fetch(`/api/admin-actions?${query.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.message || "Failed to load actions.");
-
-        const { actions, totalCount } = data;
-
-        tbody.innerHTML = actions.length
-          ? actions.map(action => `
-            <tr>
-              <td>${action.action}</td>
-              <td class="status-${action.status}">${action.status}</td>
-              <td>${action.performed_by_name || "—"}<br><small>${action.performed_by_email || ""}</small></td>
-              <td>${action.target_name || "—"}<br><small>${action.target_email || ""}</small></td>
-              <td>${new Date(action.requested_at).toLocaleString()}</td>
-              <td>${action.completed_at ? new Date(action.completed_at).toLocaleString() : "—"}</td>
-              <td>${action.error_message || ""}</td>
-            </tr>
-          `).join("")
-          : `<tr><td colspan="7" style="text-align:center;">No results found.</td></tr>`;
-
-        pageIndicator.textContent = `Page ${currentPage}`;
-
-        prevBtn.style.display = currentPage <= 1 ? "none" : "inline-block";
-        nextBtn.style.display = currentPage * limit >= totalCount ? "none" : "inline-block";
-
-        statusMessage.classList.remove("show");
-      } catch (err) {
-        console.error("❌", err);
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Error loading data.</td></tr>`;
-        statusMessage.textContent = err.message;
-        statusMessage.classList.add("show");
-      }
-    }
-
-    document.getElementById("applyFilters")?.addEventListener("click", () => {
-      currentPage = 1;
-      loadAdminActions();
+        await fetch("/api/logout", { method: "POST" });
+      } catch {}
+      localStorage.clear();
+      window.location.href = "login.html";
     });
+  });
 
-    prevBtn?.addEventListener("click", () => {
-      if (currentPage > 1) {
-        currentPage--;
-        loadAdminActions();
-      }
+  document.addEventListener("DOMContentLoaded", () => {
+  const hamburger = document.querySelector(".hamburger");
+  const navRight = document.querySelector(".nav-right");
+  const dropbtn = document.querySelector(".nav-dropdown .dropbtn");
+  const dropdownContent = document.querySelector(".dropdown-content");
+
+  if (hamburger && navRight) {
+    hamburger.addEventListener("click", () => {
+      hamburger.classList.toggle("active");
+      navRight.classList.toggle("active");
     });
+  }
 
-    nextBtn?.addEventListener("click", () => {
-      currentPage++;
-      loadAdminActions();
-    });
-
-    document.addEventListener("DOMContentLoaded", () => {
-      // Hide "Add User" and "Assign Card" links for viewer or support users
-      if (user?.type === "support" || user?.type === "viewer") {
-        const addUserLink = document.getElementById("addUserLink");
-        const assignCardLink = document.getElementById("assignCardLink");
-        if (addUserLink) addUserLink.style.display = "none";
-        if (assignCardLink) assignCardLink.style.display = "none";
-      }
-
-      loadAdminActions();
-
-      document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
+  if (dropbtn && dropdownContent) {
+    dropbtn.addEventListener("click", (e) => {
+      if (window.innerWidth <= 768) {
         e.preventDefault();
-        try {
-          await fetch("/api/logout", { method: "POST" });
-        } catch {}
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
+        dropdownContent.classList.toggle("active");
+      }
     });
-  </script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const hamburger = document.querySelector(".hamburger");
-      const navRight = document.querySelector(".nav-right");
-      const dropbtn = document.querySelector(".nav-dropdown .dropbtn");
-      const dropdownContent = document.querySelector(".dropdown-content");
+  }
 
-      hamburger?.addEventListener("click", () => {
-        const active = hamburger.classList.toggle("active");
-        navRight.classList.toggle("active", active);
-        hamburger.setAttribute("aria-expanded", active ? "true" : "false");
-      });
-
-      dropbtn?.addEventListener("click", (e) => {
-        if (window.innerWidth <= 768) {
-          e.preventDefault();
-          dropdownContent?.classList.toggle("active");
+  // Close mobile menu when a link is clicked
+  navRight.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      if (window.innerWidth <= 768) {
+        hamburger.classList.remove("active");
+        navRight.classList.remove("active");
+        if (dropdownContent) {
+          dropdownContent.classList.remove("active");
         }
-      });
-
-      navRight?.querySelectorAll("a").forEach(a => {
-        a.addEventListener("click", () => {
-          hamburger?.classList.remove("active");
-          navRight.classList.remove("active");
-          dropdownContent?.classList.remove("active");
-        });
-      });
+      }
     });
-  </script>
+  });
+});
+</script>
 </body>
 </html>
