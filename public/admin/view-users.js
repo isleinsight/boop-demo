@@ -19,10 +19,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allUsers = [];
   let currentUserEmail = null;
   let currentUser = null;
-  let sortBy = 'first_name'; // Default sort by first_name
-  let sortDirection = 'asc'; // Default ascending
+  let sortBy = 'first_name'; 
+  let sortDirection = 'asc'; 
 
-  // Map HTML data-sort to backend column names
   const sortColumnMap = {
     firstName: 'first_name',
     lastName: 'last_name',
