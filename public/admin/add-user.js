@@ -34,6 +34,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let currentUserType = null;
 
+  // Create a strong, unguessable temporary password (not emailed; just to satisfy DB)
+function generateTempPassword(length = 20) {
+  const alphabet =
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{};:,.<>?';
+  const array = new Uint32Array(length);
+  crypto.getRandomValues(array);
+  let pw = '';
+  for (let i = 0; i < length; i++) {
+    pw += alphabet[array[i] % alphabet.length];
+  }
+  return pw;
+}
+
   try {
     const token = localStorage.getItem("boop_jwt");
 
@@ -113,11 +126,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const on_assistance = onAssistanceCheckbox.checked;
     const adminType = document.getElementById("adminType")?.value || null;
 
-    if (!email || !password || password.length < 6 || !first_name || !last_name || !role) {
-      statusDiv.textContent = "Please fill in all required fields. (Password must be at least 6 characters)";
-      statusDiv.style.color = "red";
-      return;
-    }
+    if (!email || !first_name || !last_name || !role) {
+  statusDiv.textContent = "Please fill in all required fields.";
+  statusDiv.style.color = "red";
+  return;
+}
 
     const userPayload = {
       email,
