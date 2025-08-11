@@ -6,89 +6,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="../assets/styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-
   <style>
     :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
-
-    /* Page sections */
-    .admin-hero {
-      background: linear-gradient(180deg, #f7fafc, #ffffff);
-      border-bottom: 1px solid var(--stroke);
+    .admin-hero{background:linear-gradient(180deg,#f7fafc,#fff);border-bottom:1px solid var(--stroke)}
+    .admin-hero__inner{max-width:1100px;margin:24px auto;padding:24px 20px}
+    .admin-hero h1{margin:0 0 8px;font-family:'Poppins',sans-serif;color:var(--ink)}
+    .admin-hero__sub{margin:0;color:#4b5563;max-width:68ch}
+    .admin-grid{max-width:1100px;margin:20px auto 40px;padding:0 20px;display:grid;grid-template-columns:2fr 1fr;gap:18px}
+    @media (max-width:900px){.admin-grid{grid-template-columns:1fr}}
+    .admin-grid__links{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+    .tile{display:flex;align-items:center;gap:12px;border:1px solid var(--stroke);background:#fff;border-radius:12px;padding:14px;text-decoration:none;color:var(--ink);box-shadow:0 6px 16px rgba(0,0,0,.06);transition:transform .15s ease,border-color .15s ease}
+    .tile:hover{border-color:#d7deea;transform:translateY(-1px)}
+    .tile__icon{width:28px;height:28px;flex:0 0 28px}
+    .tile__title{font-weight:600}
+    .tile__sub{color:var(--muted);font-size:.9rem}
+    .admin-panel{border:1px solid var(--stroke);background:#fff;border-radius:12px;padding:16px;box-shadow:0 6px 16px rgba(0,0,0,.06)}
+    .admin-panel h3{margin:0 0 10px;color:var(--ink)}
+    .admin-tips{margin:0;padding-left:18px;color:#4b5563}
+    .admin-tips li{margin:6px 0}
+    .hamburger{display:flex;flex-direction:column;justify-content:space-between;width:24px;height:20px;background:none;border:none;cursor:pointer;padding:0}
+    .hamburger span{width:100%;height:3px;background:#fff;transition:all .3s ease}
+    .hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
+    .hamburger.active span:nth-child(2){opacity:0}
+    .hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(7px,-7px)}
+    @media (max-width:768px){
+      .nav-right{position:fixed;top:0;right:-100%;width:250px;height:100%;background:#fff;flex-direction:column;align-items:flex-start;padding:80px 20px;transition:right .3s ease;box-shadow:-4px 0 12px rgba(0,0,0,.15);z-index:1000}
+      .nav-right.active{right:0}
+      .nav-right a{color:#333;font-size:1rem;padding:12px 0;width:100%;text-align:left;text-decoration:none}
     }
-    .admin-hero__inner {
-      max-width:1100px; margin:24px auto; padding:24px 20px;
-    }
-    .admin-hero h1 { margin:0 0 8px; font-family:'Poppins', sans-serif; color:var(--ink); }
-    .admin-hero__sub { margin:0; color:#4b5563; max-width:68ch; }
-
-    .admin-grid {
-      max-width:1100px; margin:20px auto 40px; padding:0 20px;
-      display:grid; grid-template-columns:2fr 1fr; gap:18px;
-    }
-    @media (max-width: 900px){ .admin-grid{ grid-template-columns:1fr; } }
-
-    /* Links grid */
-    .admin-grid__links {
-      display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px;
-    }
-    .tile{
-      display:flex; align-items:center; gap:12px;
-      border:1px solid var(--stroke); background:#fff; border-radius:12px; padding:14px;
-      text-decoration:none; color:var(--ink); box-shadow:0 6px 16px rgba(0,0,0,.06);
-      transition: transform .15s ease, border-color .15s ease;
-    }
-    .tile:hover{ border-color:#d7deea; transform: translateY(-1px); }
-    .tile__icon{ font-size:22px; line-height:1; }
-    .tile__body{ display:flex; flex-direction:column; }
-    .tile__title{ font-weight:600; }
-    .tile__sub{ color:var(--muted); font-size:.9rem; }
-
-    /* Side panel */
-    .admin-panel{
-      border:1px solid var(--stroke); background:#fff; border-radius:12px; padding:16px;
-      box-shadow:0 6px 16px rgba(0,0,0,.06);
-    }
-    .admin-panel h3{ margin:0 0 10px; color:var(--ink); }
-    .admin-tips{ margin:0; padding-left:18px; color:#4b5563; }
-    .admin-tips li{ margin:6px 0; }
-
-    /* Minimal hamburger (works with your JS) */
-    .hamburger {
-      display:flex; flex-direction:column; justify-content:space-between;
-      width:24px; height:20px; background:none; border:none; cursor:pointer; padding:0;
-    }
-    .hamburger span { width:100%; height:3px; background:#fff; transition:all .3s ease; }
-    .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
-    .hamburger.active span:nth-child(2) { opacity:0; }
-    .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(7px, -7px); }
-
-    /* Mobile menu slide-out (matches your existing structure) */
-    @media (max-width: 768px) {
-      .nav-right {
-        position: fixed; top: 0; right: -100%; width: 250px; height: 100%;
-        background: #fff; flex-direction: column; align-items: flex-start;
-        padding: 80px 20px; transition: right 0.3s ease;
-        box-shadow: -4px 0 12px rgba(0,0,0,0.15); z-index: 1000;
-      }
-      .nav-right.active { right: 0; }
-      .nav-right a { color: #333; font-size: 1rem; padding: 12px 0; width: 100%; text-align: left; text-decoration: none; }
-    }
+    /* neutral icon color */
+    svg{stroke:#1f2937}
   </style>
 </head>
 <body>
-
-  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
         <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
-
-      <!-- Hamburger for mobile -->
       <button class="hamburger" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
-
       <div class="nav-right">
         <a href="index.html">Dashboard</a>
         <a href="admin-actions.html">Admin Actions</a>
@@ -106,7 +64,6 @@
     </div>
   </nav>
 
-  <!-- Hero -->
   <section class="admin-hero">
     <div class="admin-hero__inner">
       <h1>BOOP Admin Dashboard</h1>
@@ -116,10 +73,8 @@
     </div>
   </section>
 
-  <!-- Role-aware content -->
   <section class="admin-grid">
     <div id="quickLinks" class="admin-grid__links"></div>
-
     <div class="admin-panel">
       <h3>Tips</h3>
       <ul class="admin-tips">
@@ -133,81 +88,74 @@
   <script>
   document.addEventListener("DOMContentLoaded", () => {
     const user = JSON.parse(localStorage.getItem("boopUser"));
-    const allowedTypes = ["super_admin", "admin", "support"]; // who may access dashboard at all
+    const allowedTypes = ["super_admin","admin","support"];
     const isAuthorized = user && user.role === "admin" && allowedTypes.includes(user.type);
+    if (!isAuthorized) { window.location.href = "login.html"; return; }
 
-    if (!isAuthorized) {
-      window.location.href = "login.html";
-      return;
-    }
-
-    // Role-aware link rules:
-    // Everyone: Admin Actions, View Users
-    // Add User & Assign Card: ONLY for super_admin and admin
     const canManageUsers = user.type === "super_admin" || user.type === "admin";
 
+    // Simple inline SVGs (no emojis)
+    const icons = {
+      actions: `<svg class="tile__icon" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke-width="2" stroke-linecap="round"/></svg>`,
+      users:   `<svg class="tile__icon" viewBox="0 0 24 24" fill="none"><path d="M16 14a4 4 0 00-8 0v2h8v-2zM12 12a4 4 0 100-8 4 4 0 000 8z" stroke-width="2" stroke-linecap="round"/></svg>`,
+      add:     `<svg class="tile__icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/></svg>`,
+      card:    `<svg class="tile__icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="12" rx="2" ry="2" stroke-width="2"/><path d="M3 10h18" stroke-width="2"/></svg>`
+    };
+
     const links = [
-      { show: true, href: "admin-actions.html", icon: "🛠️", title: "Admin Actions", sub: "Exports, reports, bulk ops" },
-      { show: true, href: "view-users.html",   icon: "👥", title: "View Users",     sub: "Search, filter, manage"    },
-      { show: canManageUsers, href: "add-user.html",    icon: "➕", title: "Add User",     sub: "Create a new account"   },
-      { show: canManageUsers, href: "assign-card.html", icon: "💳", title: "Assign Card",  sub: "Link cards to users"    },
+      { show:true, href:"admin-actions.html", icon:icons.actions, title:"Admin Actions", sub:"Exports, reports, bulk ops" },
+      { show:true, href:"view-users.html",    icon:icons.users,   title:"View Users",   sub:"Search, filter, manage"    },
+      { show:canManageUsers, href:"add-user.html",    icon:icons.add,  title:"Add User",    sub:"Create a new account"   },
+      { show:canManageUsers, href:"assign-card.html", icon:icons.card, title:"Assign Card", sub:"Link cards to users"    },
     ];
 
     const quickLinks = document.getElementById("quickLinks");
-    quickLinks.innerHTML = links.filter(l => l.show).map(l => `
+    quickLinks.innerHTML = links.filter(l=>l.show).map(l => `
       <a class="tile" href="${l.href}">
-        <span class="tile__icon">${l.icon}</span>
-        <span class="tile__body">
-          <span class="tile__title">${l.title}</span>
+        ${l.icon}
+        <span>
+          <span class="tile__title">${l.title}</span><br/>
           <span class="tile__sub">${l.sub}</span>
         </span>
       </a>
     `).join("");
 
-    // Hide “Add” dropdown entirely for non-managers (optional)
+    // Hide “Add” dropdown entirely for non-managers
     if (!canManageUsers) {
       const addMenu = document.querySelector(".nav-dropdown");
       if (addMenu) addMenu.style.display = "none";
     }
 
-    // Logout (hit backend + clear storage)
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try { await fetch("/logout", { method: "POST" }); } catch {}
-        localStorage.removeItem("boop_jwt");
-        localStorage.removeItem("boopUser");
-        window.location.href = "login.html";
-      });
-    }
+    // Logout
+    document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await fetch("/logout", { method:"POST" }); } catch {}
+      localStorage.removeItem("boop_jwt");
+      localStorage.removeItem("boopUser");
+      window.location.href = "login.html";
+    });
 
     // Mobile nav
     const hamburger = document.querySelector(".hamburger");
-    const navRight  = document.querySelector(".nav-right");
-    const dropbtn   = document.querySelector(".nav-dropdown .dropbtn");
+    const navRight = document.querySelector(".nav-right");
+    const dropbtn = document.querySelector(".nav-dropdown .dropbtn");
     const dropdownContent = document.querySelector(".dropdown-content");
 
-    if (hamburger && navRight) {
-      hamburger.addEventListener("click", () => {
-        const active = hamburger.classList.toggle("active");
-        navRight.classList.toggle("active", active);
-        hamburger.setAttribute("aria-expanded", active ? "true" : "false");
-      });
-    }
+    hamburger?.addEventListener("click", () => {
+      const active = hamburger.classList.toggle("active");
+      navRight.classList.toggle("active", active);
+      hamburger.setAttribute("aria-expanded", active ? "true" : "false");
+    });
 
-    if (dropbtn && dropdownContent) {
-      dropbtn.addEventListener("click", (e) => {
-        if (window.innerWidth <= 768) {
-          e.preventDefault();
-          dropdownContent.classList.toggle("active");
-        }
-      });
-    }
+    dropbtn?.addEventListener("click", (e) => {
+      if (window.innerWidth <= 768) {
+        e.preventDefault();
+        dropdownContent?.classList.toggle("active");
+      }
+    });
 
-    // Close mobile menu on link click
-    navRight?.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => {
+    navRight?.querySelectorAll("a").forEach(a => {
+      a.addEventListener("click", () => {
         hamburger?.classList.remove("active");
         navRight.classList.remove("active");
         dropdownContent?.classList.remove("active");
