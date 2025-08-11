@@ -130,6 +130,25 @@ try {
     completed_at: new Date()
   });
 
+  // Create a password reset token and send reset email
+try {
+  const raw = generateToken();
+  const tokenHash = hashToken(raw);
+  const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
+
+  await client.query(
+    `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3)`,
+    [user.id, tokenHash, expiresAt]
+  );
+
+  const link = `${APP_URL}/reset-password.html?token=${raw}`;
+  await sendResetEmail(user.email, link);
+} catch (e) {
+  // Don't fail the whole request if email sends fail
+  console.warn("password reset email/initiation failed:", e.message);
+}
+
   await client.query("COMMIT");
 
   res.status(201).json({
