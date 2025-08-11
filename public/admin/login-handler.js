@@ -22,19 +22,19 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     const { token, user } = data;
 
-    // 🔒 Allow only users with type = "super_admin", "admin", or "support"
+    // Allow only users with type = "super_admin", "admin", or "support"
     if (!['super_admin', 'admin', 'support'].includes(user.type)) {
       statusEl.style.color = 'red';
       statusEl.textContent = 'Access denied. This login is for authorized Admins only.';
       return;
     }
 
-    // ✅ Save session data locally
+    // Save session data locally
     localStorage.setItem("admin_id", user.id);
     localStorage.setItem("boop_jwt", token);
     localStorage.setItem("boopUser", JSON.stringify(user));
 
-    // 🔓 Decode JWT expiration
+    // Decode JWT expiration
     function decodeJWT(token) {
       const payload = token.split('.')[1];
       const decoded = atob(payload);
@@ -44,7 +44,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const decoded = decodeJWT(token);
     const expiresAt = new Date(decoded.exp * 1000).toISOString();
 
-    // 💾 Save session to DB (with Authorization header)
+    // Save session to DB (with Authorization header)
     try {
       const sessionRes = await fetch("/api/sessions", {
         method: "POST",
@@ -63,21 +63,21 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
       if (!sessionRes.ok) {
         const err = await sessionRes.json();
-        console.warn("⚠️ Session insert failed:", err.message);
+        console.warn("Session insert failed:", err.message);
       } else {
-        console.log("📬 Admin session successfully recorded.");
+        console.log("Admin session successfully recorded.");
       }
 
     } catch (err) {
-      console.error("❌ Admin session record error:", err.message);
+      console.error("Admin session record error:", err.message);
     }
 
-    // 🔁 Redirect to dashboard
+    // Redirect to dashboard
     window.location.href = 'index.html';
 
   } catch (err) {
     statusEl.style.color = 'red';
     statusEl.textContent = 'Network error: ' + err.message;
-    console.error("🔥 Login JS error:", err);
+    console.error("Login JS error:", err);
   }
 });
