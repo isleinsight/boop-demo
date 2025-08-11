@@ -8,6 +8,28 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
 
+    .hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.hamburger span {
+  background: white;
+  height: 3px;
+  width: 25px;
+  display: block;
+}
+
+/* Show hamburger only on small screens */
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+}
+
     :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
     .admin-hero{background:linear-gradient(180deg,#f7fafc,#fff);border-bottom:1px solid var(--stroke)}
     .admin-hero__inner{max-width:1100px;margin:24px auto;padding:24px 20px}
@@ -40,28 +62,33 @@
   </style>
 </head>
 <body>
-  <nav>
-    <div class="nav-container">
-      <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-      
-      <div class="nav-right">
-        <a href="index.html">Dashboard</a>
-        <a href="admin-actions.html">Admin Actions</a>
-        <div class="nav-dropdown">
-          <a href="#" class="dropbtn" style="color: white;">Add</a>
-          <div class="dropdown-content">
-            <a href="add-user.html" id="addUserLink">Add User</a>
-            <a href="assign-card.html" id="assignCardLink">Assign Card</a>
-            <a href="assign-student.html">Assign Student</a>
-          </div>
-        </div>
-        <a href="view-users.html">View Users</a>
-        <a href="#" id="logoutBtn">Log Out</a>
+  <!-- Top Nav -->
+<nav>
+  <div class="nav-container">
+    <div class="nav-left">
+      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      <div class="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
     </div>
-  </nav>
+    <div class="nav-right">
+      <a href="index.html">Dashboard</a>
+      <a href="admin-actions.html">Admin Actions</a>
+      <div class="nav-dropdown">
+        <a href="#" class="dropbtn">Add</a>
+        <div class="dropdown-content">
+          <a href="add-user.html" id="addUserLink">Add User</a>
+          <a href="assign-card.html" id="assignCardLink">Assign Card</a>
+          <a href="assign-student.html">Assign Student</a>
+        </div>
+      </div>
+      <a href="view-users.html">View Users</a>
+      <a href="#" id="logoutBtn">Log Out</a>
+    </div>
+  </div>
+</nav>
 
   <section class="admin-hero">
     <div class="admin-hero__inner">
@@ -79,7 +106,6 @@
       <ul class="admin-tips">
         <li>Use <strong>View Users</strong> to search and jump into profiles fast.</li>
         <li><strong>Admin Actions</strong> has exports, reports, and bulk operations.</li>
-        <li>Need help? Check the Help Center or ping support.</li>
       </ul>
     </div>
   </section>
