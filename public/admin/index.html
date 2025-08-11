@@ -8,27 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
 
-    .hamburger {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  cursor: pointer;
-}
-
-.hamburger span {
-  background: white;
-  height: 3px;
-  width: 25px;
-  display: block;
-}
-
-/* Show hamburger only on small screens */
-@media (max-width: 600px) {
-  .hamburger {
-    display: flex;
-  }
-}
     :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
     .admin-hero{background:linear-gradient(180deg,#f7fafc,#fff);border-bottom:1px solid var(--stroke)}
     .admin-hero__inner{max-width:1100px;margin:24px auto;padding:24px 20px}
@@ -66,9 +45,7 @@
       <div class="nav-left">
         <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
-      <button class="hamburger" aria-label="Open menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+      
       <div class="nav-right">
         <a href="index.html">Dashboard</a>
         <a href="admin-actions.html">Admin Actions</a>
