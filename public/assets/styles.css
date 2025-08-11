@@ -2082,3 +2082,11 @@ body {
       border-radius: 12px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     }
+
+label {
+      display: block;
+      font-size: 0.95rem;
+      color: #1a2b4a;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
