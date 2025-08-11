@@ -2073,3 +2073,12 @@ body {
       border: 1px solid #f8c4c1;
       display: block;
     }
+
+.container-small {
+      max-width: 550px;
+      background: #fff;
+      margin: 40px auto;
+      padding: 24px 32px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
