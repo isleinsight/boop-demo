@@ -231,7 +231,6 @@ nav {
 
 .dropdown-content a:hover {
   color: #2f80ed;
-  background: #f5f8fb;
 }
 
 .nav-dropdown:hover .dropdown-content, .nav-dropdown:focus-within .dropdown-content {
