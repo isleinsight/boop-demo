@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentUser = meData;
     currentUserEmail = meData.email;
   } catch (err) {
-    console.warn("🔒 Not authorized or error fetching user:", err);
+    console.warn("Not authorized or error fetching user:", err);
     localStorage.removeItem("boop_jwt");
     localStorage.removeItem("boopUser");
     window.location.href = "login.html";
@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       userCount.textContent = `Total Users: ${data.total}`;
       paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     } catch (err) {
-      console.error("⚠️ Error loading users:", err);
+      console.error("Error loading users:", err);
       userTableBody.innerHTML = `<tr><td colspan="7">Error loading users: ${err.message}</td></tr>`;
     }
   }
@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           throw new Error(err.message || `Delete failed with status ${res.status}`);
         }
 
-        alert("✅ User deleted successfully.");
+        alert("User deleted successfully.");
       } else if (action === "suspend" || action === "unsuspend") {
         const newStatus = action === "suspend" ? "suspended" : "active";
         const res = await fetch(`/api/users/${user.id}`, {
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!res.ok) {
           const err = await res.json();
-          return alert("❌ Failed to update status: " + (err.message || res.status));
+          return alert("Failed to update status: " + (err.message || res.status));
         }
 
         if (newStatus === "suspended") {
@@ -134,9 +134,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         if (!res.ok) {
           const err = await res.json();
-          return alert("❌ Force sign-out failed: " + (err.message || res.status));
+          return alert("Force sign-out failed: " + (err.message || res.status));
         }
-        alert("✅ User signed out.");
+        alert("User signed out.");
       } else if (action === "restore") {
         await fetch(`/api/users/${user.id}/restore`, {
           method: "PATCH",
@@ -146,7 +146,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       await fetchUsers();
     } catch (err) {
-      console.error("❌ performAction failed:", err);
+      console.error("performAction failed:", err);
       alert("Action failed: " + err.message);
     }
   }
@@ -294,10 +294,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           return res;
         })
       ));
-      alert("✅ Selected users deleted successfully.");
+      alert("Selected users deleted successfully.");
       fetchUsers();
     } catch (err) {
-      console.error("⚠️ Bulk delete failed:", err);
+      console.error("Bulk delete failed:", err);
       alert("Delete failed: " + err.message);
     }
   });
