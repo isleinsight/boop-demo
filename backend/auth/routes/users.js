@@ -10,7 +10,7 @@ const {
 const crypto = require("crypto");
 
 // Postmark setup
-const { ServerClient } = require("@postmark/node");
+const { ServerClient } = require("@postmark");
 const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || "";
 const APP_URL = (process.env.APP_URL || "https://boopcard.com").replace(/\/+$/, "");
 const FROM_EMAIL = process.env.SENDER_EMAIL || "davon.campbell@boopcard.com";
