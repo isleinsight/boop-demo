@@ -1984,3 +1984,92 @@ body {
       border: 1px solid #f8c4c1;
       display: block;
     }
+
+ /* Navigation Dropdown */
+    .nav-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropbtn {
+      padding: 10px 16px;
+      text-decoration: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background: #fff;
+      min-width: 160px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1;
+    }
+
+    .dropdown-content a {
+      color: #333;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      font-size: 0.95rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content a:hover {
+      color: #2f80ed;
+    }
+
+    .nav-dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    /* Suggestion Box */
+    #userSuggestions {
+      border: 1px solid #d1d9e6;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #fff;
+      margin-top: -4px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    #userSuggestions div {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e6ebf1;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.2s ease;
+    }
+
+    #userSuggestions div:hover {
+      background-color: #f5f8fb;
+    }
+
+    /* Status Message */
+    .status {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      text-align: center;
+      display: none;
+    }
+
+    .status.success {
+      background: #f0fdf4;
+      color: #2ecc71;
+      border: 1px solid #bbf7d0;
+      display: block;
+    }
+
+    .status.error {
+      background: #fef3f2;
+      color: #e63946;
+      border: 1px solid #f8c4c1;
+      display: block;
+    }
