@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Government Portal – Choose Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; --brand:#2f80ed; --bg:#f5f8fb;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#111827; background:var(--bg); }
+    .nav { background:var(--ink); color:#fff; }
+    .nav__inner { max-width:1000px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; gap:12px; }
+    .nav__logo { height:28px; }
+    .wrap { max-width:1000px; margin:32px auto; padding:0 20px; }
+    h1 { margin:0 0 8px; color:var(--ink); font-size: clamp(1.4rem, 2.5vw, 1.9rem); }
+    p.sub { margin:0 0 24px; color:var(--muted); max-width:70ch; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px; }
+    .card {
+      background:#fff; border:1px solid var(--stroke); border-radius:14px; padding:18px;
+      box-shadow:0 8px 22px rgba(0,0,0,.06);
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+      display:flex; flex-direction:column; gap:12px; min-height:220px;
+    }
+    .card:hover { transform: translateY(-2px); border-color:#d7deea; box-shadow:0 12px 26px rgba(0,0,0,.08); }
+    .card h2 { margin:0; font-size:1.2rem; color:var(--ink); }
+    .card p { margin:0; color:var(--muted); font-size:.95rem; }
+    .cta {
+      margin-top:auto; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:none; background:var(--brand); color:#fff; padding:12px 14px; border-radius:10px;
+      font-weight:600; cursor:pointer; text-decoration:none;
+    }
+    .cta:focus-visible { outline:3px solid #93c5fd; outline-offset:2px; }
+    .hint { margin-top:10px; color:#6b7280; font-size:.9rem; }
+    .footer { max-width:1000px; margin:26px auto 40px; padding:0 20px; color:#9ca3af; font-size:.85rem; }
+    .pill { display:inline-block; padding:4px 8px; border:1px dashed #d1d5db; border-radius:999px; font-size:.8rem; color:#6b7280; }
+    .icon { width:22px; height:22px; stroke:#1f2937; }
+    @media (max-width:480px){ .card{min-height:unset;} }
+  </style>
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="nav" role="banner">
+    <div class="nav__inner">
+      <!-- If your logo file lives at /public/assets/Boop-Logo.png, this path is correct -->
+      <img src="/assets/Boop-Logo.png" alt="BOOP" class="nav__logo" />
+      <span aria-hidden="true">|</span>
+      <strong>Government Portal</strong>
+    </div>
+  </header>
+
+  <main class="wrap" role="main">
+    <h1>Choose where to sign in</h1>
+    <p class="sub">Pick the area that matches your responsibilities. You’ll be taken to the correct sign-in screen.</p>
+
+    <div class="grid">
+      <!-- Admin card -->
+      <section class="card" aria-labelledby="adminTitle">
+        <div>
+          <span class="pill">Admins & Support</span>
+          <h2 id="adminTitle">Admin Console</h2>
+          <p>Manage users, cards, vendors, and system operations.</p>
+        </div>
+        <a class="cta" href="/admin/login.html" id="adminLoginBtn" aria-label="Go to Admin login">
+          <!-- arrow icon -->
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Continue to Admin
+        </a>
+        <p class="hint">Bookmark this: <code>/admin/login.html</code></p>
+      </section>
+
+      <!-- Accounts card -->
+      <section class="card" aria-labelledby="accountsTitle">
+        <div>
+          <span class="pill">Accounts / Treasury</span>
+          <h2 id="accountsTitle">Accounts Portal</h2>
+          <p>View balances, export transactions, and perform treasury tasks.</p>
+        </div>
+        <a class="cta" href="/accounts/login.html" id="accountsLoginBtn" aria-label="Go to Accounts login">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Continue to Accounts
+        </a>
+        <p class="hint">Bookmark this: <code>/accounts/login.html</code></p>
+      </section>
+    </div>
+
+    <p class="hint" style="margin-top:18px;">
+      Tip: you can link people directly to the correct login, or send them to this portal at
+      <code>/government-portal.html</code>.
+    </p>
+  </main>
+
+  <div class="footer" role="contentinfo">
+    © <span id="year"></span> BOOP. All rights reserved.
+  </div>
+
+  <script>
+    // Optional: allow deep links like ?to=admin or ?to=accounts
+    (function() {
+      const params = new URLSearchParams(location.search);
+      const to = (params.get('to') || '').toLowerCase();
+      if (to === 'admin') location.replace('/admin/login.html');
+      if (to === 'accounts') location.replace('/accounts/login.html');
+
+      // Set year
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      // Optional: if someone comes here after logout with a hint in sessionStorage
+      try {
+        const lastArea = sessionStorage.getItem('lastArea'); // 'admin' | 'accounts'
+        if (!to && lastArea === 'admin') {
+          // uncomment to auto-redirect admins back:
+          // location.replace('/admin/login.html');
+        }
+      } catch {}
+    })();
+  </script>
+</body>
+</html>
