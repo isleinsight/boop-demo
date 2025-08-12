@@ -1,5 +1,6 @@
 // server.js
 require('dotenv').config({ path: __dirname + '/.env' });
+app.use(express.static(path.join(__dirname, 'public')));
 
 console.log('▶ running server file:', __filename);
 console.log('HSBC =', process.env.TREASURY_WALLET_ID_HSBC);
