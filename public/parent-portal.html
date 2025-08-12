@@ -4,199 +4,252 @@
   <meta charset="utf-8" />
   <title>BOOP — Parent Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="/assets/styles.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{
-      --ink:#0b1220; --ink2:#1a2b4a; --muted:#6b7280; --blue:#2f80ed; --bg:#f5f8fb; --stroke:#e6ebf1;
+      --ink:#0b1220;        /* header/nav */
+      --ink2:#1a2b4a;       /* headings */
+      --muted:#6b7280;      /* body text */
+      --blue:#2f80ed;       /* primary */
+      --stroke:#e6ebf1;     /* borders */
+      --bg:#f5f8fb;         /* page bg */
+      --card:#ffffff;       /* cards */
+      --ok:#10b981;         /* success */
+      --err:#ef4444;        /* error */
     }
-    body{margin:0;background:var(--bg);font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111827}
-    /* NAV (white logo on dark bar) */
-    nav{background:var(--ink);padding:10px 20px}
-    .nav-container{display:flex;align-items:center;justify-content:space-between}
-    .nav-left img{height:30px;display:block}
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:#111827; background:var(--bg);
+    }
+    /* --- Nav --- */
+    nav{background:var(--ink)}
+    .nav-container{
+      max-width:1100px; margin:0 auto; padding:14px 18px;
+      display:flex; align-items:center; justify-content:flex-start;
+    }
+    .nav-container img{ height:28px; display:block; }
 
-    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
-    .grid{
-      display:grid;grid-template-columns:1fr 1fr;gap:26px;
+    /* --- Hero + Layout --- */
+    .hero{
+      background:linear-gradient(180deg, rgba(11,18,32,.04), rgba(11,18,32,0));
+      border-bottom:1px solid var(--stroke);
+    }
+    .hero-inner{
+      max-width:1100px; margin:0 auto; padding:34px 18px 8px;
+      display:grid; gap:10px;
+    }
+    .hero h1{ margin:0; color:var(--ink2); font-size:clamp(1.4rem,2.6vw,2rem);}
+    .hero p{ margin:6px 0 0; color:var(--muted); max-width:62ch; }
+
+    .wrap{
+      max-width:1100px; margin:0 auto; padding:22px 18px 40px;
+      display:grid; grid-template-columns: 420px 1fr; gap:24px;
     }
     @media (max-width: 900px){
-      .grid{grid-template-columns:1fr}
+      .wrap{ grid-template-columns: 1fr; }
     }
-    /* Card styles */
-    .card{background:#fff;border:1px solid var(--stroke);border-radius:14px;box-shadow:0 10px 30px rgba(16,24,40,.08)}
-    .card__body{padding:22px}
-    .card h2{margin:0 0 8px;font-size:24px;color:var(--ink2)}
-    .sub{margin:0 0 18px;color:var(--muted);font-size:.95rem}
 
-    /* Login form */
-    form{display:grid;gap:12px}
-    label{font-size:.95rem;color:var(--ink2);font-weight:500}
+    /* --- Cards --- */
+    .card{
+      background:var(--card); border:1px solid var(--stroke);
+      border-radius:14px; box-shadow:0 10px 30px rgba(16,24,40,.06);
+      overflow:hidden;
+    }
+    .card .head{
+      padding:16px 18px; background:#f9fafb; border-bottom:1px solid var(--stroke);
+      font-weight:600; color:var(--ink2);
+    }
+    .card .body{ padding:18px; }
+
+    /* --- Login form --- */
+    form{ display:grid; gap:12px; }
+    label{ font-size:.95rem; color:var(--ink2); font-weight:500; }
     input[type="email"],input[type="password"]{
-      width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:8px;font-size:.95rem;outline:none
+      width:100%; padding:12px 14px; border:1px solid var(--stroke); border-radius:10px;
+      font-size:.95rem; outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+      background:#fff;
     }
-    input:focus{border-color:var(--blue)}
-    .btn{width:100%;padding:12px 14px;border:0;border-radius:10px;background:var(--blue);color:#fff;font-weight:600;cursor:pointer;font-size:1rem}
-    .linkrow{display:flex;justify-content:space-between;gap:12px;font-size:.9rem}
-    .linkrow a{color:var(--blue);text-decoration:none}
-    .err{color:#ef4444;font-size:.92rem;min-height:1.2em}
-    .hintok{color:#065f46;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;margin-top:6px;display:none}
+    input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(47,128,237,.15); }
+    .actions{ display:grid; gap:10px; }
+    button[type="submit"]{
+      width:100%; padding:12px 14px; border:0; border-radius:10px;
+      background:var(--blue); color:#fff; font-weight:600; cursor:pointer; font-size:1rem;
+      transition:filter .2s ease;
+    }
+    button[type="submit"]:hover{ filter:brightness(.95); }
+    .hintrow{ display:flex; justify-content:space-between; align-items:center; }
+    .hintrow a{ color:var(--blue); text-decoration:none; font-size:.92rem; }
+    .hintrow a:hover{ text-decoration:underline; }
 
-    /* Info panel (cheerful) */
-    .info-list{display:grid;gap:14px;margin-top:8px}
-    .info-item{display:flex;gap:12px;align-items:flex-start}
-    .icon{flex:0 0 36px;height:36px;border-radius:10px;display:grid;place-items:center;background:#eef2ff}
-    .icon span{font-size:18px}
-    .info-item h3{margin:0 0 4px;font-size:1.05rem;color:var(--ink2)}
-    .info-item p{margin:0;color:var(--muted);font-size:.95rem}
-    .cta{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
-    .cta a.button{display:inline-block;padding:10px 14px;border-radius:10px;border:1px solid var(--stroke);text-decoration:none}
+    .status{
+      font-size:.92rem; padding:10px 12px; border-radius:10px; display:none;
+    }
+    .status.err{ display:block; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+    .status.ok{ display:block; background:#f0fdf4; color:#065f46; border:1px solid #bbf7d0; }
+
+    /* --- Info column --- */
+    .panel h2{ margin:0 0 6px; color:var(--ink2); font-size:1.15rem; }
+    .muted{ color:var(--muted); margin:0 0 14px; }
+    .features{ margin:8px 0 0; padding-left:1.25rem; }
+    .features li{ margin:8px 0; color:var(--ink2); }
+    .features li p{ margin:4px 0 0; color:var(--muted); font-size:.95rem; }
+    .cta{
+      margin-top:14px; padding:14px; border:1px dashed var(--stroke); border-radius:12px;
+      background:#fcfcfd;
+    }
+    .cta a{ color:var(--blue); text-decoration:none; }
+    .cta a:hover{ text-decoration:underline; }
+
+    /* Screen guard (optional desktop-only) */
+    #screenGuard{
+      display:none; position:fixed; inset:0; background:#0b1220; color:#fff;
+      align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;
+    }
+    #screenGuard .inner{ max-width:540px; }
   </style>
 </head>
 <body>
-  <!-- Desktop-only guard (optional) -->
-  <div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; 
-    display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
-    <div style="max-width:540px;">
-      <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Recommended</h2>
-      <p>For the best experience, use a desktop or a tablet in landscape.</p>
+  <!-- Optional: restrict tiny screens -->
+  <div id="screenGuard">
+    <div class="inner">
+      <h2 style="margin:0 0 10px;">Desktop Recommended</h2>
+      <p>For the best experience, please use a desktop or tablet in landscape.</p>
     </div>
   </div>
   <script>
     (function(){
-      const minWidth = 900;
-      const guard = document.getElementById('screenGuard');
-      function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
-      window.addEventListener('resize', update, { passive:true });
-      update();
+      const guard=document.getElementById('screenGuard');
+      function update(){ guard.style.display = (window.innerWidth < 380) ? 'flex' : 'none'; }
+      window.addEventListener('resize', update, {passive:true}); update();
     })();
   </script>
 
-  <!-- NAV -->
+  <!-- Nav -->
   <nav>
     <div class="nav-container">
-      <div class="nav-left">
-        <a href="/"><img src="/assets/Boop-Logo.png" alt="BOOP Logo"></a>
-      </div>
+      <!-- Your logo is white, so dark header keeps it visible -->
+      <a href="/" aria-label="Go to boopcard.com">
+        <img src="/assets/Boop-Logo.png" alt="BOOP Logo">
+      </a>
     </div>
   </nav>
 
-  <div class="wrap">
-    <div class="grid">
-      <!-- LOGIN FIRST -->
-      <div class="card">
-        <div class="card__body">
-          <h2>Parent Login</h2>
-          <p class="sub">Sign in to view your child’s card activity, add funds, and manage safeguards.</p>
-
-          <form id="loginForm" novalidate>
-            <div>
-              <label for="email">Email</label>
-              <input type="email" id="email" placeholder="you@example.com" required />
-            </div>
-            <div>
-              <label for="password">Password</label>
-              <input type="password" id="password" placeholder="Your password" required />
-            </div>
-            <div class="linkrow">
-              <a href="/password.html?mode=forgot">Forgot password?</a>
-              <span></span>
-            </div>
-            <div id="loginErr" class="err"></div>
-            <div id="loginOk" class="hintok">Signed in. Redirecting…</div>
-            <button class="btn" type="submit">Sign In</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- INFO SECOND -->
-      <div class="card">
-        <div class="card__body">
-          <h2>About the Parent Portal</h2>
-          <p class="sub">A simple, friendly place to support your child’s spending with visibility and controls.</p>
-
-          <div class="info-list">
-            <div class="info-item">
-              <div class="icon"><span>👀</span></div>
-              <div>
-                <h3>See spending in real time</h3>
-                <p>Instant transaction history: where, when, and how much — right at your fingertips.</p>
-              </div>
-            </div>
-
-            <div class="info-item">
-              <div class="icon"><span>💸</span></div>
-              <div>
-                <h3>Add funds in seconds</h3>
-                <p>Top up your child’s card from your bank card. Transparent fees and fast availability.</p>
-              </div>
-            </div>
-
-            <div class="info-item">
-              <div class="icon"><span>🛡️</span></div>
-              <div>
-                <h3>Category safeguards</h3>
-                <p>Choose where the card can be used (e.g., groceries yes, restricted categories no).</p>
-              </div>
-            </div>
-
-            <div class="info-item">
-              <div class="icon"><span>🔔</span></div>
-              <div>
-                <h3>Instant alerts <small style="color:#6b7280;">(coming soon)</small></h3>
-                <p>Get notified on purchases or low balance, so there are no surprises.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="cta">
-            <a class="button" href="/vendors.html">Find participating vendors</a>
-            <a class="button" href="/contact.html">Become a vendor</a>
-          </div>
-        </div>
-      </div>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Parent Portal</h1>
+      <p>Log in to add funds, see purchases in real time, and keep your child on track. Simple tools, clear controls, and instant transparency.</p>
     </div>
-  </div>
+  </section>
+
+  <!-- Main -->
+  <main class="wrap">
+    <!-- Left: Login Card (always first on mobile) -->
+    <section class="card" aria-labelledby="loginTitle">
+      <div class="head" id="loginTitle">Parent Login</div>
+      <div class="body">
+        <form id="parentLoginForm" novalidate>
+          <div>
+            <label for="email">Email</label>
+            <input id="email" type="email" autocomplete="username" required />
+          </div>
+          <div>
+            <label for="password">Password</label>
+            <input id="password" type="password" autocomplete="current-password" required />
+          </div>
+
+          <div class="actions">
+            <button type="submit">Sign In</button>
+            <div class="hintrow">
+              <a href="/password.html?mode=forgot">Forgot password?</a>
+              <a href="/contact.html">Need help?</a>
+            </div>
+            <div id="loginStatus" class="status"></div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Right: Info / Features -->
+    <section class="card panel">
+      <div class="head">Why parents love BOOP</div>
+      <div class="body">
+        <h2>See it. Guide it. Support it.</h2>
+        <p class="muted">BOOP helps you stay in the loop without hovering. You’ll see where money goes and can add funds instantly.</p>
+
+        <ul class="features">
+          <li>
+            <strong>Real-time spending view</strong>
+            <p>Every swipe shows up immediately—where, when, and how much.</p>
+          </li>
+          <li>
+            <strong>Add funds in seconds</strong>
+            <p>Top up from your card. Clear fees. No surprises.</p>
+          </li>
+          <li>
+            <strong>Category safeguards</strong>
+            <p>Turn on/off categories so purchases stay appropriate.</p>
+          </li>
+          <li>
+            <strong>Instant alerts <span style="color:var(--muted); font-weight:500;">(coming soon)</span></strong>
+            <p>Get notified on purchases and low balance.</p>
+          </li>
+        </ul>
+
+        <div class="cta">
+          Vendors: want to accept BOOP? <a href="/vendors.html">Get onboarded</a>.
+        </div>
+      </div>
+    </section>
+  </main>
 
   <script>
     // Parent-only login handler
     (function(){
-      const form = document.getElementById('loginForm');
-      const emailEl = document.getElementById('email');
-      const pwEl = document.getElementById('password');
-      const errEl = document.getElementById('loginErr');
-      const okEl = document.getElementById('loginOk');
+      const form = document.getElementById('parentLoginForm');
+      const statusEl = document.getElementById('loginStatus');
+
+      function showErr(msg){
+        statusEl.textContent = msg || 'Login failed.';
+        statusEl.className = 'status err';
+      }
+      function showOk(msg){
+        statusEl.textContent = msg || 'Success.';
+        statusEl.className = 'status ok';
+      }
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        errEl.textContent = '';
-        okEl.style.display = 'none';
+        statusEl.className = 'status';
+        statusEl.style.display = 'none';
 
-        const email = emailEl.value.trim();
-        const password = pwEl.value;
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
 
-        if (!email || !password) {
-          errEl.textContent = 'Please enter your email and password.';
+        if(!email || !password){
+          showErr('Please enter your email and password.');
           return;
         }
 
-        try {
+        try{
           const res = await fetch('/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
             body: JSON.stringify({ email, password })
           });
           const data = await res.json();
 
-          if (!res.ok) {
-            errEl.textContent = data.message || 'Login failed.';
+          if(!res.ok){
+            showErr(data.message || 'Login failed.');
             return;
           }
 
           const { token, user } = data;
 
+          // Only allow role=parent
           if ((user?.role || '').toLowerCase() !== 'parent') {
-            errEl.textContent = 'This portal is for parents only. Please use the correct portal.';
+            showErr('This portal is for parents only.');
             return;
           }
 
@@ -204,28 +257,33 @@
           localStorage.setItem('boop_jwt', token);
           localStorage.setItem('boopUser', JSON.stringify(user));
 
-          // (optional) record session server-side, if your API supports it
-          try {
-            const payload = {
-              email: user.email,
-              user_id: user.id,
-              jwt_token: token,
-              status: 'online'
-            };
+          // (Optional) record a session in your API
+          try{
+            // decode exp for expires_at
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expiresAt = new Date(payload.exp * 1000).toISOString();
             await fetch('/api/sessions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify(payload)
+              method:'POST',
+              headers:{
+                'Content-Type':'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                email: user.email,
+                user_id: user.id,
+                jwt_token: token,
+                expires_at: expiresAt,
+                status: 'online'
+              })
             });
-          } catch (e) { /* non-blocking */ }
+          }catch(_){}
 
-          okEl.style.display = 'block';
-          setTimeout(() => {
-            window.location.href = '/parent/index.html';
-          }, 500);
+          showOk('Welcome! Redirecting…');
+          setTimeout(()=>{ window.location.href = '/parent/index.html'; }, 400);
 
-        } catch (err) {
-          errEl.textContent = 'Network error. Please try again.';
+        }catch(err){
+          showErr('Network error. Please try again.');
+          console.error(err);
         }
       });
     })();
