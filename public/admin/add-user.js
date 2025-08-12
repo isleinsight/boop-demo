@@ -157,26 +157,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       const result = await resUser.json();
       if (!resUser.ok) throw new Error(result.message || "Failed to create user");
 
-      const newUser = result.user || result; // adjust to your API shape
-      const newUserId = newUser.id;
+      const newUserId = result.user?.id ?? result.id;
 
-      // (Optional) Create transit wallet (ignore failures)
-      try {
-        const resTransit = await fetch("/api/transit-wallets", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ user_id: newUserId })
-        });
-        if (!resTransit.ok) {
-          console.warn("Transit wallet creation failed:", await resTransit.text());
-        }
-      } catch (e) {
-        console.warn("Transit wallet creation error:", e);
-      }
-
+      
       // Trigger password reset email for the new user
       try {
         const resReset = await fetch("/api/password/admin/initiate-reset", {
