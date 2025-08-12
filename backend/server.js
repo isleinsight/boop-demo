@@ -13,7 +13,6 @@ const { authenticateToken } = require('./auth/middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-const path = require('path');
 app.use(express.static(path.join(__dirname, '..', 'public')));
 console.log('🔧 server.js is initializing...');
 
