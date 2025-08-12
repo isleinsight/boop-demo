@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
+</head>
   <style>
   * {
     box-sizing: border-box; /* Ensure consistent box model */
@@ -16,7 +17,6 @@
     flex-wrap: wrap;
     gap: 12px;
     align-items: stretch; /* Ensure all items stretch to match tallest element */
-    margin-bottom: 20px;
   }
 
   .search-filter-bar input,
@@ -106,36 +106,48 @@
       padding: 8px 0;
     }
   }
-</style>
-</head>
+  </style>
 <body>
-  <nav>
+<div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; 
+  display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
+  <div style="max-width:540px;">
+    <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
+    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+  </div>
+</div>
+<script>
+  (function(){
+    const minWidth = 900; // tweak if you want to allow tablets
+    const guard = document.getElementById('screenGuard');
+    function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
+    window.addEventListener('resize', update, { passive:true });
+    update();
+  })();
+</script>
+  
+  <!-- Top Nav -->
+<nav>
   <div class="nav-container">
     <div class="nav-left">
       <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
     </div>
-    <button class="hamburger" aria-label="Toggle mobile menu">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
     <div class="nav-right">
       <a href="index.html">Dashboard</a>
+      <a href="admin-actions.html">Admin Actions</a>
       <div class="nav-dropdown">
-        <a href="#" class="dropbtn" style="color: white;">Accounts</a>
+        <a href="#" class="dropbtn" style="color: white;">Add</a>
         <div class="dropdown-content">
-          <a href="add-funds.html" id="addFundsLink">Add Funds</a>
-          <a href="transfer.html">Transfer</a>
-          <a href="reports.html">Reports</a>
-          <a href="manage-treasury.html" id="manageTreasuryLink" style="display: none;">Manage Treasury</a>
+          <a href="add-user.html" id="addUserLink">Add User</a>
+          <a href="assign-card.html" id="assignCardLink">Assign Card</a>
+          <a href="assign-student.html">Assign Student</a>
         </div>
       </div>
       <a href="view-users.html">View Users</a>
-      <a href="transactions.html">Transactions</a>
       <a href="#" id="logoutBtn">Log Out</a>
     </div>
   </div>
 </nav>
+
   
   <div class="table-scroll-wrapper">
     <div class="container">
@@ -145,7 +157,7 @@
         <span id="userCount">Total Users: 0</span>
       </div>
 
-      <!-- Unified search + filter bar -->
+      <!-- Search and filter bar -->
       <div class="search-filter-bar">
         <input type="text" id="searchInput" placeholder="Search by name or email" />
         <button id="searchBtn">Search</button>
@@ -233,7 +245,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      console.log("✅ view-users.js loaded!");
+      console.log("view-users.js loaded!");
 
       // Hide "Add Funds" link for treasury users
       if (user?.type === "treasury") {
@@ -286,6 +298,5 @@
     });
   </script>
   <script type="module" src="view-users.js"></script>
-      <script type="module" src="../assets/hamburger.js"></script>
 </body>
 </html>
