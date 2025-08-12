@@ -4,316 +4,150 @@
   <meta charset="UTF-8" />
   <title>BOOP — Parent Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="all" onload="this.media='all'" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <meta name="description" content="Parents can log in to add funds, see spending, and keep their child on track with BOOP." />
   <style>
-    :root {
-      --ink: #0b1220;
-      --ink-2: #1a2b4a;
-      --muted: #4b5563;
-      --blue: #2f80ed;
-      --blue-dark: #1c6fd8;
-      --green: #10b981;
-      --card: #ffffff;
-      --border: #e6ebf1;
-      --ghost: #f8fafc;
-      --shadow: 0 8px 24px rgba(2,6,23,.1);
-      --glass: rgba(255,255,255,.95);
+    :root{
+      --ink:#0b1220; --ink-2:#1a2b4a; --muted:#4b5563;
+      --blue:#2f80ed; --blue-dark:#1c6fd8; --green:#10b981;
+      --card:#ffffff; --border:#e6ebf1; --ghost:#f8fafc;
+      --shadow:0 8px 24px rgba(2,6,23,.1);
+      --glass:rgba(255,255,255,.95);
     }
-    [data-theme="dark"] {
-      --card: #1f2937;
-      --border: #374151;
-      --ghost: #111827;
-      --ink-2: #d1d5db;
-      --muted: #9ca3af;
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      color: var(--ink-2);
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      color:var(--ink-2);
       background: var(--ghost);
-      transition: background 0.3s, color 0.3s;
     }
 
-    /* NAV */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: rgba(11,18,32,.65);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid rgba(255,255,255,.15);
-      role: navigation;
+    /* NAV (logo only) */
+    nav{
+      position:sticky; top:0; z-index:10;
+      background:rgba(11,18,32,.65); backdrop-filter:blur(8px);
+      border-bottom:1px solid rgba(255,255,255,.15);
     }
-    .nav-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 24px;
+    .nav-container{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 24px;
     }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-      font-weight: 700;
-      color: #e5e7eb;
-    }
-    .brand img { height: 36px; width: 36px; display: block; }
-    .nav-actions { display: flex; gap: 12px; }
-    .nav-actions a {
-      color: #e5e7eb;
-      text-decoration: none;
-      font-weight: 600;
-      padding: 10px 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.2);
-      transition: border-color 0.3s, background 0.3s;
-    }
-    .nav-actions a:hover { border-color: #93c5fd; background: rgba(255,255,255,.05); }
-    .hamburger { display: none; cursor: pointer; font-size: 1.5rem; color: #e5e7eb; }
-    .theme-toggle {
-      background: none;
-      border: none;
-      color: #e5e7eb;
-      font-size: 1.2rem;
-      cursor: pointer;
-      padding: 8px;
-    }
-    @media (max-width: 768px) {
-      .nav-actions { display: none; }
-      .nav-actions.active { display: flex; flex-direction: column; position: absolute; top: 64px; right: 24px; background: var(--ink); border-radius: 12px; padding: 12px; }
-      .hamburger { display: block; }
-    }
+    .brand{display:flex; align-items:center; gap:12px; text-decoration:none}
+    .brand img{height:36px; width:auto; display:block;} /* keep aspect ratio */
 
     /* HERO */
-    header.hero {
-      max-width: 1200px;
-      margin: 64px auto 48px;
-      padding: 0 24px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 32px;
-      position: relative;
-      color: var(--ink-2);
+    header.hero{
+      position:relative;
+      color:var(--ink-2);
+      padding: 40px 0;
+      background:
+        radial-gradient(1200px 800px at 50% -20%, rgba(47,128,237,.25), transparent 70%),
+        linear-gradient(180deg, #eef4ff 0%, #f7fbff 100%);
+      border-bottom:1px solid var(--border);
     }
-    header.hero::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(1200px 800px at 50% -20%, rgba(47,128,237,.25), transparent 70%);
-      animation: pulse 15s infinite ease-in-out;
-      z-index: -1;
+    .hero-inner{
+      max-width:1200px; margin:0 auto;
+      display:grid; grid-template-columns:1.05fr .95fr; gap:32px;
+      align-items:start; padding:0 24px;
     }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 0.2; }
-      50% { transform: scale(1.1); opacity: 0.3; }
+    @media (max-width:920px){
+      .hero-inner{ grid-template-columns:1fr; }
     }
-    @media (max-width: 920px) { header.hero { grid-template-columns: 1fr; } }
-    .hero h1 {
-      margin: 12px 0;
-      font-size: clamp(32px, 5vw, 48px);
-      line-height: 1.1;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--ink);
+    .tag{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:6px 12px; border-radius:999px;
+      background:rgba(47,128,237,.1); border:1px solid rgba(47,128,237,.4);
+      color:var(--blue); font-weight:600; font-size:.85rem;
     }
-    .hero p.lead {
-      margin: 0;
-      color: var(--muted);
-      font-size: clamp(16px, 2.5vw, 19px);
-      line-height: 1.5;
+    .tag::before{content:"★"}
+    .card{
+      background:var(--glass); border:1px solid var(--border);
+      border-radius:16px; padding:24px; box-shadow:var(--shadow);
+      backdrop-filter:blur(4px); max-width:560px;
     }
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: rgba(47,128,237,.1);
-      border: 1px solid rgba(47,128,237,.6);
-      color: var(--blue);
-      font-weight: 600;
-      font-size: 0.85rem;
+    .card h2{margin:8px 0 6px; font-size:clamp(1.5rem,3vw,1.75rem); color:var(--ink);}
+    .card p{margin:0 0 16px; color:var(--muted)}
+    form{display:grid; gap:16px}
+    .input-group{position:relative}
+    input[type="email"], input[type="password"]{
+      width:100%; padding:14px 16px;
+      border:1px solid var(--border); border-radius:12px;
+      font-size:1rem; outline:none; background:var(--card);
+      transition:border-color .2s, box-shadow .2s;
     }
-    .tag::before { content: "★"; }
+    input:focus{border-color:var(--blue); box-shadow:0 0 0 3px rgba(47,128,237,.2)}
+    .toggle-password{
+      position:absolute; right:16px; top:50%; transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; color:var(--muted); font-size:.9rem;
+    }
+    .btn-primary{
+      width:100%; padding:14px; border:none; border-radius:12px;
+      background:var(--blue); color:#fff; font-weight:700; cursor:pointer;
+      box-shadow:var(--shadow); transition:transform .15s, background .15s;
+    }
+    .btn-primary:hover{transform:translateY(-1px); background:var(--blue-dark)}
+    .btn-primary:disabled{opacity:.6; cursor:not-allowed}
+    .link-row{display:flex; justify-content:space-between; gap:12px; margin-top:4px}
+    .link-row a{color:var(--blue); text-decoration:none; font-weight:600; font-size:.95rem; padding:8px}
+    .status{min-height:20px; font-size:.95rem; margin-top:8px}
+    .status.error{color:#ef4444}
+    .status.ok{color:var(--green)}
 
-    /* LOGIN CARD */
-    .card {
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-      color: var(--ink-2);
-      backdrop-filter: blur(4px);
+    /* INFO TILES */
+    .info{display:grid; gap:16px; align-content:start}
+    .tile{
+      background:var(--glass); border:1px solid var(--border);
+      border-radius:16px; padding:20px; box-shadow:var(--shadow); backdrop-filter:blur(4px);
     }
-    .card h2 {
-      margin: 0 0 10px;
-      font-size: clamp(1.5rem, 3vw, 1.75rem);
-      color: var(--ink);
+    .badge{
+      display:inline-block; padding:6px 12px; border-radius:999px;
+      background:rgba(47,128,237,.1); border:1px solid rgba(47,128,237,.4);
+      color:var(--blue); font-weight:700; font-size:.8rem;
     }
-    .card p { margin: 0 0 16px; color: var(--muted); }
-    form { display: grid; gap: 16px; }
-    .input-group { position: relative; }
-    input[type="email"], input[type="password"] {
-      width: 100%;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font-size: 1rem;
-      outline: none;
-      background: var(--card);
-      transition: border-color 0.3s, box-shadow 0.3s;
-    }
-    input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,128,237,.2); }
-    .toggle-password {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-    .btn-primary {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 12px;
-      background: var(--blue);
-      color: #fff;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: var(--shadow);
-      transition: transform 0.2s, background 0.2s;
-    }
-    .btn-primary:hover { transform: scale(1.02); background: var(--blue-dark); }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-    .link-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      margin-top: 4px;
-    }
-    .link-row a {
-      color: var(--blue);
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: 8px;
-      min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-    }
-    .status { min-height: 20px; font-size: 0.95rem; margin-top: 8px; }
-    .status.error { color: #ef4444; }
-    .status.ok { color: var(--green); }
+    .info h3{margin:10px 0 8px; color:var(--ink); font-size:clamp(1.1rem,2vw,1.25rem)}
+    .info p{margin:0; color:var(--muted)}
+    .list{margin:10px 0 0; padding-left:20px; color:var(--ink-2)}
+    .list li{margin:8px 0}
 
-    /* INFO PANEL */
-    .info { display: grid; gap: 16px; align-content: start; }
-    .info .tile {
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(4px);
+    /* SECONDARY SECTION */
+    .section{
+      max-width:1200px; margin:28px auto 48px; padding:0 24px;
+      display:grid; grid-template-columns:repeat(3,1fr); gap:20px;
     }
-    .info h3 {
-      margin: 0 0 8px;
-      font-size: clamp(1.1rem, 2vw, 1.25rem);
-      color: var(--ink);
+    @media (max-width:920px){ .section{ grid-template-columns:1fr } }
+    .feature{
+      background:#fff; border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:var(--shadow);
     }
-    .info p { margin: 0; color: var(--muted); }
-    .list { margin: 10px 0 0; padding: 0 0 0 20px; color: var(--ink-2); }
-    .list li { margin: 8px 0; }
-    .badge {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: rgba(47,128,237,.1);
-      border: 1px solid rgba(47,128,237,.6);
-      color: var(--blue);
-      font-weight: 700;
-      font-size: 0.8rem;
-    }
-
-    /* SECTION */
-    .section {
-      max-width: 1200px;
-      margin: 32px auto 48px;
-      padding: 0 24px;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-    }
-    .section.visible { opacity: 1; transform: translateY(0); }
-    @media (max-width: 920px) { .section { grid-template-columns: 1fr; } }
-    .feature {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: var(--shadow);
-    }
-    .feature h4 {
-      margin: 0 0 8px;
-      font-size: clamp(1rem, 1.8vw, 1.15rem);
-      color: var(--ink);
-    }
-    .feature p { margin: 0; color: var(--muted); }
+    .feature h4{margin:0 0 8px; color:var(--ink)}
+    .feature p{margin:0; color:var(--muted)}
 
     /* FOOTER */
-    footer {
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      text-align: center;
-      padding: 24px;
-      margin-top: 32px;
-      font-size: 0.95rem;
+    footer{
+      border-top:1px solid var(--border); color:var(--muted);
+      text-align:center; padding:24px; margin-top:32px; font-size:.95rem;
+      background:#fff;
     }
-    .footer-links a {
-      color: var(--blue);
-      text-decoration: none;
-      margin: 0 12px;
-      font-weight: 600;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root { --card: #1f2937; --border: #374151; --ghost: #111827; --ink-2: #d1d5db; --muted: #9ca3af; }
-    }
+    .footer-links a{color:var(--blue); text-decoration:none; margin:0 12px; font-weight:600}
   </style>
 </head>
 <body>
+  <!-- NAV (logo only) -->
   <nav role="navigation">
     <div class="nav-container">
       <a class="brand" href="/">
-        <img src="/assets/Boop-Logo.png" alt="BOOP Parent Portal Logo" width="36" height="36">
+        <img src="/assets/Boop-Logo.png" alt="BOOP logo">
       </a>
-      <button class="hamburger" aria-label="Toggle navigation">☰</button>
-      <div class="nav-actions">
-        <a href="/about.html">About</a>
-        <a href="/government-portal.html">Government Portal</a>
-        <button class="theme-toggle" aria-label="Toggle dark mode">🌙</button>
-      </div>
+      <!-- empty right side on purpose -->
+      <div style="width:36px;"></div>
     </div>
   </nav>
 
+  <!-- HERO -->
   <header class="hero" role="banner">
     <div class="hero-inner">
+      <!-- Login card (left) -->
       <div class="card" aria-label="Parent login">
         <span class="tag">Parent Portal</span>
         <h2>Welcome back, parents</h2>
@@ -336,6 +170,8 @@
           <div id="loginStatus" class="status" aria-live="polite"></div>
         </form>
       </div>
+
+      <!-- Info tiles (right) -->
       <div class="info" aria-label="Highlights for parents">
         <div class="tile">
           <span class="badge">Why BOOP</span>
@@ -369,6 +205,7 @@
     </div>
   </header>
 
+  <!-- Secondary highlight row -->
   <section class="section" aria-label="More benefits">
     <div class="feature">
       <h4>Transparent by design</h4>
@@ -379,7 +216,7 @@
       <p>Freeze instantly and issue a new one without the runaround.</p>
     </div>
     <div class="feature">
-      <h4>Works everywhere we matter</h4>
+      <h4>Works where it matters</h4>
       <p>Participating vendors across Bermuda—with more joining every month.</p>
     </div>
   </section>
@@ -397,30 +234,15 @@
     // Year
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Hamburger menu
-    const hamburger = document.querySelector('.hamburger');
-    const navActions = document.querySelector('.nav-actions');
-    hamburger.addEventListener('click', () => {
-      navActions.classList.toggle('active');
-    });
-
-    // Dark mode toggle
-    const themeToggle = document.querySelector('.theme-toggle');
-    themeToggle.addEventListener('click', () => {
-      document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-      themeToggle.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
-    });
-
-    // Password toggle
+    // Toggle password
     const passwordInput = document.getElementById('password');
-    const togglePassword = document.querySelector('.toggle-password');
-    togglePassword.addEventListener('click', () => {
+    document.querySelector('.toggle-password')?.addEventListener('click', () => {
       const type = passwordInput.type === 'password' ? 'text' : 'password';
       passwordInput.type = type;
-      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+      event.currentTarget.textContent = type === 'password' ? '👁️' : '🙈';
     });
 
-    // Client-side validation
+    // Login handler (same endpoint/logic you already use)
     const loginForm = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
     const emailError = document.getElementById('email-error');
@@ -433,89 +255,69 @@
       emailError.textContent = '';
       passwordError.textContent = '';
       loginStatus.textContent = '';
-      let isValid = true;
+      emailError.classList.remove('error');
+      passwordError.classList.remove('error');
+      loginStatus.classList.remove('error','ok');
 
-      if (!emailInput.value.trim()) {
-        emailError.classList.add('error');
+      let valid = true;
+      if (!emailInput.value.trim()){
         emailError.textContent = 'Email is required';
-        isValid = false;
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim())) {
-        emailError.classList.add('error');
+        emailError.classList.add('error'); valid = false;
+      } else if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(emailInput.value.trim())) {
         emailError.textContent = 'Invalid email format';
-        isValid = false;
+        emailError.classList.add('error'); valid = false;
       }
-      if (!passwordInput.value) {
-        passwordError.classList.add('error');
+      if (!passwordInput.value){
         passwordError.textContent = 'Password is required';
-        isValid = false;
+        passwordError.classList.add('error'); valid = false;
       }
+      if (!valid) return;
 
-      if (!isValid) return;
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Loading…';
-
-      try {
+      submitBtn.disabled = true; submitBtn.textContent = 'Loading…';
+      try{
         const res = await fetch('/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ email: emailInput.value.trim(), password: passwordInput.value })
         });
-
         const data = await res.json();
-
-        if (!res.ok) {
+        if (!res.ok){
           loginStatus.classList.add('error');
           loginStatus.textContent = data.message || 'Login failed.';
           return;
         }
 
         const { token, user } = data;
-
         if (String(user.role || '').toLowerCase() !== 'parent') {
           loginStatus.classList.add('error');
           loginStatus.textContent = 'This portal is for Parent accounts.';
           return;
         }
 
-        // Note: localStorage is used for JWT, but consider HttpOnly cookies for better security
-        localStorage.setItem("boop_jwt", token);
-        localStorage.setItem("boopUser", JSON.stringify(user));
+        localStorage.setItem('boop_jwt', token);
+        localStorage.setItem('boopUser', JSON.stringify(user));
 
-        try {
+        // (Optional) record a session; ignore failures
+        try{
           const payload = (() => {
-            try {
-              const p = JSON.parse(atob(token.split('.')[1]));
-              return { exp: p.exp ? new Date(p.exp * 1000).toISOString() : null };
-            } catch { return { exp: null }; }
+            try { const p = JSON.parse(atob(token.split('.')[1])); return { exp: p.exp ? new Date(p.exp*1000).toISOString() : null }; }
+            catch { return { exp:null }; }
           })();
-
-          await fetch("/api/sessions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              email: user.email,
-              user_id: user.id,
-              jwt_token: token,
-              expires_at: payload.exp,
-              status: "online"
-            })
+          await fetch('/api/sessions', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+            body: JSON.stringify({ email:user.email, user_id:user.id, jwt_token:token, expires_at:payload.exp, status:'online' })
           });
-        } catch (_) {}
+        }catch(_){}
 
         loginStatus.classList.add('ok');
         loginStatus.textContent = 'Success! Redirecting…';
         window.location.href = '/parent/index.html';
-
-      } catch (err) {
+      } catch(err){
         loginStatus.classList.add('error');
         loginStatus.textContent = 'Network error: ' + err.message;
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Sign in';
+        submitBtn.disabled = false; submitBtn.textContent = 'Sign in';
       }
     });
   </script>
