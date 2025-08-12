@@ -10,9 +10,7 @@ const { ServerClient } = require('postmark');
 
 const APP_URL = (process.env.APP_URL || 'http://localhost:8080').replace(/\/+$/, '');
 const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || '';
-const FROM_EMAIL =
-  process.env.SENDER_EMAIL ||
-  `no-reply@${new URL(APP_URL).hostname}`;
+const FROM_EMAIL = process.env.SENDER_EMAIL || `no-reply@${new URL(APP_URL).hostname}`;
 const postmark = POSTMARK_TOKEN ? new ServerClient(POSTMARK_TOKEN) : null;
 
 // ── Config ───────────────────────────────────────────────────────────────────
@@ -35,26 +33,79 @@ function normalizeEmail(e) {
   return String(e || '').trim().toLowerCase();
 }
 
+// Email template (HTML + Text)
+function renderResetEmail(link) {
+  const logoUrl = `${APP_URL}/assets/Boop-Logo.png`; // must be publicly accessible
+  const expiryMins = TOKEN_TTL_MIN;
+
+  const HtmlBody = `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reset your BOOP password</title>
+  <style>
+    /* Client-safe inline-ish styles (kept simple for broad support) */
+    .bg { background:#f6f8fb; padding:24px 12px; }
+    .card { max-width:560px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 24px rgba(16,24,40,0.08); }
+    .header { background:#0b1220; padding:20px; text-align:center; }
+    .logo { width:132px; height:auto; display:block; margin:0 auto; }
+    .body { padding:28px 24px 8px; color:#1f2937; font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial; }
+    h1 { margin:0 0 8px; font-size:20px; color:#111827; }
+    p { margin:0 0 16px; }
+    .btnwrap { text-align:center; padding:12px 0 24px; }
+    .btn { display:inline-block; background:#2f80ed; color:#ffffff !important; text-decoration:none; padding:12px 20px; border-radius:8px; font-weight:600; }
+    .small { font-size:13px; color:#6b7280; }
+    .linkbox { word-break:break-all; background:#f3f4f6; padding:10px; border-radius:8px; font-size:13px; }
+    .footer { padding:16px 24px 28px; text-align:center; color:#9ca3af; font:12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial; }
+  </style>
+</head>
+<body class="bg">
+  <div class="card">
+    <div class="header">
+      <img class="logo" src="${logoUrl}" alt="BOOP" />
+    </div>
+    <div class="body">
+      <h1>Reset your password</h1>
+      <p>We received a request to reset your BOOP password. Click the button below to choose a new one.</p>
+      <div class="btnwrap">
+        <a class="btn" href="${link}" target="_blank" rel="noopener">Set new password</a>
+      </div>
+      <p class="small">This link expires in ${expiryMins} minutes. If you didn’t request this, you can ignore this email.</p>
+      <p class="small">Having trouble with the button? Paste this link into your browser:</p>
+      <div class="linkbox small">${link}</div>
+    </div>
+    <div class="footer">
+      © ${new Date().getFullYear()} BOOP. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>`.trim();
+
+  const TextBody =
+    `Reset your BOOP password\n\n` +
+    `We received a request to reset your password. Open the link below to set a new one.\n\n` +
+    `${link}\n\n` +
+    `This link expires in ${expiryMins} minutes. If you didn’t request this, you can ignore this email.\n`;
+
+  return { HtmlBody, TextBody };
+}
+
 async function sendResetEmail(to, link) {
   if (!postmark) {
     console.warn('[email] Postmark token missing; logging link instead:', { to, link });
     return;
   }
+  const { HtmlBody, TextBody } = renderResetEmail(link);
   try {
     await postmark.sendEmail({
       From: FROM_EMAIL,
       To: to,
       Subject: 'Reset your BOOP password',
-      HtmlBody: `
-        <p>Hello,</p>
-        <p>We received a request to reset your password. Click the link below to set a new one:</p>
-        <p><a href="${link}">${link}</a></p>
-        <p>This link will expire in ${TOKEN_TTL_MIN} minutes. If you didn’t request this, you can ignore this email.</p>
-      `,
-      TextBody:
-        `Hello,\n\nWe received a request to reset your password.\n` +
-        `Open this link to set a new one:\n${link}\n\n` +
-        `This link will expire in ${TOKEN_TTL_MIN} minutes. If you didn’t request this, you can ignore this email.\n`,
+      HtmlBody,
+      TextBody,
       MessageStream: 'outbound',
     });
   } catch (e) {
@@ -85,16 +136,10 @@ router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
 
     let userRow = null;
     if (userIdFromBody) {
-      const { rows } = await db.query(
-        'SELECT id, email FROM users WHERE id=$1 LIMIT 1',
-        [userIdFromBody]
-      );
+      const { rows } = await db.query('SELECT id, email FROM users WHERE id=$1 LIMIT 1', [userIdFromBody]);
       userRow = rows[0];
     } else if (emailFromBody) {
-      const { rows } = await db.query(
-        'SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1',
-        [emailFromBody]
-      );
+      const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [emailFromBody]);
       userRow = rows[0];
     } else {
       return res.status(400).json({ error: 'Provide user_id or email' });
@@ -136,10 +181,7 @@ router.post('/forgot-password', async (req, res) => {
   if (!email) return;
 
   try {
-    const { rows } = await db.query(
-      'SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1',
-      [email]
-    );
+    const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [email]);
     if (!rows.length) return;
 
     const userId = rows[0].id;
@@ -157,7 +199,7 @@ router.post('/forgot-password', async (req, res) => {
     await sendResetEmail(email, link);
   } catch (err) {
     console.error('forgot-password error:', err);
-    // swallow — we already returned 200
+    // swallow — already returned 200
   }
 });
 
@@ -202,15 +244,14 @@ router.post('/reset', async (req, res) => {
     await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [newHash, userId]);
     await db.query('UPDATE password_reset_tokens SET used_at=NOW() WHERE id=$1', [prtId]);
 
-    // Optional: invalidate all other unused tokens for this user
+    // Invalidate any other outstanding tokens for this user
     await db.query(
-      `UPDATE password_reset_tokens
-         SET used_at = NOW()
+      `UPDATE password_reset_tokens SET used_at = NOW()
        WHERE user_id = $1 AND used_at IS NULL AND id <> $2`,
       [userId, prtId]
     );
 
-    // Optional: force sign-out everywhere (if you keep sessions)
+    // Optional: force sign-out everywhere if you store sessions
     await db.query('DELETE FROM sessions WHERE user_id=$1', [userId]);
 
     await db.query('COMMIT');
