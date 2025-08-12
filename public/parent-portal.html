@@ -4,149 +4,338 @@
   <meta charset="UTF-8" />
   <title>BOOP — Parent Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="all" onload="this.media='all'" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <meta name="description" content="Parents can log in to add funds, see spending, and keep their child on track with BOOP." />
   <style>
-    :root{
-      --ink:#0b1220;
-      --ink-2:#1a2b4a;
-      --muted:#6b7280;
-      --blue:#2f80ed;
-      --blue-dark:#1c6fd8;
-      --yellow:#facc15;
-      --green:#10b981;
-      --card:#ffffff;
-      --border:#e6ebf1;
-      --ghost:#f8fafc;
+    :root {
+      --ink: #0b1220;
+      --ink-2: #1a2b4a;
+      --muted: #4b5563;
+      --blue: #2f80ed;
+      --blue-dark: #1c6fd8;
+      --green: #10b981;
+      --card: #ffffff;
+      --border: #e6ebf1;
+      --ghost: #f8fafc;
+      --shadow: 0 8px 24px rgba(2,6,23,.1);
+      --glass: rgba(255,255,255,.95);
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      color:var(--ink-2);
-      background:#fff;
+    [data-theme="dark"] {
+      --card: #1f2937;
+      --border: #374151;
+      --ghost: #111827;
+      --ink-2: #d1d5db;
+      --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink-2);
+      background: var(--ghost);
+      transition: background 0.3s, color 0.3s;
     }
 
     /* NAV */
-    nav{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.55);backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.15)}
-    .nav-container{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 18px}
-    .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-    .brand img{height:32px;display:block}
-    .nav-actions a{color:#e5e7eb;text-decoration:none;font-weight:600;padding:8px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18)}
-    .nav-actions a:hover{border-color:#93c5fd}
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(11,18,32,.65);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,255,255,.15);
+      role: navigation;
+    }
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      color: #e5e7eb;
+    }
+    .brand img { height: 36px; width: 36px; display: block; }
+    .nav-actions { display: flex; gap: 12px; }
+    .nav-actions a {
+      color: #e5e7eb;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.2);
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .nav-actions a:hover { border-color: #93c5fd; background: rgba(255,255,255,.05); }
+    .hamburger { display: none; cursor: pointer; font-size: 1.5rem; color: #e5e7eb; }
+    .theme-toggle {
+      background: none;
+      border: none;
+      color: #e5e7eb;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 8px;
+    }
+    @media (max-width: 768px) {
+      .nav-actions { display: none; }
+      .nav-actions.active { display: flex; flex-direction: column; position: absolute; top: 64px; right: 24px; background: var(--ink); border-radius: 12px; padding: 12px; }
+      .hamburger { display: block; }
+    }
 
-    /* HERO (Gradient only at the top) */
-    header.hero{
-      color:#eef2ff;
-      background:
-        radial-gradient(1100px 700px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
-        radial-gradient(900px 600px at -10% 110%, rgba(250,204,21,.3), transparent 60%),
-        radial-gradient(1200px 800px at 35% 40%, rgba(16,185,129,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0d1220 100%);
-      border-bottom:1px solid rgba(255,255,255,.12);
+    /* HERO */
+    header.hero {
+      max-width: 1200px;
+      margin: 64px auto 48px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      position: relative;
+      color: var(--ink-2);
     }
-    .hero-inner{max-width:1100px;margin:0 auto;padding:48px 18px 34px;display:grid;grid-template-columns:1.05fr .95fr;gap:28px}
-    @media (max-width: 920px){ .hero-inner{grid-template-columns:1fr} }
-    .hero h1{margin:10px 0 10px;font-size:clamp(28px,4.8vw,44px);line-height:1.1;font-weight:700;letter-spacing:.2px}
-    .hero p.lead{margin:0;color:#dbeafe;font-size:clamp(15px,2.3vw,18px)}
-    .tag{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(250,204,21,.16);border:1px solid rgba(250,204,21,.5);color:#fde68a;font-weight:600;font-size:.85rem}
-    .tag:before{content:"★"}
+    header.hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(1200px 800px at 50% -20%, rgba(47,128,237,.25), transparent 70%);
+      animation: pulse 15s infinite ease-in-out;
+      z-index: -1;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.2; }
+      50% { transform: scale(1.1); opacity: 0.3; }
+    }
+    @media (max-width: 920px) { header.hero { grid-template-columns: 1fr; } }
+    .hero h1 {
+      margin: 12px 0;
+      font-size: clamp(32px, 5vw, 48px);
+      line-height: 1.1;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--ink);
+    }
+    .hero p.lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(16px, 2.5vw, 19px);
+      line-height: 1.5;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(47,128,237,.1);
+      border: 1px solid rgba(47,128,237,.6);
+      color: var(--blue);
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .tag::before { content: "★"; }
 
-    /* LOGIN CARD (Left) */
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:20px;
-      box-shadow:0 12px 24px rgba(2,6,23,.12);
-      color:var(--ink-2);
+    /* LOGIN CARD */
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      color: var(--ink-2);
+      backdrop-filter: blur(4px);
     }
-    .card h2{margin:0 0 8px;font-size:1.25rem;color:var(--ink)}
-    .card p{margin:0 0 14px;color:var(--muted)}
-    form{display:grid;gap:12px}
-    input[type="email"], input[type="password"]{
-      width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-size:1rem;outline:none;
-      background:#fff;
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.5rem, 3vw, 1.75rem);
+      color: var(--ink);
     }
-    input:focus{border-color:var(--blue)}
-    .btn-primary{
-      width:100%;padding:12px 14px;border:0;border-radius:12px;
-      background:linear-gradient(90deg, var(--blue), var(--yellow));
-      color:#fff;font-weight:700;cursor:pointer;box-shadow:0 10px 24px rgba(47,128,237,.18);
+    .card p { margin: 0 0 16px; color: var(--muted); }
+    form { display: grid; gap: 16px; }
+    .input-group { position: relative; }
+    input[type="email"], input[type="password"] {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 1rem;
+      outline: none;
+      background: var(--card);
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
-    .btn-primary:hover{filter:brightness(.97)}
-    .link-row{display:flex;justify-content:space-between;gap:10px;margin-top:2px}
-    .link-row a{color:var(--blue);text-decoration:none;font-weight:600;font-size:.95rem}
-    .status{min-height:20px;font-size:.95rem;margin-top:6px}
-    .status.error{color:#ef4444}
-    .status.ok{color:var(--green)}
+    input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,128,237,.2); }
+    .toggle-password {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .btn-primary:hover { transform: scale(1.02); background: var(--blue-dark); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .link-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .link-row a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 8px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .status { min-height: 20px; font-size: 0.95rem; margin-top: 8px; }
+    .status.error { color: #ef4444; }
+    .status.ok { color: var(--green); }
 
-    /* INFO PANEL (Right) */
-    .info{
-      display:grid;gap:14px;align-content:start
+    /* INFO PANEL */
+    .info { display: grid; gap: 16px; align-content: start; }
+    .info .tile {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(4px);
     }
-    .info .tile{
-      background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.96));
-      border:1px solid var(--border);
-      border-radius:16px;padding:18px
+    .info h3 {
+      margin: 0 0 8px;
+      font-size: clamp(1.1rem, 2vw, 1.25rem);
+      color: var(--ink);
     }
-    .info h3{margin:0 0 6px;font-size:1.05rem;color:var(--ink)}
-    .info p{margin:0;color:var(--muted)}
-    .list{margin:8px 0 0;padding:0 0 0 18px;color:var(--ink-2)}
-    .list li{margin:6px 0}
-    .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(250,204,21,.16);border:1px solid rgba(250,204,21,.5);color:#92400e;font-weight:700;font-size:.75rem}
+    .info p { margin: 0; color: var(--muted); }
+    .list { margin: 10px 0 0; padding: 0 0 0 20px; color: var(--ink-2); }
+    .list li { margin: 8px 0; }
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(47,128,237,.1);
+      border: 1px solid rgba(47,128,237,.6);
+      color: var(--blue);
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
 
-    /* BRIGHT SECTION BELOW */
-    .section{max-width:1100px;margin:28px auto;padding:0 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-    .section .feature{
-      background:linear-gradient(180deg, #fff, #fff);
-      border:1px solid var(--border);
-      border-radius:16px;padding:18px
+    /* SECTION */
+    .section {
+      max-width: 1200px;
+      margin: 32px auto 48px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
     }
-    .section .feature h4{margin:0 0 6px}
-    .section .feature p{margin:0;color:var(--muted)}
-    @media (max-width: 920px){ .section{grid-template-columns:1fr} }
+    .section.visible { opacity: 1; transform: translateY(0); }
+    @media (max-width: 920px) { .section { grid-template-columns: 1fr; } }
+    .feature {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .feature h4 {
+      margin: 0 0 8px;
+      font-size: clamp(1rem, 1.8vw, 1.15rem);
+      color: var(--ink);
+    }
+    .feature p { margin: 0; color: var(--muted); }
 
-    footer{border-top:1px solid var(--border);color:#6b7280;text-align:center;padding:18px;margin-top:28px;font-size:.9rem}
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      text-align: center;
+      padding: 24px;
+      margin-top: 32px;
+      font-size: 0.95rem;
+    }
+    .footer-links a {
+      color: var(--blue);
+      text-decoration: none;
+      margin: 0 12px;
+      font-weight: 600;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --card: #1f2937; --border: #374151; --ghost: #111827; --ink-2: #d1d5db; --muted: #9ca3af; }
+    }
   </style>
 </head>
 <body>
-  <nav>
+  <nav role="navigation">
     <div class="nav-container">
       <a class="brand" href="/">
-        <img src="/assets/Boop-Logo.png" alt="BOOP logo">
+        <img src="/assets/Boop-Logo.png" alt="BOOP Parent Portal Logo" width="36" height="36">
       </a>
+      <button class="hamburger" aria-label="Toggle navigation">☰</button>
       <div class="nav-actions">
         <a href="/about.html">About</a>
         <a href="/government-portal.html">Government Portal</a>
+        <button class="theme-toggle" aria-label="Toggle dark mode">🌙</button>
       </div>
     </div>
   </nav>
 
   <header class="hero" role="banner">
     <div class="hero-inner">
-      <!-- LEFT: LOGIN -->
       <div class="card" aria-label="Parent login">
         <span class="tag">Parent Portal</span>
         <h2>Welcome back, parents</h2>
         <p>Sign in to add funds, track spending, and keep your child on budget.</p>
-
         <form id="loginForm" novalidate>
-          <input type="email" id="email" placeholder="Email" autocomplete="username" required />
-          <input type="password" id="password" placeholder="Password" autocomplete="current-password" required />
-          <button class="btn-primary" type="submit">Sign in</button>
-
+          <div class="input-group">
+            <input type="email" id="email" placeholder="Email" autocomplete="username" required aria-describedby="email-error" />
+            <div id="email-error" class="status"></div>
+          </div>
+          <div class="input-group">
+            <input type="password" id="password" placeholder="Password" autocomplete="current-password" required aria-describedby="password-error" />
+            <button type="button" class="toggle-password" aria-label="Toggle password visibility">👁️</button>
+            <div id="password-error" class="status"></div>
+          </div>
+          <button class="btn-primary" type="submit" id="submitBtn">Sign in</button>
           <div class="link-row">
             <a href="/password.html?mode=forgot">Forgot password?</a>
             <a href="/signup.html" title="Request a Parent account">Need an account?</a>
           </div>
-
           <div id="loginStatus" class="status" aria-live="polite"></div>
         </form>
       </div>
-
-      <!-- RIGHT: INFO -->
       <div class="info" aria-label="Highlights for parents">
         <div class="tile">
           <span class="badge">Why BOOP</span>
@@ -180,7 +369,6 @@
     </div>
   </header>
 
-  <!-- Bright section below the hero -->
   <section class="section" aria-label="More benefits">
     <div class="feature">
       <h4>Transparent by design</h4>
@@ -197,53 +385,103 @@
   </section>
 
   <footer>
-    © <span id="year"></span> BOOP. All rights reserved.
+    <div class="footer-links">
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+      <a href="/contact.html">Contact Us</a>
+    </div>
+    <p>© <span id="year"></span> BOOP. All rights reserved.</p>
   </footer>
 
   <script>
     // Year
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Parent Login handler (POST /auth/login)
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    // Hamburger menu
+    const hamburger = document.querySelector('.hamburger');
+    const navActions = document.querySelector('.nav-actions');
+    hamburger.addEventListener('click', () => {
+      navActions.classList.toggle('active');
+    });
+
+    // Dark mode toggle
+    const themeToggle = document.querySelector('.theme-toggle');
+    themeToggle.addEventListener('click', () => {
+      document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      themeToggle.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
+    });
+
+    // Password toggle
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.querySelector('.toggle-password');
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.type === 'password' ? 'text' : 'password';
+      passwordInput.type = type;
+      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+
+    // Client-side validation
+    const loginForm = document.getElementById('loginForm');
+    const emailInput = document.getElementById('email');
+    const emailError = document.getElementById('email-error');
+    const passwordError = document.getElementById('password-error');
+    const submitBtn = document.getElementById('submitBtn');
+    const loginStatus = document.getElementById('loginStatus');
+
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      emailError.textContent = '';
+      passwordError.textContent = '';
+      loginStatus.textContent = '';
+      let isValid = true;
 
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const statusEl = document.getElementById('loginStatus');
+      if (!emailInput.value.trim()) {
+        emailError.classList.add('error');
+        emailError.textContent = 'Email is required';
+        isValid = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim())) {
+        emailError.classList.add('error');
+        emailError.textContent = 'Invalid email format';
+        isValid = false;
+      }
+      if (!passwordInput.value) {
+        passwordError.classList.add('error');
+        passwordError.textContent = 'Password is required';
+        isValid = false;
+      }
 
-      statusEl.className = 'status';
-      statusEl.textContent = '';
+      if (!isValid) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Loading…';
 
       try {
         const res = await fetch('/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email: emailInput.value.trim(), password: passwordInput.value })
         });
 
         const data = await res.json();
 
         if (!res.ok) {
-          statusEl.classList.add('error');
-          statusEl.textContent = data.message || 'Login failed.';
+          loginStatus.classList.add('error');
+          loginStatus.textContent = data.message || 'Login failed.';
           return;
         }
 
         const { token, user } = data;
 
-        // Only allow users with role "parent"
         if (String(user.role || '').toLowerCase() !== 'parent') {
-          statusEl.classList.add('error');
-          statusEl.textContent = 'This portal is for Parent accounts.';
+          loginStatus.classList.add('error');
+          loginStatus.textContent = 'This portal is for Parent accounts.';
           return;
         }
 
-        // Save session
+        // Note: localStorage is used for JWT, but consider HttpOnly cookies for better security
         localStorage.setItem("boop_jwt", token);
         localStorage.setItem("boopUser", JSON.stringify(user));
 
-        // (Optional) persist session in DB
         try {
           const payload = (() => {
             try {
@@ -268,15 +506,16 @@
           });
         } catch (_) {}
 
-        // Go to parent dashboard
-        statusEl.classList.add('ok');
-        statusEl.textContent = 'Success! Redirecting…';
+        loginStatus.classList.add('ok');
+        loginStatus.textContent = 'Success! Redirecting…';
         window.location.href = '/parent/index.html';
 
       } catch (err) {
-        const statusEl = document.getElementById('loginStatus');
-        statusEl.classList.add('error');
-        statusEl.textContent = 'Network error: ' + err.message;
+        loginStatus.classList.add('error');
+        loginStatus.textContent = 'Network error: ' + err.message;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign in';
       }
     });
   </script>
