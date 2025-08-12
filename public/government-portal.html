@@ -151,110 +151,87 @@
   </div>
 
   <script>
-(function(){
-  const form = document.getElementById('govLoginForm');     // make sure your portal form has this id
-  const statusEl = document.getElementById('loginStatus');  // small <div> or <p> to show errors
-  const sectorRadios = document.querySelectorAll('input[name="sector"]'); // "admin" or "accounts"
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('portalLoginForm');
+  const emailEl = document.getElementById('email');
+  const passEl = document.getElementById('password');
 
-  function selectedSector(){
-    const r = Array.from(sectorRadios).find(x => x.checked);
-    return r ? r.value : 'admin';
+  if (!form) {
+    console.error('Portal: form not found (id="portalLoginForm")');
+    return;
   }
 
-  function safeDecodeJWT(token){
-    try {
-      const base64 = token.split('.')[1]
-        .replace(/-/g, '+').replace(/_/g, '/');
-      const padded = base64 + '==='.slice((base64.length + 3) % 4);
-      const json = atob(padded);
-      return JSON.parse(json);
-    } catch { return null; }
-  }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); // stop page reload
 
-  async function recordSession(token, user){
-    try {
-      const decoded = safeDecodeJWT(token);
-      const expiresAt = decoded ? new Date(decoded.exp * 1000).toISOString() : null;
+    const sector = (document.querySelector('input[name="sector"]:checked') || {}).value || 'admin';
+    const email = emailEl.value.trim();
+    const password = passEl.value;
 
-      await fetch("/api/sessions", {
-        method: "POST",
-        headers: {
-          "Content-Type":"application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          email: user.email,
-          user_id: user.id,
-          jwt_token: token,
-          expires_at: expiresAt,
-          status: "online"
-        })
-      });
-    } catch (e) {
-      console.warn("Session record failed:", e);
+    let allowedTypes, redirectTo;
+    if (sector === 'admin') {
+      allowedTypes = ['super_admin','admin','support'];
+      redirectTo = '/admin/index.html';
+    } else {
+      allowedTypes = ['accountant','treasury','viewer']; // accounts side
+      redirectTo = '/accounts/index.html';
     }
-  }
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    statusEl.textContent = "Signing in…";
-    statusEl.style.color = "#333";
-
-    const email = document.getElementById('email')?.value.trim();
-    const password = document.getElementById('password')?.value;
 
     try {
       const res = await fetch('/auth/login', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type':'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const data = await res.json();
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        statusEl.style.color = 'red';
-        statusEl.textContent = data.message || 'Login failed.';
+        alert(data.message || 'Login failed.');
         return;
       }
 
       const { token, user } = data;
 
-      // Gate by sector selection
-      const sector = selectedSector();
-      let allowedTypes = [];
-      let redirectTo = '';
-
-      if (sector === 'admin') {
-        allowedTypes = ['super_admin','admin','support'];
-        redirectTo = '/admin/index.html';
-      } else {
-        // accounts (adjust allowed types for your org)
-        allowedTypes = ['accountant','treasury','viewer'];
-        redirectTo = '/accounts/index.html';
-      }
-
+      // Sector-specific access control
       if (!allowedTypes.includes(user.type)) {
-        statusEl.style.color = 'red';
-        statusEl.textContent = `Access denied for ${sector} portal.`;
+        alert('Access denied for this portal.');
         return;
       }
 
-      // Save session locally (same keys as admin handler)
-      localStorage.setItem("admin_id", user.id);
-      localStorage.setItem("boop_jwt", token);
-      localStorage.setItem("boopUser", JSON.stringify(user));
+      // Store session data
+      localStorage.setItem('boop_jwt', token);
+      localStorage.setItem('boopUser', JSON.stringify(user));
 
-      // Record session in DB (optional)
-      await recordSession(token, user);
+      // Record session
+      try {
+        const payload = (() => {
+          const payloadBase64 = token.split('.')[1];
+          return JSON.parse(atob(payloadBase64));
+        })();
+        const expiresAt = new Date(payload.exp * 1000).toISOString();
+        await fetch('/api/sessions', {
+          method: 'POST',
+          headers: {
+            'Content-Type':'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            email: user.email, user_id: user.id, jwt_token: token,
+            expires_at: expiresAt, status:'online'
+          })
+        });
+      } catch (e) {
+        console.warn('Session record failed:', e);
+      }
 
+      // Redirect to the correct dashboard
       window.location.href = redirectTo;
     } catch (err) {
-      statusEl.style.color = 'red';
-      statusEl.textContent = 'Network error: ' + err.message;
-      console.error(err);
+      console.error('Portal login error:', err);
+      alert('Network error: ' + err.message);
     }
   });
-})();
+});
 </script>
 </body>
 </html>
