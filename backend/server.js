@@ -1,6 +1,5 @@
 // server.js
 require('dotenv').config({ path: __dirname + '/.env' });
-app.use(express.static(path.join(__dirname, '..', 'public')));
 
 console.log('▶ running server file:', __filename);
 console.log('HSBC =', process.env.TREASURY_WALLET_ID_HSBC);
@@ -14,7 +13,7 @@ const { authenticateToken } = require('./auth/middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-
+app.use(express.static(path.join(__dirname, '..', 'public')));
 console.log('🔧 server.js is initializing...');
 
 // ───────────────── middleware ─────────────────
