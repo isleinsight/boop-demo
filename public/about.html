@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>About — BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="BOOP helps government assistance recipients spend benefits at participating vendors, with a flat 1% vendor fee and simple, secure payments." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#0f1f36;       /* brand dark blue for header */
+      --text:#1f2937;
+      --muted:#6b7280;
+      --stroke:#e5e7eb;
+      --bg:#f5f8fb;
+      --card:#ffffff;
+      --boop:#2f80ed;      /* action blue */
+      --ok:#10b981;
+      --warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    /* Header */
+    .nav{background:var(--ink);padding:12px 18px}
+    .nav .inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:12px}
+    .nav img{height:28px;display:block}
+    .nav a.home{display:inline-flex;align-items:center;gap:10px;text-decoration:none}
+    /* Sections */
+    .wrap{max-width:1120px;margin:0 auto;padding:28px 18px}
+    .hero{display:grid;gap:14px;padding:28px 0 16px}
+    .hero .eyebrow{color:var(--boop);font-weight:600;letter-spacing:.02em;text-transform:uppercase;font-size:.9rem}
+    h1{font-size:clamp(28px,3.2vw,40px);margin:0;color:#111827}
+    .lead{color:var(--muted);max-width:800px;margin:6px 0 0}
+    /* Cards */
+    .grid{display:grid;gap:18px;grid-template-columns:1fr}
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;box-shadow:0 10px 24px rgba(16,24,40,.06);padding:20px}
+    .card h2{margin:0 0 6px;font-size:22px}
+    .card p{margin:10px 0;color:#374151}
+    ul.clean{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+    ul.clean li{display:flex;gap:10px;align-items:flex-start}
+    .dot{width:8px;height:8px;border-radius:99px;background:var(--boop);margin-top:8px;flex:0 0 8px}
+    /* Pricing badge */
+    .pill{display:inline-block;background:#eef2ff;color:#1e40af;border:1px solid #c7d2fe;padding:6px 10px;border-radius:999px;font-size:.9rem;font-weight:600}
+    /* CTA buttons */
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .btn{display:inline-block;text-decoration:none;background:var(--boop);color:#fff;padding:12px 14px;border-radius:10px;font-weight:600}
+    .btn.secondary{background:#e5e7eb;color:#111827}
+    /* FAQ */
+    details{background:#fff;border:1px solid var(--stroke);border-radius:12px;padding:14px 16px}
+    summary{cursor:pointer;font-weight:600}
+    /* Footer */
+    .foot{color:var(--muted);text-align:center;padding:18px 0 36px}
+    /* Responsive */
+    @media (min-width:760px){
+      .grid.cols-2{grid-template-columns:repeat(2,1fr)}
+      .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+      .hero{grid-template-columns:2fr 1fr;align-items:center}
+    }
+  </style>
+</head>
+<body>
+  <!-- Top bar with white logo -->
+  <header class="nav">
+    <div class="inner">
+      <a class="home" href="/"><img src="/assets/Boop-Logo.png" alt="BOOP"></a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- HERO -->
+    <section class="hero">
+      <div>
+        <div class="eyebrow">About BOOP</div>
+        <h1>A smarter way to use assistance benefits—and a simpler way to accept them.</h1>
+        <p class="lead">
+          BOOP is a payment card and platform for government assistance programs. Cardholders spend
+          benefits at participating vendors. Vendors get paid instantly with a flat <strong>1% fee</strong>.
+          Simple, transparent, and built for everyday life.
+        </p>
+        <div class="actions">
+          <a class="btn" href="mailto:info@boopcard.com?subject=Become%20a%20BOOP%20Vendor">Become a vendor</a>
+          <a class="btn secondary" href="/contact.html">Contact us</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHAT IT IS -->
+    <section class="grid cols-3">
+      <div class="card">
+        <h2>For cardholders</h2>
+        <p>Use your BOOP Card to buy groceries and essentials at participating vendors. No hidden fees for you.</p>
+        <ul class="clean">
+          <li><span class="dot"></span><span>Tap, swipe, or insert—just like any other card.</span></li>
+          <li><span class="dot"></span><span>Only approved categories are allowed, so benefits go where they should.</span></li>
+          <li><span class="dot"></span><span>24/7 online balance and history (coming soon).</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>For vendors</h2>
+        <p class="pill">Flat 1% per transaction</p>
+        <p>
+          BOOP is not Visa or Mastercard. We keep it simple—no 2.5–3.5% interchange surprises, no tiered
+          pricing. Just a transparent 1% fee and next-day deposits<sup>*</sup>.
+        </p>
+        <ul class="clean">
+          <li><span class="dot"></span><span>Fast onboarding and simple web tools.</span></li>
+          <li><span class="dot"></span><span>Chargebacks are rare—transactions follow program rules.</span></li>
+          <li><span class="dot"></span><span>Free listing in our vendor directory (opt-in).</span></li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="mailto:info@boopcard.com?subject=Vendor%20Signup">Join as a vendor</a>
+          <a class="btn secondary" href="/docs/vendor-guide.pdf">Vendor guide (PDF)</a>
+        </div>
+        <p style="color:var(--muted);font-size:.85rem;margin-top:8px">* Deposit timing depends on bank rails and holidays.</p>
+      </div>
+
+      <div class="card">
+        <h2>For government partners</h2>
+        <p>Modernize disbursements with real-time controls and clear reporting.</p>
+        <ul class="clean">
+          <li><span class="dot"></span><span>Limit purchases to approved categories and vendors.</span></li>
+          <li><span class="dot"></span><span>Program-level dashboards and exportable reports.</span></li>
+          <li><span class="dot"></span><span>API & secure data room for auditors.</span></li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="mailto:gov@boopcard.com?subject=Agency%20Inquiry">Talk to our team</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="grid cols-2" style="margin-top:18px">
+      <div class="card">
+        <h2>How it works</h2>
+        <ul class="clean">
+          <li><span class="dot"></span><span><strong>Funds arrive</strong> on your BOOP Card via your program.</span></li>
+          <li><span class="dot"></span><span><strong>Shop at vendors</strong> that accept BOOP (look for the BOOP mark).</span></li>
+          <li><span class="dot"></span><span><strong>Compliance is built-in</strong>—restricted items simply won’t go through.</span></li>
+          <li><span class="dot"></span><span><strong>Vendors get paid</strong> with a flat 1% fee and clear settlement.</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Optional: Health & ICE swipe</h2>
+        <p>
+          You can choose to store a limited “In Case of Emergency” profile on your BOOP Card—like allergies,
+          medications, and an emergency contact. With your consent, a clinic or ambulance can read this data by
+          swiping your card to help in a crisis.
+        </p>
+        <ul class="clean">
+          <li><span class="dot"></span><span><strong>Opt-in only</strong>—you control what’s shared.</span></li>
+          <li><span class="dot"></span><span><strong>Read-only access</strong> for emergency providers.</span></li>
+          <li><span class="dot"></span><span><strong>Encrypted</strong> at rest and in transit.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- TRUST -->
+    <section class="grid cols-2" style="margin-top:18px">
+      <div class="card">
+        <h2>Security & privacy</h2>
+        <ul class="clean">
+          <li><span class="dot"></span><span>Modern encryption; credentials are hashed and salted.</span></li>
+          <li><span class="dot"></span><span>Granular permissions for admins and auditors.</span></li>
+          <li><span class="dot"></span><span>We never sell personal data. Period.</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>What BOOP is (and isn’t)</h2>
+        <p>BOOP is a closed-loop payment network built for public programs. We’re not a bank, Visa, or Mastercard.</p>
+        <p>Eligibility and funding are provided by participating programs and agencies.</p>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section style="margin-top:18px" class="grid cols-2">
+      <div class="card">
+        <h2>Frequently asked</h2>
+        <details>
+          <summary>Where can I use the BOOP Card?</summary>
+          <p>At participating vendors that accept BOOP. We’re adding locations regularly—check the vendor list in your account (coming soon).</p>
+        </details>
+        <details>
+          <summary>What does it cost?</summary>
+          <p>Cardholders don’t pay fees. Vendors pay a flat 1% per transaction.</p>
+        </details>
+        <details>
+          <summary>What happens if I lose my card?</summary>
+          <p>Freeze it in your account (coming soon) or contact support. We’ll help replace it and protect your funds.</p>
+        </details>
+      </div>
+      <div class="card">
+        <h2>Get in touch</h2>
+        <p>Email <a href="mailto:info@boopcard.com">info@boopcard.com</a> or call <a href="tel:+1-000-000-0000">+1 (000) 000-0000</a>.</p>
+        <div class="actions">
+          <a class="btn" href="mailto:info@boopcard.com?subject=Become%20a%20BOOP%20Vendor">Become a vendor</a>
+          <a class="btn secondary" href="/contact.html">General contact</a>
+        </div>
+      </div>
+    </section>
+
+    <p class="foot">© <span id="y"></span> BOOP. All rights reserved.</p>
+  </main>
+
+  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+</body>
+</html>
