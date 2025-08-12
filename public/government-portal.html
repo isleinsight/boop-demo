@@ -155,27 +155,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('portalLoginForm');
   const emailEl = document.getElementById('email');
   const passEl = document.getElementById('password');
+  const statusEl = document.getElementById('portalStatus');
 
-  if (!form) {
-    console.error('Portal: form not found (id="portalLoginForm")');
-    return;
+  function showStatus(msg, kind = 'error') {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.color = kind === 'error' ? '#b91c1c' : '#065f46';
   }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault(); // stop page reload
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
+    // Which side did they choose?
     const sector = (document.querySelector('input[name="sector"]:checked') || {}).value || 'admin';
     const email = emailEl.value.trim();
     const password = passEl.value;
 
-    let allowedTypes, redirectTo;
-    if (sector === 'admin') {
-      allowedTypes = ['super_admin','admin','support'];
-      redirectTo = '/admin/index.html';
-    } else {
-      allowedTypes = ['accountant','treasury','viewer']; // accounts side
-      redirectTo = '/accounts/index.html';
-    }
+    // Access rules per sector
+    const rules = {
+      admin: {
+        allowedTypes: ['super_admin', 'admin', 'support'],
+        redirectTo: '/admin/index.html',
+        denyText: 'This portal is for Admin roles (super_admin, admin, support).'
+      },
+      accounts: {
+        allowedTypes: ['accountant', 'treasury'],
+        redirectTo: '/accounts/index.html',
+        denyText: 'This portal is for Accounting roles (accountant, treasury).'
+      }
+    };
+    const rule = rules[sector] || rules.admin;
+
+    showStatus('Signing in…', 'ok');
 
     try {
       const res = await fetch('/auth/login', {
@@ -186,49 +197,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.message || 'Login failed.');
+        showStatus(data.message || 'Login failed.', 'error');
         return;
       }
 
       const { token, user } = data;
+      // Helpful for debugging once: see what "type" is actually returned.
+      console.log('[portal] logged in user:', user);
 
-      // Sector-specific access control
-      if (!allowedTypes.includes(user.type)) {
-        alert('Access denied for this portal.');
+      // Enforce sector rule
+      if (!rule.allowedTypes.includes((user.type || '').toLowerCase())) {
+        showStatus(`${rule.denyText} You are signed in as “${user.type || 'unknown'}”.`, 'error');
         return;
       }
 
-      // Store session data
+      // Save session
       localStorage.setItem('boop_jwt', token);
       localStorage.setItem('boopUser', JSON.stringify(user));
 
-      // Record session
+      // Record session (best effort)
       try {
         const payload = (() => {
-          const payloadBase64 = token.split('.')[1];
-          return JSON.parse(atob(payloadBase64));
+          const base64 = token.split('.')[1];
+          return JSON.parse(atob(base64));
         })();
         const expiresAt = new Date(payload.exp * 1000).toISOString();
         await fetch('/api/sessions', {
           method: 'POST',
           headers: {
-            'Content-Type':'application/json',
+            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            email: user.email, user_id: user.id, jwt_token: token,
-            expires_at: expiresAt, status:'online'
+            email: user.email,
+            user_id: user.id,
+            jwt_token: token,
+            expires_at: expiresAt,
+            status: 'online'
           })
         });
       } catch (e) {
         console.warn('Session record failed:', e);
       }
 
-      // Redirect to the correct dashboard
-      window.location.href = redirectTo;
+      // Go!
+      window.location.href = rule.redirectTo;
     } catch (err) {
-      console.error('Portal login error:', err);
-      alert('Network error: ' + err.message);
+      showStatus('Network error: ' + err.message, 'error');
     }
   });
 });
