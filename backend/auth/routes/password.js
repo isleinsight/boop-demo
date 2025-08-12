@@ -10,13 +10,16 @@ const { ServerClient } = require('postmark');
 
 const APP_URL = (process.env.APP_URL || 'http://localhost:8080').replace(/\/+$/, '');
 const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || '';
-const FROM_EMAIL = process.env.SENDER_EMAIL || `no-reply@${new URL(APP_URL).hostname}`;
+const FROM_EMAIL =
+  process.env.SENDER_EMAIL ||
+  `no-reply@${new URL(APP_URL).hostname}`;
 const postmark = POSTMARK_TOKEN ? new ServerClient(POSTMARK_TOKEN) : null;
 
 // ── Config ───────────────────────────────────────────────────────────────────
-const TOKEN_TTL_MIN = Number(process.env.PASSWORD_RESET_TTL_MIN || 30);
+const TOKEN_TTL_MIN = Number(process.env.PASSWORD_RESET_TTL_MIN || 60);
 const PASSWORD_MIN_LEN = Number(process.env.PASSWORD_MIN_LEN || 8);
 
+// ── Router ───────────────────────────────────────────────────────────────────
 const router = express.Router();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -33,95 +36,245 @@ function normalizeEmail(e) {
   return String(e || '').trim().toLowerCase();
 }
 
-// Email template (HTML + Text)
-function renderResetEmail(link) {
-  const logoUrl = `${APP_URL}/assets/Boop-Logo.png`; // must be publicly accessible
-  const expiryMins = TOKEN_TTL_MIN;
+// Use a dark header so your white logo is visible
+function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
+  const logoUrl = `${APP_URL}/assets/Boop-Logo.png`;
+  const safeIntro = intro || '';
+  const safeFooter = footerNote || '';
 
-  const HtmlBody = `
+  return `
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="x-apple-disable-message-reformatting">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reset your BOOP password</title>
-  <style>
-    /* Client-safe inline-ish styles (kept simple for broad support) */
-    .bg { background:#f6f8fb; padding:24px 12px; }
-    .card { max-width:560px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 24px rgba(16,24,40,0.08); }
-    .header { background:#0b1220; padding:20px; text-align:center; }
-    .logo { width:132px; height:auto; display:block; margin:0 auto; }
-    .body { padding:28px 24px 8px; color:#1f2937; font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial; }
-    h1 { margin:0 0 8px; font-size:20px; color:#111827; }
-    p { margin:0 0 16px; }
-    .btnwrap { text-align:center; padding:12px 0 24px; }
-    .btn { display:inline-block; background:#2f80ed; color:#ffffff !important; text-decoration:none; padding:12px 20px; border-radius:8px; font-weight:600; }
-    .small { font-size:13px; color:#6b7280; }
-    .linkbox { word-break:break-all; background:#f3f4f6; padding:10px; border-radius:8px; font-size:13px; }
-    .footer { padding:16px 24px 28px; text-align:center; color:#9ca3af; font:12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial; }
-  </style>
-</head>
-<body class="bg">
-  <div class="card">
-    <div class="header">
-      <img class="logo" src="${logoUrl}" alt="BOOP" />
-    </div>
-    <div class="body">
-      <h1>Reset your password</h1>
-      <p>We received a request to reset your BOOP password. Click the button below to choose a new one.</p>
-      <div class="btnwrap">
-        <a class="btn" href="${link}" target="_blank" rel="noopener">Set new password</a>
-      </div>
-      <p class="small">This link expires in ${expiryMins} minutes. If you didn’t request this, you can ignore this email.</p>
-      <p class="small">Having trouble with the button? Paste this link into your browser:</p>
-      <div class="linkbox small">${link}</div>
-    </div>
-    <div class="footer">
-      © ${new Date().getFullYear()} BOOP. All rights reserved.
-    </div>
-  </div>
-</body>
-</html>`.trim();
-
-  const TextBody =
-    `Reset your BOOP password\n\n` +
-    `We received a request to reset your password. Open the link below to set a new one.\n\n` +
-    `${link}\n\n` +
-    `This link expires in ${expiryMins} minutes. If you didn’t request this, you can ignore this email.\n`;
-
-  return { HtmlBody, TextBody };
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light only">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${title}</title>
+  </head>
+  <body style="margin:0; padding:0; background:#f6f8fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Poppins, Arial, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f6f8fb;">
+      <tr>
+        <td align="center" style="padding:24px;">
+          <table width="640" cellpadding="0" cellspacing="0" role="presentation" style="max-width:640px; width:100%; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 8px 28px rgba(16,24,40,.08);">
+            <tr>
+              <td style="background:#1a2b4a; padding:20px 24px;" align="left">
+                <img src="${logoUrl}" width="140" height="auto" alt="BOOP" style="display:block; border:0; outline:none;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 28px 8px 28px; color:#111827;">
+                <h1 style="margin:0 0 8px 0; font-size:22px; line-height:1.3; font-weight:600; color:#111827;">
+                  ${title}
+                </h1>
+                <p style="margin:0; color:#4b5563; font-size:15px; line-height:1.6;">
+                  ${safeIntro}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 28px 4px 28px;">
+                <a href="${ctaUrl}" style="display:inline-block; background:#2f80ed; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:10px; font-weight:600;">
+                  ${ctaText}
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 28px 0 28px;">
+                <p style="margin:0; color:#6b7280; font-size:13px;">
+                  Or paste this link into your browser:<br>
+                  <a href="${ctaUrl}" style="color:#2f80ed; word-break:break-all;">${ctaUrl}</a>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 28px 24px 28px;">
+                <p style="margin:0; color:#6b7280; font-size:12px; line-height:1.5;">
+                  ${safeFooter}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px; background:#f9fafb; color:#6b7280; font-size:12px;">
+                Sent by BOOP • <a href="${APP_URL}" style="color:#6b7280; text-decoration:none;">${new URL(APP_URL).hostname}</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }
 
-async function sendResetEmail(to, link) {
+async function postmarkSend({ to, subject, html, text }) {
   if (!postmark) {
-    console.warn('[email] Postmark token missing; logging link instead:', { to, link });
+    console.warn('[email] Postmark token missing; would have sent:', { to, subject });
     return;
   }
-  const { HtmlBody, TextBody } = renderResetEmail(link);
-  try {
-    await postmark.sendEmail({
-      From: FROM_EMAIL,
-      To: to,
-      Subject: 'Reset your BOOP password',
-      HtmlBody,
-      TextBody,
-      MessageStream: 'outbound',
-    });
-  } catch (e) {
-    console.error('Postmark send failed:', e);
-  }
+  await postmark.sendEmail({
+    From: FROM_EMAIL,
+    To: to,
+    Subject: subject,
+    HtmlBody: html,
+    TextBody: text || '',
+    MessageStream: 'outbound',
+  });
+}
+
+// Pretty wrappers with distinct subjects & copy
+async function sendAccountSetupEmail(to, link) {
+  const subject = 'Finish setting up your BOOP account';
+  const html = buildEmailHTML({
+    title: 'Welcome to BOOP',
+    intro: `Your BOOP account was created. Click the button below to set your password and finish setup.
+            This link expires in ${TOKEN_TTL_MIN} minutes.`,
+    ctaText: 'Set up your password',
+    ctaUrl: link,
+    footerNote: `If you didn’t expect this, you can ignore this email.`,
+  });
+  const text =
+    `Welcome to BOOP.\n\n` +
+    `Set your password here (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
+    `If you didn’t expect this, ignore this email.`;
+  await postmarkSend({ to, subject, html, text });
+}
+
+async function sendAdminResetEmail(to, link) {
+  const subject = 'Admin reset link for your BOOP account';
+  const html = buildEmailHTML({
+    title: 'Reset your BOOP password',
+    intro: `An administrator started a password reset for your BOOP account.
+            Use the button below to choose a new password.
+            This link expires in ${TOKEN_TTL_MIN} minutes.`,
+    ctaText: 'Reset password',
+    ctaUrl: link,
+    footerNote: `Didn’t expect this? Contact support or ignore this email.`,
+  });
+  const text =
+    `An administrator initiated a password reset for your BOOP account.\n\n` +
+    `Reset link (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
+    `If you didn’t expect this, contact support or ignore this email.`;
+  await postmarkSend({ to, subject, html, text });
+}
+
+async function sendForgotEmail(to, link) {
+  const subject = 'Reset your BOOP password';
+  const html = buildEmailHTML({
+    title: 'Reset your BOOP password',
+    intro: `We received a request to reset your password.
+            Click the button below to set a new one.
+            This link expires in ${TOKEN_TTL_MIN} minutes.`,
+    ctaText: 'Reset password',
+    ctaUrl: link,
+    footerNote: `If you didn’t request a reset, you can safely ignore this email.`,
+  });
+  const text =
+    `We received a request to reset your BOOP password.\n\n` +
+    `Reset link (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
+    `If you didn’t request this, ignore this email.`;
+  await postmarkSend({ to, subject, html, text });
 }
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 /**
- * Admin-initiated password reset
+ * Admin-initiated password reset (distinct subject/copy)
  * POST /api/password/admin/initiate-reset
  * Body: { user_id } OR { email }
  * Auth: admin (super_admin, admin, support, accountant, viewer, treasury)
  */
 router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
+  try {
+    const role = (req.user?.role || '').toLowerCase();
+    const type = (req.user?.type || '').toLowerCase();
+    const isAdmin =
+      role === 'admin' &&
+      ['super_admin', 'admin', 'support', 'accountant', 'viewer', 'treasury'].includes(type);
+
+    if (!isAdmin) return res.status(403).json({ error: 'Forbidden' });
+
+    const userIdFromBody = req.body?.user_id || req.body?.userId || null;
+    const emailFromBody = normalizeEmail(req.body?.email);
+
+    // Find target user
+    let userRow = null;
+    if (userIdFromBody) {
+      const { rows } = await db.query('SELECT id, email FROM users WHERE id=$1 LIMIT 1', [userIdFromBody]);
+      userRow = rows[0];
+    } else if (emailFromBody) {
+      const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [emailFromBody]);
+      userRow = rows[0];
+    } else {
+      return res.status(400).json({ error: 'Provide user_id or email' });
+    }
+    if (!userRow) return res.status(404).json({ error: 'User not found' });
+
+    // Create token
+    const raw = generateToken();
+    const tokenHash = hashToken(raw);
+    const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
+    await db.query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+       VALUES ($1,$2,$3)`,
+      [userRow.id, tokenHash, expiresAt]
+    );
+
+    // Email (admin flavor)
+    const link = `${APP_URL}/reset-password.html?token=${raw}`;
+    await sendAdminResetEmail(userRow.email, link);
+
+    return res.json({ ok: true, message: 'Admin reset email sent' });
+  } catch (err) {
+    console.error('admin/initiate-reset error:', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * Public forgot-password (distinct subject/copy)
+ * POST /api/password/forgot-password
+ * Body: { email }
+ * Always 200 to prevent user enumeration.
+ */
+router.post('/forgot-password', async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  // Always respond 200
+  res.json({ ok: true });
+
+  if (!email) return;
+
+  try {
+    const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [email]);
+    if (!rows.length) return;
+
+    const userId = rows[0].id;
+
+    // Create token
+    const raw = generateToken();
+    const tokenHash = hashToken(raw);
+    const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
+    await db.query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+       VALUES ($1,$2,$3)`,
+      [userId, tokenHash, expiresAt]
+    );
+
+    // Email (forgot flavor)
+    const link = `${APP_URL}/reset-password.html?token=${raw}`;
+    await sendForgotEmail(email, link);
+  } catch (err) {
+    console.error('forgot-password error:', err);
+    // do nothing else—we already returned 200
+  }
+});
+
+/**
+ * (Optional) Admin-initiated ACCOUNT SETUP email (creation flavor)
+ * Useful if you want to trigger the “finish setup” email from here too.
+ * POST /api/password/admin/initiate-setup
+ * Body: { user_id } OR { email }
+ */
+router.post('/admin/initiate-setup', authenticateToken, async (req, res) => {
   try {
     const role = (req.user?.role || '').toLowerCase();
     const type = (req.user?.type || '').toLowerCase();
@@ -144,62 +297,26 @@ router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
     } else {
       return res.status(400).json({ error: 'Provide user_id or email' });
     }
-
     if (!userRow) return res.status(404).json({ error: 'User not found' });
 
+    // Create token
     const raw = generateToken();
     const tokenHash = hashToken(raw);
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
-
     await db.query(
       `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
        VALUES ($1,$2,$3)`,
       [userRow.id, tokenHash, expiresAt]
     );
 
+    // Email (account setup flavor)
     const link = `${APP_URL}/reset-password.html?token=${raw}`;
-    await sendResetEmail(userRow.email, link);
+    await sendAccountSetupEmail(userRow.email, link);
 
-    return res.json({ ok: true, message: 'Password reset email sent' });
+    return res.json({ ok: true, message: 'Account setup email sent' });
   } catch (err) {
-    console.error('admin/initiate-reset error:', err);
+    console.error('admin/initiate-setup error:', err);
     return res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-/**
- * Public forgot-password
- * POST /api/password/forgot-password
- * Body: { email }
- * Always 200 to prevent user enumeration.
- */
-router.post('/forgot-password', async (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-  // Always respond 200
-  res.json({ ok: true });
-
-  if (!email) return;
-
-  try {
-    const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [email]);
-    if (!rows.length) return;
-
-    const userId = rows[0].id;
-    const raw = generateToken();
-    const tokenHash = hashToken(raw);
-    const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
-
-    await db.query(
-      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-       VALUES ($1,$2,$3)`,
-      [userId, tokenHash, expiresAt]
-    );
-
-    const link = `${APP_URL}/reset-password.html?token=${raw}`;
-    await sendResetEmail(email, link);
-  } catch (err) {
-    console.error('forgot-password error:', err);
-    // swallow — already returned 200
   }
 });
 
@@ -244,14 +361,15 @@ router.post('/reset', async (req, res) => {
     await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [newHash, userId]);
     await db.query('UPDATE password_reset_tokens SET used_at=NOW() WHERE id=$1', [prtId]);
 
-    // Invalidate any other outstanding tokens for this user
+    // Optional: invalidate all other unused tokens for this user
     await db.query(
-      `UPDATE password_reset_tokens SET used_at = NOW()
+      `UPDATE password_reset_tokens
+         SET used_at = NOW()
        WHERE user_id = $1 AND used_at IS NULL AND id <> $2`,
       [userId, prtId]
     );
 
-    // Optional: force sign-out everywhere if you store sessions
+    // Optional: force sign-out everywhere (if you keep sessions)
     await db.query('DELETE FROM sessions WHERE user_id=$1', [userId]);
 
     await db.query('COMMIT');
