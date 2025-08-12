@@ -73,7 +73,8 @@ router.post("/", authenticateToken, async (req, res) => {
 try {
   await client.query("BEGIN");
 
-  const hashedPassword = await bcrypt.hash(password, 12);
+const tempPw = password || generateTempPassword(24);
+const hashedPassword = await bcrypt.hash(tempPw, 12);
   const result = await client.query(
     `INSERT INTO users (
        email, password_hash, first_name, middle_name, last_name, role, type, on_assistance
