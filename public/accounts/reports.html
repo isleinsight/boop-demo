@@ -137,6 +137,22 @@
   </style>
 </head>
 <body>
+  <div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; 
+  display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
+  <div style="max-width:540px;">
+    <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
+    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+  </div>
+</div>
+<script>
+  (function(){
+    const minWidth = 900; // tweak if you want to allow tablets
+    const guard = document.getElementById('screenGuard');
+    function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
+    window.addEventListener('resize', update, { passive:true });
+    update();
+  })();
+</script>
   <!-- Top Nav -->
   <nav>
     <div class="nav-container">
