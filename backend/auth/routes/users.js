@@ -9,6 +9,10 @@ const {
 
 const crypto = require("crypto");
 
+function generateTempPassword(len = 24) {
+  return crypto.randomBytes(len).toString('base64url'); // strong, unguessable password
+}
+
 // Postmark setup
 const { ServerClient } = require("postmark");
 const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || "";
