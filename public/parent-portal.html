@@ -2,314 +2,144 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>BOOP — Parent Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <meta name="description" content="Parents can log in to add funds, see spending, and keep their child on track with BOOP." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parent Portal – BOOP</title>
+  <link href="../assets/styles.css" rel="stylesheet" />
   <style>
-    :root{
-      --ink:#0b1220; --ink-2:#1a2b4a; --muted:#4b5563;
-      --blue:#2f80ed; --blue-dark:#1c6fd8; --green:#10b981;
-      --card:#ffffff; --border:#e6ebf1; --ghost:#f8fafc;
-      --shadow:0 8px 24px rgba(2,6,23,.1);
-      --glass:rgba(255,255,255,.95);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      color:var(--ink-2);
-      background: var(--ghost);
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      background-color: #f4f7fa;
+      color: #333;
     }
 
-    
-    .brand{display:flex; align-items:center; gap:12px; text-decoration:none}
-    .brand img{height:36px; width:auto; display:block;} /* keep aspect ratio */
+    /* Navigation */
+    nav {
+      background: #0b1220; /* Solid dark blue */
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    nav img {
+      height: 40px;
+    }
 
-    /* HERO */
-    header.hero{
-      position:relative;
-      color:var(--ink-2);
-      padding: 40px 0;
-      background:
-        radial-gradient(1200px 800px at 50% -20%, rgba(47,128,237,.25), transparent 70%),
-        linear-gradient(180deg, #eef4ff 0%, #f7fbff 100%);
-      border-bottom:1px solid var(--border);
+    /* Main container */
+    .portal-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      min-height: calc(100vh - 70px);
     }
-    .hero-inner{
-      max-width:1200px; margin:0 auto;
-      display:grid; grid-template-columns:1.05fr .95fr; gap:32px;
-      align-items:start; padding:0 24px;
-    }
-    @media (max-width:920px){
-      .hero-inner{ grid-template-columns:1fr; }
-    }
-    .tag{
-      display:inline-flex; gap:8px; align-items:center;
-      padding:6px 12px; border-radius:999px;
-      background:rgba(47,128,237,.1); border:1px solid rgba(47,128,237,.4);
-      color:var(--blue); font-weight:600; font-size:.85rem;
-    }
-    .tag::before{content:"★"}
-    .card{
-      background:var(--glass); border:1px solid var(--border);
-      border-radius:16px; padding:24px; box-shadow:var(--shadow);
-      backdrop-filter:blur(4px); max-width:560px;
-    }
-    .card h2{margin:8px 0 6px; font-size:clamp(1.5rem,3vw,1.75rem); color:var(--ink);}
-    .card p{margin:0 0 16px; color:var(--muted)}
-    form{display:grid; gap:16px}
-    .input-group{position:relative}
-    input[type="email"], input[type="password"]{
-      width:100%; padding:14px 16px;
-      border:1px solid var(--border); border-radius:12px;
-      font-size:1rem; outline:none; background:var(--card);
-      transition:border-color .2s, box-shadow .2s;
-    }
-    input:focus{border-color:var(--blue); box-shadow:0 0 0 3px rgba(47,128,237,.2)}
-    .toggle-password{
-      position:absolute; right:16px; top:50%; transform:translateY(-50%);
-      background:none; border:none; cursor:pointer; color:var(--muted); font-size:.9rem;
-    }
-    .btn-primary{
-      width:100%; padding:14px; border:none; border-radius:12px;
-      background:var(--blue); color:#fff; font-weight:700; cursor:pointer;
-      box-shadow:var(--shadow); transition:transform .15s, background .15s;
-    }
-    .btn-primary:hover{transform:translateY(-1px); background:var(--blue-dark)}
-    .btn-primary:disabled{opacity:.6; cursor:not-allowed}
-    .link-row{display:flex; justify-content:space-between; gap:12px; margin-top:4px}
-    .link-row a{color:var(--blue); text-decoration:none; font-weight:600; font-size:.95rem; padding:8px}
-    .status{min-height:20px; font-size:.95rem; margin-top:8px}
-    .status.error{color:#ef4444}
-    .status.ok{color:var(--green)}
 
-    /* INFO TILES */
-    .info{display:grid; gap:16px; align-content:start}
-    .tile{
-      background:var(--glass); border:1px solid var(--border);
-      border-radius:16px; padding:20px; box-shadow:var(--shadow); backdrop-filter:blur(4px);
+    /* Left login section */
+    .login-section {
+      flex: 1 1 400px;
+      background: white;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .badge{
-      display:inline-block; padding:6px 12px; border-radius:999px;
-      background:rgba(47,128,237,.1); border:1px solid rgba(47,128,237,.4);
-      color:var(--blue); font-weight:700; font-size:.8rem;
+    .login-section h1 {
+      margin-bottom: 20px;
+      color: #0b1220;
     }
-    .info h3{margin:10px 0 8px; color:var(--ink); font-size:clamp(1.1rem,2vw,1.25rem)}
-    .info p{margin:0; color:var(--muted)}
-    .list{margin:10px 0 0; padding-left:20px; color:var(--ink-2)}
-    .list li{margin:8px 0}
+    .login-section input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .login-section button {
+      width: 100%;
+      padding: 12px;
+      background: #0b1220;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .login-section button:hover {
+      background: #142038;
+    }
+    #loginStatus {
+      margin-top: 10px;
+      color: red;
+    }
 
-    /* SECONDARY SECTION */
-    .section{
-      max-width:1200px; margin:28px auto 48px; padding:0 24px;
-      display:grid; grid-template-columns:repeat(3,1fr); gap:20px;
+    /* Right info section */
+    .info-section {
+      flex: 1 1 500px;
+      padding: 50px;
+      background: linear-gradient(135deg, #f0f4ff, #ffffff);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
-    @media (max-width:920px){ .section{ grid-template-columns:1fr } }
-    .feature{
-      background:#fff; border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:var(--shadow);
+    .info-section h2 {
+      color: #0b1220;
+      margin-bottom: 15px;
     }
-    .feature h4{margin:0 0 8px; color:var(--ink)}
-    .feature p{margin:0; color:var(--muted)}
+    .info-section ul {
+      list-style: disc;
+      padding-left: 20px;
+    }
+    .info-section li {
+      margin-bottom: 10px;
+    }
 
-    /* FOOTER */
-    footer{
-      border-top:1px solid var(--border); color:var(--muted);
-      text-align:center; padding:24px; margin-top:32px; font-size:.95rem;
-      background:#fff;
+    @media (max-width: 900px) {
+      .portal-container {
+        flex-direction: column;
+      }
+      .info-section {
+        order: -1;
+      }
     }
-    .footer-links a{color:var(--blue); text-decoration:none; margin:0 12px; font-weight:600}
   </style>
 </head>
 <body>
-  <!-- NAV (logo only) -->
-  <nav>
-    <div class="nav-container">
-      <a class="brand" href="/">
-        <img src="/assets/Boop-Logo.png" alt="BOOP logo">
-      </a>
-      <!-- empty right side on purpose -->
-      <div style="width:36px;"></div>
-    </div>
-  </nav>
 
-  <!-- HERO -->
-  <header class="hero" role="banner">
-    <div class="hero-inner">
-      <!-- Login card (left) -->
-      <div class="card" aria-label="Parent login">
-        <span class="tag">Parent Portal</span>
-        <h2>Welcome back, parents</h2>
-        <p>Sign in to add funds, track spending, and keep your child on budget.</p>
-        <form id="loginForm" novalidate>
-          <div class="input-group">
-            <input type="email" id="email" placeholder="Email" autocomplete="username" required aria-describedby="email-error" />
-            <div id="email-error" class="status"></div>
-          </div>
-          <div class="input-group">
-            <input type="password" id="password" placeholder="Password" autocomplete="current-password" required aria-describedby="password-error" />
-            <button type="button" class="toggle-password" aria-label="Toggle password visibility">👁️</button>
-            <div id="password-error" class="status"></div>
-          </div>
-          <button class="btn-primary" type="submit" id="submitBtn">Sign in</button>
-          <div class="link-row">
-            <a href="/password.html?mode=forgot">Forgot password?</a>
-            <a href="/signup.html" title="Request a Parent account">Need an account?</a>
-          </div>
-          <div id="loginStatus" class="status" aria-live="polite"></div>
-        </form>
-      </div>
+<!-- Navbar -->
+<nav>
+  <a href="../index.html">
+    <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+  </a>
+</nav>
 
-      <!-- Info tiles (right) -->
-      <div class="info" aria-label="Highlights for parents">
-        <div class="tile">
-          <span class="badge">Why BOOP</span>
-          <h3>See it all in one place</h3>
-          <p>Instant balance, recent purchases, and clear categories at a glance.</p>
-          <ul class="list">
-            <li>Top-up in seconds with card or bank</li>
-            <li>Real-time transaction feed</li>
-            <li>One-tap monthly statements</li>
-          </ul>
-        </div>
-        <div class="tile">
-          <h3>Set healthy boundaries</h3>
-          <p>Keep them on track with monthly budgets and category safeguards.</p>
-          <ul class="list">
-            <li>Create a spending limit per month</li>
-            <li>Restrict at-risk categories</li>
-            <li>Get notified if something looks off</li>
-          </ul>
-        </div>
-        <div class="tile">
-          <h3>Built for real life</h3>
-          <p>No hidden fees and simple support if you need help.</p>
-          <ul class="list">
-            <li>Flat 1% processing for vendors</li>
-            <li>Local-first support</li>
-            <li>Secure sign-in and auditing</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </header>
+<!-- Main Content -->
+<div class="portal-container">
+  
+  <!-- Login Section -->
+  <div class="login-section">
+    <h1>Parent Login</h1>
+    <form id="parentLoginForm">
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+    <p id="loginStatus"></p>
+  </div>
 
-  <!-- Secondary highlight row -->
-  <section class="section" aria-label="More benefits">
-    <div class="feature">
-      <h4>Transparent by design</h4>
-      <p>Every dollar is traceable. Easily export clean reports anytime.</p>
-    </div>
-    <div class="feature">
-      <h4>Card lost or stolen?</h4>
-      <p>Freeze instantly and issue a new one without the runaround.</p>
-    </div>
-    <div class="feature">
-      <h4>Works where it matters</h4>
-      <p>Participating vendors across Bermuda—with more joining every month.</p>
-    </div>
-  </section>
+  <!-- Info Section -->
+  <div class="info-section">
+    <h2>Welcome to the Parent Portal</h2>
+    <p>Track and manage your child's BOOP Card with ease. Once logged in, you can:</p>
+    <ul>
+      <li>View your child's recent spending activity</li>
+      <li>Add funds instantly to their BOOP Card</li>
+      <li>Set category restrictions for purchases</li>
+      <li>Receive instant alerts for transactions (coming soon)</li>
+    </ul>
+  </div>
 
-  <footer>
-    <div class="footer-links">
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-      <a href="/contact.html">Contact Us</a>
-    </div>
-    <p>© <span id="year"></span> BOOP. All rights reserved.</p>
-  </footer>
+</div>
 
-  <script>
-    // Year
-    document.getElementById('year').textContent = new Date().getFullYear();
-
-    // Toggle password
-    const passwordInput = document.getElementById('password');
-    document.querySelector('.toggle-password')?.addEventListener('click', () => {
-      const type = passwordInput.type === 'password' ? 'text' : 'password';
-      passwordInput.type = type;
-      event.currentTarget.textContent = type === 'password' ? '👁️' : '🙈';
-    });
-
-    // Login handler (same endpoint/logic you already use)
-    const loginForm = document.getElementById('loginForm');
-    const emailInput = document.getElementById('email');
-    const emailError = document.getElementById('email-error');
-    const passwordError = document.getElementById('password-error');
-    const submitBtn = document.getElementById('submitBtn');
-    const loginStatus = document.getElementById('loginStatus');
-
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      emailError.textContent = '';
-      passwordError.textContent = '';
-      loginStatus.textContent = '';
-      emailError.classList.remove('error');
-      passwordError.classList.remove('error');
-      loginStatus.classList.remove('error','ok');
-
-      let valid = true;
-      if (!emailInput.value.trim()){
-        emailError.textContent = 'Email is required';
-        emailError.classList.add('error'); valid = false;
-      } else if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(emailInput.value.trim())) {
-        emailError.textContent = 'Invalid email format';
-        emailError.classList.add('error'); valid = false;
-      }
-      if (!passwordInput.value){
-        passwordError.textContent = 'Password is required';
-        passwordError.classList.add('error'); valid = false;
-      }
-      if (!valid) return;
-
-      submitBtn.disabled = true; submitBtn.textContent = 'Loading…';
-      try{
-        const res = await fetch('/auth/login', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ email: emailInput.value.trim(), password: passwordInput.value })
-        });
-        const data = await res.json();
-        if (!res.ok){
-          loginStatus.classList.add('error');
-          loginStatus.textContent = data.message || 'Login failed.';
-          return;
-        }
-
-        const { token, user } = data;
-        if (String(user.role || '').toLowerCase() !== 'parent') {
-          loginStatus.classList.add('error');
-          loginStatus.textContent = 'This portal is for Parent accounts.';
-          return;
-        }
-
-        localStorage.setItem('boop_jwt', token);
-        localStorage.setItem('boopUser', JSON.stringify(user));
-
-        // (Optional) record a session; ignore failures
-        try{
-          const payload = (() => {
-            try { const p = JSON.parse(atob(token.split('.')[1])); return { exp: p.exp ? new Date(p.exp*1000).toISOString() : null }; }
-            catch { return { exp:null }; }
-          })();
-          await fetch('/api/sessions', {
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-            body: JSON.stringify({ email:user.email, user_id:user.id, jwt_token:token, expires_at:payload.exp, status:'online' })
-          });
-        }catch(_){}
-
-        loginStatus.classList.add('ok');
-        loginStatus.textContent = 'Success! Redirecting…';
-        window.location.href = '/parent/index.html';
-      } catch(err){
-        loginStatus.classList.add('error');
-        loginStatus.textContent = 'Network error: ' + err.message;
-      } finally {
-        submitBtn.disabled = false; submitBtn.textContent = 'Sign in';
-      }
-    });
-  </script>
+<script type="module" src="./parent-login.js"></script>
 </body>
 </html>
