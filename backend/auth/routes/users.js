@@ -88,11 +88,11 @@ const hashedPassword = await bcrypt.hash(tempPw, 12);
   // 💳 Wallet
   if (rolesWithWallet.includes(role)) {
     const walletRes = await client.query(
-      `INSERT INTO wallets (user_id, id, status)
-       VALUES ($1, gen_random_uuid(), 'active')
-       RETURNING id`,
-      [user.id]
-    );
+  `INSERT INTO wallets (user_id, id)
+   VALUES ($1, gen_random_uuid())
+   RETURNING id`,
+  [user.id]
+);
     const walletId = walletRes.rows[0].id;
     await client.query(
       `UPDATE users SET wallet_id = $1 WHERE id = $2`,
@@ -336,7 +336,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
     };
 
     if (req.body.status === "suspended" || req.body.status === "active") {
-      await pool.query(`UPDATE wallets SET status = $1 WHERE user_id = $2`, [req.body.status, id]);
+      
 
       const actionLabel = req.body.status === "suspended" ? "suspend" : "unsuspend";
 
@@ -366,7 +366,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   }
 
   try {
-    await pool.query(`UPDATE wallets SET status = 'archived' WHERE user_id = $1`, [id]);
+
     await pool.query(
       `UPDATE users SET deleted_at = NOW(), status = 'suspended' WHERE id = $1`,
       [id]
@@ -401,10 +401,6 @@ router.patch("/:id/restore", authenticateToken, async (req, res) => {
       [id]
     );
 
-    await pool.query(
-      `UPDATE wallets SET status = 'active' WHERE user_id = $1`,
-      [id]
-    );
 
     await logAdminAction({
       performed_by: req.user.id,
