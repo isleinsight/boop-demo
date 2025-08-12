@@ -9,113 +9,60 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{
-      --ink:#0b1220;          /* dark header/nav */
-      --boop:#2f80ed;         /* primary blue */
-      --boop-dark:#1c6fd8;
-      --muted:#6b7280;
-      --text:#1f2937;
-      --stroke:#e5e7eb;
-      --bg:#f5f8fb;
-      --card:#ffffff;
-      --ok:#10b981;
-      --warn:#f59e0b;
-      --danger:#ef4444;
+      --ink:#0b1220; --boop:#2f80ed; --boop-dark:#1c6fd8; --muted:#6b7280; --text:#1f2937;
+      --stroke:#e5e7eb; --bg:#f5f8fb; --card:#ffffff; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:var(--bg); color:var(--text)
-    }
-
+    *{box-sizing:border-box} body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
     /* NAV */
     .nav{background:#0b1220;}
     .nav__inner{max-width:1120px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
     .nav__brand img{height:28px;display:block}
     .nav__actions{display:flex;gap:10px;align-items:center}
-    .btn-primary{
-      background:var(--boop); color:#fff; border:0; border-radius:10px;
-      padding:10px 14px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; justify-content:center;
-    }
+    .btn-primary{background:var(--boop);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
     .btn-primary:hover{background:var(--boop-dark)}
-    .btn-light{
-      background:#fff; color:var(--boop); border:1px solid var(--stroke); border-radius:10px;
-      padding:10px 14px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; justify-content:center;
-    }
-
+    .btn-light{background:#fff;color:var(--boop);border:1px solid var(--stroke);border-radius:10px;padding:10px 14px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
     /* LAYOUT */
     .wrap{max-width:1120px;margin:0 auto;padding:24px 18px}
     .grid{display:grid;grid-template-columns:1.6fr .9fr;gap:18px;align-items:start}
     @media (max-width:900px){ .grid{grid-template-columns:1fr} }
-
     /* CARDS */
-    .card{
-      background:var(--card);
-      border:1px solid var(--stroke);
-      border-radius:14px;
-      box-shadow:0 10px 24px rgba(16,24,40,.06);
-    }
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;box-shadow:0 10px 24px rgba(16,24,40,.06)}
     .card__head{padding:14px 16px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between;gap:10px}
     .card__body{padding:16px}
     .pill{font-size:.8rem;background:#eef2ff;color:#374151;border-radius:999px;padding:4px 10px;border:1px solid #dbeafe}
-
-    /* LEFT: Student + Activity */
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .select{
-      padding:10px 12px;border:1px solid var(--stroke);border-radius:10px;background:#fff;font-size:.95rem;min-width:220px
-    }
-
-    .balance{
-      display:flex; align-items:center; gap:16px; flex-wrap:wrap
-    }
+    .select{padding:10px 12px;border:1px solid var(--stroke);border-radius:10px;background:#fff;font-size:.95rem;min-width:220px}
+    .balance{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
     .balance__amount{font-size:2rem;font-weight:700;color:var(--ink)}
     .balance__status{color:var(--muted);font-size:.95rem}
-
     .actions{display:flex;gap:8px;flex-wrap:wrap}
-
     /* table */
     table{width:100%;border-collapse:collapse}
     th, td{padding:12px 10px;border-bottom:1px solid var(--stroke);text-align:left}
     th{font-weight:600;color:#374151}
     td.small{color:var(--muted);font-size:.92rem}
-    .tag{
-      display:inline-block; padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:600;
-      background:#eef2ff; color:#1f2937; border:1px solid #dbeafe
-    }
+    .tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.8rem;font-weight:600;background:#eef2ff;color:#1f2937;border:1px solid #dbeafe}
     .empty{color:var(--muted);text-align:center;padding:30px 8px}
-
     .pager{display:flex;justify-content:flex-end;gap:8px;padding-top:10px}
-    .pager button{
-      border:1px solid var(--stroke); background:#fff; color:#111827; border-radius:8px; padding:8px 10px; cursor:pointer
-    }
+    .pager button{border:1px solid var(--stroke);background:#fff;color:#111827;border-radius:8px;padding:8px 10px;cursor:pointer}
     .pager button:disabled{opacity:.5;cursor:not-allowed}
-
-    /* RIGHT: Login/Account quick card replaced by Summary card */
-    .summary h3{margin:0 0 6px}
-    .summary p{margin:0;color:var(--muted)}
-
-    /* MODAL */
-    .modal{
-      position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:50;
-      padding:16px;
-    }
-    .modal__card{
-      width:100%; max-width:440px; background:#fff; border-radius:14px; border:1px solid var(--stroke); box-shadow:0 20px 50px rgba(0,0,0,.15);
-      overflow:hidden;
-    }
+    /* RIGHT: Overview + Controls */
+    .summary h3{margin:0 0 6px} .summary p{margin:0;color:var(--muted)}
+    .controls .row{align-items:center}
+    .controls label{display:block;font-weight:600;margin-bottom:6px}
+    .input, select.input{width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:10px;outline:none;font-size:.95rem}
+    .input:focus{border-color:var(--boop)}
+    .switch{display:flex;align-items:center;gap:10px;margin:6px 0}
+    .switch input{transform:scale(1.1)}
+    .msg{font-size:.92rem;margin-top:6px;display:none}
+    .msg.error{color:var(--danger)} .msg.ok{color:var(--ok)}
+    /* MODALS */
+    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.45);z-index:50;padding:16px}
+    .modal__card{width:100%;max-width:520px;background:#fff;border-radius:14px;border:1px solid var(--stroke);box-shadow:0 20px 50px rgba(0,0,0,.15);overflow:hidden}
     .modal__head{padding:14px 16px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between}
-    .modal__body{padding:16px; display:grid; gap:12px}
+    .modal__body{padding:16px;display:grid;gap:12px}
     .modal__foot{padding:14px 16px;border-top:1px solid var(--stroke);display:flex;gap:10px;justify-content:flex-end}
     .close{background:#f3f4f6;border:1px solid var(--stroke);color:#111827;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
-    .input, select.input{
-      width:100%; padding:12px 14px; border:1px solid var(--stroke); border-radius:10px; outline:none; font-size:.95rem;
-    }
-    .input:focus{border-color:var(--boop)}
-    .msg{font-size:.92rem;margin-top:6px;display:none}
-    .msg.error{color:var(--danger)}
-    .msg.ok{color:var(--ok)}
-
-    /* FOOTER */
     footer{padding:22px;color:#6b7280;text-align:center;margin-top:20px}
     footer a{color:var(--boop);text-decoration:none;font-weight:600}
   </style>
@@ -127,14 +74,14 @@
       <a class="nav__brand" href="/"><img src="/assets/Boop-Logo.png" alt="BOOP" /></a>
       <div class="nav__actions">
         <a class="btn-light" href="/parent/help.html">Help</a>
-        <a class="btn-primary" href="/signup-placeholder.html">Add My Child</a>
+        <button id="requestChildBtn" class="btn-primary" type="button">Request another child</button>
       </div>
     </div>
   </header>
 
   <main class="wrap">
     <section class="grid">
-      <!-- LEFT: Student selection, balance, activity -->
+      <!-- LEFT: Student + Activity -->
       <div>
         <!-- Student selector & balance -->
         <div class="card" id="studentCard">
@@ -190,17 +137,47 @@
         </div>
       </div>
 
-      <!-- RIGHT: Summary / tips -->
+      <!-- RIGHT: Overview + Controls -->
       <aside>
+        <!-- Overview shows details for the selected student -->
         <div class="card summary">
           <div class="card__head"><strong>Overview</strong></div>
           <div class="card__body">
             <h3 id="studentName">—</h3>
             <p id="studentInfo" class="small">Loading student details…</p>
-            <hr style="border:none;border-top:1px solid var(--stroke);margin:12px 0">
-            <p class="small" style="color:var(--muted)">
-              Tip: you can set spending limits and category safeguards from your child’s settings (coming soon).
-            </p>
+            <p id="cardStatus" class="small" style="margin-top:6px;color:var(--muted)"></p>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card controls" style="margin-top:16px">
+          <div class="card__head"><strong>Controls</strong></div>
+          <div class="card__body">
+            <div>
+              <label for="limitInput">Monthly spending limit (BMD)</label>
+              <input id="limitInput" class="input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 150.00" />
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button id="saveLimitBtn" class="btn-primary" type="button">Save limit</button>
+                <button id="clearLimitBtn" class="btn-light" type="button">Clear</button>
+              </div>
+              <div id="limitMsg" class="msg" aria-live="polite"></div>
+            </div>
+
+            <hr style="border:none;border-top:1px solid var(--stroke);margin:16px 0">
+
+            <div>
+              <label>Category safeguards</label>
+              <div class="switch"><input id="cat_food" type="checkbox"> <span>Allow: Groceries & Essentials</span></div>
+              <div class="switch"><input id="cat_fastfood" type="checkbox"> <span>Allow: Fast food</span></div>
+              <div class="switch"><input id="cat_electronics" type="checkbox"> <span>Allow: Electronics</span></div>
+              <div class="switch"><input id="cat_entertainment" type="checkbox"> <span>Allow: Entertainment</span></div>
+              <div class="switch"><input id="cat_other" type="checkbox"> <span>Allow: Other</span></div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button id="saveCatsBtn" class="btn-primary" type="button">Save categories</button>
+                <button id="resetCatsBtn" class="btn-light" type="button">Reset</button>
+              </div>
+              <div id="catsMsg" class="msg" aria-live="polite"></div>
+            </div>
           </div>
         </div>
       </aside>
@@ -229,6 +206,34 @@
     </div>
   </div>
 
+  <!-- Request Another Child Modal -->
+  <div id="requestModal" class="modal" aria-hidden="true">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="reqTitle">
+      <div class="modal__head">
+        <strong id="reqTitle">Request another child</strong>
+        <button class="close" id="closeRequest">Close</button>
+      </div>
+      <div class="modal__body">
+        <label>Child’s full name
+          <input id="reqName" class="input" type="text" placeholder="First Last" />
+        </label>
+        <label>Date of birth
+          <input id="reqDob" class="input" type="date" />
+        </label>
+        <label>School (optional)
+          <input id="reqSchool" class="input" type="text" placeholder="School name" />
+        </label>
+        <label>Notes (optional)
+          <input id="reqNotes" class="input" type="text" placeholder="Anything else we should know" />
+        </label>
+        <div id="reqMsg" class="msg" aria-live="polite"></div>
+      </div>
+      <div class="modal__foot">
+        <button id="submitRequest" class="btn-primary">Submit request</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     © <span id="year"></span> BOOP. All rights reserved.
     &nbsp;•&nbsp; <a href="/terms.html">Terms</a> &nbsp;•&nbsp; <a href="/privacy.html">Privacy</a>
@@ -240,12 +245,10 @@
 
     // --- Auth guard & data loading ---
     const token = localStorage.getItem('boop_jwt');
-    if (!token) {
-      location.href = '/accounts/login.html'; // or your general login
-    }
+    if (!token) { location.href = '/accounts/login.html'; }
 
     let parentId = null;
-    let students = []; // [{id, first_name, last_name, email, wallet_id?, student_profile?}, ...]
+    let students = [];
     let currentStudentId = null;
     let currentWalletId = null;
 
@@ -253,6 +256,7 @@
     const schoolPill = document.getElementById('schoolPill');
     const studentNameEl = document.getElementById('studentName');
     const studentInfoEl = document.getElementById('studentInfo');
+    const cardStatusEl = document.getElementById('cardStatus');
 
     const balanceAmount = document.getElementById('balanceAmount');
     const balanceStatus = document.getElementById('balanceStatus');
@@ -262,6 +266,8 @@
     const activityTable = document.getElementById('activityTable');
     const activityTbody = document.getElementById('activityTbody');
     const activityCountPill = document.getElementById('activityCountPill');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
 
     const addFundsBtn = document.getElementById('addFundsBtn');
     const fundsModal = document.getElementById('fundsModal');
@@ -271,254 +277,298 @@
     const noteInput = document.getElementById('noteInput');
     const fundsMsg = document.getElementById('fundsMsg');
 
+    const requestChildBtn = document.getElementById('requestChildBtn');
+    const requestModal = document.getElementById('requestModal');
+    const closeRequest = document.getElementById('closeRequest');
+    const submitRequest = document.getElementById('submitRequest');
+    const reqName = document.getElementById('reqName');
+    const reqDob = document.getElementById('reqDob');
+    const reqSchool = document.getElementById('reqSchool');
+    const reqNotes = document.getElementById('reqNotes');
+    const reqMsg = document.getElementById('reqMsg');
+
+    const limitInput = document.getElementById('limitInput');
+    const saveLimitBtn = document.getElementById('saveLimitBtn');
+    const clearLimitBtn = document.getElementById('clearLimitBtn');
+    const limitMsg = document.getElementById('limitMsg');
+
+    const catIds = ['cat_food','cat_fastfood','cat_electronics','cat_entertainment','cat_other'];
+    const saveCatsBtn = document.getElementById('saveCatsBtn');
+    const resetCatsBtn = document.getElementById('resetCatsBtn');
+    const catsMsg = document.getElementById('catsMsg');
+
     // Pagination state
-    let txns = [];
-    let page = 0;
-    const PAGE_SIZE = 8;
+    let txns = []; let page = 0; const PAGE_SIZE = 8;
 
-    function fmtMoney(n) {
-      if (typeof n !== 'number') return '—';
-      return 'BMD $' + n.toFixed(2);
-    }
-    function fmtDate(iso) {
-      try { return new Date(iso).toLocaleString(); } catch { return iso || '—'; }
-    }
+    function fmtMoney(n){ if (typeof n !== 'number') return '—'; return 'BMD $' + n.toFixed(2); }
+    function fmtDate(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
 
-    async function fetchJSON(url, opts = {}) {
+    async function fetchJSON(url, opts={}){
       const res = await fetch(url, {
         ...opts,
-        headers: {
-          'Content-Type': 'application/json',
+        headers:{
+          'Content-Type':'application/json',
           'Authorization': `Bearer ${token}`,
           ...(opts.headers || {})
         }
       });
-      if (!res.ok) throw new Error(await res.text());
+      if(!res.ok) throw new Error(await res.text());
       return res.json();
     }
 
-    async function loadMe() {
+    async function loadMe(){
       const me = await fetchJSON('/api/me');
-      if ((me.role || '').toLowerCase() !== 'parent') {
-        alert('This portal is for Parent accounts.');
-        location.href = '/';
-        return;
-      }
+      if ((me.role || '').toLowerCase() !== 'parent'){ alert('This portal is for Parent accounts.'); location.href='/'; return; }
       parentId = me.id;
     }
 
-    async function loadAssignedStudents() {
-      // Your backend: GET /api/users/:id returns assigned_students for role=parent
+    async function loadAssignedStudents(){
       const detail = await fetchJSON(`/api/users/${parentId}`);
       students = detail.assigned_students || [];
-      // If wallet_id not included, we’ll fetch per student when selected
       renderStudentOptions();
-      if (students.length) {
-        selectStudent(students[0].id);
-      } else {
+      if (students.length){ selectStudent(students[0].id); }
+      else{
         studentSelect.innerHTML = '<option>No students linked</option>';
-        balanceAmount.textContent = '—';
         activityEmpty.textContent = 'No students found.';
       }
     }
 
-    function renderStudentOptions() {
-      studentSelect.innerHTML = students.map(s =>
-        `<option value="${s.id}">${s.first_name || ''} ${s.last_name || ''}</option>`
-      ).join('');
-      studentSelect.addEventListener('change', () => {
-        selectStudent(studentSelect.value);
-      });
+    function renderStudentOptions(){
+      studentSelect.innerHTML = students.map(s => `<option value="${s.id}">${(s.first_name||'') + ' ' + (s.last_name||'')}</option>`).join('');
+      studentSelect.onchange = () => selectStudent(studentSelect.value);
     }
 
-    async function selectStudent(studentId) {
+    async function selectStudent(studentId){
       currentStudentId = studentId;
       balanceMsg.style.display = 'none';
-      fundsMsg.style.display = 'none';
       page = 0;
 
-      // Load full student row to find wallet_id (your /api/users/:id returns entire user row)
+      // Full student row
       const stu = await fetchJSON(`/api/users/${studentId}`);
       currentWalletId = stu.wallet_id || null;
 
-      // Header bits
-      const name = `${stu.first_name || ''} ${stu.last_name || ''}`.trim();
+      const name = `${stu.first_name||''} ${stu.last_name||''}`.trim();
       studentNameEl.textContent = name || 'Student';
       const sProfile = stu.student_profile || {};
       const school = sProfile.school_name ? `School: ${sProfile.school_name}` : '';
       schoolPill.style.display = school ? 'inline-block' : 'none';
       schoolPill.textContent = school;
-      studentInfoEl.textContent = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
+      const grade = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
+      studentInfoEl.textContent = [grade].filter(Boolean).join(' • ') || '—';
 
-      // Load balance & activity (best-effort)
-      await loadBalance();
-      await loadActivity();
+      // Card status (best effort)
+      cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
+
+      await Promise.all([loadBalance(), loadActivity(), loadControls()]);
     }
 
-    async function loadBalance() {
-      balanceAmount.textContent = '—';
-      balanceStatus.textContent = 'Balance';
-      balanceMsg.style.display = 'none';
-
-      if (!currentWalletId) {
-        balanceMsg.textContent = 'Balance unavailable (no wallet found).';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
-        return;
-      }
-
-      try {
-        // TODO: Update to your balance endpoint. Common patterns shown below:
-        // 1) /api/wallets/:id/summary   -> { balance: 123.45 }
-        // 2) /api/wallets/:id           -> { id, status, balance, ... }
-        const data = await fetchJSON(`/api/wallets/${currentWalletId}`); // try #2
+    async function loadBalance(){
+      balanceAmount.textContent = '—'; balanceStatus.textContent = 'Balance'; balanceMsg.style.display='none';
+      if(!currentWalletId){ balanceMsg.textContent='Balance unavailable (no wallet found).'; balanceMsg.className='msg error'; balanceMsg.style.display='block'; return; }
+      try{
+        const data = await fetchJSON(`/api/wallets/${currentWalletId}`); // TODO adjust if different
         const bal = Number(data.balance ?? data?.wallet?.balance);
-        if (!Number.isFinite(bal)) throw new Error('No balance field in response');
-
+        if(!Number.isFinite(bal)) throw new Error('No balance field');
         balanceAmount.textContent = fmtMoney(bal);
         balanceStatus.textContent = data.status ? `Balance • ${String(data.status).toUpperCase()}` : 'Balance';
-      } catch (err) {
-        // Graceful fallback
-        balanceMsg.textContent = 'Balance currently unavailable.';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
+      }catch(_){
+        balanceMsg.textContent='Balance currently unavailable.'; balanceMsg.className='msg error'; balanceMsg.style.display='block';
       }
     }
 
-    async function loadActivity() {
-      txns = [];
-      page = 0;
-      renderActivity();
-
-      if (!currentWalletId) return;
-
-      try {
-        // TODO: Update to your transactions endpoint.
-        // Examples:
-        //   /api/transactions?wallet_id=...    -> [{...}]
-        //   /api/wallets/:id/transactions      -> [{...}]
-        const list = await fetchJSON(`/api/wallets/${currentWalletId}/transactions`);
+    async function loadActivity(){
+      txns = []; page = 0; renderActivity();
+      if(!currentWalletId) return;
+      try{
+        const list = await fetchJSON(`/api/wallets/${currentWalletId}/transactions`); // TODO adjust if different
         txns = Array.isArray(list) ? list : (list.transactions || []);
-      } catch (err) {
-        // leave empty state
-      }
+      }catch(_){}
       renderActivity();
     }
 
-    function renderActivity() {
+    function renderActivity(){
       const total = txns.length;
       activityCountPill.style.display = total ? 'inline-block' : 'none';
       activityCountPill.textContent = `${total} items`;
-
-      const start = page * PAGE_SIZE;
-      const end = start + PAGE_SIZE;
-      const slice = txns.slice(start, end);
-
-      const prev = document.getElementById('prevPage');
-      const next = document.getElementById('nextPage');
-      prev.disabled = page === 0;
-      next.disabled = end >= total;
-      prev.onclick = () => { if (page>0){ page--; renderActivity(); } };
-      next.onclick = () => { if (end<total){ page++; renderActivity(); } };
-
-      if (!slice.length) {
-        activityEmpty.style.display = 'block';
-        activityTable.style.display = 'none';
-        return;
-      }
-
-      activityEmpty.style.display = 'none';
-      activityTable.style.display = 'table';
-
-      activityTbody.innerHTML = slice.map(tx => {
-        const amt = Number(tx.amount || 0);  // negative for purchases?
-        const amtStr = (amt < 0 ? '-' : '+') + fmtMoney(Math.abs(amt));
+      const start = page*PAGE_SIZE, end = start+PAGE_SIZE, slice = txns.slice(start,end);
+      prevBtn.disabled = page===0; nextBtn.disabled = end>=total;
+      prevBtn.onclick=()=>{ if(page>0){ page--; renderActivity(); } };
+      nextBtn.onclick=()=>{ if(end<total){ page++; renderActivity(); } };
+      if(!slice.length){ activityEmpty.style.display='block'; activityTable.style.display='none'; return; }
+      activityEmpty.style.display='none'; activityTable.style.display='table';
+      activityTbody.innerHTML = slice.map(tx=>{
+        const amt = Number(tx.amount || 0);
+        const amtStr = (amt<0?'-':'+') + fmtMoney(Math.abs(amt));
         const status = (tx.status || 'posted').toString().toUpperCase();
         const cat = tx.category || 'GENERAL';
         const merchant = tx.merchant || tx.description || '—';
         const date = tx.created_at || tx.posted_at || tx.date || tx.timestamp;
-
-        return `
-          <tr>
-            <td class="small">${fmtDate(date)}</td>
-            <td>${merchant}</td>
-            <td><span class="tag">${cat}</span></td>
-            <td>${amt < 0 ? '<span style="color:#ef4444">'+amtStr+'</span>' : '<span style="color:#10b981">'+amtStr+'</span>'}</td>
-            <td class="small">${status}</td>
-          </tr>
-        `;
+        return `<tr>
+          <td class="small">${fmtDate(date)}</td>
+          <td>${merchant}</td>
+          <td><span class="tag">${cat}</span></td>
+          <td>${amt<0?'<span style="color:#ef4444">'+amtStr+'</span>':'<span style="color:#10b981">'+amtStr+'</span>'}</td>
+          <td class="small">${status}</td>
+        </tr>`;
       }).join('');
     }
 
-    // --- Add Funds Modal ---
+    // ---- Controls (limit + categories) ----
+    async function loadControls(){
+      limitMsg.style.display='none'; catsMsg.style.display='none';
+      // Load current limit
+      try{
+        const res = await fetchJSON(`/api/students/${currentStudentId}/limits`); // TODO implement
+        const monthly = Number(res?.monthly_limit);
+        if (Number.isFinite(monthly)) limitInput.value = monthly.toFixed(2);
+      }catch(_){ limitInput.value=''; }
+
+      // Load categories
+      try{
+        const res = await fetchJSON(`/api/students/${currentStudentId}/categories`); // TODO implement
+        // Expect: { allow: { food:true, fastfood:false, electronics:false, entertainment:true, other:true } }
+        const a = res?.allow || {};
+        document.getElementById('cat_food').checked = !!a.food;
+        document.getElementById('cat_fastfood').checked = !!a.fastfood;
+        document.getElementById('cat_electronics').checked = !!a.electronics;
+        document.getElementById('cat_entertainment').checked = !!a.entertainment;
+        document.getElementById('cat_other').checked = !!a.other;
+      }catch(_){
+        // sensible defaults
+        document.getElementById('cat_food').checked = true;
+        document.getElementById('cat_fastfood').checked = false;
+        document.getElementById('cat_electronics').checked = false;
+        document.getElementById('cat_entertainment').checked = true;
+        document.getElementById('cat_other').checked = true;
+      }
+    }
+
+    saveLimitBtn.onclick = async ()=>{
+      limitMsg.style.display='none';
+      const val = Number(limitInput.value);
+      if (!Number.isFinite(val) || val < 0){ limitMsg.textContent='Enter a valid amount.'; limitMsg.className='msg error'; limitMsg.style.display='block'; return; }
+      try{
+        const res = await fetch(`/api/students/${currentStudentId}/limits`, { // TODO implement
+          method:'PUT',
+          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ monthly_limit: val })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        limitMsg.textContent='Spending limit saved.'; limitMsg.className='msg ok'; limitMsg.style.display='block';
+      }catch(err){
+        limitMsg.textContent='Failed to save limit.'; limitMsg.className='msg error'; limitMsg.style.display='block';
+      }
+    };
+    clearLimitBtn.onclick = async ()=>{
+      limitMsg.style.display='none';
+      try{
+        const res = await fetch(`/api/students/${currentStudentId}/limits`, { // TODO implement
+          method:'DELETE',
+          headers:{ 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        limitInput.value=''; limitMsg.textContent='Limit cleared.'; limitMsg.className='msg ok'; limitMsg.style.display='block';
+      }catch(_){
+        limitMsg.textContent='Failed to clear limit.'; limitMsg.className='msg error'; limitMsg.style.display='block';
+      }
+    };
+
+    saveCatsBtn.onclick = async ()=>{
+      catsMsg.style.display='none';
+      const payload = {
+        allow:{
+          food: document.getElementById('cat_food').checked,
+          fastfood: document.getElementById('cat_fastfood').checked,
+          electronics: document.getElementById('cat_electronics').checked,
+          entertainment: document.getElementById('cat_entertainment').checked,
+          other: document.getElementById('cat_other').checked
+        }
+      };
+      try{
+        const res = await fetch(`/api/students/${currentStudentId}/categories`, { // TODO implement
+          method:'PUT',
+          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        catsMsg.textContent='Categories saved.'; catsMsg.className='msg ok'; catsMsg.style.display='block';
+      }catch(_){
+        catsMsg.textContent='Failed to save categories.'; catsMsg.className='msg error'; catsMsg.style.display='block';
+      }
+    };
+    resetCatsBtn.onclick = loadControls;
+
+    // ---- Add Funds Modal ----
     function openFunds(){ fundsModal.style.display='grid'; fundsModal.setAttribute('aria-hidden','false'); amountInput.focus(); }
     function closeFundsModal(){ fundsModal.style.display='none'; fundsModal.setAttribute('aria-hidden','true'); fundsMsg.style.display='none'; amountInput.value=''; noteInput.value=''; }
-
-    addFundsBtn.addEventListener('click', () => {
-      if (!currentWalletId) {
-        alert('Wallet unavailable for this student.');
-        return;
-      }
-      openFunds();
-    });
-    closeFunds.addEventListener('click', closeFundsModal);
-    fundsModal.addEventListener('click', (e)=>{ if(e.target === fundsModal) closeFundsModal(); });
-
-    confirmFunds.addEventListener('click', async ()=>{
+    addFundsBtn.onclick = ()=>{ if(!currentWalletId){ alert('Wallet unavailable for this student.'); return; } openFunds(); };
+    closeFunds.onclick = closeFundsModal;
+    fundsModal.addEventListener('click', (e)=>{ if(e.target===fundsModal) closeFundsModal(); });
+    confirmFunds.onclick = async ()=>{
       fundsMsg.style.display='none';
       const amt = Number(amountInput.value);
-      if (!Number.isFinite(amt) || amt <= 0) {
-        fundsMsg.textContent = 'Please enter a valid amount.';
-        fundsMsg.className = 'msg error';
-        fundsMsg.style.display = 'block';
-        return;
-      }
-      confirmFunds.disabled = true;
-      confirmFunds.textContent = 'Processing…';
-      try {
-        // TODO: Update to your top-up endpoint.
-        // Examples:
-        //   POST /api/wallets/:id/deposits { amount, note }
-        //   POST /api/funding/topup { wallet_id, amount, note }
-        const res = await fetch(`/api/wallets/${currentWalletId}/deposits`, {
+      if(!Number.isFinite(amt) || amt<=0){ fundsMsg.textContent='Please enter a valid amount.'; fundsMsg.className='msg error'; fundsMsg.style.display='block'; return; }
+      confirmFunds.disabled=true; confirmFunds.textContent='Processing…';
+      try{
+        const res = await fetch(`/api/wallets/${currentWalletId}/deposits`, { // TODO implement
           method:'POST',
-          headers:{
-            'Content-Type':'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ amount: amt, note: noteInput.value || null })
         });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(txt || 'Top-up failed');
-        }
-        fundsMsg.textContent = 'Funds added successfully.';
-        fundsMsg.className = 'msg ok';
-        fundsMsg.style.display = 'block';
-        // Refresh balance & activity
-        await loadBalance();
-        await loadActivity();
+        if(!res.ok) throw new Error(await res.text());
+        fundsMsg.textContent='Funds added successfully.'; fundsMsg.className='msg ok'; fundsMsg.style.display='block';
+        await loadBalance(); await loadActivity();
         setTimeout(closeFundsModal, 900);
-      } catch (err) {
-        fundsMsg.textContent = 'Failed to add funds. ' + (err.message || '');
-        fundsMsg.className = 'msg error';
-        fundsMsg.style.display = 'block';
-      } finally {
-        confirmFunds.disabled = false;
-        confirmFunds.textContent = 'Add Funds';
+      }catch(err){
+        fundsMsg.textContent='Failed to add funds.'; fundsMsg.className='msg error'; fundsMsg.style.display='block';
+      }finally{
+        confirmFunds.disabled=false; confirmFunds.textContent='Add Funds';
       }
-    });
+    };
 
-    // --- Init ---
+    // ---- Request another child (modal) ----
+    function openReq(){ requestModal.style.display='grid'; requestModal.setAttribute('aria-hidden','false'); reqName.focus(); }
+    function closeReq(){ requestModal.style.display='none'; requestModal.setAttribute('aria-hidden','true'); reqMsg.style.display='none'; reqName.value=''; reqDob.value=''; reqSchool.value=''; reqNotes.value=''; }
+    requestChildBtn.onclick = openReq;
+    closeRequest.onclick = closeReq;
+    requestModal.addEventListener('click', (e)=>{ if(e.target===requestModal) closeReq(); });
+    submitRequest.onclick = async ()=>{
+      reqMsg.style.display='none';
+      if(!reqName.value.trim() || !reqDob.value){
+        reqMsg.textContent='Name and DOB are required.'; reqMsg.className='msg error'; reqMsg.style.display='block'; return;
+      }
+      submitRequest.disabled=true; submitRequest.textContent='Submitting…';
+      try{
+        const res = await fetch(`/api/parents/${parentId}/child-requests`, { // TODO implement
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            child_name: reqName.value.trim(),
+            child_dob: reqDob.value,
+            school: reqSchool.value || null,
+            notes: reqNotes.value || null
+          })
+        });
+        if(!res.ok) throw new Error(await res.text());
+        reqMsg.textContent='Request submitted. An admin will review it shortly.'; reqMsg.className='msg ok'; reqMsg.style.display='block';
+        setTimeout(closeReq, 1000);
+      }catch(err){
+        reqMsg.textContent='Failed to submit request.'; reqMsg.className='msg error'; reqMsg.style.display='block';
+      }finally{
+        submitRequest.disabled=false; submitRequest.textContent='Submit request';
+      }
+    };
+
+    // ---- Init ----
     (async function init(){
       try{
         await loadMe();
         if (!parentId) return;
         await loadAssignedStudents();
-      } catch (e) {
+      }catch(e){
         console.error(e);
         alert('Unable to load your account. Please sign in again.');
-        location.href = '/accounts/login.html';
+        location.href='/accounts/login.html';
       }
     })();
   </script>
