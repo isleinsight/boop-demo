@@ -220,7 +220,7 @@ router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
     );
 
     // Email (admin flavor)
-    const link = `${APP_URL}/reset-password.html?token=${raw}`;
+    const link = `${APP_URL}/password.html?token=${raw}`;
     await sendAdminResetEmail(userRow.email, link);
 
     return res.json({ ok: true, message: 'Admin reset email sent' });
@@ -260,7 +260,7 @@ router.post('/forgot-password', async (req, res) => {
     );
 
     // Email (forgot flavor)
-    const link = `${APP_URL}/reset-password.html?token=${raw}`;
+    const link = `${APP_URL}/password.html?token=${raw}`;
     await sendForgotEmail(email, link);
   } catch (err) {
     console.error('forgot-password error:', err);
@@ -310,7 +310,7 @@ router.post('/admin/initiate-setup', authenticateToken, async (req, res) => {
     );
 
     // Email (account setup flavor)
-    const link = `${APP_URL}/reset-password.html?token=${raw}`;
+    const link = `${APP_URL}/password.html?token=${raw}`;
     await sendAccountSetupEmail(userRow.email, link);
 
     return res.json({ ok: true, message: 'Account setup email sent' });
