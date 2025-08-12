@@ -6,45 +6,108 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root { --ink:#0f172a; --muted:#6b7280; --brand:#2f80ed; --bg:#f5f8fb; --card:#fff; --danger:#b91c1c; --ok:#0f766e; }
-    * { box-sizing: border-box }
-    body { margin:0; font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--ink) }
-    .wrap { max-width: 960px; margin: 48px auto; padding: 0 20px }
-    .header { text-align:center; margin-bottom: 24px }
-    .header img { height: 40px; display:block; margin: 0 auto 12px }
-    h1 { margin:0; font-size:1.6rem }
-    .card { background:var(--card); border:1px solid #e6ebf1; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,.06) }
-    .tabs { display:flex; border-bottom:1px solid #e6ebf1 }
-    .tab { flex:1; text-align:center; padding:14px 10px; cursor:pointer; user-select:none; font-weight:600; color:#334155 }
-    .tab.active { color:var(--brand); border-bottom:3px solid var(--brand) }
-    .panel { display:none; padding:22px; }
-    .panel.active { display:block }
-    label { display:block; font-size:.92rem; margin:12px 0 6px; color:#0f172a }
-    input { width:100%; padding:12px 14px; border:1px solid #d1d9e6; border-radius:8px; font-size:1rem; }
-    input:focus { outline: none; border-color: var(--brand) }
-    .row { display:flex; gap:14px; align-items:center; justify-content:space-between; margin-top: 16px; }
-    .btn { appearance:none; border:0; background:var(--brand); color:#fff; padding:12px 16px; border-radius:10px; font-weight:600; cursor:pointer; width:100% }
-    .btn:disabled { opacity:.6; cursor:not-allowed }
-    .status { min-height: 22px; margin-top:10px; font-size:.92rem }
-    .status.error { color: var(--danger) }
-    .status.ok { color: var(--ok) }
-    .helper { font-size:.9rem; color:var(--muted); margin-top:10px; text-align:center }
-    .links { text-align:center; margin-top:8px }
-    .links a { color: var(--brand); text-decoration: none }
-    .links a:hover { text-decoration: underline }
+    :root{
+      --ink:#1a2b4a;           /* BOOP dark blue */
+      --muted:#6b7280;
+      --stroke:#e6ebf1;
+      --brand:#2f80ed;
+      --bg:#f5f8fb;
+      --danger:#b91c1c;
+      --ok:#0f766e;
+      --card:#ffffff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a}
+
+    /* Top bar */
+    .topbar{
+      background:var(--ink);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .topbar__inner{
+      max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;
+      padding:10px 20px;
+    }
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{height:34px;display:block} /* your logo is white, sits on dark bg */
+    .brand__title{color:#fff;font-weight:600;letter-spacing:.2px}
+
+    /* Hero */
+    .hero{
+      background:linear-gradient(180deg,#f7fafc,#fff);
+      border-bottom:1px solid var(--stroke);
+    }
+    .hero__inner{max-width:1100px;margin:0 auto;padding:24px 20px}
+    .hero h1{margin:0 0 6px;font-size:1.6rem;color:var(--ink)}
+    .hero__sub{margin:0;color:#4b5563;max-width:68ch}
+
+    /* Layout */
+    .grid{max-width:1100px;margin:22px auto 40px;padding:0 20px;display:grid;grid-template-columns:2fr 1fr;gap:18px}
+    @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
+
+    /* Auth card */
+    .card{
+      background:var(--card);border:1px solid var(--stroke);border-radius:12px;padding:16px 16px 20px;
+      box-shadow:0 6px 16px rgba(0,0,0,.06);
+    }
+    .tabs{display:flex;border-bottom:1px solid var(--stroke);gap:6px;padding:6px}
+    .tab{
+      flex:1;text-align:center;padding:10px 12px;border-radius:10px;cursor:pointer;
+      font-weight:600;color:#334155;user-select:none;
+    }
+    .tab.active{background:#eef5ff;color:var(--brand);border:1px solid #d7e6ff}
+    .panel{display:none;padding:14px 8px 6px}
+    .panel.active{display:block}
+    label{display:block;font-size:.95rem;margin:10px 0 6px;color:var(--ink)}
+    input{
+      width:100%;padding:12px 14px;border:1px solid #d1d9e6;border-radius:8px;font-size:1rem;background:#fff;
+    }
+    input:focus{outline:none;border-color:var(--brand)}
+    .btn{
+      width:100%;margin-top:14px;appearance:none;border:0;border-radius:10px;background:var(--brand);
+      color:#fff;padding:12px 16px;font-weight:600;cursor:pointer;
+    }
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .status{min-height:22px;margin-top:8px;font-size:.92rem}
+    .status.error{color:var(--danger)}
+    .status.ok{color:var(--ok)}
+    .links{margin-top:8px;text-align:center}
+    .links a{color:var(--brand);text-decoration:none}
+    .links a:hover{text-decoration:underline}
+
+    /* Tips panel */
+    .panel-side{
+      background:var(--card);border:1px solid var(--stroke);border-radius:12px;padding:16px;
+      box-shadow:0 6px 16px rgba(0,0,0,.06);
+    }
+    .panel-side h3{margin:0 0 10px;color:var(--ink)}
+    .tips{margin:0;padding-left:18px;color:#4b5563}
+    .tips li{margin:6px 0}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="header">
-      <!-- Optional logo (served from /public/assets/Boop-Logo.png) -->
-      <img src="/assets/Boop-Logo.png" alt="BOOP" />
-      <h1>Government Portal</h1>
-      <div class="helper">Choose the correct area and sign in.</div>
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar__inner">
+      <div class="brand">
+        <img src="/assets/Boop-Logo.png" alt="BOOP Logo" />
+        <div class="brand__title">Government Portal</div>
+      </div>
     </div>
+  </div>
 
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero__inner">
+      <h1>Sign in</h1>
+      <p class="hero__sub">Choose the correct area and sign in. If you landed here from “Forgot password,” use the link in your email to reset.</p>
+    </div>
+  </section>
+
+  <!-- Main -->
+  <section class="grid">
+    <!-- Left: forms -->
     <div class="card">
-      <!-- Tabs -->
       <div class="tabs">
         <div class="tab active" data-target="admin">Admin</div>
         <div class="tab" data-target="accounts">Accounts</div>
@@ -59,13 +122,9 @@
           <label for="password-admin">Password</label>
           <input id="password-admin" type="password" autocomplete="current-password" required />
 
-          <div class="row">
-            <button class="btn" type="submit" id="btn-admin">Sign in to Admin</button>
-          </div>
+          <button class="btn" type="submit" id="btn-admin">Sign in to Admin</button>
           <div class="status" id="status-admin"></div>
-          <div class="links">
-            <a href="/password.html?mode=forgot">Forgot password?</a>
-          </div>
+          <div class="links"><a href="/password.html?mode=forgot">Forgot password?</a></div>
         </form>
       </div>
 
@@ -78,21 +137,27 @@
           <label for="password-accounts">Password</label>
           <input id="password-accounts" type="password" autocomplete="current-password" required />
 
-          <div class="row">
-            <button class="btn" type="submit" id="btn-accounts">Sign in to Accounts</button>
-          </div>
+          <button class="btn" type="submit" id="btn-accounts">Sign in to Accounts</button>
           <div class="status" id="status-accounts"></div>
-          <div class="links">
-            <a href="/password.html?mode=forgot">Forgot password?</a>
-          </div>
+          <div class="links"><a href="/password.html?mode=forgot">Forgot password?</a></div>
         </form>
       </div>
     </div>
-  </div>
+
+    <!-- Right: tips -->
+    <aside class="panel-side">
+      <h3>Tips</h3>
+      <ul class="tips">
+        <li>Admin access: <strong>super_admin</strong>, <strong>admin</strong>, or <strong>support</strong>.</li>
+        <li>Accounts access: <strong>accountant</strong> or <strong>treasury</strong> only.</li>
+        <li>Forgot password? Use the email link; it expires in 60 minutes.</li>
+      </ul>
+    </aside>
+  </section>
 
   <script>
   (function(){
-    // --- Tab switching (shows the correct FORM, not just color) ---
+    // --- Tabs show the correct form (not just color) ---
     const tabs = document.querySelectorAll('.tab');
     const panels = {
       admin: document.getElementById('panel-admin'),
@@ -102,14 +167,18 @@
       t.addEventListener('click', () => {
         tabs.forEach(x => x.classList.remove('active'));
         t.classList.add('active');
-        const target = t.dataset.target; // 'admin' | 'accounts'
+        const target = t.dataset.target;
         panels.admin.classList.toggle('active', target === 'admin');
         panels.accounts.classList.toggle('active', target === 'accounts');
-        // Focus first input of the active panel
-        const first = panels[target].querySelector('input[type="email"]');
-        if (first) first.focus();
+        panels[target].querySelector('input[type="email"]')?.focus();
       });
     });
+
+    // Optional: allow ?area=admin|accounts to preselect
+    const area = new URLSearchParams(location.search).get('area');
+    if (area && panels[area]) {
+      document.querySelector(`.tab[data-target="${area}"]`)?.click();
+    }
 
     // --- Common helpers ---
     async function login({email, password}) {
@@ -129,7 +198,6 @@
 
     async function recordSession(token, user){
       try {
-        // Decode JWT exp
         const payload = JSON.parse(atob(token.split('.')[1] || ''));
         const expiresAt = new Date((payload.exp || 0) * 1000).toISOString();
         const res = await fetch('/api/sessions', {
@@ -146,30 +214,27 @@
             status: 'online'
           })
         });
-        if (!res.ok) {
-          console.warn('Session record failed:', await res.text());
-        }
+        if (!res.ok) console.warn('Session record failed:', await res.text());
       } catch (e) {
         console.warn('Session record error:', e);
       }
     }
 
-    // --- Admin form logic ---
+    // --- Admin form ---
     const adminForm = document.getElementById('form-admin');
     const adminBtn  = document.getElementById('btn-admin');
     const adminStatus = document.getElementById('status-admin');
 
     adminForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      adminStatus.className = 'status';
-      adminStatus.textContent = '';
-      adminBtn.disabled = true;
+      adminStatus.className='status'; adminStatus.textContent='';
+      adminBtn.disabled=true;
 
       const email = document.getElementById('email-admin').value.trim();
       const password = document.getElementById('password-admin').value;
 
       const { ok, data } = await login({email, password});
-      adminBtn.disabled = false;
+      adminBtn.disabled=false;
 
       if (!ok) {
         adminStatus.classList.add('error');
@@ -178,7 +243,6 @@
       }
 
       const { token, user } = data;
-      // Allowed admin types:
       const allowed = ['super_admin','admin','support'];
       if (!(user && allowed.includes(user.type))) {
         adminStatus.classList.add('error');
@@ -191,22 +255,21 @@
       window.location.href = '/admin/index.html';
     });
 
-    // --- Accounts form logic ---
+    // --- Accounts form ---
     const accForm = document.getElementById('form-accounts');
     const accBtn  = document.getElementById('btn-accounts');
     const accStatus = document.getElementById('status-accounts');
 
     accForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      accStatus.className = 'status';
-      accStatus.textContent = '';
-      accBtn.disabled = true;
+      accStatus.className='status'; accStatus.textContent='';
+      accBtn.disabled=true;
 
       const email = document.getElementById('email-accounts').value.trim();
       const password = document.getElementById('password-accounts').value;
 
       const { ok, data } = await login({email, password});
-      accBtn.disabled = false;
+      accBtn.disabled=false;
 
       if (!ok) {
         accStatus.classList.add('error');
@@ -215,7 +278,6 @@
       }
 
       const { token, user } = data;
-      // Allowed accounts types (no support here)
       const allowed = ['accountant','treasury'];
       if (!(user && allowed.includes(user.type))) {
         accStatus.classList.add('error');
