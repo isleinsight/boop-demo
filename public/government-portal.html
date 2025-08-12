@@ -2,230 +2,140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Government Portal – Sign in</title>
+  <title>Government Portal — BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; --brand:#2f80ed; --bg:#f5f8fb; }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#111827}
-    .nav{background:var(--ink);color:#fff}
-    .nav__inner{max-width:980px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
-    .nav__logo{height:28px}
-    .wrap{max-width:980px;margin:34px auto;padding:0 20px}
-    h1{margin:0 0 8px;color:var(--ink);font-size:clamp(1.4rem,2.5vw,1.9rem)}
-    p.sub{margin:0 0 18px;color:var(--muted)}
-    .panel{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}
-    @media (max-width:900px){.panel{grid-template-columns:1fr}}
-    .card{background:#fff;border:1px solid var(--stroke);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.06)}
-    .card__inner{padding:20px}
-    .hint{color:#6b7280;font-size:.9rem}
-    .pill{display:inline-block;padding:4px 8px;border:1px dashed #d1d5db;border-radius:999px;font-size:.8rem;color:#6b7280}
-
-    form .field{margin:12px 0}
-    label{display:block;font-weight:600;color:var(--ink);margin-bottom:6px}
-    input[type="email"],input[type="password"]{
-      width:100%;height:44px;border:1px solid var(--stroke);border-radius:10px;padding:0 14px;font-size:1rem;
-      outline:none;transition:border-color .15s ease, box-shadow .15s ease;background:#fff
-    }
-    input:focus{border-color:#c9d6ee;box-shadow:0 0 0 3px rgba(47,128,237,.12)}
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .area-toggle{display:flex;gap:10px}
-    .seg{position:relative}
-    .seg input{position:absolute;opacity:0;pointer-events:none}
-    .seg label{
-      display:inline-block;background:#f3f6fb;border:1px solid #e2e8f0;border-radius:999px;padding:8px 12px;cursor:pointer;
-      color:#334155;font-weight:600;font-size:.92rem;user-select:none
-    }
-    .seg input:checked + label{background:#e8f0ff;border-color:#bfd3ff;color:#1d4ed8}
-    .actions{margin-top:14px;display:flex;flex-direction:column;gap:10px}
-    button[type="submit"]{
-      display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      width:100%;height:46px;border:none;border-radius:10px;background:var(--brand);color:#fff;font-weight:700;cursor:pointer
-    }
-    button[disabled]{opacity:.7;cursor:not-allowed}
-    .linkrow{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-    a.small{color:#1d4ed8;text-decoration:none;font-size:.92rem}
-    a.small:hover{text-decoration:underline}
-
-    .alert{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:.92rem;display:none}
-    .alert.show{display:block}
-    .alert.error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
-    .alert.success{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
-
-    .side{padding:18px 20px}
-    .tile{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px dashed #e5e7eb}
-    .tile:last-child{border-bottom:none}
-    .tile h3{margin:0;font-size:1rem;color:var(--ink)}
-    .tile p{margin:4px 0 0;color:#6b7280;font-size:.92rem}
-    .footer{max-width:980px;margin:26px auto 40px;padding:0 20px;color:#9ca3af;font-size:.85rem}
-    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px}
+    :root { --ink:#0f172a; --muted:#6b7280; --brand:#2f80ed; --bg:#f5f8fb; --card:#fff; --danger:#b91c1c; --ok:#0f766e; }
+    * { box-sizing: border-box }
+    body { margin:0; font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--ink) }
+    .wrap { max-width: 960px; margin: 48px auto; padding: 0 20px }
+    .header { text-align:center; margin-bottom: 24px }
+    .header img { height: 40px; display:block; margin: 0 auto 12px }
+    h1 { margin:0; font-size:1.6rem }
+    .card { background:var(--card); border:1px solid #e6ebf1; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,.06) }
+    .tabs { display:flex; border-bottom:1px solid #e6ebf1 }
+    .tab { flex:1; text-align:center; padding:14px 10px; cursor:pointer; user-select:none; font-weight:600; color:#334155 }
+    .tab.active { color:var(--brand); border-bottom:3px solid var(--brand) }
+    .panel { display:none; padding:22px; }
+    .panel.active { display:block }
+    label { display:block; font-size:.92rem; margin:12px 0 6px; color:#0f172a }
+    input { width:100%; padding:12px 14px; border:1px solid #d1d9e6; border-radius:8px; font-size:1rem; }
+    input:focus { outline: none; border-color: var(--brand) }
+    .row { display:flex; gap:14px; align-items:center; justify-content:space-between; margin-top: 16px; }
+    .btn { appearance:none; border:0; background:var(--brand); color:#fff; padding:12px 16px; border-radius:10px; font-weight:600; cursor:pointer; width:100% }
+    .btn:disabled { opacity:.6; cursor:not-allowed }
+    .status { min-height: 22px; margin-top:10px; font-size:.92rem }
+    .status.error { color: var(--danger) }
+    .status.ok { color: var(--ok) }
+    .helper { font-size:.9rem; color:var(--muted); margin-top:10px; text-align:center }
+    .links { text-align:center; margin-top:8px }
+    .links a { color: var(--brand); text-decoration: none }
+    .links a:hover { text-decoration: underline }
   </style>
 </head>
 <body>
-  <header class="nav" role="banner">
-    <div class="nav__inner">
-      <img src="/assets/Boop-Logo.png" alt="BOOP" class="nav__logo">
-      <span aria-hidden="true">|</span>
-      <strong>Government Portal</strong>
+  <div class="wrap">
+    <div class="header">
+      <!-- Optional logo (served from /public/assets/Boop-Logo.png) -->
+      <img src="/assets/Boop-Logo.png" alt="BOOP" />
+      <h1>Government Portal</h1>
+      <div class="helper">Choose the correct area and sign in.</div>
     </div>
-  </header>
 
-  <main class="wrap" role="main">
-    <h1>Sign in</h1>
-    <p class="sub">Choose your area and use your BOOP credentials. We’ll route you to the correct console.</p>
+    <div class="card">
+      <!-- Tabs -->
+      <div class="tabs">
+        <div class="tab active" data-target="admin">Admin</div>
+        <div class="tab" data-target="accounts">Accounts</div>
+      </div>
 
-    <div class="panel">
-      <!-- Login card -->
-      <section class="card" aria-labelledby="loginTitle">
-        <div class="card__inner">
-          <span class="pill">Secure access</span>
-          <h2 id="loginTitle" style="margin:10px 0 4px;">Government Portal Login</h2>
-          <p class="hint">Admins, Support, Treasury/Accounts</p>
+      <!-- Admin form -->
+      <div class="panel active" id="panel-admin">
+        <form id="form-admin" novalidate>
+          <label for="email-admin">Email</label>
+          <input id="email-admin" type="email" autocomplete="username" required />
 
-          <form id="portalLoginForm" novalidate>
-            <div class="field">
-              <label for="email">Email</label>
-              <input id="email" type="email" autocomplete="username" required />
-            </div>
-            <div class="field">
-              <label for="password">Password</label>
-              <input id="password" type="password" autocomplete="current-password" required />
-            </div>
+          <label for="password-admin">Password</label>
+          <input id="password-admin" type="password" autocomplete="current-password" required />
 
-            <div class="field">
-              <label style="margin-bottom:8px;">Sign in to</label>
-              <div class="area-toggle" role="radiogroup" aria-label="Choose destination">
-                <div class="seg">
-                  <input type="radio" id="area-admin" name="area" value="admin" checked />
-                  <label for="area-admin">Admin</label>
-                </div>
-                <div class="seg">
-                  <input type="radio" id="area-accounts" name="area" value="accounts" />
-                  <label for="area-accounts">Accounts</label>
-                </div>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button type="submit" id="submitBtn">
-                <span id="btnText">Sign in</span>
-              </button>
-              <div class="linkrow">
-                <a class="small" href="/forgot-password.html">Forgot password?</a>
-                <a class="small" href="/government-portal.html?to=admin">Go to Admin login</a>
-              </div>
-              <div id="alertBox" class="alert" role="alert"></div>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <!-- Info / tips -->
-      <aside class="card side" aria-labelledby="tipsTitle">
-        <h2 id="tipsTitle" style="margin:0 0 8px;color:var(--ink)">Tips</h2>
-        <div class="tile">
-          <div>
-            <h3>Direct URLs</h3>
-            <p>Admins: <code>/admin/login.html</code><br/>Accounts: <code>/accounts/login.html</code></p>
+          <div class="row">
+            <button class="btn" type="submit" id="btn-admin">Sign in to Admin</button>
           </div>
-        </div>
-        <div class="tile">
-          <div>
-            <h3>Security</h3>
-            <p>Use a desktop browser when possible. Multi-factor auth is recommended.</p>
+          <div class="status" id="status-admin"></div>
+          <div class="links">
+            <a href="/password.html?mode=forgot">Forgot password?</a>
           </div>
-        </div>
-        <div class="tile">
-          <div>
-            <h3>Need help?</h3>
-            <p>Contact your BOOP administrator to reset access or permissions.</p>
+        </form>
+      </div>
+
+      <!-- Accounts form -->
+      <div class="panel" id="panel-accounts">
+        <form id="form-accounts" novalidate>
+          <label for="email-accounts">Email</label>
+          <input id="email-accounts" type="email" autocomplete="username" required />
+
+          <label for="password-accounts">Password</label>
+          <input id="password-accounts" type="password" autocomplete="current-password" required />
+
+          <div class="row">
+            <button class="btn" type="submit" id="btn-accounts">Sign in to Accounts</button>
           </div>
-        </div>
-      </aside>
+          <div class="status" id="status-accounts"></div>
+          <div class="links">
+            <a href="/password.html?mode=forgot">Forgot password?</a>
+          </div>
+        </form>
+      </div>
     </div>
-  </main>
-
-  <div class="footer" role="contentinfo">
-    © <span id="year"></span> BOOP. All rights reserved.
   </div>
 
   <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('portalLoginForm');
-  const emailEl = document.getElementById('email');
-  const passEl = document.getElementById('password');
-  const statusEl = document.getElementById('portalStatus');
-
-  function showStatus(msg, kind = 'error') {
-    if (!statusEl) return;
-    statusEl.textContent = msg;
-    statusEl.style.color = kind === 'error' ? '#b91c1c' : '#065f46';
-  }
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    // Which side did they choose?
-    const sector = (document.querySelector('input[name="sector"]:checked') || {}).value || 'admin';
-    const email = emailEl.value.trim();
-    const password = passEl.value;
-
-    // Access rules per sector
-    const rules = {
-      admin: {
-        allowedTypes: ['super_admin', 'admin', 'support'],
-        redirectTo: '/admin/index.html',
-        denyText: 'This portal is for Admin roles (super_admin, admin, support).'
-      },
-      accounts: {
-        allowedTypes: ['accountant', 'treasury'],
-        redirectTo: '/accounts/index.html',
-        denyText: 'This portal is for Accounting roles (accountant, treasury).'
-      }
+  (function(){
+    // --- Tab switching (shows the correct FORM, not just color) ---
+    const tabs = document.querySelectorAll('.tab');
+    const panels = {
+      admin: document.getElementById('panel-admin'),
+      accounts: document.getElementById('panel-accounts')
     };
-    const rule = rules[sector] || rules.admin;
+    tabs.forEach(t => {
+      t.addEventListener('click', () => {
+        tabs.forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        const target = t.dataset.target; // 'admin' | 'accounts'
+        panels.admin.classList.toggle('active', target === 'admin');
+        panels.accounts.classList.toggle('active', target === 'accounts');
+        // Focus first input of the active panel
+        const first = panels[target].querySelector('input[type="email"]');
+        if (first) first.focus();
+      });
+    });
 
-    showStatus('Signing in…', 'ok');
-
-    try {
+    // --- Common helpers ---
+    async function login({email, password}) {
       const res = await fetch('/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type':'application/json' },
+        headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ email, password })
       });
-
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        showStatus(data.message || 'Login failed.', 'error');
-        return;
-      }
+      return { ok: res.ok, data };
+    }
 
-      const { token, user } = data;
-      // Helpful for debugging once: see what "type" is actually returned.
-      console.log('[portal] logged in user:', user);
+    function saveSession(token, user){
+      localStorage.setItem("boop_jwt", token);
+      localStorage.setItem("boopUser", JSON.stringify(user));
+    }
 
-      // Enforce sector rule
-      if (!rule.allowedTypes.includes((user.type || '').toLowerCase())) {
-        showStatus(`${rule.denyText} You are signed in as “${user.type || 'unknown'}”.`, 'error');
-        return;
-      }
-
-      // Save session
-      localStorage.setItem('boop_jwt', token);
-      localStorage.setItem('boopUser', JSON.stringify(user));
-
-      // Record session (best effort)
+    async function recordSession(token, user){
       try {
-        const payload = (() => {
-          const base64 = token.split('.')[1];
-          return JSON.parse(atob(base64));
-        })();
-        const expiresAt = new Date(payload.exp * 1000).toISOString();
-        await fetch('/api/sessions', {
+        // Decode JWT exp
+        const payload = JSON.parse(atob(token.split('.')[1] || ''));
+        const expiresAt = new Date((payload.exp || 0) * 1000).toISOString();
+        const res = await fetch('/api/sessions', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type':'application/json',
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
@@ -236,17 +146,88 @@ document.addEventListener('DOMContentLoaded', () => {
             status: 'online'
           })
         });
+        if (!res.ok) {
+          console.warn('Session record failed:', await res.text());
+        }
       } catch (e) {
-        console.warn('Session record failed:', e);
+        console.warn('Session record error:', e);
+      }
+    }
+
+    // --- Admin form logic ---
+    const adminForm = document.getElementById('form-admin');
+    const adminBtn  = document.getElementById('btn-admin');
+    const adminStatus = document.getElementById('status-admin');
+
+    adminForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      adminStatus.className = 'status';
+      adminStatus.textContent = '';
+      adminBtn.disabled = true;
+
+      const email = document.getElementById('email-admin').value.trim();
+      const password = document.getElementById('password-admin').value;
+
+      const { ok, data } = await login({email, password});
+      adminBtn.disabled = false;
+
+      if (!ok) {
+        adminStatus.classList.add('error');
+        adminStatus.textContent = data.message || 'Login failed.';
+        return;
       }
 
-      // Go!
-      window.location.href = rule.redirectTo;
-    } catch (err) {
-      showStatus('Network error: ' + err.message, 'error');
-    }
-  });
-});
-</script>
+      const { token, user } = data;
+      // Allowed admin types:
+      const allowed = ['super_admin','admin','support'];
+      if (!(user && allowed.includes(user.type))) {
+        adminStatus.classList.add('error');
+        adminStatus.textContent = 'Access denied. This area is for Admin roles only.';
+        return;
+      }
+
+      saveSession(token, user);
+      recordSession(token, user);
+      window.location.href = '/admin/index.html';
+    });
+
+    // --- Accounts form logic ---
+    const accForm = document.getElementById('form-accounts');
+    const accBtn  = document.getElementById('btn-accounts');
+    const accStatus = document.getElementById('status-accounts');
+
+    accForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      accStatus.className = 'status';
+      accStatus.textContent = '';
+      accBtn.disabled = true;
+
+      const email = document.getElementById('email-accounts').value.trim();
+      const password = document.getElementById('password-accounts').value;
+
+      const { ok, data } = await login({email, password});
+      accBtn.disabled = false;
+
+      if (!ok) {
+        accStatus.classList.add('error');
+        accStatus.textContent = data.message || 'Login failed.';
+        return;
+      }
+
+      const { token, user } = data;
+      // Allowed accounts types (no support here)
+      const allowed = ['accountant','treasury'];
+      if (!(user && allowed.includes(user.type))) {
+        accStatus.classList.add('error');
+        accStatus.textContent = 'Access denied. This area is for Accounts roles only.';
+        return;
+      }
+
+      saveSession(token, user);
+      recordSession(token, user);
+      window.location.href = '/accounts/index.html';
+    });
+  })();
+  </script>
 </body>
 </html>
