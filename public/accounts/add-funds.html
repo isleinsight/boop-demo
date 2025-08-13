@@ -141,35 +141,37 @@
   <script type="module">
   document.addEventListener("DOMContentLoaded", async () => {
     // ===== Helpers =====
-const token = localStorage.getItem("boop_jwt");
-const me    = JSON.parse(localStorage.getItem("boopUser") || "{}");
+    const token = localStorage.getItem("boop_jwt");
+    const me    = JSON.parse(localStorage.getItem("boopUser") || "{}");
 
-const $ = (id) => document.getElementById(id);
-const statusEl = $("status");
-function showStatus(msg, type = "info") {
-  // type: "ok" | "err" | "info"
-  statusEl.className = "status";              // reset
-  if (type === "ok")  statusEl.classList.add("ok");
-  if (type === "err") statusEl.classList.add("err");
-  statusEl.textContent = msg;
-  statusEl.setAttribute("role","status");
-  statusEl.setAttribute("aria-live","polite");
-  statusEl.scrollIntoView({ behavior:"smooth", block:"center" });
-  console.log("[AddFunds]", msg);
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
 
-  // Auto-hide for success/info after 4s (errors stick)
-  if (type !== "err") {
-    clearTimeout(window.__statusTimer);
-    window.__statusTimer = setTimeout(() => {
-      statusEl.textContent = "";
-      statusEl.className = "status";
-    }, 4000);
-  }
-}
+    function showStatus(msg, type = "info") {
+      // type: "ok" | "err" | "info"
+      statusEl.className = "status";              // reset classes
+      if (type === "ok")  statusEl.classList.add("ok");
+      if (type === "err") statusEl.classList.add("err");
+      statusEl.textContent = msg;
+      statusEl.setAttribute("role","status");
+      statusEl.setAttribute("aria-live","polite");
+      statusEl.scrollIntoView({ behavior:"smooth", block:"center" });
+      console.log("[AddFunds]", msg);
 
-// Catch silent runtime errors
-window.addEventListener("error", (e) => showStatus(`❌ ${e.message}`, "err"));
-window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?.message || e.reason || "Unhandled promise rejection"}`, "err"));
+      // Auto-hide for success/info after 4s (errors stay)
+      if (type !== "err") {
+        clearTimeout(window.__statusTimer);
+        window.__statusTimer = setTimeout(() => {
+          statusEl.textContent = "";
+          statusEl.className = "status";
+        }, 4000);
+      }
+    }
+
+    // Catch silent runtime errors
+    window.addEventListener("error", (e) => showStatus(`❌ ${e.message}`, "err"));
+    window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?.message || e.reason || "Unhandled promise rejection"}`, "err"));
+
     // ===== Elements =====
     const userSearch = $("userSearch");
     const suggestions = $("userSuggestions");
@@ -190,7 +192,7 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
 
     // ===== Populate treasury accounts =====
     async function populateTreasuryAccounts() {
-      showStatus("Loading treasury accounts…");
+      showStatus("Loading treasury accounts…", "info");
       try {
         const res = await fetch("/api/treasury/treasury-wallets", {
           headers: { Authorization: `Bearer ${token}` }
@@ -204,9 +206,9 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
           ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
         `;
         treasuryAccount.disabled = false;
-        showStatus("Treasury accounts ready.");
+        showStatus("Treasury accounts ready.", "info");
       } catch (err) {
-        showStatus(`❌ ${err.message}`, "red");
+        showStatus(`❌ ${err.message}`, "err");
         addFundsBtn.disabled = true;
       }
     }
@@ -233,7 +235,7 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
       } catch (err) {
         suggestions.innerHTML = "<div>Error loading suggestions</div>";
         suggestions.style.display = "block";
-        showStatus(`❌ ${err.message}`, "red");
+        showStatus(`❌ ${err.message}`, "err");
       }
     });
 
@@ -247,7 +249,7 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
       };
       userSearch.value = item.textContent;
       suggestions.style.display = "none";
-      showStatus(`Selected: ${selectedUser.name}`);
+      showStatus(`Selected: ${selectedUser.name}`, "info");
     });
 
     document.addEventListener("click", (e) => {
@@ -260,16 +262,16 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
     addFundsBtn.addEventListener("click", async () => {
       // Validate
       if (!selectedUser?.wallet_id) {
-        showStatus("❌ Please select a user from the list.", "red");
+        showStatus("❌ Please select a user from the list.", "err");
         return;
       }
       if (!treasuryAccount.value) {
-        showStatus("❌ Please select the source treasury account.", "red");
+        showStatus("❌ Please select the source treasury account.", "err");
         return;
       }
       const amt = parseFloat(amount.value);
       if (!amt || isNaN(amt) || amt <= 0) {
-        showStatus("❌ Please enter a valid amount.", "red");
+        showStatus("❌ Please enter a valid amount.", "err");
         return;
       }
 
@@ -278,7 +280,7 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
       modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex]?.text || "Treasury";
       modalUser.textContent = selectedUser.name;
       modal.style.display = "flex";
-      showStatus("Awaiting confirmation…");
+      showStatus("Awaiting confirmation…", "info");
 
       // Simple confirm promise
       let confirmed = false;
@@ -295,12 +297,12 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
       });
 
       if (!confirmed) {
-        showStatus("⚠️ Transfer cancelled.", "#555");
+        showStatus("⚠️ Transfer cancelled.", "info");
         return;
       }
 
       // Submit
-      showStatus("Submitting transfer…");
+      showStatus("Submitting transfer…", "info");
       addFundsBtn.disabled = true;
 
       // Abort/timeout after 15s so we always surface something
@@ -332,7 +334,7 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
         try { payload = await res.json(); } catch { payload = null; }
 
         if (res.ok) {
-          showStatus(payload?.message || "✅ Funds transferred successfully!", "green");
+          showStatus(payload?.message || "✅ Funds transferred successfully!", "ok");
           // Reset form
           userSearch.value = "";
           amount.value = "";
@@ -341,11 +343,11 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
           if (!treasuryAccount.disabled) treasuryAccount.selectedIndex = 0;
         } else {
           const msg = payload?.error || payload?.message || `HTTP ${res.status}`;
-          showStatus(`❌ ${msg}`, "red");
+          showStatus(`❌ ${msg}`, "err");
         }
       } catch (err) {
         const msg = err.name === "AbortError" ? "Request timed out." : err.message || String(err);
-        showStatus(`❌ ${msg}`, "red");
+        showStatus(`❌ ${msg}`, "err");
       } finally {
         addFundsBtn.disabled = false;
       }
@@ -360,9 +362,8 @@ window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?
     });
 
     console.log("✅ Add Funds script ready");
-    showStatus("Ready.");
+    showStatus("Ready.", "info");
   });
 </script>
-      <script type="module" src="../assets/hamburger.js"></script>
 </body>
 </html>
