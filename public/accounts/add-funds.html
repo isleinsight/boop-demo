@@ -22,7 +22,7 @@
     .status { text-align: center; margin-top: 20px; color: #333; }
     #userSuggestions div { padding: 8px 12px; border-bottom: 1px solid #eee; cursor: pointer; }
     #userSuggestions div:hover { background-color: #f0f0f0; }
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; justify-content: center; align-items: center; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; justify-content: center; align-items: center; z-index: 10000; }
     .modal-content { background: #fff; padding: 20px; border-radius: 6px; text-align: center; }
     .modal-content button { padding: 8px 16px; margin: 5px; }
     #cancelModalBtn { background: #e74c3c; } #cancelModalBtn:hover { background: #c0392b; }
@@ -126,7 +126,7 @@
       </select>
     </div>
 
-    <button id="addFundsBtn">Add Funds</button>
+    <button id="addFundsBtn" type="button">Add Funds</button>
     <div class="status" id="status"></div>
   </div>
 
@@ -141,8 +141,8 @@
           to user <span id="modalUser"></span>?
         </p>
         <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
-          <button id="confirmModalBtn">Confirm</button>
-          <button id="cancelModalBtn" style="background:#e74c3c;">Cancel</button>
+          <button id="confirmModalBtn" type="button">Confirm</button>
+          <button id="cancelModalBtn" type="button" style="background:#e74c3c;">Cancel</button>
         </div>
       </div>
 
@@ -150,7 +150,7 @@
       <div id="modalView-result" style="display:none; text-align:center;">
         <p id="resultText" style="margin:0 0 10px;"></p>
         <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
-          <button id="resultOkBtn">OK</button>
+          <button id="resultOkBtn" type="button">OK</button>
         </div>
       </div>
     </div>
@@ -173,7 +173,6 @@
       statusEl.setAttribute("role","status");
       statusEl.setAttribute("aria-live","polite");
       statusEl.scrollIntoView({ behavior:"smooth", block:"center" });
-      // Auto-hide for success/info after 4s (errors persist)
       if (type !== "err") {
         clearTimeout(window.__statusTimer);
         window.__statusTimer = setTimeout(() => {
@@ -225,6 +224,11 @@
       setTimeout(() => resultOkBtn.focus(), 0);
     }
     function closeModal() { modal.style.display = "none"; }
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (modal.style.display === 'flex' && e.key === 'Escape') closeModal();
+    });
 
     // ===== Populate treasury accounts =====
     async function populateTreasuryAccounts() {
@@ -308,16 +312,13 @@
       openConfirmView();
       showStatus("Awaiting confirmation…", "info");
 
-      // IMPORTANT FIX: Use .onclick assignments (no cloning), clear them each time before rebinding
+      // idempotent bindings
       confirmModalBtn.onclick = null;
       cancelModalBtn.onclick  = null;
 
       confirmModalBtn.onclick = () => {
-        // keep console fun
-        console.log("Charlie Brown is in the everyday news.");
-        console.log("Charlie Brown is in the everyday news.");
-        console.log("Charlie Brown is in the everyday news.");
-        console.log("Charlie Brown is in the everyday news.");
+        confirmModalBtn.disabled = true; // avoid double submit
+        cancelModalBtn.disabled  = true;
         doSubmit();
       };
       cancelModalBtn.onclick = () => {
@@ -384,7 +385,8 @@
           };
         } finally {
           addFundsBtn.disabled = false;
-          // ensure modal buttons don't keep stale handlers next open
+          confirmModalBtn.disabled = false;
+          cancelModalBtn.disabled  = false;
           confirmModalBtn.onclick = null;
           cancelModalBtn.onclick  = null;
         }
