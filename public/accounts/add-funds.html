@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Add Funds – BOOP Accounts</title>
+  <title>Add Funds – BOOP Accounts (Fixed)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
@@ -28,13 +28,13 @@
     #cancelModalBtn { background: #e74c3c; } #cancelModalBtn:hover { background: #c0392b; }
 
     .status.ok{
-  color:#065f46;background:#ecfdf5;border:1px solid #34d399;
-  padding:10px;border-radius:8px;margin-top:16px
-}
-.status.err{
-  color:#991b1b;background:#fef2f2;border:1px solid #fecaca;
-  padding:10px;border-radius:8px;margin-top:16px
-}
+      color:#065f46;background:#ecfdf5;border:1px solid #34d399;
+      padding:10px;border-radius:8px;margin-top:16px
+    }
+    .status.err{
+      color:#991b1b;background:#fef2f2;border:1px solid #fecaca;
+      padding:10px;border-radius:8px;margin-top:16px
+    }
   </style>
 </head>
 <body>
@@ -57,23 +57,25 @@
       }
     })();
   </script>
-<div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; 
+
+  <div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; 
   display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
-  <div style="max-width:540px;">
-    <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
-    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+    <div style="max-width:540px;">
+      <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
+      <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+    </div>
   </div>
-</div>
-<script>
-  (function(){
-    const minWidth = 900; // tweak if you want to allow tablets
-    const guard = document.getElementById('screenGuard');
-    function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
-    window.addEventListener('resize', update, { passive:true });
-    update();
-  })();
-</script>
- <!-- Top Nav -->
+  <script>
+    (function(){
+      const minWidth = 900;
+      const guard = document.getElementById('screenGuard');
+      function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
+      window.addEventListener('resize', update, { passive:true });
+      update();
+    })();
+  </script>
+
+  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -96,7 +98,6 @@
       </div>
     </div>
   </nav>
-
 
   <!-- Main Form -->
   <div class="container-small">
@@ -129,31 +130,31 @@
     <div class="status" id="status"></div>
   </div>
 
-<!-- Confirmation / Result Modal -->
-<div id="modal" class="modal">
-  <div class="modal-content" style="max-width:520px;">
-    <!-- Confirm view -->
-    <div id="modalView-confirm">
-      <p>
-        Confirm transfer of $<span id="modalAmount"></span>
-        from <span id="modalTreasury"></span>
-        to user <span id="modalUser"></span>?
-      </p>
-      <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
-        <button id="confirmModalBtn">Confirm</button>
-        <button id="cancelModalBtn" style="background:#e74c3c;">Cancel</button>
+  <!-- Confirmation / Result Modal -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content" style="max-width:520px;">
+      <!-- Confirm view -->
+      <div id="modalView-confirm">
+        <p id="modalTitle">
+          Confirm transfer of $<span id="modalAmount"></span>
+          from <span id="modalTreasury"></span>
+          to user <span id="modalUser"></span>?
+        </p>
+        <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
+          <button id="confirmModalBtn">Confirm</button>
+          <button id="cancelModalBtn" style="background:#e74c3c;">Cancel</button>
+        </div>
       </div>
-    </div>
 
-    <!-- Result view (success / error) -->
-    <div id="modalView-result" style="display:none; text-align:center;">
-      <p id="resultText" style="margin:0 0 10px;"></p>
-      <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
-        <button id="resultOkBtn">OK</button>
+      <!-- Result view (success / error) -->
+      <div id="modalView-result" style="display:none; text-align:center;">
+        <p id="resultText" style="margin:0 0 10px;"></p>
+        <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
+          <button id="resultOkBtn">OK</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
   <script type="module">
   document.addEventListener("DOMContentLoaded", async () => {
@@ -165,7 +166,6 @@
     const statusEl = $("status");
 
     function showStatus(msg, type = "info") {
-      // type: "ok" | "err" | "info"
       statusEl.className = "status";
       if (type === "ok")  statusEl.classList.add("ok");
       if (type === "err") statusEl.classList.add("err");
@@ -173,8 +173,6 @@
       statusEl.setAttribute("role","status");
       statusEl.setAttribute("aria-live","polite");
       statusEl.scrollIntoView({ behavior:"smooth", block:"center" });
-      console.log("[AddFunds]", msg);
-
       // Auto-hide for success/info after 4s (errors persist)
       if (type !== "err") {
         clearTimeout(window.__statusTimer);
@@ -217,19 +215,16 @@
       viewConfirm.style.display = "block";
       viewResult.style.display  = "none";
       modal.style.display       = "flex";
-      // fun console lines you asked for
-      console.log("That's from a Harvard professor.");
-      console.log("That's from a Harvard professor.");
+      confirmModalBtn.focus();
     }
     function openResultView(message) {
       viewConfirm.style.display = "none";
       viewResult.style.display  = "block";
       resultText.textContent    = message;
       modal.style.display       = "flex";
+      setTimeout(() => resultOkBtn.focus(), 0);
     }
-    function closeModal() {
-      modal.style.display = "none";
-    }
+    function closeModal() { modal.style.display = "none"; }
 
     // ===== Populate treasury accounts =====
     async function populateTreasuryAccounts() {
@@ -301,20 +296,10 @@
 
     // ===== Add Funds flow =====
     addFundsBtn.addEventListener("click", async () => {
-      // Validate
-      if (!selectedUser?.wallet_id) {
-        showStatus("❌ Please select a user from the list.", "err");
-        return;
-      }
-      if (!treasuryAccount.value) {
-        showStatus("❌ Please select the source treasury account.", "err");
-        return;
-      }
+      if (!selectedUser?.wallet_id) { showStatus("❌ Please select a user from the list.", "err"); return; }
+      if (!treasuryAccount.value)   { showStatus("❌ Please select the source treasury account.", "err"); return; }
       const amt = parseFloat(amount.value);
-      if (!amt || isNaN(amt) || amt <= 0) {
-        showStatus("❌ Please enter a valid amount.", "err");
-        return;
-      }
+      if (!amt || isNaN(amt) || amt <= 0) { showStatus("❌ Please enter a valid amount.", "err"); return; }
 
       // Fill and open confirm view
       modalAmount.textContent   = amt.toFixed(2);
@@ -323,27 +308,24 @@
       openConfirmView();
       showStatus("Awaiting confirmation…", "info");
 
-      // Wire one-shot listeners for confirm/cancel
-      const confirmOnce = () => {
-        // more fun console lines you asked for (after pressing confirm)
+      // IMPORTANT FIX: Use .onclick assignments (no cloning), clear them each time before rebinding
+      confirmModalBtn.onclick = null;
+      cancelModalBtn.onclick  = null;
+
+      confirmModalBtn.onclick = () => {
+        // keep console fun
         console.log("Charlie Brown is in the everyday news.");
         console.log("Charlie Brown is in the everyday news.");
         console.log("Charlie Brown is in the everyday news.");
         console.log("Charlie Brown is in the everyday news.");
-        doSubmit(); // actually submit
+        doSubmit();
       };
-      const cancelOnce = () => {
+      cancelModalBtn.onclick = () => {
         closeModal();
         showStatus("⚠️ Transfer cancelled.", "info");
-        cleanup();
+        confirmModalBtn.onclick = null;
+        cancelModalBtn.onclick  = null;
       };
-      confirmModalBtn.addEventListener("click", confirmOnce, { once: true });
-      cancelModalBtn.addEventListener("click", cancelOnce, { once: true });
-
-      function cleanup() {
-        confirmModalBtn.replaceWith(confirmModalBtn.cloneNode(true));
-        cancelModalBtn.replaceWith(cancelModalBtn.cloneNode(true));
-      }
 
       async function doSubmit() {
         showStatus("Submitting transfer…", "info");
@@ -376,12 +358,10 @@
           try { payload = await res.json(); } catch { payload = null; }
 
           if (res.ok) {
-            // Show success *in the modal*, and only show the green bar after user clicks OK
             openResultView(payload?.message || "Funds added successfully.");
             resultOkBtn.onclick = () => {
               closeModal();
               showStatus("✅ Funds transferred successfully!", "ok");
-              // Reset form
               userSearch.value = "";
               amount.value = "";
               note.value = "";
@@ -404,6 +384,9 @@
           };
         } finally {
           addFundsBtn.disabled = false;
+          // ensure modal buttons don't keep stale handlers next open
+          confirmModalBtn.onclick = null;
+          cancelModalBtn.onclick  = null;
         }
       }
     });
@@ -419,6 +402,6 @@
     console.log("✅ Add Funds script ready");
     showStatus("Ready.", "info");
   });
-</script>
+  </script>
 </body>
 </html>
