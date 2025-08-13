@@ -191,105 +191,137 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 // 💰 POST /api/transactions/add-funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
-  if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
-    return res.status(403).json({ message: 'You do not have permission to add funds.' });
+
+  // Permission: only admin accountants/treasury
+  if (role !== 'admin' || !['accountant', 'treasury'].includes((type || '').toLowerCase())) {
+    return res.status(403).json({ success: false, message: 'You do not have permission to add funds.' });
+  }
+
+  const { treasury_wallet_id, wallet_id, user_id, amount, note } = req.body || {};
+
+  // Validate required fields
+  if (!treasury_wallet_id || !wallet_id || !user_id || amount == null) {
+    return res.status(400).json({ success: false, message: 'Missing required fields.' });
+  }
+
+  // Validate amount
+  const amountNum = Number(amount);
+  if (!Number.isFinite(amountNum) || amountNum <= 0) {
+    return res.status(400).json({ success: false, message: 'Invalid amount.' });
+  }
+  const amount_cents = Math.round(amountNum * 100);
+
+  // Prevent self-transfer between same wallet
+  if (String(treasury_wallet_id) === String(wallet_id)) {
+    return res.status(400).json({ success: false, message: 'Treasury and recipient wallets must be different.' });
   }
 
   const client = await pool.connect();
   try {
-    const { treasury_wallet_id, wallet_id, user_id, amount, note } = req.body;
-
-    if (!treasury_wallet_id || !wallet_id || !user_id || amount == null) {
-      return res.status(400).json({ message: 'Missing required fields.' });
-    }
-
-    const amountNum = Number(amount);
-    if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      return res.status(400).json({ message: 'Invalid amount.' });
-    }
-
-    const amount_cents = Math.round(amountNum * 100);
-    const debitNote  = note || 'Funds issued';
-    const creditNote = 'Received from Government Assistance';
-
     await client.query('BEGIN');
 
-    // Verify treasury wallet exists & get its owner (sender)
-    const treas = await client.query(
-      `SELECT id, user_id FROM wallets WHERE id = $1`,
+    // 1) Load treasury wallet (and owner)
+    const treasQ = await client.query(
+      `SELECT id, user_id, balance
+         FROM wallets
+        WHERE id = $1
+        FOR UPDATE`,
       [treasury_wallet_id]
     );
-    if (!treas.rowCount) throw new Error('Treasury wallet not found');
-    const treasuryUserId = treas.rows[0].user_id;
+    if (!treasQ.rowCount) {
+      throw new Error('Treasury wallet not found.');
+    }
+    const treasury = treasQ.rows[0];
 
-    // Verify recipient wallet belongs to user_id
-    const recip = await client.query(
-      `SELECT id FROM wallets WHERE id = $1 AND user_id = $2`,
+    // 2) Load recipient wallet & verify ownership
+    const recipQ = await client.query(
+      `SELECT id, user_id, balance
+         FROM wallets
+        WHERE id = $1 AND user_id = $2
+        FOR UPDATE`,
       [wallet_id, user_id]
     );
-    if (!recip.rowCount) {
-      throw new Error('Recipient wallet does not belong to the specified user');
+    if (!recipQ.rowCount) {
+      throw new Error('Recipient wallet not found or does not belong to the specified user.');
+    }
+    const recipient = recipQ.rows[0];
+
+    // (Optional) Enforce non-negative treasury balance
+    // Comment this out if treasury is allowed to go negative.
+    if (Number(treasury.balance) < amount_cents) {
+      return res.status(400).json({ success: false, message: 'Insufficient treasury balance.' });
     }
 
-    // 1) Debit from Treasury wallet
-    await client.query(
+    // 3) Insert debit transaction on treasury wallet
+    const debitNote  = note || 'Funds issued';
+    const debitTx = await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
          added_by, sender_id, recipient_id
-       )
-       VALUES ($1, $2, 'debit', $3, $4, NOW(),
-               $5, $6, $7)`,
+       ) VALUES ($1, $2, 'debit', $3, $4, NOW(),
+                 $5, $6, $7)
+       RETURNING id`,
       [
-        treasury_wallet_id,        // wallet debited
-        treasuryUserId,            // owner of treasury wallet
+        treasury.id,             // wallet debited
+        treasury.user_id,        // treasury owner
         amount_cents,
         debitNote,
-        adminId,                   // admin performing the action
-        treasuryUserId,            // FROM
-        user_id                    // TO
+        adminId,                 // which admin performed the action
+        treasury.user_id,        // FROM
+        recipient.user_id        // TO
       ]
     );
 
-    await client.query(
-      `UPDATE wallets
-       SET balance = balance - $1
-       WHERE id = $2`,
-      [amount_cents, treasury_wallet_id]
-    );
-
-    // 2) Credit to Recipient wallet
-    await client.query(
+    // 4) Insert credit transaction on recipient wallet
+    const creditNote = 'Received from Government Assistance';
+    const creditTx = await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
          added_by, sender_id, recipient_id
-       )
-       VALUES ($1, $2, 'credit', $3, $4, NOW(),
-               $5, $6, $7)`,
+       ) VALUES ($1, $2, 'credit', $3, $4, NOW(),
+                 $5, $6, $7)
+       RETURNING id`,
       [
-        wallet_id,                 // wallet credited
-        user_id,                   // recipient user
+        recipient.id,            // wallet credited
+        recipient.user_id,       // recipient user
         amount_cents,
         creditNote,
         adminId,
-        treasuryUserId,            // FROM
-        user_id                    // TO
+        treasury.user_id,        // FROM
+        recipient.user_id        // TO
       ]
     );
 
+    // 5) Update balances (use your existing `wallets.balance` column)
+    const newTreasuryBal  = Number(treasury.balance)  - amount_cents;
+    const newRecipientBal = Number(recipient.balance) + amount_cents;
+
     await client.query(
-      `UPDATE wallets
-       SET balance = balance + $1
-       WHERE id = $2`,
-      [amount_cents, wallet_id]
+      `UPDATE wallets SET balance = $1 WHERE id = $2`,
+      [newTreasuryBal, treasury.id]
+    );
+
+    await client.query(
+      `UPDATE wallets SET balance = $1 WHERE id = $2`,
+      [newRecipientBal, recipient.id]
     );
 
     await client.query('COMMIT');
-    return res.status(200).json({ message: 'Funds added successfully' });
 
+    return res.status(200).json({
+      success: true,
+      message: 'Funds added successfully',
+      debit_tx_id:  debitTx.rows[0].id,
+      credit_tx_id: creditTx.rows[0].id,
+      balances: {
+        treasury:  newTreasuryBal,   // cents
+        recipient: newRecipientBal   // cents
+      }
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('❌ Add Funds Error:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to add funds.' });
   } finally {
     client.release();
   }
