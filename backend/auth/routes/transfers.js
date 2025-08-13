@@ -268,9 +268,9 @@ router.post('/', async (req, res) => {
     const ins = await db.query(
       `
       INSERT INTO transfers (
-        user_id, amount_cents, bank, destination_masked, status, requested_at
-      )
-      VALUES ($1, $2, $3, $4, 'pending', NOW())
+  user_id, amount_cents, bank, destination_masked, status, requested_at, memo
+)
+VALUES ($1, $2, $3, $4, 'pending', NOW(), $5)
       RETURNING id, user_id, amount_cents, bank, destination_masked, status,
                 requested_at AS created_at
       `,
