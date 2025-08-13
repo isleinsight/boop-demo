@@ -197,7 +197,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
   const client = await pool.connect();
   try {
-    const { treasury_wallet_id, wallet_id, user_id, amount, note } = req.body;
+    const { treasury_wallet_id, wallet_id, user_id, amount, note } = req.body || {};
 
     if (!treasury_wallet_id || !wallet_id || !user_id || amount == null) {
       return res.status(400).json({ message: 'Missing required fields.' });
@@ -207,40 +207,48 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
       return res.status(400).json({ message: 'Invalid amount.' });
     }
-
     const amount_cents = Math.round(amountNum * 100);
     const debitNote  = note || 'Funds issued';
     const creditNote = 'Received from Government Assistance';
 
     await client.query('BEGIN');
 
-    // Verify treasury wallet exists & get its owner (sender)
+    // Lock BOTH wallets to keep balances consistent while we update.
     const treas = await client.query(
-      `SELECT id, user_id FROM wallets WHERE id = $1`,
+      `SELECT id, user_id, COALESCE(balance_cents, 0) AS balance_cents
+         FROM wallets
+        WHERE id = $1
+        FOR UPDATE`,
       [treasury_wallet_id]
     );
     if (!treas.rowCount) throw new Error('Treasury wallet not found');
     const treasuryUserId = treas.rows[0].user_id;
+    const treasuryBal    = treas.rows[0].balance_cents;
 
-    // Verify recipient wallet belongs to user_id
     const recip = await client.query(
-      `SELECT id FROM wallets WHERE id = $1 AND user_id = $2`,
+      `SELECT id, user_id, COALESCE(balance_cents, 0) AS balance_cents
+         FROM wallets
+        WHERE id = $1 AND user_id = $2
+        FOR UPDATE`,
       [wallet_id, user_id]
     );
-    if (!recip.rowCount) {
-      throw new Error('Recipient wallet does not belong to the specified user');
-    }
+    if (!recip.rowCount) throw new Error('Recipient wallet does not belong to the specified user');
+    const recipBal = recip.rows[0].balance_cents;
+
+    // Optional: enforce non-negative treasury
+    // if (treasuryBal < amount_cents) throw new Error('Insufficient funds in treasury wallet');
 
     // 1) Debit from Treasury wallet
-    await client.query(
+    const debitTx = await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
          added_by, sender_id, recipient_id
        )
        VALUES ($1, $2, 'debit', $3, $4, NOW(),
-               $5, $6, $7)`,
+               $5, $6, $7)
+       RETURNING id`,
       [
-        treasury_wallet_id,        // wallet debited
+        treasury_wallet_id,        // debited wallet
         treasuryUserId,            // owner of treasury wallet
         amount_cents,
         debitNote,
@@ -251,15 +259,16 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     );
 
     // 2) Credit to Recipient wallet
-    await client.query(
+    const creditTx = await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
          added_by, sender_id, recipient_id
        )
        VALUES ($1, $2, 'credit', $3, $4, NOW(),
-               $5, $6, $7)`,
+               $5, $6, $7)
+       RETURNING id`,
       [
-        wallet_id,                 // wallet credited
+        wallet_id,                 // credited wallet
         user_id,                   // recipient user
         amount_cents,
         creditNote,
@@ -269,13 +278,42 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       ]
     );
 
+    // 3) Update balances (atomic)
+    const updTreas = await client.query(
+      `UPDATE wallets
+          SET balance_cents = COALESCE(balance_cents,0) - $2,
+              updated_at    = NOW()
+        WHERE id = $1
+        RETURNING id, balance_cents`,
+      [treasury_wallet_id, amount_cents]
+    );
+    const updRecip = await client.query(
+      `UPDATE wallets
+          SET balance_cents = COALESCE(balance_cents,0) + $2,
+              updated_at    = NOW()
+        WHERE id = $1
+        RETURNING id, balance_cents`,
+      [wallet_id, amount_cents]
+    );
+
+    // If your column is named "balance" instead of "balance_cents", use this instead:
+    // await client.query(`UPDATE wallets SET balance = COALESCE(balance,0) - $2, updated_at = NOW() WHERE id = $1`, [treasury_wallet_id, amount_cents]);
+    // await client.query(`UPDATE wallets SET balance = COALESCE(balance,0) + $2, updated_at = NOW() WHERE id = $1`, [wallet_id, amount_cents]);
+
     await client.query('COMMIT');
-    return res.status(200).json({ message: 'Funds added successfully' });
+
+    return res.status(201).json({
+      message: 'Funds added successfully',
+      debit_txn_id:  debitTx.rows[0].id,
+      credit_txn_id: creditTx.rows[0].id,
+      treasury_balance_cents: updTreas.rows[0].balance_cents,
+      recipient_balance_cents: updRecip.rows[0].balance_cents
+    });
 
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('❌ Add Funds Error:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message || 'Failed to add funds' });
   } finally {
     client.release();
   }
