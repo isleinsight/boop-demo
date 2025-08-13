@@ -212,7 +212,7 @@ router.get('/mine/latest', async (req, res) => {
   }
 });
 
-// --- Cardholder: create a new transfer request
+// --- Cardholder: create a new transfer request (schema-safe: no bank_account_id column)
 router.post('/', async (req, res) => {
   try {
     const me = req.user || {};
@@ -237,9 +237,9 @@ router.post('/', async (req, res) => {
 
     // Verify the bank account belongs to this user
     const ba = await db.query(
-      `SELECT bank_name AS bank, RIGHT(account_number, 4) AS last4
+      `SELECT bank_name AS bank, COALESCE(last4, RIGHT(account_number, 4)) AS last4
          FROM bank_accounts
-        WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+        WHERE id = $1 AND user_id = $2 AND (deleted_at IS NULL OR deleted_at IS NULL)
         LIMIT 1`,
       [bank_account_id, userId]
     );
@@ -247,34 +247,40 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ message: 'Bank account not found.' });
     }
     const bank = ba.rows[0].bank;
-    const last4 = ba.rows[0].last4;
-    const destination_masked = `${bank} •••• ${last4}`;
+    const last4 = String(ba.rows[0].last4 || '').slice(-4);
+    const destination_masked = `•••• ${last4}`;
 
-    // (Optional) soft balance check
+    // Soft balance check (your wallets table uses `balance` in cents)
     try {
       const w = await db.query(
-        `SELECT COALESCE(balance_cents, balance) AS cents
-           FROM wallets
-          WHERE user_id = $1
-          LIMIT 1`,
+        `SELECT balance FROM wallets WHERE user_id = $1 LIMIT 1`,
         [userId]
       );
-      const walletCents = Number(w.rows?.[0]?.cents || 0);
+      const walletCents = Number(w.rows?.[0]?.balance || 0);
       if (!Number.isNaN(walletCents) && amt > walletCents) {
         return res.status(400).json({ message: 'Amount exceeds available balance.' });
       }
-    } catch { /* ignore soft check errors */ }
+    } catch {
+      // ignore soft check errors
+    }
 
-    // Insert transfer request (matches the columns you use elsewhere)
+    // Insert: DO NOT include bank_account_id or memo columns (they don't exist in your table)
     const ins = await db.query(
-      `INSERT INTO transfers
-         (user_id, bank_account_id, amount_cents, bank, destination_masked, status, requested_at, memo)
-       VALUES ($1,      $2,             $3,           $4,   $5,                'pending',   NOW(),       $6)
-       RETURNING id, user_id, amount_cents, bank, destination_masked, status, requested_at AS created_at`,
-      [userId, bank_account_id, amt, bank, destination_masked, memo || '']
+      `
+      INSERT INTO transfers (
+        user_id, amount_cents, bank, destination_masked, status, requested_at
+      )
+      VALUES ($1, $2, $3, $4, 'pending', NOW())
+      RETURNING id, user_id, amount_cents, bank, destination_masked, status,
+                requested_at AS created_at
+      `,
+      [userId, amt, bank, destination_masked]
     );
 
-    return res.status(201).json(ins.rows[0]);
+    return res.status(201).json({
+      message: 'Transfer request submitted.',
+      ...ins.rows[0]
+    });
   } catch (e) {
     console.error('POST /api/transfers error', e);
     return res.status(500).json({ message: 'Failed to submit transfer request.' });
