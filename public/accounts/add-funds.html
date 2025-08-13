@@ -130,192 +130,216 @@
   </div>
 
   <script type="module">
-    document.addEventListener("DOMContentLoaded", async () => {
-      const user = JSON.parse(localStorage.getItem("boopUser"));
-      const token = localStorage.getItem("boop_jwt");
+  document.addEventListener("DOMContentLoaded", async () => {
+    // ===== Helpers =====
+    const token = localStorage.getItem("boop_jwt");
+    const me    = JSON.parse(localStorage.getItem("boopUser") || "{}");
 
-      // Build Accounts menu dynamically (no "Add User", correct visibility)
-      const accountsMenu = document.getElementById("accountsMenu");
-      if (accountsMenu) {
-        accountsMenu.innerHTML = `
-          <a href="add-funds.html">Add Funds</a>
-          <a href="transfer.html">Transfer</a>
-          <a href="reports.html">Reports</a>
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+    function showStatus(msg, color = "#333") {
+      statusEl.textContent = msg;
+      statusEl.style.color = color;
+      console.log("[AddFunds]", msg);
+    }
+
+    // Catch silent runtime errors
+    window.addEventListener("error", (e) => showStatus(`❌ ${e.message}`, "red"));
+    window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?.message || e.reason || "Unhandled promise rejection"}`, "red"));
+
+    // ===== Elements =====
+    const userSearch = $("userSearch");
+    const suggestions = $("userSuggestions");
+    const treasuryAccount = $("treasuryAccount");
+    const amount = $("amount");
+    const note = $("note");
+    const addFundsBtn = $("addFundsBtn");
+    const logoutBtn = $("logoutBtn");
+
+    const modal = $("modal");
+    const modalAmount = $("modalAmount");
+    const modalTreasury = $("modalTreasury");
+    const modalUser = $("modalUser");
+    const confirmModalBtn = $("confirmModalBtn");
+    const cancelModalBtn = $("cancelModalBtn");
+
+    let selectedUser = null;
+
+    // ===== Populate treasury accounts =====
+    async function populateTreasuryAccounts() {
+      showStatus("Loading treasury accounts…");
+      try {
+        const res = await fetch("/api/treasury/treasury-wallets", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json().catch(() => []);
+        if (!res.ok || !Array.isArray(data)) {
+          throw new Error(data?.message || "Failed to load treasury wallets");
+        }
+        treasuryAccount.innerHTML = `
+          <option value="" disabled selected>Select a treasury account</option>
+          ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
         `;
-        // This page is accountant-only; no Manage Treasury item here
+        treasuryAccount.disabled = false;
+        showStatus("Treasury accounts ready.");
+      } catch (err) {
+        showStatus(`❌ ${err.message}`, "red");
+        addFundsBtn.disabled = true;
       }
+    }
+    await populateTreasuryAccounts();
 
-      const userSearch = document.getElementById("userSearch");
-      const suggestions = document.getElementById("userSuggestions");
-      const treasuryAccount = document.getElementById("treasuryAccount");
-      const amount = document.getElementById("amount");
-      const note = document.getElementById("note");
-      const addFundsBtn = document.getElementById("addFundsBtn");
-      const statusEl = document.getElementById("status");
-      const logoutBtn = document.getElementById("logoutBtn");
+    // ===== User search =====
+    userSearch.addEventListener("input", async () => {
+      const query = userSearch.value.trim();
+      if (query.length < 2) { suggestions.style.display = "none"; return; }
 
-      const modal = document.getElementById("modal");
-      const modalAmount = document.getElementById("modalAmount");
-      const modalTreasury = document.getElementById("modalTreasury");
-      const modalUser = document.getElementById("modalUser");
-      const confirmModalBtn = document.getElementById("confirmModalBtn");
-      const cancelModalBtn = document.getElementById("cancelModalBtn");
-
-      let selectedUser = null;
-
-      // 🚀 Load treasury wallets (accountant selects source)
-      async function populateTreasuryAccounts() {
-        try {
-          const res = await fetch('/api/treasury/treasury-wallets', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const data = await res.json();
-          if (!res.ok || !Array.isArray(data)) throw new Error("Failed to load treasury wallets");
-
-          treasuryAccount.innerHTML = `
-            <option value="" disabled selected>Select a treasury account</option>
-            ${data.map(w => `<option value="${w.id}">${w.name}</option>`).join("")}
-          `;
-          treasuryAccount.disabled = false;
-        } catch (err) {
-          console.error("❌ Treasury account load error:", err);
-          statusEl.textContent = `❌ ${err.message}`;
-          statusEl.style.color = "red";
-          addFundsBtn.disabled = true;
-        }
+      try {
+        const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const users = await res.json().catch(() => []);
+        suggestions.innerHTML = (Array.isArray(users) && users.length)
+          ? users.map(u => `
+              <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
+                ${u.first_name} ${u.last_name} (${u.email})
+              </div>
+            `).join("")
+          : "<div>No results found</div>";
+        suggestions.style.display = "block";
+      } catch (err) {
+        suggestions.innerHTML = "<div>Error loading suggestions</div>";
+        suggestions.style.display = "block";
+        showStatus(`❌ ${err.message}`, "red");
       }
-      await populateTreasuryAccounts();
-
-      // 👤 Search for assistance user (must have wallet)
-      userSearch.addEventListener("input", async () => {
-        const query = userSearch.value.trim();
-        if (query.length < 2) { suggestions.style.display = "none"; return; }
-
-        try {
-          const res = await fetch(`/api/users?search=${encodeURIComponent(query)}&hasWallet=true&assistanceOnly=true`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const users = await res.json();
-          suggestions.innerHTML = (Array.isArray(users) && users.length)
-            ? users.map(u => `
-                <div class="user-suggestion" data-id="${u.id}" data-wallet="${u.wallet_id}">
-                  ${u.first_name} ${u.last_name} (${u.email})
-                </div>
-              `).join("")
-            : "<div>No results found</div>";
-          suggestions.style.display = "block";
-        } catch (err) {
-          console.error("❌ User search error:", err);
-          suggestions.innerHTML = "<div>Error loading suggestions</div>";
-          suggestions.style.display = "block";
-        }
-      });
-
-      // 👆 Pick user
-      suggestions.addEventListener("click", (e) => {
-        const item = e.target.closest(".user-suggestion");
-        if (!item) return;
-        selectedUser = {
-          id: item.dataset.id,
-          wallet_id: item.dataset.wallet,
-          name: item.textContent
-        };
-        userSearch.value = item.textContent;
-        suggestions.style.display = "none";
-      });
-
-      // Hide suggestions on outside click
-      document.addEventListener("click", (e) => {
-        if (!suggestions.contains(e.target) && e.target !== userSearch) {
-          suggestions.style.display = "none";
-        }
-      });
-
-      // 💸 Add Funds flow
-      addFundsBtn.addEventListener("click", async () => {
-        // Basic validation
-        if (!selectedUser?.wallet_id) {
-          statusEl.textContent = "❌ Please select a user from the list.";
-          statusEl.style.color = "red";
-          return;
-        }
-        if (!treasuryAccount.value) {
-          statusEl.textContent = "❌ Please select the source treasury account.";
-          statusEl.style.color = "red";
-          return;
-        }
-        const amt = parseFloat(amount.value);
-        if (!amt || isNaN(amt) || amt <= 0) {
-          statusEl.textContent = "❌ Please enter a valid amount.";
-          statusEl.style.color = "red";
-          return;
-        }
-
-        // Confirm modal
-        modalAmount.textContent = amt.toFixed(2);
-        modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex]?.text || "Treasury";
-        modalUser.textContent = selectedUser.name;
-        modal.style.display = "flex";
-
-        try {
-          const confirmed = await new Promise((resolve, reject) => {
-            confirmModalBtn.onclick = () => { modal.style.display = "none"; resolve(true); };
-            cancelModalBtn.onclick = () => { modal.style.display = "none"; reject(new Error("Cancelled")); };
-          });
-          if (!confirmed) return;
-
-          // ✅ Send BOTH recipient & source wallets
-          const res = await fetch("/api/transactions/add-funds", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              wallet_id: selectedUser.wallet_id,       // recipient wallet (credit)
-              user_id: selectedUser.id,                // recipient user
-              amount: amt,
-              note: note.value,
-              added_by: user.id,                       // admin performing action
-              treasury_wallet_id: treasuryAccount.value // SOURCE treasury wallet (debit)
-            })
-          });
-
-          const result = await res.json();
-          if (res.ok) {
-            statusEl.textContent = "✅ Funds transferred successfully!";
-            statusEl.style.color = "green";
-            userSearch.value = "";
-            amount.value = "";
-            note.value = "";
-            selectedUser = null;
-            if (!treasuryAccount.disabled) treasuryAccount.selectedIndex = 0;
-          } else {
-            throw new Error(result.error || "Transfer failed.");
-          }
-        } catch (err) {
-          if (err.message !== "Cancelled") {
-            console.error("❌ Fund transfer error:", err);
-            statusEl.textContent = `❌ ${err.message}`;
-            statusEl.style.color = "red";
-          } else {
-            statusEl.textContent = "⚠️ Transfer cancelled.";
-            statusEl.style.color = "#555";
-          }
-        }
-      });
-
-      // Logout
-      logoutBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try { await fetch("/api/logout", { method: "POST" }); } catch {}
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
-
-      console.log("✅ Add Funds script ready");
     });
-  </script>
+
+    suggestions.addEventListener("click", (e) => {
+      const item = e.target.closest(".user-suggestion");
+      if (!item) return;
+      selectedUser = {
+        id: item.dataset.id,
+        wallet_id: item.dataset.wallet,
+        name: item.textContent
+      };
+      userSearch.value = item.textContent;
+      suggestions.style.display = "none";
+      showStatus(`Selected: ${selectedUser.name}`);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!suggestions.contains(e.target) && e.target !== userSearch) {
+        suggestions.style.display = "none";
+      }
+    });
+
+    // ===== Add Funds flow =====
+    addFundsBtn.addEventListener("click", async () => {
+      // Validate
+      if (!selectedUser?.wallet_id) {
+        showStatus("❌ Please select a user from the list.", "red");
+        return;
+      }
+      if (!treasuryAccount.value) {
+        showStatus("❌ Please select the source treasury account.", "red");
+        return;
+      }
+      const amt = parseFloat(amount.value);
+      if (!amt || isNaN(amt) || amt <= 0) {
+        showStatus("❌ Please enter a valid amount.", "red");
+        return;
+      }
+
+      // Open confirm modal
+      modalAmount.textContent = amt.toFixed(2);
+      modalTreasury.textContent = treasuryAccount.options[treasuryAccount.selectedIndex]?.text || "Treasury";
+      modalUser.textContent = selectedUser.name;
+      modal.style.display = "flex";
+      showStatus("Awaiting confirmation…");
+
+      // Simple confirm promise
+      let confirmed = false;
+      const onOk = () => { confirmed = true; modal.style.display = "none"; };
+      const onCancel = () => { confirmed = false; modal.style.display = "none"; };
+      confirmModalBtn.onclick = onOk;
+      cancelModalBtn.onclick = onCancel;
+
+      // Wait for user to click
+      await new Promise((resolve) => {
+        const end = () => { confirmModalBtn.onclick = null; cancelModalBtn.onclick = null; resolve(); };
+        confirmModalBtn.addEventListener("click", end, { once: true });
+        cancelModalBtn.addEventListener("click", end, { once: true });
+      });
+
+      if (!confirmed) {
+        showStatus("⚠️ Transfer cancelled.", "#555");
+        return;
+      }
+
+      // Submit
+      showStatus("Submitting transfer…");
+      addFundsBtn.disabled = true;
+
+      // Abort/timeout after 15s so we always surface something
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const res = await fetch("/api/transactions/add-funds", {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            wallet_id: selectedUser.wallet_id,
+            user_id: selectedUser.id,
+            amount: parseFloat(amount.value),
+            note: note.value,
+            added_by: me.id,
+            treasury_wallet_id: treasuryAccount.value
+          })
+        });
+
+        clearTimeout(timeout);
+
+        // Try to parse JSON, but don’t explode if not JSON
+        let payload = null;
+        try { payload = await res.json(); } catch { payload = null; }
+
+        if (res.ok) {
+          showStatus(payload?.message || "✅ Funds transferred successfully!", "green");
+          // Reset form
+          userSearch.value = "";
+          amount.value = "";
+          note.value = "";
+          selectedUser = null;
+          if (!treasuryAccount.disabled) treasuryAccount.selectedIndex = 0;
+        } else {
+          const msg = payload?.error || payload?.message || `HTTP ${res.status}`;
+          showStatus(`❌ ${msg}`, "red");
+        }
+      } catch (err) {
+        const msg = err.name === "AbortError" ? "Request timed out." : err.message || String(err);
+        showStatus(`❌ ${msg}`, "red");
+      } finally {
+        addFundsBtn.disabled = false;
+      }
+    });
+
+    // ===== Logout =====
+    logoutBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await fetch("/api/logout", { method: "POST" }); } catch {}
+      localStorage.clear();
+      window.location.href = "login.html";
+    });
+
+    console.log("✅ Add Funds script ready");
+    showStatus("Ready.");
+  });
+</script>
       <script type="module" src="../assets/hamburger.js"></script>
 </body>
 </html>
