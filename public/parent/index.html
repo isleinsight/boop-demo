@@ -250,7 +250,7 @@
   // --- Auth guard ---
   const token = localStorage.getItem('boop_jwt');
   if (!token) {
-    window.location.href = 'index.html';
+    window.location.href = './index.html';
     return;
   }
 
@@ -705,7 +705,7 @@
         localStorage.removeItem('boop_jwt');
         localStorage.removeItem('boopUser');
         sessionStorage.clear();
-        window.location.href = 'index.html';
+        window.location.href = './index.html';
       }
     });
   }
