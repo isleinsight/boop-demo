@@ -242,165 +242,205 @@
   </footer>
 
   <script>
-    // Year
-    document.getElementById('year').textContent = new Date().getFullYear();
+(function () {
+  // --- Year ---
+  const yearEl = document.getElementById('year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-    // --- Auth guard & data loading ---
-    const token = localStorage.getItem('boop_jwt');
-    if (!token) { location.href = '/accounts/login.html'; }
+  // --- Auth guard ---
+  const token = localStorage.getItem('boop_jwt');
+  if (!token) {
+    window.location.href = '/accounts/login.html';
+    return;
+  }
 
-    let parentId = null;
-    let students = [];
-    let currentStudentId = null;
-    let currentWalletId = null;
+  // --- State ---
+  let parentId = null;
+  let students = [];
+  let currentStudentId = null;
+  let currentWalletId = null;
+  let txns = [];
+  let page = 0;
+  const PAGE_SIZE = 8;
 
-    const studentSelect = document.getElementById('studentSelect');
-    const schoolPill = document.getElementById('schoolPill');
-    const studentNameEl = document.getElementById('studentName');
-    const studentInfoEl = document.getElementById('studentInfo');
-    const cardStatusEl = document.getElementById('cardStatus');
+  // --- El refs ---
+  const studentSelect = document.getElementById('studentSelect');
+  const schoolPill = document.getElementById('schoolPill');
+  const studentNameEl = document.getElementById('studentName');
+  const studentInfoEl = document.getElementById('studentInfo');
+  const cardStatusEl = document.getElementById('cardStatus');
 
-    const balanceAmount = document.getElementById('balanceAmount');
-    const balanceStatus = document.getElementById('balanceStatus');
-    const balanceMsg = document.getElementById('balanceMsg');
+  const balanceAmount = document.getElementById('balanceAmount');
+  const balanceStatus = document.getElementById('balanceStatus');
+  const balanceMsg = document.getElementById('balanceMsg');
 
-    const activityEmpty = document.getElementById('activityEmpty');
-    const activityTable = document.getElementById('activityTable');
-    const activityTbody = document.getElementById('activityTbody');
-    const activityCountPill = document.getElementById('activityCountPill');
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
+  const activityEmpty = document.getElementById('activityEmpty');
+  const activityTable = document.getElementById('activityTable');
+  const activityTbody = document.getElementById('activityTbody');
+  const activityCountPill = document.getElementById('activityCountPill');
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
 
-    const addFundsBtn = document.getElementById('addFundsBtn');
-    const fundsModal = document.getElementById('fundsModal');
-    const closeFunds = document.getElementById('closeFunds');
-    const confirmFunds = document.getElementById('confirmFunds');
-    const amountInput = document.getElementById('amountInput');
-    const noteInput = document.getElementById('noteInput');
-    const fundsMsg = document.getElementById('fundsMsg');
+  const addFundsBtn = document.getElementById('addFundsBtn');
+  const fundsModal = document.getElementById('fundsModal');
+  const closeFunds = document.getElementById('closeFunds');
+  const confirmFunds = document.getElementById('confirmFunds');
+  const amountInput = document.getElementById('amountInput');
+  const noteInput = document.getElementById('noteInput');
+  const fundsMsg = document.getElementById('fundsMsg');
 
-    const requestChildBtn = document.getElementById('requestChildBtn');
-    const requestModal = document.getElementById('requestModal');
-    const closeRequest = document.getElementById('closeRequest');
-    const submitRequest = document.getElementById('submitRequest');
-    const reqName = document.getElementById('reqName');
-    const reqDob = document.getElementById('reqDob');
-    const reqSchool = document.getElementById('reqSchool');
-    const reqNotes = document.getElementById('reqNotes');
-    const reqMsg = document.getElementById('reqMsg');
+  const requestChildBtn = document.getElementById('requestChildBtn'); // this may not exist on your page — guarded below
+  const requestModal = document.getElementById('requestModal');
+  const closeRequest = document.getElementById('closeRequest');
+  const submitRequest = document.getElementById('submitRequest');
+  const reqName = document.getElementById('reqName');
+  const reqDob = document.getElementById('reqDob');
+  const reqSchool = document.getElementById('reqSchool');
+  const reqNotes = document.getElementById('reqNotes');
+  const reqMsg = document.getElementById('reqMsg');
 
-    const limitInput = document.getElementById('limitInput');
-    const saveLimitBtn = document.getElementById('saveLimitBtn');
-    const clearLimitBtn = document.getElementById('clearLimitBtn');
-    const limitMsg = document.getElementById('limitMsg');
+  const limitInput = document.getElementById('limitInput');
+  const saveLimitBtn = document.getElementById('saveLimitBtn');
+  const clearLimitBtn = document.getElementById('clearLimitBtn');
+  const limitMsg = document.getElementById('limitMsg');
 
-    const catIds = ['cat_food','cat_fastfood','cat_electronics','cat_entertainment','cat_other'];
-    const saveCatsBtn = document.getElementById('saveCatsBtn');
-    const resetCatsBtn = document.getElementById('resetCatsBtn');
-    const catsMsg = document.getElementById('catsMsg');
+  const saveCatsBtn = document.getElementById('saveCatsBtn');
+  const resetCatsBtn = document.getElementById('resetCatsBtn');
+  const catsMsg = document.getElementById('catsMsg');
 
-    // Pagination state
-    let txns = []; let page = 0; const PAGE_SIZE = 8;
+  // --- Helpers ---
+  function fmtMoney(n) { return (typeof n === 'number' && Number.isFinite(n)) ? ('BMD $' + n.toFixed(2)) : '—'; }
+  function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch { return iso || '—'; } }
 
-    function fmtMoney(n){ if (typeof n !== 'number') return '—'; return 'BMD $' + n.toFixed(2); }
-    function fmtDate(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
-
-    async function fetchJSON(url, opts={}){
-      const res = await fetch(url, {
-        ...opts,
-        headers:{
-          'Content-Type':'application/json',
-          'Authorization': `Bearer ${token}`,
-          ...(opts.headers || {})
-        }
-      });
-      if(!res.ok) throw new Error(await res.text());
-      return res.json();
-    }
-
-    async function loadMe(){
-      const me = await fetchJSON('/api/me');
-      if ((me.role || '').toLowerCase() !== 'parent'){ alert('This portal is for Parent accounts.'); location.href='/'; return; }
-      parentId = me.id;
-    }
-
-    async function loadAssignedStudents(){
-      const detail = await fetchJSON(`/api/users/${parentId}`);
-      students = detail.assigned_students || [];
-      renderStudentOptions();
-      if (students.length){ selectStudent(students[0].id); }
-      else{
-        studentSelect.innerHTML = '<option>No students linked</option>';
-        activityEmpty.textContent = 'No students found.';
+  async function fetchJSON(url, opts = {}) {
+    const res = await fetch(url, {
+      ...opts,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...(opts.headers || {})
       }
+    });
+    if (!res.ok) throw new Error(await res.text().catch(()=>'HTTP error'));
+    return res.json();
+  }
+
+  // --- Data loaders ---
+  async function loadMe() {
+    const me = await fetchJSON('/api/me');
+    if ((me.role || '').toLowerCase() !== 'parent') {
+      alert('This portal is for Parent accounts.');
+      window.location.href = '/';
+      return;
     }
+    parentId = me.id;
+  }
 
-    function renderStudentOptions(){
-      studentSelect.innerHTML = students.map(s => `<option value="${s.id}">${(s.first_name||'') + ' ' + (s.last_name||'')}</option>`).join('');
-      studentSelect.onchange = () => selectStudent(studentSelect.value);
+  async function loadAssignedStudents() {
+    const detail = await fetchJSON(`/api/users/${parentId}`);
+    students = detail.assigned_students || [];
+    renderStudentOptions();
+    if (students.length) {
+      selectStudent(students[0].id);
+    } else {
+      if (studentSelect) studentSelect.innerHTML = '<option>No students linked</option>';
+      activityEmpty.textContent = 'No students found.';
     }
+  }
 
-    async function selectStudent(studentId){
-      currentStudentId = studentId;
-      balanceMsg.style.display = 'none';
-      page = 0;
+  function renderStudentOptions() {
+    if (!studentSelect) return;
+    studentSelect.innerHTML = students.map(s => {
+      const full = `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Student';
+      return `<option value="${s.id}">${full}</option>`;
+    }).join('');
+    studentSelect.onchange = () => selectStudent(studentSelect.value);
+  }
 
-      // Full student row
-      const stu = await fetchJSON(`/api/users/${studentId}`);
-      currentWalletId = stu.wallet_id || null;
+  async function selectStudent(studentId) {
+    currentStudentId = studentId;
+    if (balanceMsg) balanceMsg.style.display = 'none';
+    page = 0;
 
-      const name = `${stu.first_name||''} ${stu.last_name||''}`.trim();
-      studentNameEl.textContent = name || 'Student';
-      const sProfile = stu.student_profile || {};
-      const school = sProfile.school_name ? `School: ${sProfile.school_name}` : '';
+    const stu = await fetchJSON(`/api/users/${studentId}`);
+    currentWalletId = stu.wallet_id || null;
+
+    const name = `${stu.first_name || ''} ${stu.last_name || ''}`.trim();
+    if (studentNameEl) studentNameEl.textContent = name || 'Student';
+
+    const sProfile = stu.student_profile || {};
+    const school = sProfile.school_name ? `School: ${sProfile.school_name}` : '';
+    if (schoolPill) {
       schoolPill.style.display = school ? 'inline-block' : 'none';
       schoolPill.textContent = school;
-      const grade = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
-      studentInfoEl.textContent = [grade].filter(Boolean).join(' • ') || '—';
-
-      // Card status (best effort)
-      cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
-
-      await Promise.all([loadBalance(), loadActivity(), loadControls()]);
     }
+    const grade = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
+    if (studentInfoEl) studentInfoEl.textContent = [grade].filter(Boolean).join(' • ') || '—';
 
-    async function loadBalance(){
-      balanceAmount.textContent = '—'; balanceStatus.textContent = 'Balance'; balanceMsg.style.display='none';
-      if(!currentWalletId){ balanceMsg.textContent='Balance unavailable (no wallet found).'; balanceMsg.className='msg error'; balanceMsg.style.display='block'; return; }
-      try{
-        const data = await fetchJSON(`/api/wallets/${currentWalletId}`); // TODO adjust if different
-        const bal = Number(data.balance ?? data?.wallet?.balance);
-        if(!Number.isFinite(bal)) throw new Error('No balance field');
-        balanceAmount.textContent = fmtMoney(bal);
-        balanceStatus.textContent = data.status ? `Balance • ${String(data.status).toUpperCase()}` : 'Balance';
-      }catch(_){
-        balanceMsg.textContent='Balance currently unavailable.'; balanceMsg.className='msg error'; balanceMsg.style.display='block';
+    if (cardStatusEl) cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
+
+    await Promise.all([loadBalance(), loadActivity(), loadControls()]);
+  }
+
+  async function loadBalance() {
+    if (balanceAmount) balanceAmount.textContent = '—';
+    if (balanceStatus) balanceStatus.textContent = 'Balance';
+    if (!currentWalletId) {
+      if (balanceMsg) {
+        balanceMsg.textContent = 'Balance unavailable (no wallet found).';
+        balanceMsg.className = 'msg error';
+        balanceMsg.style.display = 'block';
+      }
+      return;
+    }
+    try {
+      const data = await fetchJSON(`/api/wallets/${currentWalletId}`); // adjust if your route differs
+      const bal = Number(data.balance ?? data?.wallet?.balance);
+      if (!Number.isFinite(bal)) throw new Error('No balance field');
+      if (balanceAmount) balanceAmount.textContent = fmtMoney(bal);
+      if (balanceStatus) balanceStatus.textContent = data.status ? `Balance • ${String(data.status).toUpperCase()}` : 'Balance';
+    } catch {
+      if (balanceMsg) {
+        balanceMsg.textContent = 'Balance currently unavailable.';
+        balanceMsg.className = 'msg error';
+        balanceMsg.style.display = 'block';
       }
     }
+  }
 
-    async function loadActivity(){
-      txns = []; page = 0; renderActivity();
-      if(!currentWalletId) return;
-      try{
-        const list = await fetchJSON(`/api/wallets/${currentWalletId}/transactions`); // TODO adjust if different
-        txns = Array.isArray(list) ? list : (list.transactions || []);
-      }catch(_){}
-      renderActivity();
-    }
+  async function loadActivity() {
+    txns = [];
+    page = 0;
+    renderActivity();
+    if (!currentWalletId) return;
+    try {
+      const list = await fetchJSON(`/api/wallets/${currentWalletId}/transactions`); // adjust if your route differs
+      txns = Array.isArray(list) ? list : (list.transactions || []);
+    } catch { /* ignore */ }
+    renderActivity();
+  }
 
-    function renderActivity(){
-      const total = txns.length;
+  function renderActivity() {
+    const total = txns.length;
+    if (activityCountPill) {
       activityCountPill.style.display = total ? 'inline-block' : 'none';
       activityCountPill.textContent = `${total} items`;
-      const start = page*PAGE_SIZE, end = start+PAGE_SIZE, slice = txns.slice(start,end);
-      prevBtn.disabled = page===0; nextBtn.disabled = end>=total;
-      prevBtn.onclick=()=>{ if(page>0){ page--; renderActivity(); } };
-      nextBtn.onclick=()=>{ if(end<total){ page++; renderActivity(); } };
-      if(!slice.length){ activityEmpty.style.display='block'; activityTable.style.display='none'; return; }
-      activityEmpty.style.display='none'; activityTable.style.display='table';
-      activityTbody.innerHTML = slice.map(tx=>{
+    }
+    const start = page * PAGE_SIZE, end = start + PAGE_SIZE, slice = txns.slice(start, end);
+    if (prevBtn) { prevBtn.disabled = page === 0; prevBtn.onclick = () => { if (page > 0) { page--; renderActivity(); } }; }
+    if (nextBtn) { nextBtn.disabled = end >= total; nextBtn.onclick = () => { if (end < total) { page++; renderActivity(); } }; }
+
+    if (!slice.length) {
+      if (activityEmpty) activityEmpty.style.display = 'block';
+      if (activityTable) activityTable.style.display = 'none';
+      return;
+    }
+    if (activityEmpty) activityEmpty.style.display = 'none';
+    if (activityTable) activityTable.style.display = 'table';
+    if (activityTbody) {
+      activityTbody.innerHTML = slice.map(tx => {
         const amt = Number(tx.amount || 0);
-        const amtStr = (amt<0?'-':'+') + fmtMoney(Math.abs(amt));
+        const amtStr = (amt < 0 ? '-' : '+') + fmtMoney(Math.abs(amt));
         const status = (tx.status || 'posted').toString().toUpperCase();
         const cat = tx.category || 'GENERAL';
         const merchant = tx.merchant || tx.description || '—';
@@ -409,180 +449,267 @@
           <td class="small">${fmtDate(date)}</td>
           <td>${merchant}</td>
           <td><span class="tag">${cat}</span></td>
-          <td>${amt<0?'<span style="color:#ef4444">'+amtStr+'</span>':'<span style="color:#10b981">'+amtStr+'</span>'}</td>
+          <td>${amt < 0 ? '<span style="color:#ef4444">' + amtStr + '</span>' : '<span style="color:#10b981">' + amtStr + '</span>'}</td>
           <td class="small">${status}</td>
         </tr>`;
       }).join('');
     }
+  }
 
-    // ---- Controls (limit + categories) ----
-    async function loadControls(){
-      limitMsg.style.display='none'; catsMsg.style.display='none';
-      // Load current limit
-      try{
-        const res = await fetchJSON(`/api/students/${currentStudentId}/limits`); // TODO implement
-        const monthly = Number(res?.monthly_limit);
-        if (Number.isFinite(monthly)) limitInput.value = monthly.toFixed(2);
-      }catch(_){ limitInput.value=''; }
+  // --- Controls (limit + categories) ---
+  async function loadControls() {
+    if (limitMsg) limitMsg.style.display = 'none';
+    if (catsMsg) catsMsg.style.display = 'none';
 
-      // Load categories
-      try{
-        const res = await fetchJSON(`/api/students/${currentStudentId}/categories`); // TODO implement
-        // Expect: { allow: { food:true, fastfood:false, electronics:false, entertainment:true, other:true } }
-        const a = res?.allow || {};
-        document.getElementById('cat_food').checked = !!a.food;
-        document.getElementById('cat_fastfood').checked = !!a.fastfood;
-        document.getElementById('cat_electronics').checked = !!a.electronics;
-        document.getElementById('cat_entertainment').checked = !!a.entertainment;
-        document.getElementById('cat_other').checked = !!a.other;
-      }catch(_){
-        // sensible defaults
-        document.getElementById('cat_food').checked = true;
-        document.getElementById('cat_fastfood').checked = false;
-        document.getElementById('cat_electronics').checked = false;
-        document.getElementById('cat_entertainment').checked = true;
-        document.getElementById('cat_other').checked = true;
-      }
+    // limit
+    try {
+      const res = await fetchJSON(`/api/students/${currentStudentId}/limits`); // implement server route
+      const monthly = Number(res?.monthly_limit);
+      if (Number.isFinite(monthly) && limitInput) limitInput.value = monthly.toFixed(2);
+      else if (limitInput) limitInput.value = '';
+    } catch { if (limitInput) limitInput.value = ''; }
+
+    // categories
+    try {
+      const res = await fetchJSON(`/api/students/${currentStudentId}/categories`); // implement server route
+      const a = res?.allow || {};
+      (document.getElementById('cat_food') || {}).checked = !!a.food;
+      (document.getElementById('cat_fastfood') || {}).checked = !!a.fastfood;
+      (document.getElementById('cat_electronics') || {}).checked = !!a.electronics;
+      (document.getElementById('cat_entertainment') || {}).checked = !!a.entertainment;
+      (document.getElementById('cat_other') || {}).checked = !!a.other;
+    } catch {
+      (document.getElementById('cat_food') || {}).checked = true;
+      (document.getElementById('cat_fastfood') || {}).checked = false;
+      (document.getElementById('cat_electronics') || {}).checked = false;
+      (document.getElementById('cat_entertainment') || {}).checked = true;
+      (document.getElementById('cat_other') || {}).checked = true;
     }
+  }
 
-    saveLimitBtn.onclick = async ()=>{
-      limitMsg.style.display='none';
+  if (saveLimitBtn) {
+    saveLimitBtn.onclick = async () => {
+      if (!limitInput || !limitMsg) return;
+      limitMsg.style.display = 'none';
       const val = Number(limitInput.value);
-      if (!Number.isFinite(val) || val < 0){ limitMsg.textContent='Enter a valid amount.'; limitMsg.className='msg error'; limitMsg.style.display='block'; return; }
-      try{
-        const res = await fetch(`/api/students/${currentStudentId}/limits`, { // TODO implement
-          method:'PUT',
-          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
+      if (!Number.isFinite(val) || val < 0) {
+        limitMsg.textContent = 'Enter a valid amount.';
+        limitMsg.className = 'msg error';
+        limitMsg.style.display = 'block';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/students/${currentStudentId}/limits`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ monthly_limit: val })
         });
         if (!res.ok) throw new Error(await res.text());
-        limitMsg.textContent='Spending limit saved.'; limitMsg.className='msg ok'; limitMsg.style.display='block';
-      }catch(err){
-        limitMsg.textContent='Failed to save limit.'; limitMsg.className='msg error'; limitMsg.style.display='block';
+        limitMsg.textContent = 'Spending limit saved.';
+        limitMsg.className = 'msg ok';
+        limitMsg.style.display = 'block';
+      } catch {
+        limitMsg.textContent = 'Failed to save limit.';
+        limitMsg.className = 'msg error';
+        limitMsg.style.display = 'block';
       }
     };
-    clearLimitBtn.onclick = async ()=>{
-      limitMsg.style.display='none';
-      try{
-        const res = await fetch(`/api/students/${currentStudentId}/limits`, { // TODO implement
-          method:'DELETE',
-          headers:{ 'Authorization': `Bearer ${token}` }
+  }
+
+  if (clearLimitBtn) {
+    clearLimitBtn.onclick = async () => {
+      if (!limitInput || !limitMsg) return;
+      limitMsg.style.display = 'none';
+      try {
+        const res = await fetch(`/api/students/${currentStudentId}/limits`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) throw new Error(await res.text());
-        limitInput.value=''; limitMsg.textContent='Limit cleared.'; limitMsg.className='msg ok'; limitMsg.style.display='block';
-      }catch(_){
-        limitMsg.textContent='Failed to clear limit.'; limitMsg.className='msg error'; limitMsg.style.display='block';
+        limitInput.value = '';
+        limitMsg.textContent = 'Limit cleared.';
+        limitMsg.className = 'msg ok';
+        limitMsg.style.display = 'block';
+      } catch {
+        limitMsg.textContent = 'Failed to clear limit.';
+        limitMsg.className = 'msg error';
+        limitMsg.style.display = 'block';
       }
     };
+  }
 
-    saveCatsBtn.onclick = async ()=>{
-      catsMsg.style.display='none';
+  if (saveCatsBtn) {
+    saveCatsBtn.onclick = async () => {
+      if (!catsMsg) return;
+      catsMsg.style.display = 'none';
       const payload = {
-        allow:{
-          food: document.getElementById('cat_food').checked,
-          fastfood: document.getElementById('cat_fastfood').checked,
-          electronics: document.getElementById('cat_electronics').checked,
-          entertainment: document.getElementById('cat_entertainment').checked,
-          other: document.getElementById('cat_other').checked
+        allow: {
+          food: (document.getElementById('cat_food') || {}).checked || false,
+          fastfood: (document.getElementById('cat_fastfood') || {}).checked || false,
+          electronics: (document.getElementById('cat_electronics') || {}).checked || false,
+          entertainment: (document.getElementById('cat_entertainment') || {}).checked || false,
+          other: (document.getElementById('cat_other') || {}).checked || false
         }
       };
-      try{
-        const res = await fetch(`/api/students/${currentStudentId}/categories`, { // TODO implement
-          method:'PUT',
-          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
+      try {
+        const res = await fetch(`/api/students/${currentStudentId}/categories`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error(await res.text());
-        catsMsg.textContent='Categories saved.'; catsMsg.className='msg ok'; catsMsg.style.display='block';
-      }catch(_){
-        catsMsg.textContent='Failed to save categories.'; catsMsg.className='msg error'; catsMsg.style.display='block';
+        catsMsg.textContent = 'Categories saved.';
+        catsMsg.className = 'msg ok';
+        catsMsg.style.display = 'block';
+      } catch {
+        catsMsg.textContent = 'Failed to save categories.';
+        catsMsg.className = 'msg error';
+        catsMsg.style.display = 'block';
       }
     };
-    resetCatsBtn.onclick = loadControls;
+  }
 
-    // ---- Add Funds Modal ----
-    function openFunds(){ fundsModal.style.display='grid'; fundsModal.setAttribute('aria-hidden','false'); amountInput.focus(); }
-    function closeFundsModal(){ fundsModal.style.display='none'; fundsModal.setAttribute('aria-hidden','true'); fundsMsg.style.display='none'; amountInput.value=''; noteInput.value=''; }
-    addFundsBtn.onclick = ()=>{ if(!currentWalletId){ alert('Wallet unavailable for this student.'); return; } openFunds(); };
-    closeFunds.onclick = closeFundsModal;
-    fundsModal.addEventListener('click', (e)=>{ if(e.target===fundsModal) closeFundsModal(); });
-    confirmFunds.onclick = async ()=>{
-      fundsMsg.style.display='none';
+  if (resetCatsBtn) {
+    resetCatsBtn.onclick = loadControls;
+  }
+
+  // --- Add Funds modal ---
+  function openFunds() {
+    if (fundsModal) { fundsModal.style.display = 'grid'; fundsModal.setAttribute('aria-hidden', 'false'); }
+    if (amountInput) amountInput.focus();
+  }
+  function closeFundsModal() {
+    if (fundsModal) { fundsModal.style.display = 'none'; fundsModal.setAttribute('aria-hidden', 'true'); }
+    if (fundsMsg) fundsMsg.style.display = 'none';
+    if (amountInput) amountInput.value = '';
+    if (noteInput) noteInput.value = '';
+  }
+
+  if (addFundsBtn) addFundsBtn.onclick = () => { if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; } openFunds(); };
+  if (closeFunds) closeFunds.onclick = closeFundsModal;
+  if (fundsModal) fundsModal.addEventListener('click', (e) => { if (e.target === fundsModal) closeFundsModal(); });
+  if (confirmFunds) {
+    confirmFunds.onclick = async () => {
+      if (!amountInput || !fundsMsg) return;
+      fundsMsg.style.display = 'none';
       const amt = Number(amountInput.value);
-      if(!Number.isFinite(amt) || amt<=0){ fundsMsg.textContent='Please enter a valid amount.'; fundsMsg.className='msg error'; fundsMsg.style.display='block'; return; }
-      confirmFunds.disabled=true; confirmFunds.textContent='Processing…';
-      try{
-        const res = await fetch(`/api/wallets/${currentWalletId}/deposits`, { // TODO implement
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ amount: amt, note: noteInput.value || null })
+      if (!Number.isFinite(amt) || amt <= 0) {
+        fundsMsg.textContent = 'Please enter a valid amount.';
+        fundsMsg.className = 'msg error';
+        fundsMsg.style.display = 'block';
+        return;
+      }
+      confirmFunds.disabled = true; confirmFunds.textContent = 'Processing…';
+      try {
+        const res = await fetch(`/api/wallets/${currentWalletId}/deposits`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ amount: amt, note: (noteInput && noteInput.value) || null })
         });
-        if(!res.ok) throw new Error(await res.text());
-        fundsMsg.textContent='Funds added successfully.'; fundsMsg.className='msg ok'; fundsMsg.style.display='block';
+        if (!res.ok) throw new Error(await res.text());
+        fundsMsg.textContent = 'Funds added successfully.';
+        fundsMsg.className = 'msg ok';
+        fundsMsg.style.display = 'block';
         await loadBalance(); await loadActivity();
         setTimeout(closeFundsModal, 900);
-      }catch(err){
-        fundsMsg.textContent='Failed to add funds.'; fundsMsg.className='msg error'; fundsMsg.style.display='block';
-      }finally{
-        confirmFunds.disabled=false; confirmFunds.textContent='Add Funds';
+      } catch {
+        fundsMsg.textContent = 'Failed to add funds.';
+        fundsMsg.className = 'msg error';
+        fundsMsg.style.display = 'block';
+      } finally {
+        confirmFunds.disabled = false; confirmFunds.textContent = 'Add Funds';
       }
     };
+  }
 
-    // ---- Request another child (modal) ----
-    function openReq(){ requestModal.style.display='grid'; requestModal.setAttribute('aria-hidden','false'); reqName.focus(); }
-    function closeReq(){ requestModal.style.display='none'; requestModal.setAttribute('aria-hidden','true'); reqMsg.style.display='none'; reqName.value=''; reqDob.value=''; reqSchool.value=''; reqNotes.value=''; }
-    requestChildBtn.onclick = openReq;
-    closeRequest.onclick = closeReq;
-    requestModal.addEventListener('click', (e)=>{ if(e.target===requestModal) closeReq(); });
-    submitRequest.onclick = async ()=>{
-      reqMsg.style.display='none';
-      if(!reqName.value.trim() || !reqDob.value){
-        reqMsg.textContent='Name and DOB are required.'; reqMsg.className='msg error'; reqMsg.style.display='block'; return;
+  // --- Request another child modal (guarded: trigger may not exist) ---
+  function openReq() {
+    if (requestModal) { requestModal.style.display = 'grid'; requestModal.setAttribute('aria-hidden', 'false'); }
+    if (reqName) reqName.focus();
+  }
+  function closeReq() {
+    if (requestModal) { requestModal.style.display = 'none'; requestModal.setAttribute('aria-hidden', 'true'); }
+    if (reqMsg) reqMsg.style.display = 'none';
+    if (reqName) reqName.value = '';
+    if (reqDob) reqDob.value = '';
+    if (reqSchool) reqSchool.value = '';
+    if (reqNotes) reqNotes.value = '';
+  }
+  if (requestChildBtn) requestChildBtn.onclick = openReq;
+  if (closeRequest) closeRequest.onclick = closeReq;
+  if (requestModal) requestModal.addEventListener('click', (e) => { if (e.target === requestModal) closeReq(); });
+  if (submitRequest) {
+    submitRequest.onclick = async () => {
+      if (!reqMsg || !reqName || !reqDob) return;
+      reqMsg.style.display = 'none';
+      if (!reqName.value.trim() || !reqDob.value) {
+        reqMsg.textContent = 'Name and DOB are required.';
+        reqMsg.className = 'msg error';
+        reqMsg.style.display = 'block';
+        return;
       }
-      submitRequest.disabled=true; submitRequest.textContent='Submitting…';
-      try{
-        const res = await fetch(`/api/parents/${parentId}/child-requests`, { // TODO implement
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` },
+      submitRequest.disabled = true; submitRequest.textContent = 'Submitting…';
+      try {
+        const res = await fetch(`/api/parents/${parentId}/child-requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
             child_name: reqName.value.trim(),
             child_dob: reqDob.value,
-            school: reqSchool.value || null,
-            notes: reqNotes.value || null
+            school: (reqSchool && reqSchool.value) || null,
+            notes: (reqNotes && reqNotes.value) || null
           })
         });
-        if(!res.ok) throw new Error(await res.text());
-        reqMsg.textContent='Request submitted. An admin will review it shortly.'; reqMsg.className='msg ok'; reqMsg.style.display='block';
+        if (!res.ok) throw new Error(await res.text());
+        reqMsg.textContent = 'Request submitted. An admin will review it shortly.';
+        reqMsg.className = 'msg ok';
+        reqMsg.style.display = 'block';
         setTimeout(closeReq, 1000);
-      }catch(err){
-        reqMsg.textContent='Failed to submit request.'; reqMsg.className='msg error'; reqMsg.style.display='block';
-      }finally{
-        submitRequest.disabled=false; submitRequest.textContent='Submit request';
+      } catch {
+        reqMsg.textContent = 'Failed to submit request.';
+        reqMsg.className = 'msg error';
+        reqMsg.style.display = 'block';
+      } finally {
+        submitRequest.disabled = false; submitRequest.textContent = 'Submit request';
       }
     };
+  }
 
-    // ---- Init ----
-    (async function init(){
-      try{
-        await loadMe();
-        if (!parentId) return;
-        await loadAssignedStudents();
-      }catch(e){
-        console.error(e);
-        alert('Unable to load your account. Please sign in again.');
-        location.href='/accounts/login.html';
-      }
-    })();
+  // --- Init ---
+  (async function init() {
+    try {
+      await loadMe();
+      if (!parentId) return;
+      await loadAssignedStudents();
+    } catch (e) {
+      console.error(e);
+      alert('Unable to load your account. Please sign in again.');
+      window.location.href = '/accounts/login.html';
+    }
+  })();
 
-    const logoutBtn = document.getElementById("logoutBtn");
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          localStorage.removeItem("boopUser");
-          window.location.href = "index.html";
-        });
+  // --- Logout (null-safe, server best-effort) ---
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
+        if (me.id && token) {
+          await fetch(`/api/users/${me.id}/signout`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).catch(() => {});
+        }
+      } finally {
+        localStorage.removeItem('boop_jwt');
+        localStorage.removeItem('boopUser');
+        sessionStorage.clear();
+        window.location.href = '/accounts/login.html';
       }
     });
-  </script>
+  }
+})();
+</script>
 </body>
 </html>
