@@ -26,6 +26,15 @@
     .modal-content { background: #fff; padding: 20px; border-radius: 6px; text-align: center; }
     .modal-content button { padding: 8px 16px; margin: 5px; }
     #cancelModalBtn { background: #e74c3c; } #cancelModalBtn:hover { background: #c0392b; }
+
+    .status.ok{
+  color:#065f46;background:#ecfdf5;border:1px solid #34d399;
+  padding:10px;border-radius:8px;margin-top:16px
+}
+.status.err{
+  color:#991b1b;background:#fef2f2;border:1px solid #fecaca;
+  padding:10px;border-radius:8px;margin-top:16px
+}
   </style>
 </head>
 <body>
@@ -137,11 +146,26 @@
 
     const $ = (id) => document.getElementById(id);
     const statusEl = $("status");
-    function showStatus(msg, color = "#333") {
-      statusEl.textContent = msg;
-      statusEl.style.color = color;
-      console.log("[AddFunds]", msg);
-    }
+    function showStatus(msg, type = "info") {
+  // type: "ok" | "err" | "info"
+  statusEl.className = "status";              // reset
+  if (type === "ok")  statusEl.classList.add("ok");
+  if (type === "err") statusEl.classList.add("err");
+  statusEl.textContent = msg;
+  statusEl.setAttribute("role","status");
+  statusEl.setAttribute("aria-live","polite");
+  statusEl.scrollIntoView({ behavior:"smooth", block:"center" });
+  console.log("[AddFunds]", msg);
+
+  // Auto-hide for success/info after 4s (errors stick)
+  if (type !== "err") {
+    clearTimeout(window.__statusTimer);
+    window.__statusTimer = setTimeout(() => {
+      statusEl.textContent = "";
+      statusEl.className = "status";
+    }, 4000);
+  }
+}
 
     // Catch silent runtime errors
     window.addEventListener("error", (e) => showStatus(`❌ ${e.message}`, "red"));
