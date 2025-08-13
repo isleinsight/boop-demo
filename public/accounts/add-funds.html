@@ -141,12 +141,12 @@
   <script type="module">
   document.addEventListener("DOMContentLoaded", async () => {
     // ===== Helpers =====
-    const token = localStorage.getItem("boop_jwt");
-    const me    = JSON.parse(localStorage.getItem("boopUser") || "{}");
+const token = localStorage.getItem("boop_jwt");
+const me    = JSON.parse(localStorage.getItem("boopUser") || "{}");
 
-    const $ = (id) => document.getElementById(id);
-    const statusEl = $("status");
-    function showStatus(msg, type = "info") {
+const $ = (id) => document.getElementById(id);
+const statusEl = $("status");
+function showStatus(msg, type = "info") {
   // type: "ok" | "err" | "info"
   statusEl.className = "status";              // reset
   if (type === "ok")  statusEl.classList.add("ok");
@@ -167,10 +167,9 @@
   }
 }
 
-    // Catch silent runtime errors
-    window.addEventListener("error", (e) => showStatus(`❌ ${e.message}`, "red"));
-    window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?.message || e.reason || "Unhandled promise rejection"}`, "red"));
-
+// Catch silent runtime errors
+window.addEventListener("error", (e) => showStatus(`❌ ${e.message}`, "err"));
+window.addEventListener("unhandledrejection", (e) => showStatus(`❌ ${e.reason?.message || e.reason || "Unhandled promise rejection"}`, "err"));
     // ===== Elements =====
     const userSearch = $("userSearch");
     const suggestions = $("userSuggestions");
