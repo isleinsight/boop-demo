@@ -197,132 +197,99 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
   const client = await pool.connect();
   try {
-    const { treasury_wallet_id, wallet_id, user_id, amount, note } = req.body || {};
+    const { treasury_wallet_id, wallet_id, user_id, amount, note } = req.body;
 
-    // Validate payload
     if (!treasury_wallet_id || !wallet_id || !user_id || amount == null) {
       return res.status(400).json({ message: 'Missing required fields.' });
     }
+
     const amountNum = Number(amount);
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
       return res.status(400).json({ message: 'Invalid amount.' });
     }
 
-    // Work in cents, but your column name is `balance`
     const amount_cents = Math.round(amountNum * 100);
     const debitNote  = note || 'Funds issued';
     const creditNote = 'Received from Government Assistance';
 
     await client.query('BEGIN');
 
-    // 1) Lock treasury wallet row
+    // Verify treasury wallet exists & get its owner (sender)
     const treas = await client.query(
-      `SELECT id, user_id, COALESCE(balance, 0) AS balance
-         FROM wallets
-        WHERE id = $1
-        FOR UPDATE`,
+      `SELECT id, user_id FROM wallets WHERE id = $1`,
       [treasury_wallet_id]
     );
-    if (!treas.rowCount) {
-      throw new Error('Treasury wallet not found');
-    }
+    if (!treas.rowCount) throw new Error('Treasury wallet not found');
     const treasuryUserId = treas.rows[0].user_id;
-    const treasuryBal    = Number(treas.rows[0].balance);
 
-    // Optional: enforce sufficient funds in treasury
-    if (treasuryBal < amount_cents) {
-      throw new Error('Treasury balance is insufficient for this transfer');
-    }
-
-    // 2) Lock recipient wallet row and verify it belongs to the provided user_id
+    // Verify recipient wallet belongs to user_id
     const recip = await client.query(
-      `SELECT id, user_id, COALESCE(balance, 0) AS balance
-         FROM wallets
-        WHERE id = $1 AND user_id = $2
-        FOR UPDATE`,
+      `SELECT id FROM wallets WHERE id = $1 AND user_id = $2`,
       [wallet_id, user_id]
     );
     if (!recip.rowCount) {
       throw new Error('Recipient wallet does not belong to the specified user');
     }
-    const recipientBal = Number(recip.rows[0].balance);
 
-    // 3) Debit treasury wallet (decrease balance)
-    const debitUpdate = await client.query(
-      `UPDATE wallets
-          SET balance = COALESCE(balance, 0) - $2,
-              updated_at = NOW()
-        WHERE id = $1
-      RETURNING COALESCE(balance, 0) AS balance`,
-      [treasury_wallet_id, amount_cents]
-    );
-    const newTreasuryBalance = Number(debitUpdate.rows[0].balance);
-
-    // 4) Credit recipient wallet (increase balance)
-    const creditUpdate = await client.query(
-      `UPDATE wallets
-          SET balance = COALESCE(balance, 0) + $2,
-              updated_at = NOW()
-        WHERE id = $1
-      RETURNING COALESCE(balance, 0) AS balance`,
-      [wallet_id, amount_cents]
-    );
-    const newRecipientBalance = Number(creditUpdate.rows[0].balance);
-
-    // 5) Insert debit transaction for treasury wallet
-    const debitTx = await client.query(
+    // 1) Debit from Treasury wallet
+    await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
          added_by, sender_id, recipient_id
        )
        VALUES ($1, $2, 'debit', $3, $4, NOW(),
-               $5, $6, $7)
-       RETURNING id`,
+               $5, $6, $7)`,
       [
         treasury_wallet_id,        // wallet debited
-        treasuryUserId,            // owner of treasury wallet (user_id on the tx row)
+        treasuryUserId,            // owner of treasury wallet
         amount_cents,
         debitNote,
-        adminId,                   // admin who performed the action
-        treasuryUserId,            // sender
-        user_id                    // recipient
+        adminId,                   // admin performing the action
+        treasuryUserId,            // FROM
+        user_id                    // TO
       ]
     );
 
-    // 6) Insert credit transaction for recipient wallet
-    const creditTx = await client.query(
+    await client.query(
+      `UPDATE wallets
+       SET balance = balance - $1
+       WHERE id = $2`,
+      [amount_cents, treasury_wallet_id]
+    );
+
+    // 2) Credit to Recipient wallet
+    await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
          added_by, sender_id, recipient_id
        )
        VALUES ($1, $2, 'credit', $3, $4, NOW(),
-               $5, $6, $7)
-       RETURNING id`,
+               $5, $6, $7)`,
       [
         wallet_id,                 // wallet credited
-        user_id,                   // owner of recipient wallet (user_id on the tx row)
+        user_id,                   // recipient user
         amount_cents,
         creditNote,
         adminId,
-        treasuryUserId,            // sender
-        user_id                    // recipient
+        treasuryUserId,            // FROM
+        user_id                    // TO
       ]
     );
 
-    await client.query('COMMIT');
+    await client.query(
+      `UPDATE wallets
+       SET balance = balance + $1
+       WHERE id = $2`,
+      [amount_cents, wallet_id]
+    );
 
-    return res.status(200).json({
-      message: 'Funds added successfully',
-      treasury_balance: newTreasuryBalance,   // cents, column name is `balance`
-      recipient_balance: newRecipientBalance, // cents, column name is `balance`
-      tx_debit_id: debitTx.rows[0].id,
-      tx_credit_id: creditTx.rows[0].id
-    });
+    await client.query('COMMIT');
+    return res.status(200).json({ message: 'Funds added successfully' });
 
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('❌ Add Funds Error:', err);
-    return res.status(500).json({ message: err.message || 'Failed to add funds.' });
+    return res.status(500).json({ error: err.message });
   } finally {
     client.release();
   }
