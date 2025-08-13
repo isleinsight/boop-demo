@@ -146,10 +146,19 @@ if (
 let walletBalance = "N/A";
 
 try {
-  const wallet = await fetchJSON(`/api/wallets/user/${user.id}`);
-  const balanceNum = Number(wallet.balance); // This handles string balances like "0.00"
-  if (!isNaN(balanceNum)) {
-    walletBalance = `$${balanceNum.toFixed(2)}`;
+  const w = await fetchJSON(`/api/wallets/user/${user.id}`);
+
+  // Prefer balance_cents; fall back to balance (which is also cents in your DB)
+  const cents = Number(
+    w?.balance_cents ??
+    w?.balance ??
+    w?.wallet?.balance_cents ??
+    w?.wallet?.balance ??
+    0
+  );
+
+  if (Number.isFinite(cents)) {
+    walletBalance = `$${(cents / 100).toFixed(2)}`;
   }
 } catch (err) {
   console.warn("Could not load wallet balance:", err.message);
