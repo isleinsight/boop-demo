@@ -129,14 +129,31 @@
     <div class="status" id="status"></div>
   </div>
 
-  <!-- Confirmation Modal -->
-  <div id="modal" class="modal">
-    <div class="modal-content">
-      <p>Confirm transfer of $<span id="modalAmount"></span> from <span id="modalTreasury"></span> to user <span id="modalUser"></span>?</p>
-      <button id="confirmModalBtn">Confirm</button>
-      <button id="cancelModalBtn">Cancel</button>
+<!-- Confirmation / Result Modal -->
+<div id="modal" class="modal">
+  <div class="modal-content" style="max-width:520px;">
+    <!-- Confirm view -->
+    <div id="modalView-confirm">
+      <p>
+        Confirm transfer of $<span id="modalAmount"></span>
+        from <span id="modalTreasury"></span>
+        to user <span id="modalUser"></span>?
+      </p>
+      <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
+        <button id="confirmModalBtn">Confirm</button>
+        <button id="cancelModalBtn" style="background:#e74c3c;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Result view (success / error) -->
+    <div id="modalView-result" style="display:none; text-align:center;">
+      <p id="resultText" style="margin:0 0 10px;"></p>
+      <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
+        <button id="resultOkBtn">OK</button>
+      </div>
     </div>
   </div>
+</div>
 
   <script type="module">
   document.addEventListener("DOMContentLoaded", async () => {
