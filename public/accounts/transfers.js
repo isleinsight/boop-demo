@@ -37,13 +37,12 @@
   const releaseBtn = document.getElementById("releaseBtn");
   const rejectBtn = document.getElementById("rejectBtn");
   const completeBtn = document.getElementById("completeBtn");
-
-  // Optional helper line: “Mark completed only after you’ve moved funds”
-  // (Add id="completeHelp" in your HTML for that little note, if it isn't already.)
   const completeHelp = document.getElementById("completeHelp");
 
-  // Also show cardholder balance
+  // Dynamic fields we might inject
   let d_balance = document.getElementById("d_balance");
+  let bankDetailsWrap = null; // wrapper div we inject for full bank details
+  let d_bankFull = null;      // the readonly textarea / input we show
 
   // --- State
   let me = JSON.parse(localStorage.getItem("boopUser") || "null");
@@ -66,7 +65,6 @@
     const n = Number(v || 0) / 100;
     return n.toFixed(2);
   }
-  // Robust date parser for common SQL timestamp formats
   function fmtDate(v) {
     if (!v) return "—";
     let s = String(v).trim();
@@ -154,8 +152,14 @@
     return data;
   }
 
+  // Full bank details: only available when claimed by me
+  async function fetchFullBankDetails(transferId) {
+    const res = await fetch(`/api/transfers/${transferId}/bank-details`, { headers: authHeaders() });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Failed to load bank details');
+    return res.json();
+  }
+
   // Try to fetch a user's current wallet balance (in cents).
-  // Expects backend route: GET /api/wallets/user/:userId → { balance_cents: number }
   async function fetchUserBalanceCents(userId) {
     try {
       const res = await fetch(`/api/wallets/user/${userId}`, { headers: authHeaders() });
@@ -172,7 +176,6 @@
   function actionButtonsFor(r) {
     const s = String(r.status || "").toLowerCase();
 
-    // Completed/rejected: no actions — view only
     if (s === "completed" || s === "rejected") {
       return `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
     }
@@ -256,7 +259,7 @@
     }
   }
 
-  // --- Modal helpers (for the fields you want to hide/show)
+  // --- Modal helpers / dynamic fields
   function ensureBalanceField() {
     d_balance = document.getElementById("d_balance");
     if (d_balance) return d_balance;
@@ -275,7 +278,26 @@
     return d_balance;
   }
 
-  // get the whole .field wrapper for the internal note (so label + input hide together)
+  // Create (if needed) a read-only “Full Bank Details” area right after Destination
+  function ensureBankDetailsField() {
+    if (bankDetailsWrap && d_bankFull) return { wrap: bankDetailsWrap, input: d_bankFull };
+
+    const destField = d_destination?.closest(".field");
+    if (!destField) return { wrap: null, input: null };
+
+    bankDetailsWrap = document.createElement("div");
+    bankDetailsWrap.className = "field";
+    bankDetailsWrap.style.display = "none"; // hidden by default
+    bankDetailsWrap.innerHTML = `
+      <label>Full Bank Details (visible to claimer)</label>
+      <textarea id="d_bankFull" rows="3" readonly style="resize:vertical"></textarea>
+    `;
+
+    destField.insertAdjacentElement("afterend", bankDetailsWrap);
+    d_bankFull = bankDetailsWrap.querySelector("#d_bankFull");
+    return { wrap: bankDetailsWrap, input: d_bankFull };
+  }
+
   function noteFieldWrapper() {
     return d_internalNote ? (d_internalNote.closest(".field") || d_internalNote.parentElement) : null;
   }
@@ -309,21 +331,23 @@
     d_bankRef.disabled = true;
     d_internalNote.disabled = true;
 
-    // Completed/rejected → view only; also hide note + helper
+    // Completed/rejected → view only; also hide note + helper + full bank
     if (s === "completed" || s === "rejected") {
       toggleFinalizeExtras(false);
+      if (bankDetailsWrap) bankDetailsWrap.style.display = "none";
       return;
     }
 
-    // Pending → can Claim/Reject; hide note + helper (you can't complete yet)
+    // Pending → can Claim/Reject; hide finalize extras and full bank
     if (s === "pending") {
       claimBtn.style.display = "inline-block";
       if (rejectBtn) rejectBtn.style.display = "inline-block";
       toggleFinalizeExtras(false);
+      if (bankDetailsWrap) bankDetailsWrap.style.display = "none";
       return;
     }
 
-    // Claimed → if it's mine, can Release/Complete/Reject; show note + helper
+    // Claimed → if it's mine, can Release/Complete/Reject; show finalize extras
     if (s === "claimed" && mine) {
       releaseBtn.style.display = "inline-block";
       completeBtn.style.display = "inline-block";
@@ -334,11 +358,13 @@
       d_internalNote.disabled = false;
 
       toggleFinalizeExtras(true);
+      // full bank details visibility toggled in openModal() after we fetch them
       return;
     }
 
-    // Claimed, but not mine → hide finalize extras
+    // Claimed, but not mine → hide finalize extras and full bank
     toggleFinalizeExtras(false);
+    if (bankDetailsWrap) bankDetailsWrap.style.display = "none";
   }
 
   async function openModal(row) {
@@ -362,6 +388,38 @@
       balInput.value = "Loading…";
       const cents = await fetchUserBalanceCents(row.user_id);
       balInput.value = cents == null ? "—" : fmtMoney(cents);
+    }
+
+    // If this transfer is claimed and claimed by me, fetch + show full bank details
+    const s = String(row.status || "").toLowerCase();
+    const mine = me && row.claimed_by === me.id;
+    const { wrap, input } = ensureBankDetailsField();
+    if (wrap && input) {
+      if (s === "claimed" && mine) {
+        input.value = "Loading…";
+        wrap.style.display = ""; // show area immediately
+        try {
+          const details = await fetchFullBankDetails(row.id);
+          // Compose a handy block for quick copy
+          const lines = [
+            details.bank_name ? `Bank: ${details.bank_name}` : null,
+            details.account_holder_name ? `Account Name: ${details.account_holder_name}` : null,
+            details.account_number ? `Account Number: ${details.account_number}` : null,
+            details.routing_number ? `Routing: ${details.routing_number}` : null,
+            details.iban ? `IBAN: ${details.iban}` : null,
+            details.swift ? `SWIFT: ${details.swift}` : null,
+            details.country ? `Country: ${details.country}` : null
+          ].filter(Boolean);
+          input.value = lines.length ? lines.join('\n') : '—';
+        } catch (e) {
+          console.warn(e);
+          input.value = 'Failed to load bank details.';
+        }
+      } else {
+        // Not claimed by me: hide the field and clear
+        wrap.style.display = "none";
+        input.value = "";
+      }
     }
 
     modal.style.display = "flex";
