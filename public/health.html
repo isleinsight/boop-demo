@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BOOP Health — Emergency Bracelet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b1020;--bg-soft:#0f1630;--ink:#e6e9f2;--muted:#a6afc9;--accent:#5eead4;--accent-2:#7c3aed;--card:#121835;--ok:#22c55e;--warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji','Segoe UI Emoji';color:var(--ink);background:radial-gradient(1200px 600px at 80% -10%, #1d254a, transparent),linear-gradient(180deg,#090d1a, #0c1228 30%, #0b1020 100%);}    
+    a{color:inherit}
+    .container{max-width:1100px;margin:0 auto;padding:24px}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--ink);padding:8px 12px;border-radius:999px;font-size:12px;letter-spacing:.3px}
+    header{position:sticky;top:0;backdrop-filter:saturate(140%) blur(10px);background:rgba(9,13,26,.6);border-bottom:1px solid rgba(255,255,255,.08);z-index:10}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px}
+    .brand-logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#8b5cf6);box-shadow:0 0 0 1px rgba(255,255,255,.2) inset}
+    .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:center;padding:48px 0 8px}
+    @media (max-width:900px){.hero{grid-template-columns:1fr;}}
+    h1{font-size:44px;line-height:1.05;margin:.2rem 0 1rem;font-weight:800}
+    h2{font-size:28px;margin:0 0 12px}
+    p.lead{font-size:18px;color:var(--muted);max-width:60ch}
+    .cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px}
+    .btn{appearance:none;border:none;background:var(--accent);color:#07161a;font-weight:700;padding:12px 18px;border-radius:12px;cursor:pointer;transition:.2s;box-shadow:0 10px 30px rgba(94,234,212,.2)}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.secondary{background:#1f294c;color:var(--ink);box-shadow:none;border:1px solid rgba(255,255,255,.12)}
+    .card{background:linear-gradient(180deg,#0f1632, #0e1530 70%);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:22px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    @media (max-width:900px){.grid-3{grid-template-columns:1fr}}
+    .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:12px}
+    @media (max-width:900px){.gallery{grid-template-columns:1fr}}
+    .bracelet{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:16px;position:relative}
+    .bracelet svg{width:100%;height:180px;display:block}
+    .caption{display:flex;align-items:center;justify-content:space-between;margin-top:10px;color:var(--muted);font-size:14px}
+    .badge{font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
+    .features .item{display:flex;gap:12px}
+    .features .dot{min-width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:8px;box-shadow:0 0 0 3px rgba(94,234,212,.15)}
+    .note{font-size:13px;color:var(--muted)}
+    .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);margin:28px 0}
+    form.interest{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    form.interest .full{grid-column:1/-1}
+    input, select, textarea{width:100%;background:#0c132a;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 14px;color:var(--ink);outline:none}
+    textarea{min-height:110px}
+    footer{padding:36px 0;color:var(--muted);font-size:13px}
+    .tag{display:inline-flex;gap:6px;align-items:center;background:#0c132a;border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:6px 10px;font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div class="brand"><span class="brand-logo"></span> BOOP Health</div>
+      <div class="pill">Private emergency profile • Bermuda</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- HERO -->
+    <section class="hero">
+      <div>
+        <div class="tag">New • Health Bracelet</div>
+        <h1>Emergency info, when seconds matter.</h1>
+        <p class="lead">The BOOP Health Bracelet lets EMTs and hospital staff access your critical details in an emergency — allergies, meds, conditions, and a designated contact — <strong>securely</strong> and <strong>only</strong> by authorised responders.</p>
+        <div class="cta">
+          <a href="#interest" class="btn">Register your interest</a>
+          <a href="#how" class="btn secondary">How it works</a>
+        </div>
+        <p class="note" style="margin-top:10px">No instant online signup. We’ll contact you after you submit the form to arrange your bracelet and activation.</p>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">Choose your style</h2>
+        <div class="gallery">
+          <!-- Silver -->
+          <figure class="bracelet">
+            <svg viewBox="0 0 420 180" role="img" aria-label="Sterling silver bracelet mockup">
+              <defs>
+                <linearGradient id="steel" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#dfe6f3"/>
+                  <stop offset="50%" stop-color="#b8c2d9"/>
+                  <stop offset="100%" stop-color="#e9eef9"/>
+                </linearGradient>
+                <linearGradient id="shadow" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#000" stop-opacity=".18"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <ellipse cx="210" cy="90" rx="170" ry="68" fill="url(#steel)"/>
+              <ellipse cx="210" cy="92" rx="170" ry="68" fill="url(#shadow)"/>
+              <rect x="140" y="65" width="140" height="50" rx="10" fill="#f4f7ff" stroke="#c8d2ea"/>
+              <text x="210" y="96" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1020">BOOP HEALTH</text>
+              <text x="210" y="114" text-anchor="middle" font-size="11" fill="#4b556b">emergency only</text>
+            </svg>
+            <figcaption class="caption">
+              <span>Sterling Silver</span>
+              <span class="badge">Classic</span>
+            </figcaption>
+          </figure>
+          <!-- Gold -->
+          <figure class="bracelet">
+            <svg viewBox="0 0 420 180" role="img" aria-label="Gold bracelet mockup">
+              <defs>
+                <linearGradient id="gold" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#fff3c4"/>
+                  <stop offset="50%" stop-color="#ffd166"/>
+                  <stop offset="100%" stop-color="#fff5d1"/>
+                </linearGradient>
+                <linearGradient id="gshadow" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#000" stop-opacity=".18"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <ellipse cx="210" cy="90" rx="170" ry="68" fill="url(#gold)"/>
+              <ellipse cx="210" cy="92" rx="170" ry="68" fill="url(#gshadow)"/>
+              <rect x="140" y="65" width="140" height="50" rx="10" fill="#ffeaa7" stroke="#f2c94c"/>
+              <text x="210" y="96" text-anchor="middle" font-size="16" font-weight="700" fill="#5b3d00">BOOP HEALTH</text>
+              <text x="210" y="114" text-anchor="middle" font-size="11" fill="#7a5a05">emergency only</text>
+            </svg>
+            <figcaption class="caption">
+              <span>Gold Tone</span>
+              <span class="badge">Warm</span>
+            </figcaption>
+          </figure>
+          <!-- Black -->
+          <figure class="bracelet">
+            <svg viewBox="0 0 420 180" role="img" aria-label="Black bracelet mockup">
+              <defs>
+                <linearGradient id="blk" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#1f2638"/>
+                  <stop offset="50%" stop-color="#0f1525"/>
+                  <stop offset="100%" stop-color="#232b3f"/>
+                </linearGradient>
+                <linearGradient id="bshadow" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#000" stop-opacity=".2"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <ellipse cx="210" cy="90" rx="170" ry="68" fill="url(#blk)"/>
+              <ellipse cx="210" cy="92" rx="170" ry="68" fill="url(#bshadow)"/>
+              <rect x="140" y="65" width="140" height="50" rx="10" fill="#181e2e" stroke="#2c3653"/>
+              <text x="210" y="96" text-anchor="middle" font-size="16" font-weight="700" fill="#e6ebff">BOOP HEALTH</text>
+              <text x="210" y="114" text-anchor="middle" font-size="11" fill="#aab4d7">emergency only</text>
+            </svg>
+            <figcaption class="caption">
+              <span>Matte Black</span>
+              <span class="badge">Low‑key</span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- HOW IT WORKS -->
+    <section id="how" class="grid-3">
+      <div class="card">
+        <h2>How it works</h2>
+        <div class="features" style="display:grid;gap:14px;margin-top:8px">
+          <div class="item"><span class="dot"></span><div><strong>Emergency‑only access.</strong><br><span class="note">Your bracelet encodes a secure ID. Only authorised EMTs and hospital systems can view your medical summary.</span></div></div>
+          <div class="item"><span class="dot"></span><div><strong>Private by design.</strong><br><span class="note">No public profile. Nothing visible without responder credentials. You control what’s on your summary.</span></div></div>
+          <div class="item"><span class="dot"></span><div><strong>Fast + offline‑friendly.</strong><br><span class="note">Built to work in low‑signal situations. EMTs get the essentials in seconds.</span></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Eligibility & cost</h2>
+        <p class="note">• <strong>HIP beneficiaries</strong>: <span class="pill" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08);color:#a7f3d0">No monthly fee</span> — pay only for the bracelet.</p>
+        <p class="note">• Others: small subscription (e.g. <strong>$5/mo</strong>) + bracelet cost.</p>
+        <p class="note">We’ll confirm pricing when we contact you.</p>
+      </div>
+      <div class="card">
+        <h2>Why a bracelet?</h2>
+        <p class="note">Phones lock. Cards get buried in wallets. A durable bracelet is visible, water‑resistant, and easy for responders to scan or read in the field.</p>
+        <div style="margin-top:8px" class="pill">Designed for Bermuda responders</div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- FAQ -->
+    <section class="grid-3">
+      <div class="card">
+        <h2>Who can read it?</h2>
+        <p class="note">Emergency Medical Technicians and hospital staff with approved credentials. No one else can access your information.</p>
+      </div>
+      <div class="card">
+        <h2>What’s stored?</h2>
+        <p class="note">Only what you choose: allergies, medications, conditions, and an emergency contact. You can update this any time after activation.</p>
+      </div>
+      <div class="card">
+        <h2>What if I lose it?</h2>
+        <p class="note">We can disable the bracelet ID remotely and issue a replacement. Your data stays safe.</p>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- INTEREST FORM -->
+    <section id="interest" class="card">
+      <h2 style="margin-top:0">Register your interest</h2>
+      <p class="note">Fill this out and we’ll contact you to confirm eligibility, sizing, style and payment. This is not an instant signup.</p>
+      <form class="interest" id="interestForm" novalidate>
+        <div>
+          <label for="first">First name</label>
+          <input id="first" name="first" required />
+        </div>
+        <div>
+          <label for="last">Last name</label>
+          <input id="last" name="last" required />
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" name="email" required />
+        </div>
+        <div>
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" placeholder="441‑XXX‑XXXX" />
+        </div>
+        <div>
+          <label for="style">Preferred style</label>
+          <select id="style" name="style">
+            <option value="silver">Sterling Silver</option>
+            <option value="gold">Gold Tone</option>
+            <option value="black">Matte Black</option>
+          </select>
+        </div>
+        <div>
+          <label for="hip">Are you a HIP beneficiary?</label>
+          <select id="hip" name="hip">
+            <option value="unknown">Not sure</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+        <div class="full">
+          <label for="notes">Anything we should know?</label>
+          <textarea id="notes" name="notes" placeholder="Allergies, sizing, best time to call…"></textarea>
+        </div>
+        <div class="full" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <button class="btn" type="submit">Send my details</button>
+          <span id="formMsg" class="note"></span>
+        </div>
+      </form>
+    </section>
+
+    <footer class="container" style="padding-left:0;padding-right:0">
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div>© <span id="yr"></span> BOOP Health</div>
+        <div class="note">Built with privacy by design • Bermuda</div>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById('yr').textContent = new Date().getFullYear();
+    const form = document.getElementById('interestForm');
+    const msg  = document.getElementById('formMsg');
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      msg.textContent = 'Sending…';
+      const data = Object.fromEntries(new FormData(form).entries());
+      try{
+        // Replace with your real endpoint if/when you wire it up
+        // await fetch('/api/health/interest', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+        await new Promise(r=>setTimeout(r,700));
+        form.reset();
+        msg.textContent = 'Thank you! We will contact you shortly.';
+      }catch(err){
+        console.error(err);
+        msg.textContent = 'Sorry, something went wrong. Please try again later.';
+      }
+    });
+  </script>
+</body>
+</html>
