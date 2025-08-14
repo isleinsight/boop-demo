@@ -30,46 +30,6 @@ async function releaseExpiredClaims() {
   }
 }
 
-
-// return Set of column names for a table
-async function tableCols(client, table) {
-  const { rows } = await client.query(
-    `SELECT column_name
-       FROM information_schema.columns
-      WHERE table_schema = 'public' AND table_name = $1`,
-    [table]
-  );
-  return new Set(rows.map(r => r.column_name));
-}
-
-// build a safe INSERT for transactions, adapting to optional columns
-function buildTxnInsert(cols, {
-  userId, walletId, amountCents, type, description,
-  transferId, counterpartyUserId = null, counterpartyLabel = null
-}) {
-  const hasAmountCents = cols.has('amount_cents');
-  const amountCol = hasAmountCents ? 'amount_cents' : (cols.has('amount') ? 'amount' : 'amount_cents');
-
-  const insertCols = ['id', 'user_id', 'created_at', 'currency', 'type', 'description', 'transfer_id'];
-  const values = ['gen_random_uuid()', '$1', 'NOW()', `'BMD'::text`, '$2', '$3', '$4'];
-  const params = [userId, type, description, transferId];
-
-  if (cols.has('wallet_id')) { insertCols.push('wallet_id'); values.push('$' + (params.push(walletId), params.length)); }
-  insertCols.push(amountCol); values.push('$' + (params.push(amountCents), params.length));
-
-  if (cols.has('from_user_id')) { insertCols.push('from_user_id'); values.push('$' + (params.push(userId), params.length)); }
-  if (cols.has('to_user_id'))   { insertCols.push('to_user_id');   values.push(counterpartyUserId ? '$' + (params.push(counterpartyUserId), params.length) : 'NULL'); }
-  if (cols.has('counterparty')) { insertCols.push('counterparty'); values.push('$' + (params.push(counterpartyLabel), params.length)); }
-  if (cols.has('counterparty_user_id')) {
-    insertCols.push('counterparty_user_id');
-    values.push(counterpartyUserId ? '$' + (params.push(counterpartyUserId), params.length) : 'NULL');
-  }
-  if (cols.has('note')) { insertCols.push('note'); values.push('$' + (params.push(description), params.length)); }
-
-  const sql = `INSERT INTO transactions (${insertCols.join(',')}) VALUES (${values.join(',')})`;
-  return { sql, params };
-}
-
 // --- Health ---------------------------------------------------------------
 router.get('/ping', (req, res) => {
   res.json({ ok: true, message: 'Transfers route is alive' });
@@ -209,29 +169,6 @@ async function doRelease(req, res) {
 router.patch('/:id/release', requireAccountsRole, wrap(doRelease));
 router.post('/:id/release',  requireAccountsRole, wrap(doRelease));
 
-// --- REJECT ----------------------------------------------------------------
-async function doReject(req, res) {
-  const id = req.params.id;
-  const reason = (req.body?.reason || '').slice(0, 255); // (optional)
-  const { rows } = await db.query(
-    `
-    UPDATE transfers
-       SET status = 'rejected',
-           claimed_by = NULL,
-           claimed_at = NULL
-     WHERE id = $1
-       AND status IN ('pending','claimed')
-     RETURNING id, status
-    `,
-    [id]
-  );
-  if (!rows.length) return res.status(409).json({ message: 'Transfer is not eligible to reject.' });
-  // TODO: persist reason somewhere if you want
-  res.json({ ok: true, transfer: rows[0] });
-}
-router.patch('/:id/reject', requireAccountsRole, wrap(doReject));
-router.post('/:id/reject',  requireAccountsRole, wrap(doReject));
-
 // --- COMPLETE (double-entry + debits) -------------------------------------
 /** COMPLETE — double-entry + atomic debits with virtual counterparty recipient */
 async function doComplete(req, res) {
@@ -249,23 +186,22 @@ async function doComplete(req, res) {
   await releaseExpiredClaims();
 
   // Helper: find-or-create a virtual counterparty user for this bank/destination
-  async function ensureVirtualCounterparty(client, bank, destination_masked) {
+  async function ensureBankCounterparty(client, bank, destination_masked) {
     const safeBank = String(bank || 'Bank').trim();
     const mask = String(destination_masked || '').trim();
-    // try to extract last4 digits from mask (fallback to 'xxxx')
     const last4Match = mask.match(/(\d{4})\s*$/);
     const last4 = last4Match ? last4Match[1] : '0000';
 
     // Stable unique email slug so we re-use the same counterparty each time
     const slug = `${safeBank}-${last4}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const email = `counterparty+${slug}@boop.local`;
-    const first_name = safeBank;           // e.g., "HSBC" / "Butterfield"
-    const last_name = `•••• ${last4}`;     // e.g., "•••• 1234"
+    const first_name = safeBank;        // e.g., "HSBC" / "Butterfield"
+    const last_name  = `•••• ${last4}`; // e.g., "•••• 4987"
 
-    // Insert (or reuse if email already exists). Adjust column names only if your users table differs.
+    // Upsert a user that satisfies your users_role_check (role/type = 'vendor')
     const upsertSql = `
       INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
-      VALUES ($1, $2, $3, 'system', 'counterparty', 'active', NOW(), NOW())
+      VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
       ON CONFLICT (email)
       DO UPDATE SET first_name = EXCLUDED.first_name,
                     last_name  = EXCLUDED.last_name,
@@ -276,7 +212,6 @@ async function doComplete(req, res) {
     return rows[0].id;
   }
 
-  // Get dedicated client
   const client = await getDbClient();
   try {
     await client.query('BEGIN');
