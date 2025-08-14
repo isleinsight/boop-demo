@@ -5,6 +5,41 @@ const router = express.Router();
 const pool = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
+// --- presentation helpers ---------------------------------------------------
+function safeMeta(tx) {
+  try {
+    return typeof tx.metadata === 'string'
+      ? JSON.parse(tx.metadata)
+      : (tx.metadata || {});
+  } catch {
+    return {};
+  }
+}
+
+function computeToDisplay(tx) {
+  // Prefer the masked destination saved during transfer completion
+  const m = safeMeta(tx);
+  if (m.to_mask) return m.to_mask;               // set by transfers.doComplete()
+  // Fallbacks you already select via JOINs:
+  if (tx.recipient_name) return tx.recipient_name;
+  if (tx.counterparty_name) return tx.counterparty_name;
+  return '';
+}
+
+function computeFromDisplay(tx) {
+  // You already select sender_name via NAME_FIELDS_SQL
+  if (tx.sender_name) return tx.sender_name;
+  return '';
+}
+
+function decorateTx(rows) {
+  return rows.map(r => ({
+    ...r,
+    to_display: computeToDisplay(r),
+    from_display: computeFromDisplay(r),
+  }));
+}
+
 const NAME_FIELDS_SQL = `
   t.sender_id,
   t.recipient_id,
@@ -27,21 +62,22 @@ router.get('/recent', authenticateToken, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
-        t.id,
-        t.user_id,
-        t.wallet_id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        ${NAME_FIELDS_SQL}
+  t.id,
+  t.user_id,
+  t.wallet_id,
+  t.type,
+  t.amount_cents,
+  t.note,
+  t.metadata,
+  t.created_at,
+  ${NAME_FIELDS_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
       ORDER BY t.created_at DESC
       LIMIT 50
     `);
-    return res.status(200).json(rows);
+    return res.status(200).json(decorateTx(rows));
   } catch (err) {
     console.error('❌ Failed to load transactions:', err);
     return res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
@@ -55,13 +91,14 @@ router.get('/mine', authenticateToken, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
-        t.id,
-        t.wallet_id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        ${NAME_FIELDS_SQL}
+  t.id,
+  t.wallet_id,
+  t.type,
+  t.amount_cents,
+  t.note,
+  t.metadata,
+  t.created_at,
+  ${NAME_FIELDS_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
@@ -70,7 +107,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
       LIMIT 50
     `, [userId]);
 
-    return res.status(200).json(rows);
+    return res.status(200).json(decorateTx(rows));
   } catch (err) {
     console.error('❌ Failed to load user transactions:', err);
     return res.status(500).json({ message: 'An error occurred while retrieving your transactions.' });
@@ -111,13 +148,14 @@ router.get('/report', authenticateToken, async (req, res) => {
 
     const { rows } = await pool.query(`
       SELECT
-        t.id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        COALESCE(s.first_name || ' ' || s.last_name, 'System') AS sender_name,
-        COALESCE(r.first_name || ' ' || r.last_name, 'Unknown') AS recipient_name
+  t.id,
+  t.type,
+  t.amount_cents,
+  t.note,
+  t.metadata,
+  t.created_at,
+  COALESCE(s.first_name || ' ' || s.last_name, 'System') AS sender_name,
+  COALESCE(r.first_name || ' ' || r.last_name, 'Unknown') AS recipient_name
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
@@ -127,11 +165,11 @@ router.get('/report', authenticateToken, async (req, res) => {
     `, values);
 
     return res.status(200).json({
-      transactions: rows,
-      totalCount,
-      limit: parseInt(limit, 10),
-      offset: parseInt(offset, 10)
-    });
+  transactions: decorateTx(rows),
+  totalCount,
+  limit: parseInt(limit, 10),
+  offset: parseInt(offset, 10)
+});
   } catch (err) {
     console.error('❌ Error loading transaction report:', err);
     return res.status(500).json({ message: 'An error occurred while retrieving report transactions.' });
@@ -152,13 +190,14 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   try {
     const txRes = await pool.query(`
       SELECT
-        t.id,
-        t.wallet_id,
-        t.type,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        ${NAME_FIELDS_SQL}
+  t.id,
+  t.wallet_id,
+  t.type,
+  t.amount_cents,
+  t.note,
+  t.metadata,
+  t.created_at,
+  ${NAME_FIELDS_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
@@ -179,9 +218,9 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
     });
 
     return res.status(200).json({
-      transactions: txRes.rows,
-      totalCount: countRes.rows[0].count
-    });
+  transactions: decorateTx(txRes.rows),
+  totalCount: countRes.rows[0].count
+});
   } catch (err) {
     console.error('❌ Failed to load target user transactions:', err);
     return res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
