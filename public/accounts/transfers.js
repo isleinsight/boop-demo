@@ -35,10 +35,14 @@
   const d_internalNote = document.getElementById("d_internalNote");
   const claimBtn = document.getElementById("claimBtn");
   const releaseBtn = document.getElementById("releaseBtn");
-  const rejectBtn = document.getElementById("rejectBtn"); // ← now referenced
+  const rejectBtn = document.getElementById("rejectBtn");
   const completeBtn = document.getElementById("completeBtn");
 
-  // Will hold a live reference to the “Cardholder Balance” input we inject (if needed)
+  // Optional helper line: “Mark completed only after you’ve moved funds”
+  // (Add id="completeHelp" in your HTML for that little note, if it isn't already.)
+  const completeHelp = document.getElementById("completeHelp");
+
+  // Also show cardholder balance
   let d_balance = document.getElementById("d_balance");
 
   // --- State
@@ -229,7 +233,6 @@
       try {
         await sendJSON(`/api/transfers/${id}/claim`, "PATCH");
         await fetchTransfers();
-        // Show the modal after claiming so you can complete/release
         const updated = rows.find(r => String(r.id) === String(id));
         openModal(updated || row);
       } catch (err) {
@@ -253,14 +256,11 @@
     }
   }
 
-  // --- Modal logic
+  // --- Modal helpers (for the fields you want to hide/show)
   function ensureBalanceField() {
-    // If #d_balance already exists, use it.
     d_balance = document.getElementById("d_balance");
     if (d_balance) return d_balance;
 
-    // Otherwise, inject a new "Cardholder Balance" field right after the Amount field container.
-    // Find the .field wrapper that contains d_amount
     const amountField = d_amount?.closest(".field");
     if (!amountField) return null;
 
@@ -273,6 +273,17 @@
     amountField.insertAdjacentElement("afterend", balanceField);
     d_balance = balanceField.querySelector("#d_balance");
     return d_balance;
+  }
+
+  // get the whole .field wrapper for the internal note (so label + input hide together)
+  function noteFieldWrapper() {
+    return d_internalNote ? (d_internalNote.closest(".field") || d_internalNote.parentElement) : null;
+  }
+
+  function toggleFinalizeExtras(visible) {
+    const noteWrap = noteFieldWrapper();
+    if (noteWrap) noteWrap.style.display = visible ? "" : "none";
+    if (completeHelp) completeHelp.style.display = visible ? "" : "none";
   }
 
   function fillTreasurySelect() {
@@ -298,25 +309,36 @@
     d_bankRef.disabled = true;
     d_internalNote.disabled = true;
 
-    // Completed/rejected → view only
-    if (s === "completed" || s === "rejected") return;
-
-    // Pending → can Claim OR Reject
-    if (s === "pending") {
-      claimBtn.style.display = "inline-block";
-      if (rejectBtn) rejectBtn.style.display = "inline-block";
+    // Completed/rejected → view only; also hide note + helper
+    if (s === "completed" || s === "rejected") {
+      toggleFinalizeExtras(false);
       return;
     }
 
-    // Claimed → if it's mine, can Release, Complete, Reject
+    // Pending → can Claim/Reject; hide note + helper (you can't complete yet)
+    if (s === "pending") {
+      claimBtn.style.display = "inline-block";
+      if (rejectBtn) rejectBtn.style.display = "inline-block";
+      toggleFinalizeExtras(false);
+      return;
+    }
+
+    // Claimed → if it's mine, can Release/Complete/Reject; show note + helper
     if (s === "claimed" && mine) {
       releaseBtn.style.display = "inline-block";
       completeBtn.style.display = "inline-block";
       if (rejectBtn) rejectBtn.style.display = "inline-block";
+
       d_treasury.disabled = false;
       d_bankRef.disabled = false;
       d_internalNote.disabled = false;
+
+      toggleFinalizeExtras(true);
+      return;
     }
+
+    // Claimed, but not mine → hide finalize extras
+    toggleFinalizeExtras(false);
   }
 
   async function openModal(row) {
