@@ -174,39 +174,75 @@ async function doReject(req, res) {
   const id = req.params.id;
   const reason = (req.body?.reason || '').slice(0, 255);
 
-  // Move transfer to rejected (pending/claimed only)
-  const { rows } = await db.query(
-    `
-    UPDATE transfers
-       SET status = 'rejected',
-           claimed_by = NULL,
-           claimed_at = NULL
-     WHERE id = $1
-       AND status IN ('pending','claimed')
-    RETURNING id, user_id, bank, destination_masked, status
-    `,
-    [id]
-  );
-  if (!rows.length) return res.status(409).json({ message: 'Transfer is not eligible to reject.' });
+  // helper: find-or-create the virtual counterparty user (same pattern as complete)
+  async function ensureBankCounterparty(client, bank, destination_masked) {
+    const safeBank = String(bank || 'Bank').trim();
+    const mask = String(destination_masked || '').trim();
+    const last4Match = mask.match(/(\d{4})\s*$/);
+    const last4 = last4Match ? last4Match[1] : '0000';
 
-  const t = rows[0];
+    const slug  = `${safeBank}-${last4}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const email = `counterparty+${slug}@boop.local`;
+    const first_name = safeBank;        // e.g. "HSBC"
+    const last_name  = `•••• ${last4}`; // e.g. "•••• 1234"
 
-  // 🔔 Log a zero-amount "transfer" activity for the cardholder so they can see the rejection
-  // This uses ONLY columns your transactions table already has.
+    // Use role/type 'vendor' (matches your constraint)
+    const upsertSql = `
+      INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
+      VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
+      ON CONFLICT (email)
+      DO UPDATE SET first_name = EXCLUDED.first_name,
+                    last_name  = EXCLUDED.last_name,
+                    updated_at = NOW()
+      RETURNING id
+    `;
+    const { rows } = await client.query(upsertSql, [email, first_name, last_name]);
+    return rows[0].id;
+  }
+
+  const client = await getDbClient();
   try {
-    await db.query(
+    await client.query('BEGIN');
+
+    // Move transfer to rejected (pending/claimed only) and get needed fields
+    const rej = await client.query(
+      `
+      UPDATE transfers
+         SET status = 'rejected',
+             claimed_by = NULL,
+             claimed_at = NULL
+       WHERE id = $1
+         AND status IN ('pending','claimed')
+      RETURNING id, user_id, bank, destination_masked, status
+      `,
+      [id]
+    );
+
+    if (!rej.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Transfer is not eligible to reject.' });
+    }
+
+    const t = rej.rows[0];
+
+    // ensure we have a recipient counterparty so the "TO" column shows a name
+    const recipientId = await ensureBankCounterparty(client, t.bank, t.destination_masked);
+
+    // Insert a zero-amount activity transaction for the cardholder with recipient set
+    await client.query(
       `
       INSERT INTO transactions (
         user_id, type, amount_cents, note, created_at, updated_at,
         sender_id, recipient_id, transfer_id, metadata
       ) VALUES (
         $1, 'transfer', 0, $2, NOW(), NOW(),
-        $1, NULL, $3, $4
+        $1, $3, $4, $5
       )
       `,
       [
         t.user_id,
         reason ? `Bank transfer rejected: ${reason}` : 'Bank transfer rejected',
+        recipientId,
         t.id,
         JSON.stringify({
           event: 'transfer_rejected',
@@ -217,15 +253,21 @@ async function doReject(req, res) {
         })
       ]
     );
-  } catch (e) {
-    // If the activity row fails, don’t block the rejection — just log it.
-    console.warn('⚠️ failed to insert rejection activity transaction:', e.message || e);
-  }
 
-  return res.json({ ok: true, transfer: { id: t.id, status: 'rejected' } });
+    await client.query('COMMIT');
+    return res.json({ ok: true, transfer: { id: t.id, status: 'rejected' } });
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.warn('⚠️ reject flow error:', e.message || e);
+    // Even if the activity insert fails, the transfer might already be marked rejected.
+    // We return a generic failure so the UI can show a toast, but the state is safe.
+    return res.status(500).json({ message: 'Failed to reject transfer.' });
+  } finally {
+    client.release && client.release();
+  }
 }
 router.patch('/:id/reject', requireAccountsRole, wrap(doReject));
-router.post('/:id/reject',  requireAccountsRole, wrap(doReject));
+router.post('/:id/reject',  requireAccountsRole, wrap(doReject)); // POST alias
 
 // --- COMPLETE (double-entry + debits) -------------------------------------
 /** COMPLETE — double-entry + atomic debits with virtual counterparty recipient */
