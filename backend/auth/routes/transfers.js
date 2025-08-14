@@ -537,34 +537,32 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
 
     // First attempt: exact bank + last4
     let ba = await db.query(
-      `
-      SELECT id, bank_name, account_holder_name, account_number, routing_number,
-             iban, swift, country
-      FROM bank_accounts
-      WHERE user_id = $1
-        AND deleted_at IS NULL
-        AND ($2::text IS NULL OR bank_name = $2)
-        AND ($3::text IS NULL OR RIGHT(account_number, 4) = $3)
-      ORDER BY updated_at DESC NULLS LAST, created_at DESC
-      LIMIT 1
-      `,
-      [t.user_id, bankName || null, last4 || null]
-    );
+  `
+  SELECT id, bank_name, account_number
+  FROM bank_accounts
+  WHERE user_id = $1
+    AND deleted_at IS NULL
+    AND ($2::text IS NULL OR bank_name = $2)
+    AND ($3::text IS NULL OR RIGHT(account_number, 4) = $3)
+  ORDER BY updated_at DESC NULLS LAST, created_at DESC
+  LIMIT 1
+  `,
+  [t.user_id, bankName || null, last4 || null]
+);
 
     // Fallback: any recent account for the user (if exact match didn’t hit)
     if (!ba.rowCount) {
       ba = await db.query(
-        `
-        SELECT id, bank_name, account_holder_name, account_number, routing_number,
-               iban, swift, country
-        FROM bank_accounts
-        WHERE user_id = $1
-          AND deleted_at IS NULL
-        ORDER BY updated_at DESC NULLS LAST, created_at DESC
-        LIMIT 1
-        `,
-        [t.user_id]
-      );
+  `
+  SELECT id, bank_name, account_number
+  FROM bank_accounts
+  WHERE user_id = $1
+    AND deleted_at IS NULL
+  ORDER BY updated_at DESC NULLS LAST, created_at DESC
+  LIMIT 1
+  `,
+  [t.user_id]
+);
     }
 
     if (!ba.rowCount) {
@@ -572,16 +570,10 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
     }
 
     const b = ba.rows[0];
-    // Return only what you need in the modal
-    return res.json({
-      bank_name: b.bank_name,
-      account_holder_name: b.account_holder_name,
-      account_number: b.account_number,     // FULL number
-      routing_number: b.routing_number || null,
-      iban: b.iban || null,
-      swift: b.swift || null,
-      country: b.country || null
-    });
+return res.json({
+  bank_name: b.bank_name,
+  account_number: b.account_number   // FULL number only
+});
   } catch (err) {
     console.error('❌ /:id/bank-details error:', err);
     return res.status(500).json({ message: 'Failed to load bank details.' });
