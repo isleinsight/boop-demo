@@ -268,11 +268,15 @@ tr:hover {
   z-index: 1000;
   align-items: center;
   justify-content: center;
+  padding: 24px;                 /* gives breathing room so content never touches edges */
 }
 
 .modal-content {
   width: 100%;
   max-width: 640px;
+  max-height: 90vh;              /* cap the height to viewport */
+  overflow: auto;                /* scroll inside the modal */
+  -webkit-overflow-scrolling: touch;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2);
