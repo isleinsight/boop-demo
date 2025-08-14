@@ -213,7 +213,7 @@ async function doReject(req, res) {
 router.patch('/:id/reject', requireAccountsRole, wrap(doReject));
 router.post('/:id/reject',  requireAccountsRole, wrap(doReject)); // POST alias
 
-/** COMPLETE — double-entry + atomic debits + transaction rows (with transfer_id) */
+/** COMPLETE — atomic debits + double-entry rows into `transactions` */
 async function doComplete(req, res) {
   const id = req.params.id;
   const me = req.user.userId || req.user.id;
@@ -228,49 +228,19 @@ async function doComplete(req, res) {
 
   await releaseExpiredClaims();
 
-  // helper: insert a transaction row; supports amount_cents OR amount
-  async function insertTxn(client, {
-    wallet_id, amount_cents, type, description, transfer_id
-  }) {
-    // Try amount_cents first
-    try {
-      await client.query(
-        `INSERT INTO transactions
-           (wallet_id, amount_cents, type, description, transfer_id, created_at)
-         VALUES ($1,        $2,           $3,   $4,         $5,          NOW())`,
-        [wallet_id, amount_cents, type, description, transfer_id]
-      );
-      return;
-    } catch (e) {
-      // If "amount_cents" column doesn't exist, fall back to "amount"
-      if (e && e.code === '42703') {
-        await client.query(
-          `INSERT INTO transactions
-             (wallet_id, amount, type, description, transfer_id, created_at)
-           VALUES ($1,        $2,    $3,   $4,         $5,          NOW())`,
-          [wallet_id, amount_cents, type, description, transfer_id]
-        );
-        return;
-      }
-      throw e;
-    }
-  }
-
-  // get a client for a single atomic tx
-  const client = await (db?.pool?.connect ? db.pool.connect() :
-                        db?.getClient ? db.getClient() :
-                        db?.connect ? db.connect() :
-                        Promise.reject(new Error('No db client available')));
-
+  // get a transactional client from your db helper
+  const client = await getDbClient();
   try {
     await client.query('BEGIN');
 
-    // 1) Lock transfer + validate claim
+    // 1) Lock the transfer & validate claim freshness/ownership
     const { rows: trows } = await client.query(
-      `SELECT id, user_id, amount_cents, status, claimed_by, claimed_at
-         FROM transfers
-        WHERE id = $1
-        FOR UPDATE`,
+      `
+      SELECT id, user_id, amount_cents, status, claimed_by, claimed_at
+        FROM transfers
+       WHERE id = $1
+       FOR UPDATE
+      `,
       [id]
     );
     const t = trows[0];
@@ -288,75 +258,78 @@ async function doComplete(req, res) {
     const amount = Number(t.amount_cents || 0);
     const userId = t.user_id;
 
-    // 2) Resolve wallet IDs (user wallet id + treasury wallet id)
-    const { rows: uw } = await client.query(
-      `SELECT id FROM wallets WHERE user_id = $1 LIMIT 1`,
+    // 2) Resolve wallet IDs + treasury user_id for ledger rows
+    const { rows: uwRows } = await client.query(
+      `SELECT id AS wallet_id, user_id FROM wallets WHERE user_id = $1 LIMIT 1`,
       [userId]
     );
-    const userWalletId = uw[0]?.id;
-    if (!userWalletId) {
+    if (!uwRows.length) {
       await client.query('ROLLBACK');
       return res.status(404).json({ message: 'User wallet not found.' });
     }
+    const userWalletId = uwRows[0].wallet_id;
 
-    // Sanity check treasury wallet exists (and is a treasury)
-    const { rows: tw } = await client.query(
-      `SELECT id FROM wallets WHERE id = $1 AND is_treasury = TRUE LIMIT 1`,
+    const { rows: twRows } = await client.query(
+      `SELECT id AS wallet_id, user_id FROM wallets WHERE id = $1 AND is_treasury = true LIMIT 1`,
       [treasury_wallet_id]
     );
-    const treasuryWalletId = tw[0]?.id;
-    if (!treasuryWalletId) {
+    if (!twRows.length) {
       await client.query('ROLLBACK');
       return res.status(404).json({ message: 'Treasury wallet not found.' });
     }
+    const treasuryUserId = twRows[0].user_id;
 
-    // 3) Debit balances
-    const { rowCount: userUpd } = await client.query(
-      `UPDATE wallets SET balance = balance - $1
-        WHERE user_id = $2 AND balance >= $1`,
-      [amount, userId]
+    // 3) Update balances (both decrease on a bank payout)
+    const userUpd = await client.query(
+      `UPDATE wallets SET balance = balance - $1 WHERE id = $2 AND balance >= $1`,
+      [amount, userWalletId]
     );
-    if (userUpd !== 1) {
+    if (userUpd.rowCount !== 1) {
       await client.query('ROLLBACK');
-      return res.status(409).json({ message: 'Insufficient user balance or wallet not found.' });
+      return res.status(409).json({ message: 'Insufficient user balance.' });
     }
 
-    const { rowCount: treasUpd } = await client.query(
-      `UPDATE wallets SET balance = balance - $1
-        WHERE id = $2 AND is_treasury = TRUE AND balance >= $1`,
-      [amount, treasuryWalletId]
+    const treasUpd = await client.query(
+      `UPDATE wallets SET balance = balance - $1 WHERE id = $2 AND balance >= $1`,
+      [amount, treasury_wallet_id]
     );
-    if (treasUpd !== 1) {
+    if (treasUpd.rowCount !== 1) {
       await client.query('ROLLBACK');
-      return res.status(409).json({ message: 'Treasury has insufficient funds or not found.' });
+      return res.status(409).json({ message: 'Treasury has insufficient funds.' });
     }
 
-    // 4) Insert double-entry transactions (with transfer_id)
-    //    - From the user's perspective: DEBIT (money leaves their wallet)
-    //    - From the treasury's perspective: CREDIT (recognize the outgoing transfer)
-    await insertTxn(client, {
-      wallet_id: userWalletId,
-      amount_cents: amount,
-      type: 'debit',
-      description: 'Bank transfer out',
-      transfer_id: id
-    });
-    await insertTxn(client, {
-      wallet_id: treasuryWalletId,
-      amount_cents: amount,
-      type: 'credit',
-      description: 'Bank transfer out',
-      transfer_id: id
-    });
+    // 4) Double-entry ledger rows (link both to this transfer_id)
+    // NOTE: since both balances went down, we record both as 'debit'.
+    // If your convention differs, change `type` accordingly.
+    await client.query(
+      `
+      INSERT INTO transactions
+        (wallet_id, user_id, description, amount_cents, currency, type, created_at, transfer_id)
+      VALUES
+        ($1, $2, 'Bank transfer out', $3, 'BMD', 'debit', NOW(), $7),
+        ($4, $5, 'Bank transfer out (treasury payout)', $3, 'BMD', 'debit', NOW(), $7)
+      `,
+      [
+        userWalletId,          // $1 user wallet
+        userId,                // $2 user id
+        amount,                // $3 amount
+        treasury_wallet_id,    // $4 treasury wallet
+        treasuryUserId,        // $5 treasury user id
+        /* $6 unused */,
+        id                     // $7 transfer_id on both rows
+      ]
+    );
 
     // 5) Mark transfer completed
     const { rows: done } = await client.query(
-      `UPDATE transfers
-          SET status = 'completed',
-              bank_reference = $2,
-              completed_at = NOW()
-        WHERE id = $1
-        RETURNING id, status, bank_reference, completed_at`,
+      `
+      UPDATE transfers
+         SET status        = 'completed',
+             bank_reference = $2,
+             completed_at   = NOW()
+       WHERE id = $1
+       RETURNING id, status, bank_reference, completed_at
+      `,
       [id, String(bank_reference).trim()]
     );
 
