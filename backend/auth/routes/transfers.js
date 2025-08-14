@@ -213,9 +213,9 @@ async function doReject(req, res) {
 router.patch('/:id/reject', requireAccountsRole, wrap(doReject));
 router.post('/:id/reject',  requireAccountsRole, wrap(doReject)); // POST alias
 
-/** COMPLETE — atomic debits + double-entry rows into `transactions` */
+/** COMPLETE — atomic debits + double-entry transactions */
 async function doComplete(req, res) {
-  const id = req.params.id;
+  const id = req.params.id; // transfer id
   const me = req.user.userId || req.user.id;
   const { bank_reference, internal_note, treasury_wallet_id } = req.body || {};
 
@@ -228,18 +228,20 @@ async function doComplete(req, res) {
 
   await releaseExpiredClaims();
 
-  // get a transactional client from your db helper
-  const client = await getDbClient();
+  // get a dedicated client so all statements are in the same txn
+  const client = await (db.pool?.connect ? db.pool.connect() : db.connect?.());
+  if (!client) return res.status(500).json({ message: 'DB connection unavailable' });
+
   try {
     await client.query('BEGIN');
 
-    // 1) Lock the transfer & validate claim freshness/ownership
+    // 1) Lock transfer and validate claim freshness/ownership
     const { rows: trows } = await client.query(
       `
       SELECT id, user_id, amount_cents, status, claimed_by, claimed_at
-        FROM transfers
-       WHERE id = $1
-       FOR UPDATE
+      FROM transfers
+      WHERE id = $1
+      FOR UPDATE
       `,
       [id]
     );
@@ -248,9 +250,10 @@ async function doComplete(req, res) {
       await client.query('ROLLBACK');
       return res.status(404).json({ message: 'Transfer not found.' });
     }
-    const isClaimedByMe = t.status === 'claimed' && String(t.claimed_by) === String(me);
-    const stillFresh = t.claimed_at && (new Date(t.claimed_at) > new Date(Date.now() - CLAIM_TTL_MINUTES * 60 * 1000));
-    if (!isClaimedByMe || !stillFresh) {
+    const isMine = t.status === 'claimed' && String(t.claimed_by) === String(me);
+    const stillFresh =
+      t.claimed_at && (new Date(t.claimed_at) > new Date(Date.now() - CLAIM_TTL_MINUTES * 60 * 1000));
+    if (!isMine || !stillFresh) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Claim expired or not owned by you. Please claim again.' });
     }
@@ -258,77 +261,87 @@ async function doComplete(req, res) {
     const amount = Number(t.amount_cents || 0);
     const userId = t.user_id;
 
-    // 2) Resolve wallet IDs + treasury user_id for ledger rows
-    const { rows: uwRows } = await client.query(
-      `SELECT id AS wallet_id, user_id FROM wallets WHERE user_id = $1 LIMIT 1`,
+    // 2) Fetch wallets (user + treasury) and lock them
+    const { rows: uw } = await client.query(
+      `SELECT id AS wallet_id FROM wallets WHERE user_id = $1 LIMIT 1 FOR UPDATE`,
       [userId]
     );
-    if (!uwRows.length) {
+    if (!uw.length) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ message: 'User wallet not found.' });
+      return res.status(409).json({ message: 'User wallet not found.' });
     }
-    const userWalletId = uwRows[0].wallet_id;
+    const userWalletId = uw[0].wallet_id;
 
-    const { rows: twRows } = await client.query(
-      `SELECT id AS wallet_id, user_id FROM wallets WHERE id = $1 AND is_treasury = true LIMIT 1`,
+    const { rows: tw } = await client.query(
+      `SELECT id AS wallet_id, user_id AS treasury_user_id, is_treasury
+       FROM wallets
+       WHERE id = $1
+       FOR UPDATE`,
       [treasury_wallet_id]
     );
-    if (!twRows.length) {
+    const twr = tw[0];
+    if (!twr || !twr.is_treasury) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ message: 'Treasury wallet not found.' });
+      return res.status(409).json({ message: 'Selected wallet is not a treasury wallet.' });
     }
-    const treasuryUserId = twRows[0].user_id;
+    const treasuryUserId = twr.treasury_user_id;
 
-    // 3) Update balances (both decrease on a bank payout)
-    const userUpd = await client.query(
+    // 3) Debit balances (guard against negatives)
+    const { rowCount: userUpd } = await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2 AND balance >= $1`,
       [amount, userWalletId]
     );
-    if (userUpd.rowCount !== 1) {
+    if (userUpd !== 1) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Insufficient user balance.' });
     }
 
-    const treasUpd = await client.query(
+    const { rowCount: treasUpd } = await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2 AND balance >= $1`,
       [amount, treasury_wallet_id]
     );
-    if (treasUpd.rowCount !== 1) {
+    if (treasUpd !== 1) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Treasury has insufficient funds.' });
     }
 
-    // 4) Double-entry ledger rows (link both to this transfer_id)
-    // NOTE: since both balances went down, we record both as 'debit'.
-    // If your convention differs, change `type` accordingly.
+    // 4) Double-entry transactions (explicit types so PG never guesses)
+    // 4a) User ledger — debit
     await client.query(
       `
-      INSERT INTO transactions
-        (wallet_id, user_id, description, amount_cents, currency, type, created_at, transfer_id)
-      VALUES
-        ($1, $2, 'Bank transfer out', $3, 'BMD', 'debit', NOW(), $7),
-        ($4, $5, 'Bank transfer out (treasury payout)', $3, 'BMD', 'debit', NOW(), $7)
+      INSERT INTO transactions (
+        id, user_id, wallet_id, amount_cents, currency, type, description, created_at, transfer_id
+      ) VALUES (
+        gen_random_uuid(), $1, $2, $3, 'BMD'::text, 'debit'::text, 'Bank transfer out'::text, NOW(), $4::uuid
+      )
       `,
-      [
-        userWalletId,          // $1 user wallet
-        userId,                // $2 user id
-        amount,                // $3 amount
-        treasury_wallet_id,    // $4 treasury wallet
-        treasuryUserId,        // $5 treasury user id
-        /* $6 unused */,
-        id                     // $7 transfer_id on both rows
-      ]
+      [userId, userWalletId, amount, id]
     );
 
-    // 5) Mark transfer completed
+    // 4b) Treasury ledger — debit (money leaves treasury to external bank)
+    await client.query(
+      `
+      INSERT INTO transactions (
+        id, user_id, wallet_id, amount_cents, currency, type, description, created_at, transfer_id
+      ) VALUES (
+        gen_random_uuid(), $1, $2, $3, 'BMD'::text, 'debit'::text, 'Bank payout (ACH/Wire)'::text, NOW(), $4::uuid
+      )
+      `,
+      [treasuryUserId, treasury_wallet_id, amount, id]
+    );
+
+    // If you also want a *credit* somewhere internal, add it here (and adjust balances accordingly).
+    // Current model: funds leave both the cardholder wallet and the treasury (to the outside bank).
+
+    // 5) Finalize transfer
     const { rows: done } = await client.query(
       `
       UPDATE transfers
-         SET status        = 'completed',
-             bank_reference = $2,
-             completed_at   = NOW()
-       WHERE id = $1
-       RETURNING id, status, bank_reference, completed_at
+      SET status = 'completed',
+          bank_reference = $2,
+          completed_at = NOW()
+      WHERE id = $1
+      RETURNING id, status, bank_reference, completed_at
       `,
       [id, String(bank_reference).trim()]
     );
@@ -340,7 +353,7 @@ async function doComplete(req, res) {
     console.error('doComplete error:', e);
     return res.status(500).json({ message: 'Failed to complete transfer.' });
   } finally {
-    client.release && client.release();
+    if (client.release) client.release();
   }
 }
 
