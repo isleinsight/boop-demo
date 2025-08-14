@@ -153,36 +153,157 @@ router.patch('/:id/release', requireAccountsRole, wrap(doRelease));
 router.post('/:id/release',  requireAccountsRole, wrap(doRelease)); // <— POST alias
 
 /** COMPLETE — allow PATCH and POST */
+/** COMPLETE — allow PATCH and POST (now actually moves money) */
 async function doComplete(req, res) {
   const id = req.params.id;
   const me = req.user.userId || req.user.id;
   const { bank_reference, internal_note, treasury_wallet_id } = req.body || {};
+
+  if (!treasury_wallet_id) {
+    return res.status(400).json({ message: 'treasury_wallet_id is required.' });
+  }
   if (!bank_reference || String(bank_reference).trim().length < 4) {
-    return res.status(400).json({ message: 'bank_reference is required.' });
+    return res.status(400).json({ message: 'bank_reference is required (min 4 chars).' });
   }
 
-  // (optional) you can log internal_note / treasury_wallet_id in a journal table
+  // start tx
+  await db.query('BEGIN');
+  try {
+    // 1) Lock the transfer
+    const { rows: tRows } = await db.query(
+      `
+      SELECT id, user_id, amount_cents, status, claimed_by
+      FROM transfers
+      WHERE id = $1
+      FOR UPDATE
+      `,
+      [id]
+    );
+    const t = tRows[0];
+    if (!t) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ message: 'Transfer not found.' });
+    }
+    if (String(t.status).toLowerCase() !== 'claimed' || t.claimed_by !== me) {
+      await db.query('ROLLBACK');
+      return res.status(409).json({ message: 'Only the claimer can complete this transfer (must be in claimed state).' });
+    }
 
-  const { rows } = await db.query(
-    `
-    UPDATE transfers t
-    SET status = 'completed',
-        bank_reference = $3,
-        completed_at = NOW()
-    WHERE t.id = $1
-      AND t.status = 'claimed'
-      AND t.claimed_by = $2
-    RETURNING t.id, t.status, t.bank_reference, t.completed_at;
-    `,
-    [id, me, bank_reference.trim()]
-  );
-  if (!rows.length) {
-    return res.status(409).json({ message: 'Only the claimer can complete this transfer (or it is not in claimed state).' });
+    // 2) Lock user wallet
+    const { rows: wRows } = await db.query(
+      `
+      SELECT id, COALESCE(balance_cents, balance) AS balance_cents
+      FROM wallets
+      WHERE user_id = $1
+      FOR UPDATE
+      `,
+      [t.user_id]
+    );
+    const w = wRows[0];
+    if (!w) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ message: 'User wallet not found.' });
+    }
+
+    // 3) Lock treasury wallet
+    const { rows: twRows } = await db.query(
+      `
+      SELECT id, COALESCE(balance_cents, balance) AS balance_cents
+      FROM treasury_wallets
+      WHERE id = $1
+      FOR UPDATE
+      `,
+      [treasury_wallet_id]
+    );
+    const tw = twRows[0];
+    if (!tw) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ message: 'Treasury wallet not found.' });
+    }
+
+    const amt = Number(t.amount_cents || 0);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ message: 'Invalid transfer amount.' });
+    }
+
+    // 4) Balance checks (soft)
+    if (Number(w.balance_cents) < amt) {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ message: 'User balance is insufficient.' });
+    }
+    if (Number(tw.balance_cents) < amt) {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ message: 'Treasury balance is insufficient.' });
+    }
+
+    // 5) Debit user wallet
+    await db.query(
+      `
+      UPDATE wallets
+      SET
+        balance_cents = COALESCE(balance_cents, COALESCE(balance,0)) - $2,
+        balance       = COALESCE(balance,       COALESCE(balance_cents,0)) - $2
+      WHERE user_id = $1
+      `,
+      [t.user_id, amt]
+    );
+
+    // 6) Debit treasury wallet
+    await db.query(
+      `
+      UPDATE treasury_wallets
+      SET
+        balance_cents = COALESCE(balance_cents, COALESCE(balance,0)) - $2,
+        balance       = COALESCE(balance,       COALESCE(balance_cents,0)) - $2
+      WHERE id = $1
+      `,
+      [treasury_wallet_id, amt]
+    );
+
+    // 7) (Optional) Insert a transaction record for audit
+    //    Adjust columns/table name to match your existing transactions schema.
+    await db.query(
+      `
+      INSERT INTO transactions
+        (user_id, amount_cents, type, note, counterparty_name, created_at)
+      VALUES
+        ($1,     $2,           'debit', $3,   'Bank transfer', NOW())
+      `,
+      [t.user_id, amt, internal_note || 'Transfer to bank']
+    );
+
+    // 8) Mark transfer completed + store bank reference + treasury used
+    await db.query(
+      `
+      UPDATE transfers
+      SET status = 'completed',
+          bank_reference = $2,
+          treasury_wallet_id = $3,
+          completed_at = NOW()
+      WHERE id = $1
+      `,
+      [id, String(bank_reference).trim(), treasury_wallet_id]
+    );
+
+    await db.query('COMMIT');
+    return res.json({
+      ok: true,
+      transfer: {
+        id,
+        status: 'completed',
+        bank_reference: String(bank_reference).trim(),
+        treasury_wallet_id
+      }
+    });
+  } catch (e) {
+    await db.query('ROLLBACK');
+    console.error('complete transfer error', e);
+    return res.status(500).json({ message: 'Failed to complete transfer.' });
   }
-  res.json({ ok: true, transfer: rows[0] });
 }
 router.patch('/:id/complete', requireAccountsRole, wrap(doComplete));
-router.post('/:id/complete',  requireAccountsRole, wrap(doComplete)); // <— POST alias
+router.post('/:id/complete',  requireAccountsRole, wrap(doComplete)); // POST alias
 
 // --- Cardholder view: latest request
 router.get('/mine/latest', async (req, res) => {
