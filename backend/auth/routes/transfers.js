@@ -375,7 +375,7 @@ async function doComplete(req, res) {
         amount,
         `Transfer to ${bankLabel} ${toMask}`,
         ref,
-        JSON.stringify({ role: 'user', via: 'transfer', bank: bankLabel }),
+        JSON.stringify({ role: 'user', via: 'transfer', bank: bankLabel, to_mask: toMask }),
         t.id,
         now,
       ]
@@ -400,7 +400,7 @@ async function doComplete(req, res) {
         amount,
         `Bank payout for transfer ${t.id} → ${toMask}`,
         ref,
-        JSON.stringify({ role: 'treasury', via: 'transfer', bank: bankLabel }),
+        JSON.stringify({ role: 'treasury', via: 'transfer', bank: bankLabel, to_mask: toMask }),
         t.id,
         now,
       ]
