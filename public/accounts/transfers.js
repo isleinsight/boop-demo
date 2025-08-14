@@ -55,9 +55,17 @@
     const n = Number(cents || 0) / 100;
     return `$${n.toFixed(2)}`;
   }
-  function fmtDate(d) {
-    try { return new Date(d).toLocaleString(); } catch { return d || ""; }
-  }
+  function fmtDate(v) {
+  if (!v) return "—";
+  // Normalize "YYYY-MM-DD HH:MM:SS(.ms)+00" → ISO the browser likes
+  let s = String(v).trim().replace(" ", "T").replace(/(\.\d{3})\d+/, "$1");
+  // Force Z for UTC variants
+  s = s.replace(/\+00(?::00)?$/, "Z");
+  // If it still has no zone, assume UTC
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) s += "Z";
+  const d = new Date(s);
+  return isNaN(d) ? String(v) : d.toLocaleString();
+}
   function maskDest(r) {
     // Show masked destination (account/iban/route). Prefer last 4 if present.
     const acct = r.dest_last4 || r.account_last4 || r.mask_last4;
@@ -100,7 +108,7 @@
       const actions = actionButtonsFor(r);
       return `
         <tr data-id="${r.id}">
-          <td>${fmtDate(r.created_at)}</td>
+          <td>${fmtDate(r.requested_at)}</td>
           <td>${r.id}</td>
           <td>${escapeHtml(who)}</td>
           <td>${fmtMoney(r.amount_cents)}</td>
@@ -155,14 +163,14 @@
 
   async function fetchTransfers() {
     const params = new URLSearchParams();
-    params.set("status", tabStatus);
-    params.set("page", String(page));
-    params.set("perPage", String(perPage));
-    if (startDateEl.value) params.set("start", startDateEl.value);
-    if (endDateEl.value) params.set("end", endDateEl.value);
-    if (bankFilterEl.value) params.set("bank", bankFilterEl.value);
+params.set("status", tabStatus);
+params.set("limit", String(perPage));
+params.set("offset", String((page - 1) * perPage));
+if (startDateEl.value) params.set("start", startDateEl.value);
+if (endDateEl.value) params.set("end", endDateEl.value);
+if (bankFilterEl.value) params.set("bank", bankFilterEl.value);
 
-    const res = await fetch(`/api/transfers?${params.toString()}`, { headers: authHeaders() });
+const res = await fetch(`/api/transfers?${params.toString()}`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || `Failed to fetch: ${res.status}`);
 
@@ -250,7 +258,7 @@
     d_reqId.value = row.id || "";
     d_status.value = String(row.status || "").toUpperCase();
     d_user.value = row.user_name || row.cardholder_name || row.user_email || "—";
-    d_requestedAt.value = fmtDate(row.created_at);
+    d_requestedAt.value = fmtDate(row.requested_at);
     d_amount.value = fmtMoney(row.amount_cents);
     d_bank.value = row.bank || row.preferred_bank || "—";
     d_destination.value = maskDest(row);
