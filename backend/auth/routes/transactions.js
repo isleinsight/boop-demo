@@ -52,6 +52,24 @@ const NAME_FIELDS_SQL = `
   END::text AS counterparty_name
 `;
 
+// We may have no recipient user for bank transfers.
+// Build a universal "to_display" with smart fallbacks:
+// 1) recipient full name (if recipient_id present)
+// 2) transfers.destination_masked (if linked via transfer_id)
+// 3) metadata.transfer_to_display (what we write on completion)
+// 4) empty string
+const TO_DISPLAY_SQL = `
+  CASE
+    WHEN t.recipient_id IS NOT NULL THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
+    WHEN tr.destination_masked IS NOT NULL AND t.method = 'bank' THEN tr.destination_masked
+    WHEN t.metadata ? 'transfer_to_display' THEN t.metadata->>'transfer_to_display'
+    ELSE ''
+  END::text AS to_display
+`;
+
+// We’ll join transfers so we can read destination_masked via transfer_id
+const TRANSFER_JOIN_SQL = `LEFT JOIN transfers tr ON tr.id = t.transfer_id`;
+
 // 🔍 GET /api/transactions/recent
 router.get('/recent', authenticateToken, async (req, res) => {
   const { role, type } = req.user;
@@ -68,14 +86,15 @@ router.get('/recent', authenticateToken, async (req, res) => {
   t.type,
   t.amount_cents,
   t.note,
-  t.metadata,
   t.created_at,
-  ${NAME_FIELDS_SQL}
-      FROM transactions t
-      LEFT JOIN users s ON s.id = t.sender_id
-      LEFT JOIN users r ON r.id = t.recipient_id
-      ORDER BY t.created_at DESC
-      LIMIT 50
+  ${NAME_FIELDS_SQL},
+  ${TO_DISPLAY_SQL}
+FROM transactions t
+LEFT JOIN users s ON s.id = t.sender_id
+LEFT JOIN users r ON r.id = t.recipient_id
+${TRANSFER_JOIN_SQL}
+ORDER BY t.created_at DESC
+LIMIT 50
     `);
     return res.status(200).json(decorateTx(rows));
   } catch (err) {
@@ -96,15 +115,16 @@ router.get('/mine', authenticateToken, async (req, res) => {
   t.type,
   t.amount_cents,
   t.note,
-  t.metadata,
   t.created_at,
-  ${NAME_FIELDS_SQL}
-      FROM transactions t
-      LEFT JOIN users s ON s.id = t.sender_id
-      LEFT JOIN users r ON r.id = t.recipient_id
-      WHERE t.user_id = $1
-      ORDER BY t.created_at DESC
-      LIMIT 50
+  ${NAME_FIELDS_SQL},
+  ${TO_DISPLAY_SQL}
+FROM transactions t
+LEFT JOIN users s ON s.id = t.sender_id
+LEFT JOIN users r ON r.id = t.recipient_id
+${TRANSFER_JOIN_SQL}
+WHERE t.user_id = $1
+ORDER BY t.created_at DESC
+LIMIT 50
     `, [userId]);
 
     return res.status(200).json(decorateTx(rows));
@@ -152,16 +172,17 @@ router.get('/report', authenticateToken, async (req, res) => {
   t.type,
   t.amount_cents,
   t.note,
-  t.metadata,
   t.created_at,
   COALESCE(s.first_name || ' ' || s.last_name, 'System') AS sender_name,
-  COALESCE(r.first_name || ' ' || r.last_name, 'Unknown') AS recipient_name
-      FROM transactions t
-      LEFT JOIN users s ON s.id = t.sender_id
-      LEFT JOIN users r ON r.id = t.recipient_id
-      ${whereClause}
-      ORDER BY t.created_at DESC
-      LIMIT $${values.length - 1} OFFSET $${values.length}
+  COALESCE(r.first_name || ' ' || r.last_name, 'Unknown') AS recipient_name,
+  ${TO_DISPLAY_SQL}
+FROM transactions t
+LEFT JOIN users s ON s.id = t.sender_id
+LEFT JOIN users r ON r.id = t.recipient_id
+${TRANSFER_JOIN_SQL}
+${whereClause}
+ORDER BY t.created_at DESC
+LIMIT $${values.length - 1} OFFSET $${values.length}
     `, values);
 
     return res.status(200).json({
@@ -195,15 +216,16 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   t.type,
   t.amount_cents,
   t.note,
-  t.metadata,
   t.created_at,
-  ${NAME_FIELDS_SQL}
-      FROM transactions t
-      LEFT JOIN users s ON s.id = t.sender_id
-      LEFT JOIN users r ON r.id = t.recipient_id
-      WHERE t.user_id = $1
-      ORDER BY t.created_at DESC
-      LIMIT $2 OFFSET $3
+  ${NAME_FIELDS_SQL},
+  ${TO_DISPLAY_SQL}
+FROM transactions t
+LEFT JOIN users s ON s.id = t.sender_id
+LEFT JOIN users r ON r.id = t.recipient_id
+${TRANSFER_JOIN_SQL}
+WHERE t.user_id = $1
+ORDER BY t.created_at DESC
+LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
     const countRes = await pool.query(
