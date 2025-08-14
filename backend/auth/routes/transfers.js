@@ -273,19 +273,20 @@ async function doComplete(req, res) {
     }
 
     // 2) Debit treasury wallet (source of outgoing bank payment)
-    const { rowCount: twUpd } = await client.query(
-      `
-      UPDATE treasury_wallets
-         SET balance = balance - $1
-       WHERE id = $2
-         AND balance >= $1
-      `,
-      [amount, treasury_wallet_id]
-    );
-    if (twUpd !== 1) {
-      await client.query('ROLLBACK');
-      return res.status(409).json({ message: 'Treasury has insufficient funds or not found.' });
-    }
+const { rowCount: twUpd } = await client.query(
+  `
+  UPDATE wallets
+     SET balance = balance - $1
+   WHERE id = $2
+     AND is_treasury = true
+     AND balance >= $1
+  `,
+  [amount, treasury_wallet_id]
+);
+if (twUpd !== 1) {
+  await client.query('ROLLBACK');
+  return res.status(409).json({ message: 'Treasury has insufficient funds or not found.' });
+}
 
     // (Optional) 3) Insert journal rows here if you have a ledger table (client.query(...))
 
