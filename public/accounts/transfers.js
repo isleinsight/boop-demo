@@ -1,4 +1,4 @@
-// public/admin/transfers.js
+// public/accounts/transfers.js
 // Client logic for Admin → Transfers
 
 (() => {
@@ -35,7 +35,6 @@
   const d_internalNote = document.getElementById("d_internalNote");
   const claimBtn = document.getElementById("claimBtn");
   const releaseBtn = document.getElementById("releaseBtn");
-  const rejectBtn = document.getElementById("rejectBtn");
   const completeBtn = document.getElementById("completeBtn");
 
   // --- State
@@ -55,28 +54,22 @@
     const n = Number(cents || 0) / 100;
     return `$${n.toFixed(2)}`;
   }
-
   // Robust date parser for common SQL timestamp formats
   function fmtDate(v) {
     if (!v) return "—";
     let s = String(v).trim();
-    // Convert "YYYY-MM-DD HH:MM:SS(.ms)+00" → ISO-ish
     s = s.replace(" ", "T").replace(/(\.\d{3})\d+/, "$1");
-    // Force Z for +00
     s = s.replace(/\+00(?::00)?$/, "Z");
-    // If there's no zone, assume UTC
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) s += "Z";
     const d = new Date(s);
     return isNaN(d) ? String(v) : d.toLocaleString();
   }
-
   function maskDest(r) {
     const acct = r.dest_last4 || r.account_last4 || r.mask_last4 || (r.destination_masked && r.destination_masked.slice(-4));
     const bank = r.bank || r.preferred_bank || "";
     if (acct) return `${bank} •••• ${acct}`;
     return r.dest_label || r.destination_masked || bank || "—";
   }
-
   function statusPill(s) {
     const t = String(s || "").toLowerCase();
     const cls =
@@ -86,16 +79,13 @@
       t === "rejected"  ? "s-rejected"  : "";
     return `<span class="status-pill ${cls}">${t || "—"}</span>`;
   }
-
   function dollarsOnly(v) {
     const n = Number(v || 0) / 100;
     return n.toFixed(2);
   }
-
   function setActiveTab(btn) {
     tabs.forEach(b => b.classList.toggle("active", b === btn));
   }
-
   function setPaginationUI() {
     paginationInfo.textContent = `Page ${totalPages ? page : 0} of ${totalPages || 0}`;
     prevPageBtn.disabled = page <= 1;
@@ -115,15 +105,13 @@
     const canClaim    = s === "pending";
     const canRelease  = s === "claimed" && mine;
     const canComplete = s === "claimed" && mine;
-    const canReject   = s === "pending" || (s === "claimed" && mine);
 
     const view     = `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
     const claim    = canClaim    ? `<button class="btn warn"      data-action="claim"    data-id="${r.id}" style="padding:6px 10px;">Claim</button>` : "";
     const release  = canRelease  ? `<button class="btn secondary" data-action="release"  data-id="${r.id}" style="padding:6px 10px;">Release</button>` : "";
     const complete = canComplete ? `<button class="btn"           data-action="complete" data-id="${r.id}" style="padding:6px 10px;">Complete</button>` : "";
-    const reject   = canReject   ? `<button class="btn danger"    data-action="reject"   data-id="${r.id}" style="padding:6px 10px;">Reject</button>` : "";
 
-    return [view, claim, release, complete, reject].filter(Boolean).join(" ");
+    return [view, claim, release, complete].filter(Boolean).join(" ");
   }
 
   function renderTable() {
@@ -148,7 +136,6 @@
       `;
     }).join("");
 
-    // wire action buttons
     tbody.querySelectorAll("[data-action]").forEach(btn => {
       btn.addEventListener("click", onRowActionClick);
     });
@@ -191,11 +178,11 @@
     renderTable();
   }
 
-  async function postJSON(url, body) {
+  async function sendJSON(url, method = "POST", body) {
     const res = await fetch(url, {
-      method: "POST",
+      method,
       headers: { "Content-Type":"application/json", ...authHeaders() },
-      body: JSON.stringify(body || {})
+      body: body ? JSON.stringify(body) : undefined
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -219,7 +206,7 @@
     }
     if (action === "claim") {
       try {
-        await postJSON(`/api/transfers/${id}/claim`);
+        await sendJSON(`/api/transfers/${id}/claim`, "PATCH");
         await fetchTransfers();
         const updated = rows.find(r => String(r.id) === String(id));
         openModal(updated || row);
@@ -230,7 +217,7 @@
     }
     if (action === "release") {
       try {
-        await postJSON(`/api/transfers/${id}/release`);
+        await sendJSON(`/api/transfers/${id}/release`, "PATCH");
         await fetchTransfers();
         closeModal();
       } catch (err) {
@@ -238,19 +225,8 @@
       }
       return;
     }
-    if (action === "reject") {
-      const reason = prompt("Enter a short reason for rejection (optional):") || "";
-      try {
-        await postJSON(`/api/transfers/${id}/reject`, { reason });
-        await fetchTransfers();
-        closeModal();
-      } catch (err) {
-        alert(`Reject failed: ${err.message}`);
-      }
-      return;
-    }
     if (action === "complete") {
-      openModal(row); // ensure modal open so they can fill Bank Ref + Treasury
+      openModal(row);
       return;
     }
   }
@@ -269,37 +245,27 @@
     const s = String(row.status || "").toLowerCase();
     const mine = me && row.claimed_by === me.id;
 
-    // Hide everything by default
     claimBtn.style.display = "none";
     releaseBtn.style.display = "none";
-    rejectBtn.style.display = "none";
     completeBtn.style.display = "none";
 
-    // Inputs default to read-only
     d_treasury.disabled = true;
     d_bankRef.disabled = true;
     d_internalNote.disabled = true;
 
-    if (s === "completed" || s === "rejected") {
-      return; // view only
-    }
+    if (s === "completed" || s === "rejected") return;
 
     if (s === "pending") {
       claimBtn.style.display = "inline-block";
-      rejectBtn.style.display = "inline-block";
       return;
     }
-
     if (s === "claimed") {
       if (mine) {
         releaseBtn.style.display = "inline-block";
         completeBtn.style.display = "inline-block";
-        rejectBtn.style.display = "inline-block";
         d_treasury.disabled = false;
         d_bankRef.disabled = false;
         d_internalNote.disabled = false;
-      } else {
-        // claimed by someone else: view only
       }
     }
   }
@@ -309,7 +275,7 @@
     d_reqId.value = row.id || "";
     d_status.value = String(row.status || "").toUpperCase();
     d_user.value = row.user_name || row.cardholder_name || row.user_email || "—";
-    d_requestedAt.value = fmtDate(row.requested_at || row.created_at); // prefer requested_at
+    d_requestedAt.value = fmtDate(row.requested_at || row.created_at);
     d_amount.value = fmtMoney(row.amount_cents);
     d_bank.value = row.bank || row.preferred_bank || "—";
     d_destination.value = maskDest(row);
@@ -320,13 +286,13 @@
     setModalActionsFor(row);
 
     modal.style.display = "flex";
-    document.body.style.overflow = "hidden"; // page behind doesn't scroll
+    document.body.style.overflow = "hidden";
   }
 
   function closeModal() {
     modal.style.display = "none";
     currentRow = null;
-    document.body.style.overflow = ""; // restore
+    document.body.style.overflow = "";
   }
 
   closeDetails.addEventListener("click", closeModal);
@@ -338,7 +304,7 @@
   claimBtn.addEventListener("click", async () => {
     if (!currentRow) return;
     try {
-      await postJSON(`/api/transfers/${currentRow.id}/claim`);
+      await sendJSON(`/api/transfers/${currentRow.id}/claim`, "PATCH");
       await fetchTransfers();
       const updated = rows.find(r => String(r.id) === String(currentRow.id));
       openModal(updated || currentRow);
@@ -350,23 +316,11 @@
   releaseBtn.addEventListener("click", async () => {
     if (!currentRow) return;
     try {
-      await postJSON(`/api/transfers/${currentRow.id}/release`);
+      await sendJSON(`/api/transfers/${currentRow.id}/release`, "PATCH");
       await fetchTransfers();
       closeModal();
     } catch (err) {
       alert(`Release failed: ${err.message}`);
-    }
-  });
-
-  rejectBtn.addEventListener("click", async () => {
-    if (!currentRow) return;
-    const reason = prompt("Enter a short reason for rejection (optional):") || "";
-    try {
-      await postJSON(`/api/transfers/${currentRow.id}/reject`, { reason });
-      await fetchTransfers();
-      closeModal();
-    } catch (err) {
-      alert(`Reject failed: ${err.message}`);
     }
   });
 
@@ -386,26 +340,19 @@
       return;
     }
 
-    // prevent double submits
     const prevText = completeBtn.textContent;
     completeBtn.disabled = true;
     completeBtn.textContent = "Completing…";
 
     try {
-      await postJSON(`/api/transfers/${currentRow.id}/complete`, {
+      await sendJSON(`/api/transfers/${currentRow.id}/complete`, "PATCH", {
         bank_reference,
         treasury_wallet_id,
         internal_note
       });
-
-      // Refresh list and reopen read-only
       await fetchTransfers();
       const updated = rows.find(r => String(r.id) === String(currentRow.id));
-      if (updated) {
-        openModal(updated); // will show read-only because status=completed
-      } else {
-        closeModal();
-      }
+      if (updated) openModal(updated); else closeModal();
     } catch (err) {
       console.error(err);
       alert(`Complete failed: ${err.message}`);
