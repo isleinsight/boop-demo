@@ -505,6 +505,89 @@ async function doComplete(req, res) {
 router.patch('/:id/complete', requireAccountsRole, wrap(doComplete));
 router.post('/:id/complete',  requireAccountsRole, wrap(doComplete)); // POST alias
 
+// --- Claimer-only full bank details for a transfer -------------------------
+router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const me = req.user.userId || req.user.id;
+
+    // Load the transfer first
+    const tRes = await db.query(
+      `
+      SELECT id, user_id, bank, destination_masked, status, claimed_by
+      FROM transfers
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [id]
+    );
+    if (!tRes.rowCount) return res.status(404).json({ message: 'Transfer not found.' });
+    const t = tRes.rows[0];
+
+    // Only visible when claimed AND to the claimer
+    if (!(t.status === 'claimed' && String(t.claimed_by) === String(me))) {
+      return res.status(403).json({ message: 'Bank details available only to the current claimer.' });
+    }
+
+    // Try to match bank account by bank name + last4 parsed from destination_masked
+    const bankName = String(t.bank || '').trim();
+    const mask = String(t.destination_masked || '');
+    const last4Match = mask.match(/(\d{4})\s*$/);
+    const last4 = last4Match ? last4Match[1] : null;
+
+    // First attempt: exact bank + last4
+    let ba = await db.query(
+      `
+      SELECT id, bank_name, account_holder_name, account_number, routing_number,
+             iban, swift, country
+      FROM bank_accounts
+      WHERE user_id = $1
+        AND deleted_at IS NULL
+        AND ($2::text IS NULL OR bank_name = $2)
+        AND ($3::text IS NULL OR RIGHT(account_number, 4) = $3)
+      ORDER BY updated_at DESC NULLS LAST, created_at DESC
+      LIMIT 1
+      `,
+      [t.user_id, bankName || null, last4 || null]
+    );
+
+    // Fallback: any recent account for the user (if exact match didn’t hit)
+    if (!ba.rowCount) {
+      ba = await db.query(
+        `
+        SELECT id, bank_name, account_holder_name, account_number, routing_number,
+               iban, swift, country
+        FROM bank_accounts
+        WHERE user_id = $1
+          AND deleted_at IS NULL
+        ORDER BY updated_at DESC NULLS LAST, created_at DESC
+        LIMIT 1
+        `,
+        [t.user_id]
+      );
+    }
+
+    if (!ba.rowCount) {
+      return res.status(404).json({ message: 'No active bank account found for this user.' });
+    }
+
+    const b = ba.rows[0];
+    // Return only what you need in the modal
+    return res.json({
+      bank_name: b.bank_name,
+      account_holder_name: b.account_holder_name,
+      account_number: b.account_number,     // FULL number
+      routing_number: b.routing_number || null,
+      iban: b.iban || null,
+      swift: b.swift || null,
+      country: b.country || null
+    });
+  } catch (err) {
+    console.error('❌ /:id/bank-details error:', err);
+    return res.status(500).json({ message: 'Failed to load bank details.' });
+  }
+});
+
 // --- Cardholder view: latest request --------------------------------------
 router.get('/mine/latest', async (req, res) => {
   try {
