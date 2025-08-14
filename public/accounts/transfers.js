@@ -35,17 +35,21 @@
   const d_internalNote = document.getElementById("d_internalNote");
   const claimBtn = document.getElementById("claimBtn");
   const releaseBtn = document.getElementById("releaseBtn");
+  const rejectBtn = document.getElementById("rejectBtn"); // ← now referenced
   const completeBtn = document.getElementById("completeBtn");
+
+  // Will hold a live reference to the “Cardholder Balance” input we inject (if needed)
+  let d_balance = document.getElementById("d_balance");
 
   // --- State
   let me = JSON.parse(localStorage.getItem("boopUser") || "null");
-  let tabStatus = "pending";     // 'pending' | 'claimed' | 'completed' | 'rejected'
+  let tabStatus = "pending"; // 'pending' | 'claimed' | 'completed' | 'rejected'
   let page = 1;
   const perPage = 20;
   let totalPages = 1;
-  let rows = [];                 // last fetched page
-  let treasuries = [];           // from /api/treasury/treasury-wallets
-  let currentRow = null;         // row shown in modal
+  let rows = []; // last fetched page
+  let treasuries = []; // from /api/treasury/treasury-wallets
+  let currentRow = null; // row shown in modal
 
   // --- Helpers
   const authHeaders = () => ({ Authorization: `Bearer ${token}` });
@@ -53,6 +57,10 @@
   function fmtMoney(cents) {
     const n = Number(cents || 0) / 100;
     return `$${n.toFixed(2)}`;
+  }
+  function dollarsOnly(v) {
+    const n = Number(v || 0) / 100;
+    return n.toFixed(2);
   }
   // Robust date parser for common SQL timestamp formats
   function fmtDate(v) {
@@ -65,7 +73,11 @@
     return isNaN(d) ? String(v) : d.toLocaleString();
   }
   function maskDest(r) {
-    const acct = r.dest_last4 || r.account_last4 || r.mask_last4 || (r.destination_masked && r.destination_masked.slice(-4));
+    const acct =
+      r.dest_last4 ||
+      r.account_last4 ||
+      r.mask_last4 ||
+      (r.destination_masked && r.destination_masked.slice(-4));
     const bank = r.bank || r.preferred_bank || "";
     if (acct) return `${bank} •••• ${acct}`;
     return r.dest_label || r.destination_masked || bank || "—";
@@ -73,15 +85,11 @@
   function statusPill(s) {
     const t = String(s || "").toLowerCase();
     const cls =
-      t === "pending"   ? "s-pending"   :
-      t === "claimed"   ? "s-claimed"   :
+      t === "pending" ? "s-pending" :
+      t === "claimed" ? "s-claimed" :
       t === "completed" ? "s-completed" :
-      t === "rejected"  ? "s-rejected"  : "";
+      t === "rejected" ? "s-rejected" : "";
     return `<span class="status-pill ${cls}">${t || "—"}</span>`;
-  }
-  function dollarsOnly(v) {
-    const n = Number(v || 0) / 100;
-    return n.toFixed(2);
   }
   function setActiveTab(btn) {
     tabs.forEach(b => b.classList.toggle("active", b === btn));
@@ -91,56 +99,6 @@
     prevPageBtn.disabled = page <= 1;
     nextPageBtn.disabled = page >= totalPages;
   }
-
-  // --- Table rendering
-  function actionButtonsFor(r) {
-    const s = String(r.status || "").toLowerCase();
-
-    // Completed/rejected: no actions — view only
-    if (s === "completed" || s === "rejected") {
-      return `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
-    }
-
-    const mine = me && r.claimed_by === me.id;
-    const canClaim    = s === "pending";
-    const canRelease  = s === "claimed" && mine;
-    const canComplete = s === "claimed" && mine;
-
-    const view     = `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
-    const claim    = canClaim    ? `<button class="btn warn"      data-action="claim"    data-id="${r.id}" style="padding:6px 10px;">Claim</button>` : "";
-    const release  = canRelease  ? `<button class="btn secondary" data-action="release"  data-id="${r.id}" style="padding:6px 10px;">Release</button>` : "";
-    const complete = canComplete ? `<button class="btn"           data-action="complete" data-id="${r.id}" style="padding:6px 10px;">Complete</button>` : "";
-
-    return [view, claim, release, complete].filter(Boolean).join(" ");
-  }
-
-  function renderTable() {
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="8" class="muted">No transfer requests found.</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = rows.map(r => {
-      const who = r.user_name || r.cardholder_name || `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim() || r.user_email || "—";
-      const actions = actionButtonsFor(r);
-      return `
-        <tr data-id="${r.id}">
-          <td>${fmtDate(r.requested_at)}</td>
-          <td>${r.id}</td>
-          <td>${escapeHtml(who)}</td>
-          <td>${fmtMoney(r.amount_cents)}</td>
-          <td>${escapeHtml(maskDest(r))}</td>
-          <td>${statusPill(r.status)}</td>
-          <td>${r.claimed_by_name ? escapeHtml(r.claimed_by_name) : (r.claimed_by ? "—" : "—")}</td>
-          <td>${actions}</td>
-        </tr>
-      `;
-    }).join("");
-
-    tbody.querySelectorAll("[data-action]").forEach(btn => {
-      btn.addEventListener("click", onRowActionClick);
-    });
-  }
-
   function escapeHtml(s) {
     return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
   }
@@ -192,6 +150,69 @@
     return data;
   }
 
+  // Try to fetch a user's current wallet balance (in cents).
+  // Expects backend route: GET /api/wallets/user/:userId → { balance_cents: number }
+  async function fetchUserBalanceCents(userId) {
+    try {
+      const res = await fetch(`/api/wallets/user/${userId}`, { headers: authHeaders() });
+      if (!res.ok) return null;
+      const j = await res.json();
+      const cents = Number(j?.balance_cents);
+      return Number.isFinite(cents) ? cents : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // --- Table rendering
+  function actionButtonsFor(r) {
+    const s = String(r.status || "").toLowerCase();
+
+    // Completed/rejected: no actions — view only
+    if (s === "completed" || s === "rejected") {
+      return `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
+    }
+
+    const mine = me && r.claimed_by === me.id;
+    const canClaim    = s === "pending";
+    const canRelease  = s === "claimed" && mine;
+    const canComplete = s === "claimed" && mine;
+
+    const view     = `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
+    const claim    = canClaim    ? `<button class="btn warn"      data-action="claim"    data-id="${r.id}" style="padding:6px 10px;">Claim</button>` : "";
+    const release  = canRelease  ? `<button class="btn secondary" data-action="release"  data-id="${r.id}" style="padding:6px 10px;">Release</button>` : "";
+    const complete = canComplete ? `<button class="btn"           data-action="complete" data-id="${r.id}" style="padding:6px 10px;">Complete</button>` : "";
+
+    return [view, claim, release, complete].filter(Boolean).join(" ");
+  }
+
+  function renderTable() {
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="muted">No transfer requests found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const who = r.user_name || r.cardholder_name || `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim() || r.user_email || "—";
+      const actions = actionButtonsFor(r);
+      return `
+        <tr data-id="${r.id}">
+          <td>${fmtDate(r.requested_at)}</td>
+          <td>${r.id}</td>
+          <td>${escapeHtml(who)}</td>
+          <td>${fmtMoney(r.amount_cents)}</td>
+          <td>${escapeHtml(maskDest(r))}</td>
+          <td>${statusPill(r.status)}</td>
+          <td>${r.claimed_by_name ? escapeHtml(r.claimed_by_name) : (r.claimed_by ? "—" : "—")}</td>
+          <td>${actions}</td>
+        </tr>
+      `;
+    }).join("");
+
+    tbody.querySelectorAll("[data-action]").forEach(btn => {
+      btn.addEventListener("click", onRowActionClick);
+    });
+  }
+
   // --- Row actions
   async function onRowActionClick(e) {
     const btn = e.currentTarget;
@@ -208,6 +229,7 @@
       try {
         await sendJSON(`/api/transfers/${id}/claim`, "PATCH");
         await fetchTransfers();
+        // Show the modal after claiming so you can complete/release
         const updated = rows.find(r => String(r.id) === String(id));
         openModal(updated || row);
       } catch (err) {
@@ -232,6 +254,27 @@
   }
 
   // --- Modal logic
+  function ensureBalanceField() {
+    // If #d_balance already exists, use it.
+    d_balance = document.getElementById("d_balance");
+    if (d_balance) return d_balance;
+
+    // Otherwise, inject a new "Cardholder Balance" field right after the Amount field container.
+    // Find the .field wrapper that contains d_amount
+    const amountField = d_amount?.closest(".field");
+    if (!amountField) return null;
+
+    const balanceField = document.createElement("div");
+    balanceField.className = "field";
+    balanceField.innerHTML = `
+      <label>Cardholder Balance</label>
+      <input id="d_balance" type="text" disabled>
+    `;
+    amountField.insertAdjacentElement("afterend", balanceField);
+    d_balance = balanceField.querySelector("#d_balance");
+    return d_balance;
+  }
+
   function fillTreasurySelect() {
     if (!d_treasury) return;
     d_treasury.innerHTML =
@@ -245,32 +288,38 @@
     const s = String(row.status || "").toLowerCase();
     const mine = me && row.claimed_by === me.id;
 
+    // hide all by default
     claimBtn.style.display = "none";
     releaseBtn.style.display = "none";
     completeBtn.style.display = "none";
+    if (rejectBtn) rejectBtn.style.display = "none";
 
     d_treasury.disabled = true;
     d_bankRef.disabled = true;
     d_internalNote.disabled = true;
 
+    // Completed/rejected → view only
     if (s === "completed" || s === "rejected") return;
 
+    // Pending → can Claim OR Reject
     if (s === "pending") {
       claimBtn.style.display = "inline-block";
+      if (rejectBtn) rejectBtn.style.display = "inline-block";
       return;
     }
-    if (s === "claimed") {
-      if (mine) {
-        releaseBtn.style.display = "inline-block";
-        completeBtn.style.display = "inline-block";
-        d_treasury.disabled = false;
-        d_bankRef.disabled = false;
-        d_internalNote.disabled = false;
-      }
+
+    // Claimed → if it's mine, can Release, Complete, Reject
+    if (s === "claimed" && mine) {
+      releaseBtn.style.display = "inline-block";
+      completeBtn.style.display = "inline-block";
+      if (rejectBtn) rejectBtn.style.display = "inline-block";
+      d_treasury.disabled = false;
+      d_bankRef.disabled = false;
+      d_internalNote.disabled = false;
     }
   }
 
-  function openModal(row) {
+  async function openModal(row) {
     currentRow = row;
     d_reqId.value = row.id || "";
     d_status.value = String(row.status || "").toUpperCase();
@@ -284,6 +333,14 @@
 
     fillTreasurySelect();
     setModalActionsFor(row);
+
+    // Ensure balance field exists, then fetch & show balance
+    const balInput = ensureBalanceField();
+    if (balInput) {
+      balInput.value = "Loading…";
+      const cents = await fetchUserBalanceCents(row.user_id);
+      balInput.value = cents == null ? "—" : fmtMoney(cents);
+    }
 
     modal.style.display = "flex";
     document.body.style.overflow = "hidden";
@@ -306,8 +363,7 @@
     try {
       await sendJSON(`/api/transfers/${currentRow.id}/claim`, "PATCH");
       await fetchTransfers();
-      const updated = rows.find(r => String(r.id) === String(currentRow.id));
-      openModal(updated || currentRow);
+      closeModal(); // close after success
     } catch (err) {
       alert(`Claim failed: ${err.message}`);
     }
@@ -323,6 +379,20 @@
       alert(`Release failed: ${err.message}`);
     }
   });
+
+  if (rejectBtn) {
+    rejectBtn.addEventListener("click", async () => {
+      if (!currentRow) return;
+      const reason = prompt("Enter a short reason for rejection (optional):") || "";
+      try {
+        await sendJSON(`/api/transfers/${currentRow.id}/reject`, "PATCH", { reason });
+        await fetchTransfers();
+        closeModal(); // close after success
+      } catch (err) {
+        alert(`Reject failed: ${err.message}`);
+      }
+    });
+  }
 
   completeBtn.addEventListener("click", async () => {
     if (!currentRow) return;
@@ -351,8 +421,7 @@
         internal_note
       });
       await fetchTransfers();
-      const updated = rows.find(r => String(r.id) === String(currentRow.id));
-      if (updated) openModal(updated); else closeModal();
+      closeModal(); // close after success
     } catch (err) {
       console.error(err);
       alert(`Complete failed: ${err.message}`);
@@ -363,8 +432,12 @@
   });
 
   // --- Pagination
-  prevPageBtn.addEventListener("click", () => { if (page > 1) { page--; fetchTransfers().catch(showErr); } });
-  nextPageBtn.addEventListener("click", () => { if (page < totalPages) { page++; fetchTransfers().catch(showErr); } });
+  prevPageBtn.addEventListener("click", () => {
+    if (page > 1) { page--; fetchTransfers().catch(showErr); }
+  });
+  nextPageBtn.addEventListener("click", () => {
+    if (page < totalPages) { page++; fetchTransfers().catch(showErr); }
+  });
 
   // --- Filters
   applyFiltersBtn.addEventListener("click", () => { page = 1; fetchTransfers().catch(showErr); });
