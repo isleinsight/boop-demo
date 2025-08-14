@@ -247,48 +247,56 @@ const res = await fetch(`/api/transfers?${params.toString()}`, { headers: authHe
   }
 
   // --- Modal logic
-  function fillTreasurySelect() {
-    if (!d_treasury) return;
-    d_treasury.innerHTML = `<option value="">Select treasury</option>` +
-      treasuries.map(t => `<option value="${t.id}">${escapeHtml(t.name || t.label || t.id)}</option>`).join("");
-  }
+function fillTreasurySelect() {
+  if (!d_treasury) return;
+  d_treasury.innerHTML =
+    `<option value="">Select treasury</option>` +
+    treasuries
+      .map(t => `<option value="${t.id}">${escapeHtml(t.name || t.label || t.id)}</option>`)
+      .join("");
+}
 
-  function openModal(row) {
-    currentRow = row;
-    d_reqId.value = row.id || "";
-    d_status.value = String(row.status || "").toUpperCase();
-    d_user.value = row.user_name || row.cardholder_name || row.user_email || "—";
-    d_requestedAt.value = fmtDate(row.requested_at);
-    d_amount.value = fmtMoney(row.amount_cents);
-    d_bank.value = row.bank || row.preferred_bank || "—";
-    d_destination.value = maskDest(row);
-    d_bankRef.value = row.bank_reference || "";
-    d_internalNote.value = row.internal_note || "";
+function openModal(row) {
+  currentRow = row;
+  d_reqId.value = row.id || "";
+  d_status.value = String(row.status || "").toUpperCase();
+  d_user.value = row.user_name || row.cardholder_name || row.user_email || "—";
+  // use created_at if present; fall back to requested_at
+  d_requestedAt.value = fmtDate(row.created_at || row.requested_at);
+  d_amount.value = fmtMoney(row.amount_cents);
+  d_bank.value = row.bank || row.preferred_bank || "—";
+  d_destination.value = maskDest(row);
+  d_bankRef.value = row.bank_reference || "";
+  d_internalNote.value = row.internal_note || "";
 
-    // Buttons enablement by status/ownership
-    const s = String(row.status || "").toLowerCase();
-    const mine = me && row.claimed_by === me.id;
+  // Buttons enablement by status/ownership
+  const s = String(row.status || "").toLowerCase();
+  const mine = me && row.claimed_by === me.id;
 
-    claimBtn.disabled = !(s === "pending");
-    releaseBtn.disabled = !(s === "claimed" && mine);
-    rejectBtn.disabled = !(s === "pending" || (s === "claimed" && mine));
-    completeBtn.disabled = !(s === "claimed" && mine);
+  claimBtn.disabled = !(s === "pending");
+  releaseBtn.disabled = !(s === "claimed" && mine);
+  rejectBtn.disabled = !(s === "pending" || (s === "claimed" && mine));
+  completeBtn.disabled = !(s === "claimed" && mine);
 
-    // Treasury select (always fill)
-    fillTreasurySelect();
+  // Treasury select (always fill)
+  fillTreasurySelect();
 
-    modal.style.display = "flex";
-  }
+  modal.style.display = "flex";
+  // prevent page behind from scrolling; modal itself should scroll via CSS
+  document.body.style.overflow = "hidden";
+}
 
-  function closeModal() {
-    modal.style.display = "none";
-    currentRow = null;
-  }
+function closeModal() {
+  modal.style.display = "none";
+  currentRow = null;
+  // restore page scrolling
+  document.body.style.overflow = "";
+}
 
-  closeDetails.addEventListener("click", closeModal);
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) closeModal();
-  });
+closeDetails.addEventListener("click", closeModal);
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) closeModal();
+});
 
   // Modal buttons
   claimBtn.addEventListener("click", async () => {
