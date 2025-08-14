@@ -232,9 +232,9 @@ router.patch('/:id/reject', requireAccountsRole, wrap(doReject));
 router.post('/:id/reject',  requireAccountsRole, wrap(doReject));
 
 // --- COMPLETE (double-entry + debits) -------------------------------------
-/** COMPLETE — atomic debits + 2 ledger rows (no schema changes required) */
+/** COMPLETE — double-entry + atomic debits (uses only existing transaction columns) */
 async function doComplete(req, res) {
-  const id = req.params.id;
+  const id = req.params.id; // transfer id
   const me = req.user.userId || req.user.id;
   const { bank_reference, internal_note, treasury_wallet_id } = req.body || {};
 
@@ -247,102 +247,178 @@ async function doComplete(req, res) {
 
   await releaseExpiredClaims();
 
+  // helper to get a dedicated client
   const client = await getDbClient();
   try {
     await client.query('BEGIN');
 
-    // Lock the transfer row and validate claim freshness/ownership
+    // Lock transfer and validate claim ownership + TTL freshness
     const { rows: trows } = await client.query(
-      `SELECT id, user_id, amount_cents, status, claimed_by, claimed_at,
-              bank, destination_masked
-         FROM transfers
-        WHERE id = $1
-        FOR UPDATE`,
+      `
+      SELECT id, user_id, amount_cents, status, claimed_by, claimed_at,
+             destination_masked, bank
+        FROM transfers
+       WHERE id = $1
+       FOR UPDATE
+      `,
       [id]
     );
     const t = trows[0];
-    if (!t) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Transfer not found.' }); }
+    if (!t) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Transfer not found.' });
+    }
 
-    const isClaimedByMe = t.status === 'claimed' && String(t.claimed_by) === String(me);
-    const stillFresh = t.claimed_at && (new Date(t.claimed_at) > new Date(Date.now() - CLAIM_TTL_MINUTES * 60 * 1000));
-    if (!isClaimedByMe || !stillFresh) {
+    // Must be claimed by me and still within TTL
+    const isMine = t.status === 'claimed' && String(t.claimed_by) === String(me);
+    const fresh = t.claimed_at && (new Date(t.claimed_at) > new Date(Date.now() - CLAIM_TTL_MINUTES * 60 * 1000));
+    if (!isMine || !fresh) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Claim expired or not owned by you. Please claim again.' });
     }
 
     const amount = Number(t.amount_cents || 0);
-    const userId = t.user_id;
-    const toLabel = t.destination_masked || (t.bank ? t.bank : 'External bank');
+    if (!amount || amount <= 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Invalid amount on transfer.' });
+    }
 
-    // Fetch both wallets so we have wallet_id AND user_id for the ledger
-    const { rows: userW } = await client.query(
-      `SELECT id AS wallet_id, user_id
-         FROM wallets
-        WHERE user_id = $1
-        LIMIT 1`,
-      [userId]
+    // Fetch wallets
+    const { rows: uwRows } = await client.query(
+      `SELECT id AS wallet_id FROM wallets WHERE user_id = $1 LIMIT 1`,
+      [t.user_id]
     );
-    if (!userW.length) { await client.query('ROLLBACK'); return res.status(409).json({ message: 'User wallet not found.' }); }
-    const userWallet = userW[0];
+    if (!uwRows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'User wallet not found.' });
+    }
+    const userWalletId = uwRows[0].wallet_id;
 
-    const { rows: treasW } = await client.query(
-      `SELECT id AS wallet_id, user_id
+    const { rows: twRows } = await client.query(
+      `SELECT id AS wallet_id, user_id AS treasury_user_id, is_treasury
          FROM wallets
         WHERE id = $1
         LIMIT 1`,
       [treasury_wallet_id]
     );
-    if (!treasW.length) { await client.query('ROLLBACK'); return res.status(409).json({ message: 'Treasury wallet not found.' }); }
-    const treasuryWallet = treasW[0];
+    if (!twRows.length || !twRows[0].wallet_id) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Treasury wallet not found.' });
+    }
+    const treasuryWalletId = twRows[0].wallet_id;
+    const treasuryUserId   = twRows[0].treasury_user_id;
+
+    // Prevent double-complete creating duplicate transactions
+    const { rows: existingTxn } = await client.query(
+      `SELECT 1 FROM transactions WHERE transfer_id = $1 LIMIT 1`,
+      [id]
+    );
+    if (existingTxn.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Transfer already completed.' });
+    }
 
     // 1) Debit user wallet balance
     const { rowCount: userUpd } = await client.query(
-      `UPDATE wallets SET balance = balance - $1
-         WHERE user_id = $2 AND balance >= $1`,
-      [amount, userId]
+      `
+      UPDATE wallets
+         SET balance = balance - $1
+       WHERE id = $2
+         AND balance >= $1
+      `,
+      [amount, userWalletId]
     );
-    if (userUpd !== 1) { await client.query('ROLLBACK'); return res.status(409).json({ message: 'Insufficient user balance.' }); }
+    if (userUpd !== 1) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Insufficient user balance.' });
+    }
 
     // 2) Debit treasury wallet balance
-    const { rowCount: treasUpd } = await client.query(
-      `UPDATE wallets SET balance = balance - $1
-         WHERE id = $2 AND balance >= $1`,
-      [amount, treasury_wallet_id]
+    const { rowCount: treUpd } = await client.query(
+      `
+      UPDATE wallets
+         SET balance = balance - $1
+       WHERE id = $2
+         AND balance >= $1
+      `,
+      [amount, treasuryWalletId]
     );
-    if (treasUpd !== 1) { await client.query('ROLLBACK'); return res.status(409).json({ message: 'Treasury has insufficient funds.' }); }
+    if (treUpd !== 1) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Insufficient treasury balance.' });
+    }
 
-    // 3) Insert two ledger rows (both debits) — use description to show the destination
-    const desc = `Bank payout to ${toLabel} (transfer ${t.id})`;
+    // Common fields
+    const now = new Date();
+    const ref = String(bank_reference).trim();
+    const toMask = t.destination_masked || 'bank destination';
+    const bankLabel = t.bank || 'Bank';
 
-    // user ledger row
+    // 3) Insert transaction rows (NO extra columns; matches your schema)
+
+    // 3a) User debit — shows on the cardholder’s history
     await client.query(
-      `INSERT INTO transactions
-         (transfer_id, wallet_id, user_id, amount_cents, currency, direction, description, created_at)
-       VALUES
-         ($1, $2, $3, $4, 'BMD', 'debit', $5, NOW())`,
-      [t.id, userWallet.wallet_id, userWallet.user_id, amount, desc]
+      `
+      INSERT INTO transactions (
+        user_id, wallet_id, amount_cents, currency, type, method,
+        description, reference_code, metadata, transfer_id,
+        sender_id, recipient_id, created_at, updated_at
+      ) VALUES (
+        $1,       $2,        $3,           'BMD',   'debit', 'bank',
+        $4,         $5,           $6,         $7,
+        $1,        NULL,        $8,        $8
+      )
+      `,
+      [
+        t.user_id,
+        userWalletId,
+        amount,
+        `Transfer to ${bankLabel} ${toMask}`,
+        ref,
+        JSON.stringify({ role: 'user', via: 'transfer', bank: bankLabel }),
+        t.id,
+        now,
+      ]
     );
 
-    // treasury ledger row
+    // 3b) Treasury debit — internal accounting view
     await client.query(
-      `INSERT INTO transactions
-         (transfer_id, wallet_id, user_id, amount_cents, currency, direction, description, created_at)
-       VALUES
-         ($1, $2, $3, $4, 'BMD', 'debit', $5, NOW())`,
-      [t.id, treasuryWallet.wallet_id, treasuryWallet.user_id, amount, desc]
+      `
+      INSERT INTO transactions (
+        user_id, wallet_id, amount_cents, currency, type, method,
+        description, reference_code, metadata, transfer_id,
+        sender_id, recipient_id, created_at, updated_at
+      ) VALUES (
+        $1,       $2,        $3,           'BMD',   'debit', 'bank',
+        $4,         $5,           $6,         $7,
+        $1,        NULL,        $8,        $8
+      )
+      `,
+      [
+        treasuryUserId,
+        treasuryWalletId,
+        amount,
+        `Bank payout for transfer ${t.id} → ${toMask}`,
+        ref,
+        JSON.stringify({ role: 'treasury', via: 'transfer', bank: bankLabel }),
+        t.id,
+        now,
+      ]
     );
 
-    // (Optional) you could also insert an audit note with internal_note here.
+    // (Optional) Persist internal note if you later add a column/table for it
 
     // 4) Mark transfer completed
     const { rows: done } = await client.query(
-      `UPDATE transfers
-          SET status = 'completed',
-              bank_reference = $2,
-              completed_at = NOW()
-        WHERE id = $1
-        RETURNING id, status, bank_reference, completed_at`,
-      [id, String(bank_reference).trim()]
+      `
+      UPDATE transfers
+         SET status = 'completed',
+             bank_reference = $2,
+             completed_at = NOW()
+       WHERE id = $1
+      RETURNING id, status, bank_reference, completed_at
+      `,
+      [t.id, ref]
     );
 
     await client.query('COMMIT');
