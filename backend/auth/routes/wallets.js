@@ -4,7 +4,17 @@ const router = express.Router();
 const db = require("../../db");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
-// GET /api/wallets/mine  — current user's wallet summary
+/** Admin-only guard */
+function requireAdmin(req, res, next) {
+  const role = (req.user?.role || "").toLowerCase();
+  if (role !== "admin") return res.status(403).json({ message: "Admin access required." });
+  next();
+}
+
+/**
+ * GET /api/wallets/mine — current user's wallet summary
+ * Shape: { wallet_id, balance_cents }
+ */
 router.get("/mine", authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.userId ?? req.user?.id;
@@ -20,14 +30,14 @@ router.get("/mine", authenticateToken, async (req, res) => {
     const { rows } = await db.query(q, [userId]);
 
     if (!rows.length) {
-      // return the shape your client expects
       return res.json({ wallet_id: null, balance_cents: 0 });
     }
 
     const w = rows[0];
     return res.json({
       wallet_id: w.id,
-      balance_cents: Number(w.balance || 0) // your schema stores cents in integer
+      // your schema stores cents as an integer column named "balance"
+      balance_cents: Number(w.balance || 0)
     });
   } catch (err) {
     console.error("❌ wallets/mine error:", err.stack || err);
@@ -36,17 +46,35 @@ router.get("/mine", authenticateToken, async (req, res) => {
 });
 
 /**
- * GET /api/wallets/user/:userId — keep your existing route
+ * GET /api/wallets/user/:userId — admin-only wallet summary for any user
+ * Returns the SAME shape as /mine so front-ends can reuse code:
+ * { wallet_id, balance_cents }
  */
-router.get("/user/:userId", async (req, res) => {
-  const { userId } = req.params;
+router.get("/user/:userId", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const result = await db.query(`SELECT * FROM wallets WHERE user_id = $1`, [userId]);
-    if (result.rows.length === 0) return res.status(404).json({ error: "Wallet not found" });
-    res.json(result.rows[0]);
+    const { userId } = req.params;
+
+    const q = `
+      SELECT id, balance
+      FROM wallets
+      WHERE user_id = $1
+      ORDER BY created_at ASC
+      LIMIT 1
+    `;
+    const { rows } = await db.query(q, [userId]);
+
+    if (!rows.length) {
+      return res.json({ wallet_id: null, balance_cents: 0 });
+    }
+
+    const w = rows[0];
+    return res.json({
+      wallet_id: w.id,
+      balance_cents: Number(w.balance || 0)
+    });
   } catch (err) {
-    console.error("❌ Error fetching wallet:", err);
-    res.status(500).json({ error: "Failed to fetch wallet" });
+    console.error("❌ wallets/user/:userId error:", err);
+    return res.status(500).json({ message: "Failed to load wallet." });
   }
 });
 
