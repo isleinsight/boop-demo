@@ -288,7 +288,51 @@ if (twUpd !== 1) {
   return res.status(409).json({ message: 'Treasury has insufficient funds or not found.' });
 }
 
-    // (Optional) 3) Insert journal rows here if you have a ledger table (client.query(...))
+        // 3) Journal to transactions (user & treasury)
+    // Adjust column names to your schema:
+    // - if your table uses `amount` instead of `amount_cents`, change it below.
+    // - if it uses `description` instead of `memo`, tweak accordingly.
+
+    // a) user wallet: debit (negative)
+    await client.query(
+      `
+      INSERT INTO transactions (
+        wallet_id,
+        amount_cents,
+        type,
+        description,
+        transfer_id,
+        created_at
+      )
+      SELECT
+        w.id,
+        $2 * -1,                              -- debit user
+        'bank_transfer_out',
+        COALESCE($3, 'Transfer to bank'),
+        $1,
+        NOW()
+      FROM wallets w
+      WHERE w.user_id = $4
+      LIMIT 1
+      `,
+      [id, amount, (req.body?.internal_note || null), userId]
+    );
+
+    // b) treasury wallet: debit (negative)
+    await client.query(
+      `
+      INSERT INTO transactions (
+        wallet_id,
+        amount_cents,
+        type,
+        description,
+        transfer_id,
+        created_at
+      )
+      VALUES ($1, $2 * -1, 'bank_payout', COALESCE($3, 'Bank payout'), $4, NOW())
+      `,
+      [treasury_wallet_id, amount, (req.body?.internal_note || null), id]
+    );
 
     // 4) Mark transfer completed
     const { rows: done } = await client.query(
