@@ -232,7 +232,7 @@ router.patch('/:id/reject', requireAccountsRole, wrap(doReject));
 router.post('/:id/reject',  requireAccountsRole, wrap(doReject));
 
 // --- COMPLETE (double-entry + debits) -------------------------------------
-/** COMPLETE — double-entry + atomic debits (uses only existing transaction columns) */
+/** COMPLETE — double-entry + atomic debits with virtual counterparty recipient */
 async function doComplete(req, res) {
   const id = req.params.id; // transfer id
   const me = req.user.userId || req.user.id;
@@ -247,7 +247,35 @@ async function doComplete(req, res) {
 
   await releaseExpiredClaims();
 
-  // helper to get a dedicated client
+  // Helper: find-or-create a virtual counterparty user for this bank/destination
+  async function ensureVirtualCounterparty(client, bank, destination_masked) {
+    const safeBank = String(bank || 'Bank').trim();
+    const mask = String(destination_masked || '').trim();
+    // try to extract last4 digits from mask (fallback to 'xxxx')
+    const last4Match = mask.match(/(\d{4})\s*$/);
+    const last4 = last4Match ? last4Match[1] : '0000';
+
+    // Stable unique email slug so we re-use the same counterparty each time
+    const slug = `${safeBank}-${last4}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const email = `counterparty+${slug}@boop.local`;
+    const first_name = safeBank;           // e.g., "HSBC" / "Butterfield"
+    const last_name = `•••• ${last4}`;     // e.g., "•••• 1234"
+
+    // Insert (or reuse if email already exists). Adjust column names only if your users table differs.
+    const upsertSql = `
+      INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
+      VALUES ($1, $2, $3, 'system', 'counterparty', 'active', NOW(), NOW())
+      ON CONFLICT (email)
+      DO UPDATE SET first_name = EXCLUDED.first_name,
+                    last_name  = EXCLUDED.last_name,
+                    updated_at = NOW()
+      RETURNING id
+    `;
+    const { rows } = await client.query(upsertSql, [email, first_name, last_name]);
+    return rows[0].id;
+  }
+
+  // Get dedicated client
   const client = await getDbClient();
   try {
     await client.query('BEGIN');
@@ -269,9 +297,8 @@ async function doComplete(req, res) {
       return res.status(404).json({ message: 'Transfer not found.' });
     }
 
-    // Must be claimed by me and still within TTL
     const isMine = t.status === 'claimed' && String(t.claimed_by) === String(me);
-    const fresh = t.claimed_at && (new Date(t.claimed_at) > new Date(Date.now() - CLAIM_TTL_MINUTES * 60 * 1000));
+    const fresh  = t.claimed_at && (new Date(t.claimed_at) > new Date(Date.now() - CLAIM_TTL_MINUTES * 60 * 1000));
     if (!isMine || !fresh) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Claim expired or not owned by you. Please claim again.' });
@@ -318,6 +345,9 @@ async function doComplete(req, res) {
       return res.status(409).json({ message: 'Transfer already completed.' });
     }
 
+    // Build (or reuse) the counterparty user (recipient)
+    const recipientId = await ensureVirtualCounterparty(client, t.bank, t.destination_masked);
+
     // 1) Debit user wallet balance
     const { rowCount: userUpd } = await client.query(
       `
@@ -348,15 +378,12 @@ async function doComplete(req, res) {
       return res.status(409).json({ message: 'Insufficient treasury balance.' });
     }
 
-    // Common fields
     const now = new Date();
     const ref = String(bank_reference).trim();
-    const toMask = t.destination_masked || 'bank destination';
+    const toMask    = t.destination_masked || 'bank destination';
     const bankLabel = t.bank || 'Bank';
 
-    // 3) Insert transaction rows (NO extra columns; matches your schema)
-
-    // 3a) User debit — shows on the cardholder’s history
+    // 3a) User debit — visible in cardholder history
     await client.query(
       `
       INSERT INTO transactions (
@@ -365,8 +392,8 @@ async function doComplete(req, res) {
         sender_id, recipient_id, created_at, updated_at
       ) VALUES (
         $1,       $2,        $3,           'BMD',   'debit', 'bank',
-        $4,         $5,           $6,         $7,
-        $1,        NULL,        $8,        $8
+        $4,             $5,            $6,         $7,
+        $1,        $8,          $9,        $9
       )
       `,
       [
@@ -375,13 +402,18 @@ async function doComplete(req, res) {
         amount,
         `Transfer to ${bankLabel} ${toMask}`,
         ref,
-        JSON.stringify({ role: 'user', via: 'transfer', bank: bankLabel, to_mask: toMask }),
+        JSON.stringify({
+          via: 'transfer',
+          role: 'user',
+          counterparty_name: `${bankLabel} ${toMask}`
+        }),
         t.id,
-        now,
+        recipientId,
+        now
       ]
     );
 
-    // 3b) Treasury debit — internal accounting view
+    // 3b) Treasury debit — internal accounting
     await client.query(
       `
       INSERT INTO transactions (
@@ -390,8 +422,8 @@ async function doComplete(req, res) {
         sender_id, recipient_id, created_at, updated_at
       ) VALUES (
         $1,       $2,        $3,           'BMD',   'debit', 'bank',
-        $4,         $5,           $6,         $7,
-        $1,        NULL,        $8,        $8
+        $4,             $5,            $6,         $7,
+        $1,        $8,          $9,        $9
       )
       `,
       [
@@ -400,13 +432,16 @@ async function doComplete(req, res) {
         amount,
         `Bank payout for transfer ${t.id} → ${toMask}`,
         ref,
-        JSON.stringify({ role: 'treasury', via: 'transfer', bank: bankLabel, to_mask: toMask }),
+        JSON.stringify({
+          via: 'transfer',
+          role: 'treasury',
+          counterparty_name: `${bankLabel} ${toMask}`
+        }),
         t.id,
-        now,
+        recipientId,
+        now
       ]
     );
-
-    // (Optional) Persist internal note if you later add a column/table for it
 
     // 4) Mark transfer completed
     const { rows: done } = await client.query(
