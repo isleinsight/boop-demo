@@ -169,6 +169,64 @@ async function doRelease(req, res) {
 router.patch('/:id/release', requireAccountsRole, wrap(doRelease));
 router.post('/:id/release',  requireAccountsRole, wrap(doRelease));
 
+// --- REJECT ----------------------------------------------------------------
+async function doReject(req, res) {
+  const id = req.params.id;
+  const reason = (req.body?.reason || '').slice(0, 255);
+
+  // Move transfer to rejected (pending/claimed only)
+  const { rows } = await db.query(
+    `
+    UPDATE transfers
+       SET status = 'rejected',
+           claimed_by = NULL,
+           claimed_at = NULL
+     WHERE id = $1
+       AND status IN ('pending','claimed')
+    RETURNING id, user_id, bank, destination_masked, status
+    `,
+    [id]
+  );
+  if (!rows.length) return res.status(409).json({ message: 'Transfer is not eligible to reject.' });
+
+  const t = rows[0];
+
+  // 🔔 Log a zero-amount "transfer" activity for the cardholder so they can see the rejection
+  // This uses ONLY columns your transactions table already has.
+  try {
+    await db.query(
+      `
+      INSERT INTO transactions (
+        user_id, type, amount_cents, note, created_at, updated_at,
+        sender_id, recipient_id, transfer_id, metadata
+      ) VALUES (
+        $1, 'transfer', 0, $2, NOW(), NOW(),
+        $1, NULL, $3, $4
+      )
+      `,
+      [
+        t.user_id,
+        reason ? `Bank transfer rejected: ${reason}` : 'Bank transfer rejected',
+        t.id,
+        JSON.stringify({
+          event: 'transfer_rejected',
+          bank: t.bank || null,
+          destination_masked: t.destination_masked || null,
+          transfer_id: t.id,
+          reason: reason || null
+        })
+      ]
+    );
+  } catch (e) {
+    // If the activity row fails, don’t block the rejection — just log it.
+    console.warn('⚠️ failed to insert rejection activity transaction:', e.message || e);
+  }
+
+  return res.json({ ok: true, transfer: { id: t.id, status: 'rejected' } });
+}
+router.patch('/:id/reject', requireAccountsRole, wrap(doReject));
+router.post('/:id/reject',  requireAccountsRole, wrap(doReject));
+
 // --- COMPLETE (double-entry + debits) -------------------------------------
 /** COMPLETE — double-entry + atomic debits with virtual counterparty recipient */
 async function doComplete(req, res) {
