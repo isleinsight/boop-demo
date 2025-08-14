@@ -4,6 +4,25 @@ const router = express.Router();
 const db = require('../../db');                 // <— use your db helper
 const { authenticateToken } = require('../middleware/authMiddleware');
 
+// --- Claim TTL (minutes)
+const CLAIM_TTL_MINUTES = 30;
+
+// Release any claims older than the TTL
+async function releaseExpiredClaims() {
+  try {
+    await db.query(`
+      UPDATE transfers
+         SET status = 'pending',
+             claimed_by = NULL,
+             claimed_at = NULL
+       WHERE status = 'claimed'
+         AND claimed_at < NOW() - INTERVAL '${CLAIM_TTL_MINUTES} minutes'
+    `);
+  } catch (e) {
+    console.warn('releaseExpiredClaims failed', e.message || e);
+  }
+}
+
 // --- Health ---
 router.get('/ping', (req, res) => {
   res.json({ ok: true, message: 'Transfers route is alive' });
@@ -164,125 +183,94 @@ async function doComplete(req, res) {
   if (!treasury_wallet_id) {
     return res.status(400).json({ message: 'treasury_wallet_id is required.' });
   }
-  const ref = String(bank_reference).trim();
 
+  // free up any stale claims first
+  await releaseExpiredClaims();
+
+  const client = await db.pool.connect(); // assumes db exposes pool; if not, use db.query('BEGIN') style on same connection helper you use elsewhere
   try {
-    await db.query('BEGIN');
+    await client.query('BEGIN');
 
-    // 1) Lock the transfer row (must be claimed by me)
-    const { rows: trows } = await db.query(
-      `SELECT id, user_id, amount_cents, bank, destination_masked, status, claimed_by
-       FROM transfers
+    // Lock the transfer row and validate ownership + freshness
+    const { rows: trows } = await client.query(
+      `
+      SELECT id, user_id, amount_cents, status, claimed_by, claimed_at
+        FROM transfers
        WHERE id = $1
-       FOR UPDATE`,
+       FOR UPDATE
+      `,
       [id]
     );
-    if (!trows.length) { await db.query('ROLLBACK'); return res.status(404).json({ message: 'Transfer not found.' }); }
     const t = trows[0];
-    if (t.status !== 'claimed' || String(t.claimed_by) !== String(me)) {
-      await db.query('ROLLBACK');
-      return res.status(409).json({ message: 'Only the claimer can complete this transfer (and it must be claimed).' });
+    if (!t) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Transfer not found.' });
+    }
+    const isClaimedByMe = t.status === 'claimed' && String(t.claimed_by) === String(me);
+    const stillFresh = t.claimed_at && (new Date(t.claimed_at) > new Date(Date.now() - CLAIM_TTL_MINUTES * 60 * 1000));
+    if (!isClaimedByMe || !stillFresh) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Claim expired or not owned by you. Please claim again.' });
     }
 
-    const amt = Number(t.amount_cents || 0);
-    if (!Number.isFinite(amt) || amt <= 0) {
-      await db.query('ROLLBACK');
-      return res.status(400).json({ message: 'Invalid transfer amount.' });
+    const amount = Number(t.amount_cents || 0);
+    const userId = t.user_id;
+
+    // 1) Debit user wallet
+    const { rowCount: userUpd } = await client.query(
+      `
+      UPDATE wallets
+         SET balance = balance - $1
+       WHERE user_id = $2
+         AND balance >= $1
+      `,
+      [amount, userId]
+    );
+    if (userUpd !== 1) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Insufficient user balance or wallet not found.' });
     }
 
-    // 2) Lock user wallet (by user_id) and treasury wallet (by id)
-    const { rows: uwRows } = await db.query(
-      `SELECT id,
-              COALESCE(balance_cents, balance) AS balance_cents,
-              balance_cents IS NOT NULL AS has_bc,
-              balance        IS NOT NULL AS has_b
-       FROM wallets
-       WHERE user_id = $1
-       FOR UPDATE`,
-      [t.user_id]
+    // 2) Debit treasury wallet (source of outgoing bank payment)
+    const { rowCount: twUpd } = await client.query(
+      `
+      UPDATE treasury_wallets
+         SET balance = balance - $1
+       WHERE id = $2
+         AND balance >= $1
+      `,
+      [amount, treasury_wallet_id]
     );
-    if (!uwRows.length) { await db.query('ROLLBACK'); return res.status(404).json({ message: 'User wallet not found.' }); }
-    const userWallet = uwRows[0];
-
-    const { rows: twRows } = await db.query(
-      `SELECT id,
-              COALESCE(balance_cents, balance) AS balance_cents,
-              balance_cents IS NOT NULL AS has_bc,
-              balance        IS NOT NULL AS has_b
-       FROM treasury_wallets
-       WHERE id = $1
-       FOR UPDATE`,
-      [treasury_wallet_id]
-    );
-    if (!twRows.length) { await db.query('ROLLBACK'); return res.status(404).json({ message: 'Treasury wallet not found.' }); }
-    const treasuryWallet = twRows[0];
-
-    // 3) Balance checks
-    const uwBal = Number(userWallet.balance_cents || 0);
-    const twBal = Number(treasuryWallet.balance_cents || 0);
-    if (uwBal < amt) { await db.query('ROLLBACK'); return res.status(400).json({ message: 'User wallet has insufficient balance.' }); }
-    if (twBal < amt) { await db.query('ROLLBACK'); return res.status(400).json({ message: 'Treasury wallet has insufficient balance.' }); }
-
-    // 4) Deduct balances (handle either column name)
-    // User wallet
-    if (userWallet.has_bc) {
-      await db.query(`UPDATE wallets SET balance_cents = balance_cents - $2 WHERE id = $1`, [userWallet.id, amt]);
-    } else if (userWallet.has_b) {
-      await db.query(`UPDATE wallets SET balance = balance - $2 WHERE id = $1`, [userWallet.id, amt]);
-    } else {
-      await db.query('ROLLBACK');
-      return res.status(500).json({ message: 'User wallet has no balance column.' });
+    if (twUpd !== 1) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'Treasury has insufficient funds or not found.' });
     }
 
-    // Treasury wallet
-    if (treasuryWallet.has_bc) {
-      await db.query(`UPDATE treasury_wallets SET balance_cents = balance_cents - $2 WHERE id = $1`, [treasuryWallet.id, amt]);
-    } else if (treasuryWallet.has_b) {
-      await db.query(`UPDATE treasury_wallets SET balance = balance - $2 WHERE id = $1`, [treasuryWallet.id, amt]);
-    } else {
-      await db.query('ROLLBACK');
-      return res.status(500).json({ message: 'Treasury wallet has no balance column.' });
-    }
+    // (Optional) 3) Insert journal rows here if you have a ledger table
 
-    // 5) Insert double-entry transactions
-    const userNote   = `Bank transfer to ${t.bank || 'bank'} (${t.destination_masked || '••••'}) • Ref ${ref}`;
-    const treasNote  = `Payout for transfer #${t.id} to ${t.bank || 'bank'} (${t.destination_masked || '••••'}) • Ref ${ref}`;
-
-    await db.query(
-      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, counterparty_name)
-       VALUES ($1, $2, 'debit', $3, $4, $5)`,
-      [userWallet.id, t.user_id, amt, userNote, t.bank || 'Bank']
-    );
-
-    await db.query(
-      `INSERT INTO transactions (treasury_wallet_id, type, amount_cents, note, counterparty_name)
-       VALUES ($1, 'debit', $2, $3, $4)`,
-      [treasuryWallet.id, amt, treasNote, 'User bank payout']
-    );
-
-    // 6) Mark transfer completed
-    const { rows: done } = await db.query(
-      `UPDATE transfers
+    // 4) Mark transfer completed
+    const { rows: done } = await client.query(
+      `
+      UPDATE transfers
          SET status = 'completed',
              bank_reference = $2,
-             completed_at = NOW(),
-             internal_note = COALESCE($3, internal_note)
+             completed_at = NOW()
        WHERE id = $1
-       RETURNING id, status, bank_reference, completed_at`,
-      [id, ref, internal_note || null]
+       RETURNING id, status, bank_reference, completed_at
+      `,
+      [id, String(bank_reference).trim()]
     );
 
-    await db.query('COMMIT');
+    await client.query('COMMIT');
     return res.json({ ok: true, transfer: done[0] });
-  } catch (err) {
-    console.error('❌ doComplete error:', err);
-    try { await db.query('ROLLBACK'); } catch {}
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error('doComplete error:', e);
     return res.status(500).json({ message: 'Failed to complete transfer.' });
+  } finally {
+    client.release();
   }
 }
-
-router.patch('/:id/complete', requireAccountsRole, wrap(doComplete));
-router.post('/:id/complete',  requireAccountsRole, wrap(doComplete));
 
 // --- Cardholder view: latest request
 router.get('/mine/latest', async (req, res) => {
