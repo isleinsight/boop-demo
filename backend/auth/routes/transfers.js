@@ -30,6 +30,7 @@ async function releaseExpiredClaims() {
   }
 }
 
+
 // return Set of column names for a table
 async function tableCols(client, table) {
   const { rows } = await client.query(
@@ -346,7 +347,7 @@ async function doComplete(req, res) {
     }
 
     // Build (or reuse) the counterparty user (recipient)
-    const recipientId = await ensureVirtualCounterparty(client, t.bank, t.destination_masked);
+    const recipientId = await ensureBankCounterparty(client, t.bank, t.destination_masked);
 
     // 1) Debit user wallet balance
     const { rowCount: userUpd } = await client.query(
