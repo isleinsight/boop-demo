@@ -30,6 +30,32 @@ async function releaseExpiredClaims() {
   }
 }
 
+// Create (or reuse) a virtual counterparty user based on bank + last4
+async function ensureBankCounterparty(client, bank, destination_masked) {
+  const safeBank = String(bank || 'Bank').trim();
+  const mask = String(destination_masked || '').trim();
+  const m = mask.match(/(\d{4})\s*$/);
+  const last4 = m ? m[1] : '0000';
+
+  const slug  = `${safeBank}-${last4}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const email = `counterparty+${slug}@boop.local`;
+  const first_name = safeBank;        // e.g., "HSBC" / "Butterfield"
+  const last_name  = `•••• ${last4}`; // e.g., "•••• 4987"
+
+  // Use role/type 'vendor' to satisfy users_role_check
+  const upsertSql = `
+    INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
+    VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
+    ON CONFLICT (email)
+    DO UPDATE SET first_name = EXCLUDED.first_name,
+                  last_name  = EXCLUDED.last_name,
+                  updated_at = NOW()
+    RETURNING id
+  `;
+  const { rows } = await client.query(upsertSql, [email, first_name, last_name]);
+  return rows[0].id;
+}
+
 // --- Health ---------------------------------------------------------------
 router.get('/ping', (req, res) => {
   res.json({ ok: true, message: 'Transfers route is alive' });
@@ -174,32 +200,6 @@ async function doReject(req, res) {
   const id = req.params.id;
   const reason = (req.body?.reason || '').slice(0, 255);
 
-  // helper: find-or-create the virtual counterparty user (same pattern as complete)
-  async function ensureBankCounterparty(client, bank, destination_masked) {
-    const safeBank = String(bank || 'Bank').trim();
-    const mask = String(destination_masked || '').trim();
-    const last4Match = mask.match(/(\d{4})\s*$/);
-    const last4 = last4Match ? last4Match[1] : '0000';
-
-    const slug  = `${safeBank}-${last4}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const email = `counterparty+${slug}@boop.local`;
-    const first_name = safeBank;        // e.g. "HSBC"
-    const last_name  = `•••• ${last4}`; // e.g. "•••• 1234"
-
-    // Use role/type 'vendor' (matches your constraint)
-    const upsertSql = `
-      INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
-      VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
-      ON CONFLICT (email)
-      DO UPDATE SET first_name = EXCLUDED.first_name,
-                    last_name  = EXCLUDED.last_name,
-                    updated_at = NOW()
-      RETURNING id
-    `;
-    const { rows } = await client.query(upsertSql, [email, first_name, last_name]);
-    return rows[0].id;
-  }
-
   const client = await getDbClient();
   try {
     await client.query('BEGIN');
@@ -217,12 +217,10 @@ async function doReject(req, res) {
       `,
       [id]
     );
-
     if (!rej.rows.length) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Transfer is not eligible to reject.' });
     }
-
     const t = rej.rows[0];
 
     // ensure we have a recipient counterparty so the "TO" column shows a name
@@ -259,8 +257,6 @@ async function doReject(req, res) {
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch {}
     console.warn('⚠️ reject flow error:', e.message || e);
-    // Even if the activity insert fails, the transfer might already be marked rejected.
-    // We return a generic failure so the UI can show a toast, but the state is safe.
     return res.status(500).json({ message: 'Failed to reject transfer.' });
   } finally {
     client.release && client.release();
@@ -284,33 +280,6 @@ async function doComplete(req, res) {
   }
 
   await releaseExpiredClaims();
-
-  // Helper: find-or-create a virtual counterparty user for this bank/destination
-  async function ensureBankCounterparty(client, bank, destination_masked) {
-    const safeBank = String(bank || 'Bank').trim();
-    const mask = String(destination_masked || '').trim();
-    const last4Match = mask.match(/(\d{4})\s*$/);
-    const last4 = last4Match ? last4Match[1] : '0000';
-
-    // Stable unique email slug so we re-use the same counterparty each time
-    const slug = `${safeBank}-${last4}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const email = `counterparty+${slug}@boop.local`;
-    const first_name = safeBank;        // e.g., "HSBC" / "Butterfield"
-    const last_name  = `•••• ${last4}`; // e.g., "•••• 4987"
-
-    // Upsert a user that satisfies your users_role_check (role/type = 'vendor')
-    const upsertSql = `
-      INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
-      VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
-      ON CONFLICT (email)
-      DO UPDATE SET first_name = EXCLUDED.first_name,
-                    last_name  = EXCLUDED.last_name,
-                    updated_at = NOW()
-      RETURNING id
-    `;
-    const { rows } = await client.query(upsertSql, [email, first_name, last_name]);
-    return rows[0].id;
-  }
 
   const client = await getDbClient();
   try {
@@ -510,81 +479,41 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // We do NOT store bank_account_id on transfers, so we infer by:
-    //   - same user
-    //   - same bank name
-    //   - last4 in destination_masked matches RIGHT(account_number, 4)
-    const sql = `
+    // First try: match by bank name and last4 from destination_masked
+    const q1 = `
       SELECT ba.account_number
         FROM transfers t
         JOIN bank_accounts ba
           ON ba.user_id = t.user_id
          AND ba.deleted_at IS NULL
-         AND ba.bank_name = t.bank
+         AND (t.bank IS NULL OR ba.bank_name = t.bank)
          AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
        WHERE t.id = $1
        LIMIT 1
     `;
-    const { rows } = await db.query(sql, [id]);
-    if (!rows.length) {
-      return res.status(404).json({ message: 'Bank account not found for this transfer.' });
+    const r1 = await db.query(q1, [id]);
+    if (r1.rowCount) {
+      return res.json({ account_number: r1.rows[0].account_number });
     }
 
-    // Return only what the UI needs
-    return res.json({ account_number: rows[0].account_number });
+    // Fallback: most recent active account for the same user
+    const q2 = `
+      SELECT ba.account_number
+        FROM bank_accounts ba
+        JOIN transfers t ON t.user_id = ba.user_id
+       WHERE t.id = $1
+         AND ba.deleted_at IS NULL
+       ORDER BY ba.created_at DESC
+       LIMIT 1
+    `;
+    const r2 = await db.query(q2, [id]);
+    if (r2.rowCount) {
+      return res.json({ account_number: r2.rows[0].account_number });
+    }
+
+    return res.status(404).json({ message: 'Bank account not found for this transfer.' });
   } catch (err) {
-    console.error('/id/bank-details error:', err);
-    return res.status(500).json({ message: 'Failed to load bank details.' });
-  }
-});
-
-    // Try to match bank account by bank name + last4 parsed from destination_masked
-    const bankName = String(t.bank || '').trim();
-    const mask = String(t.destination_masked || '');
-    const last4Match = mask.match(/(\d{4})\s*$/);
-    const last4 = last4Match ? last4Match[1] : null;
-
-    // First attempt: exact bank + last4
-    let ba = await db.query(
-  `
-  SELECT id, bank_name, account_number
-  FROM bank_accounts
-  WHERE user_id = $1
-    AND deleted_at IS NULL
-    AND ($2::text IS NULL OR bank_name = $2)
-    AND ($3::text IS NULL OR RIGHT(account_number, 4) = $3)
-  ORDER BY updated_at DESC NULLS LAST, created_at DESC
-  LIMIT 1
-  `,
-  [t.user_id, bankName || null, last4 || null]
-);
-
-    // Fallback: any recent account for the user (if exact match didn’t hit)
-    if (!ba.rowCount) {
-      ba = await db.query(
-  `
-  SELECT id, bank_name, account_number
-  FROM bank_accounts
-  WHERE user_id = $1
-    AND deleted_at IS NULL
-  ORDER BY updated_at DESC NULLS LAST, created_at DESC
-  LIMIT 1
-  `,
-  [t.user_id]
-);
-    }
-
-    if (!ba.rowCount) {
-      return res.status(404).json({ message: 'No active bank account found for this user.' });
-    }
-
-    const b = ba.rows[0];
-return res.json({
-  bank_name: b.bank_name,
-  account_number: b.account_number   // FULL number only
-});
-  } catch (err) {
-    console.error('❌ /:id/bank-details error:', err);
+    console.error('/:id/bank-details error:', err);
     return res.status(500).json({ message: 'Failed to load bank details.' });
   }
 });
