@@ -505,29 +505,38 @@ async function doComplete(req, res) {
 router.patch('/:id/complete', requireAccountsRole, wrap(doComplete));
 router.post('/:id/complete',  requireAccountsRole, wrap(doComplete)); // POST alias
 
-// --- Claimer-only full bank details for a transfer -------------------------
+// --- BANK DETAILS (full account number for claimed transfers) -------------
 router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
   try {
-    const id = req.params.id;
-    const me = req.user.userId || req.user.id;
+    const { id } = req.params;
 
-    // Load the transfer first
-    const tRes = await db.query(
-      `
-      SELECT id, user_id, bank, destination_masked, status, claimed_by
-      FROM transfers
-      WHERE id = $1
-      LIMIT 1
-      `,
-      [id]
-    );
-    if (!tRes.rowCount) return res.status(404).json({ message: 'Transfer not found.' });
-    const t = tRes.rows[0];
-
-    // Only visible when claimed AND to the claimer
-    if (!(t.status === 'claimed' && String(t.claimed_by) === String(me))) {
-      return res.status(403).json({ message: 'Bank details available only to the current claimer.' });
+    // We do NOT store bank_account_id on transfers, so we infer by:
+    //   - same user
+    //   - same bank name
+    //   - last4 in destination_masked matches RIGHT(account_number, 4)
+    const sql = `
+      SELECT ba.account_number
+        FROM transfers t
+        JOIN bank_accounts ba
+          ON ba.user_id = t.user_id
+         AND ba.deleted_at IS NULL
+         AND ba.bank_name = t.bank
+         AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
+       WHERE t.id = $1
+       LIMIT 1
+    `;
+    const { rows } = await db.query(sql, [id]);
+    if (!rows.length) {
+      return res.status(404).json({ message: 'Bank account not found for this transfer.' });
     }
+
+    // Return only what the UI needs
+    return res.json({ account_number: rows[0].account_number });
+  } catch (err) {
+    console.error('/id/bank-details error:', err);
+    return res.status(500).json({ message: 'Failed to load bank details.' });
+  }
+});
 
     // Try to match bank account by bank name + last4 parsed from destination_masked
     const bankName = String(t.bank || '').trim();
