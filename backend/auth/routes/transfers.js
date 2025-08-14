@@ -152,7 +152,7 @@ async function doRelease(req, res) {
 router.patch('/:id/release', requireAccountsRole, wrap(doRelease));
 router.post('/:id/release',  requireAccountsRole, wrap(doRelease)); // <— POST alias
 
-/** COMPLETE — double-entry + atomic debits (user & treasury) */
+/** COMPLETE — double-entry + atomic debits (schema-agnostic balances) */
 async function doComplete(req, res) {
   const id = req.params.id;
   const me = req.user.userId || req.user.id;
@@ -164,31 +164,24 @@ async function doComplete(req, res) {
   if (!treasury_wallet_id) {
     return res.status(400).json({ message: 'treasury_wallet_id is required.' });
   }
-
   const ref = String(bank_reference).trim();
 
   try {
-    // Start atomic tx
     await db.query('BEGIN');
 
     // 1) Lock the transfer row (must be claimed by me)
     const { rows: trows } = await db.query(
-      `
-      SELECT id, user_id, amount_cents, bank, destination_masked, status, claimed_by
-      FROM transfers
-      WHERE id = $1
-      FOR UPDATE
-      `,
+      `SELECT id, user_id, amount_cents, bank, destination_masked, status, claimed_by
+       FROM transfers
+       WHERE id = $1
+       FOR UPDATE`,
       [id]
     );
-    if (!trows.length) {
-      await db.query('ROLLBACK');
-      return res.status(404).json({ message: 'Transfer not found.' });
-    }
+    if (!trows.length) { await db.query('ROLLBACK'); return res.status(404).json({ message: 'Transfer not found.' }); }
     const t = trows[0];
     if (t.status !== 'claimed' || String(t.claimed_by) !== String(me)) {
       await db.query('ROLLBACK');
-      return res.status(409).json({ message: 'Only the claimer can complete this transfer (and it must be in claimed state).' });
+      return res.status(409).json({ message: 'Only the claimer can complete this transfer (and it must be claimed).' });
     }
 
     const amt = Number(t.amount_cents || 0);
@@ -199,84 +192,83 @@ async function doComplete(req, res) {
 
     // 2) Lock user wallet (by user_id) and treasury wallet (by id)
     const { rows: uwRows } = await db.query(
-      `SELECT id, balance AS balance_cents FROM wallets WHERE user_id = $1 FOR UPDATE`,
+      `SELECT id,
+              COALESCE(balance_cents, balance) AS balance_cents,
+              balance_cents IS NOT NULL AS has_bc,
+              balance        IS NOT NULL AS has_b
+       FROM wallets
+       WHERE user_id = $1
+       FOR UPDATE`,
       [t.user_id]
     );
-    if (!uwRows.length) {
-      await db.query('ROLLBACK');
-      return res.status(404).json({ message: 'User wallet not found.' });
-    }
+    if (!uwRows.length) { await db.query('ROLLBACK'); return res.status(404).json({ message: 'User wallet not found.' }); }
     const userWallet = uwRows[0];
 
     const { rows: twRows } = await db.query(
-      `SELECT id, balance AS balance_cents FROM treasury_wallets WHERE id = $1 FOR UPDATE`,
+      `SELECT id,
+              COALESCE(balance_cents, balance) AS balance_cents,
+              balance_cents IS NOT NULL AS has_bc,
+              balance        IS NOT NULL AS has_b
+       FROM treasury_wallets
+       WHERE id = $1
+       FOR UPDATE`,
       [treasury_wallet_id]
     );
-    if (!twRows.length) {
-      await db.query('ROLLBACK');
-      return res.status(404).json({ message: 'Treasury wallet not found.' });
-    }
+    if (!twRows.length) { await db.query('ROLLBACK'); return res.status(404).json({ message: 'Treasury wallet not found.' }); }
     const treasuryWallet = twRows[0];
 
-    // 3) Balance checks (soft guard)
+    // 3) Balance checks
     const uwBal = Number(userWallet.balance_cents || 0);
     const twBal = Number(treasuryWallet.balance_cents || 0);
-    if (uwBal < amt) {
+    if (uwBal < amt) { await db.query('ROLLBACK'); return res.status(400).json({ message: 'User wallet has insufficient balance.' }); }
+    if (twBal < amt) { await db.query('ROLLBACK'); return res.status(400).json({ message: 'Treasury wallet has insufficient balance.' }); }
+
+    // 4) Deduct balances (handle either column name)
+    // User wallet
+    if (userWallet.has_bc) {
+      await db.query(`UPDATE wallets SET balance_cents = balance_cents - $2 WHERE id = $1`, [userWallet.id, amt]);
+    } else if (userWallet.has_b) {
+      await db.query(`UPDATE wallets SET balance = balance - $2 WHERE id = $1`, [userWallet.id, amt]);
+    } else {
       await db.query('ROLLBACK');
-      return res.status(400).json({ message: 'User wallet has insufficient balance.' });
-    }
-    if (twBal < amt) {
-      await db.query('ROLLBACK');
-      return res.status(400).json({ message: 'Treasury wallet has insufficient balance.' });
+      return res.status(500).json({ message: 'User wallet has no balance column.' });
     }
 
-    // 4) Deduct balances
-    await db.query(
-      `UPDATE wallets SET balance = balance - $2 WHERE id = $1`,
-      [userWallet.id, amt]
-    );
-    await db.query(
-      `UPDATE treasury_wallets SET balance = balance - $2 WHERE id = $1`,
-      [treasuryWallet.id, amt]
-    );
+    // Treasury wallet
+    if (treasuryWallet.has_bc) {
+      await db.query(`UPDATE treasury_wallets SET balance_cents = balance_cents - $2 WHERE id = $1`, [treasuryWallet.id, amt]);
+    } else if (treasuryWallet.has_b) {
+      await db.query(`UPDATE treasury_wallets SET balance = balance - $2 WHERE id = $1`, [treasuryWallet.id, amt]);
+    } else {
+      await db.query('ROLLBACK');
+      return res.status(500).json({ message: 'Treasury wallet has no balance column.' });
+    }
 
     // 5) Insert double-entry transactions
-    const userNote = `Bank transfer to ${t.bank || 'bank'} (${t.destination_masked || '••••'}) • Ref ${ref}`;
-    const treasNote = `Payout for transfer #${t.id} to ${t.bank || 'bank'} (${t.destination_masked || '••••'}) • Ref ${ref}`;
+    const userNote   = `Bank transfer to ${t.bank || 'bank'} (${t.destination_masked || '••••'}) • Ref ${ref}`;
+    const treasNote  = `Payout for transfer #${t.id} to ${t.bank || 'bank'} (${t.destination_masked || '••••'}) • Ref ${ref}`;
 
-    // user (debit)
     await db.query(
-      `
-      INSERT INTO transactions
-        (wallet_id, user_id, type, amount_cents, note, counterparty_name)
-      VALUES
-        ($1, $2, 'debit', $3, $4, $5)
-      `,
+      `INSERT INTO transactions (wallet_id, user_id, type, amount_cents, note, counterparty_name)
+       VALUES ($1, $2, 'debit', $3, $4, $5)`,
       [userWallet.id, t.user_id, amt, userNote, t.bank || 'Bank']
     );
 
-    // treasury (debit)
     await db.query(
-      `
-      INSERT INTO transactions
-        (treasury_wallet_id, type, amount_cents, note, counterparty_name)
-      VALUES
-        ($1, 'debit', $2, $3, $4)
-      `,
+      `INSERT INTO transactions (treasury_wallet_id, type, amount_cents, note, counterparty_name)
+       VALUES ($1, 'debit', $2, $3, $4)`,
       [treasuryWallet.id, amt, treasNote, 'User bank payout']
     );
 
     // 6) Mark transfer completed
     const { rows: done } = await db.query(
-      `
-      UPDATE transfers
-      SET status = 'completed',
-          bank_reference = $2,
-          completed_at = NOW(),
-          internal_note = COALESCE($3, internal_note)
-      WHERE id = $1
-      RETURNING id, status, bank_reference, completed_at
-      `,
+      `UPDATE transfers
+         SET status = 'completed',
+             bank_reference = $2,
+             completed_at = NOW(),
+             internal_note = COALESCE($3, internal_note)
+       WHERE id = $1
+       RETURNING id, status, bank_reference, completed_at`,
       [id, ref, internal_note || null]
     );
 
