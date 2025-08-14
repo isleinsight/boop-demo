@@ -313,6 +313,10 @@ async function doComplete(req, res) {
   }
 }
 
+// COMPLETE — enable both PATCH and POST
+router.patch('/:id/complete', requireAccountsRole, wrap(doComplete));
+router.post('/:id/complete',  requireAccountsRole, wrap(doComplete)); // optional POST alias
+
 // --- Cardholder view: latest request
 // Returns requested_at (canonical) PLUS created_at mirror for compatibility.
 router.get('/mine/latest', async (req, res) => {
