@@ -281,6 +281,33 @@ async function doComplete(req, res) {
 
   await releaseExpiredClaims();
 
+  // Helper: find-or-create a virtual counterparty user for this bank/destination
+  async function ensureBankCounterparty(client, bank, destination_masked) {
+    const safeBank = String(bank || 'Bank').trim();
+    const mask = String(destination_masked || '').trim();
+    const last4Match = mask.match(/(\d{4})\s*$/);
+    const last4 = last4Match ? last4Match[1] : '0000';
+
+    // Stable unique email slug so we re-use the same counterparty each time
+    const slug = `${safeBank}-${last4}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const email = `counterparty+${slug}@boop.local`;
+    const first_name = safeBank;        // e.g., "HSBC" / "Butterfield"
+    const last_name  = `•••• ${last4}`; // e.g., "•••• 4987"
+
+    // Upsert a user that satisfies your users_role_check (role/type = 'vendor')
+    const upsertSql = `
+      INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
+      VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
+      ON CONFLICT (email)
+      DO UPDATE SET first_name = EXCLUDED.first_name,
+                    last_name  = EXCLUDED.last_name,
+                    updated_at = NOW()
+      RETURNING id
+    `;
+    const { rows } = await client.query(upsertSql, [email, first_name, last_name]);
+    return rows[0].id;
+  }
+
   const client = await getDbClient();
   try {
     await client.query('BEGIN');
@@ -289,7 +316,7 @@ async function doComplete(req, res) {
     const { rows: trows } = await client.query(
       `
       SELECT id, user_id, amount_cents, status, claimed_by, claimed_at,
-             destination_masked, bank
+             destination_masked, bank, memo
         FROM transfers
        WHERE id = $1
        FOR UPDATE
@@ -388,23 +415,30 @@ async function doComplete(req, res) {
     const toMask    = t.destination_masked || 'bank destination';
     const bankLabel = t.bank || 'Bank';
 
-    // 3a) User debit — visible in cardholder history
+    // Notes: cardholder's original memo, and admin internal note (for treasury side)
+    const userNote      = t.memo || null;
+    const treasuryNote  = internal_note?.trim()
+      ? internal_note.trim()
+      : `Bank reference ${ref}`;
+
+    // 3a) User debit — visible in cardholder history (includes note = t.memo)
     await client.query(
       `
       INSERT INTO transactions (
         user_id, wallet_id, amount_cents, currency, type, method,
-        description, reference_code, metadata, transfer_id,
+        note, description, reference_code, metadata, transfer_id,
         sender_id, recipient_id, created_at, updated_at
       ) VALUES (
         $1,       $2,        $3,           'BMD',   'debit', 'bank',
-        $4,             $5,            $6,         $7,
-        $1,        $8,          $9,        $9
+        $4,  $5,          $6,            $7,         $8,
+        $1,        $9,          $10,       $10
       )
       `,
       [
         t.user_id,
         userWalletId,
         amount,
+        userNote,
         `Transfer to ${bankLabel} ${toMask}`,
         ref,
         JSON.stringify({
@@ -418,23 +452,24 @@ async function doComplete(req, res) {
       ]
     );
 
-    // 3b) Treasury debit — internal accounting
+    // 3b) Treasury debit — internal accounting (includes note = internal_note or reference)
     await client.query(
       `
       INSERT INTO transactions (
         user_id, wallet_id, amount_cents, currency, type, method,
-        description, reference_code, metadata, transfer_id,
+        note, description, reference_code, metadata, transfer_id,
         sender_id, recipient_id, created_at, updated_at
       ) VALUES (
         $1,       $2,        $3,           'BMD',   'debit', 'bank',
-        $4,             $5,            $6,         $7,
-        $1,        $8,          $9,        $9
+        $4,  $5,          $6,            $7,         $8,
+        $1,        $9,          $10,       $10
       )
       `,
       [
         treasuryUserId,
         treasuryWalletId,
         amount,
+        treasuryNote,
         `Bank payout for transfer ${t.id} → ${toMask}`,
         ref,
         JSON.stringify({
