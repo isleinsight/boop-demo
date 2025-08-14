@@ -55,34 +55,38 @@
     const n = Number(cents || 0) / 100;
     return `$${n.toFixed(2)}`;
   }
+
+  // Robust date parser for common SQL timestamp formats
   function fmtDate(v) {
-  if (!v) return "—";
-  // Normalize "YYYY-MM-DD HH:MM:SS(.ms)+00" → ISO the browser likes
-  let s = String(v).trim().replace(" ", "T").replace(/(\.\d{3})\d+/, "$1");
-  // Force Z for UTC variants
-  s = s.replace(/\+00(?::00)?$/, "Z");
-  // If it still has no zone, assume UTC
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) s += "Z";
-  const d = new Date(s);
-  return isNaN(d) ? String(v) : d.toLocaleString();
-}
+    if (!v) return "—";
+    let s = String(v).trim();
+    // Convert "YYYY-MM-DD HH:MM:SS(.ms)+00" → ISO-ish
+    s = s.replace(" ", "T").replace(/(\.\d{3})\d+/, "$1");
+    // Force Z for +00
+    s = s.replace(/\+00(?::00)?$/, "Z");
+    // If there's no zone, assume UTC
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) s += "Z";
+    const d = new Date(s);
+    return isNaN(d) ? String(v) : d.toLocaleString();
+  }
+
   function maskDest(r) {
-    // Show masked destination (account/iban/route). Prefer last 4 if present.
-    const acct = r.dest_last4 || r.account_last4 || r.mask_last4;
+    const acct = r.dest_last4 || r.account_last4 || r.mask_last4 || (r.destination_masked && r.destination_masked.slice(-4));
     const bank = r.bank || r.preferred_bank || "";
     if (acct) return `${bank} •••• ${acct}`;
-    // fallback to label if provided
-    return r.dest_label || bank || "—";
+    return r.dest_label || r.destination_masked || bank || "—";
   }
+
   function statusPill(s) {
     const t = String(s || "").toLowerCase();
     const cls =
-      t === "pending" ? "s-pending" :
-      t === "claimed" ? "s-claimed" :
+      t === "pending"   ? "s-pending"   :
+      t === "claimed"   ? "s-claimed"   :
       t === "completed" ? "s-completed" :
-      t === "rejected" ? "s-rejected" : "";
+      t === "rejected"  ? "s-rejected"  : "";
     return `<span class="status-pill ${cls}">${t || "—"}</span>`;
   }
+
   function dollarsOnly(v) {
     const n = Number(v || 0) / 100;
     return n.toFixed(2);
@@ -96,6 +100,30 @@
     paginationInfo.textContent = `Page ${totalPages ? page : 0} of ${totalPages || 0}`;
     prevPageBtn.disabled = page <= 1;
     nextPageBtn.disabled = page >= totalPages;
+  }
+
+  // --- Table rendering
+  function actionButtonsFor(r) {
+    const s = String(r.status || "").toLowerCase();
+
+    // Completed/rejected: no actions — view only
+    if (s === "completed" || s === "rejected") {
+      return `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
+    }
+
+    const mine = me && r.claimed_by === me.id;
+    const canClaim    = s === "pending";
+    const canRelease  = s === "claimed" && mine;
+    const canComplete = s === "claimed" && mine;
+    const canReject   = s === "pending" || (s === "claimed" && mine);
+
+    const view     = `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
+    const claim    = canClaim    ? `<button class="btn warn"      data-action="claim"    data-id="${r.id}" style="padding:6px 10px;">Claim</button>` : "";
+    const release  = canRelease  ? `<button class="btn secondary" data-action="release"  data-id="${r.id}" style="padding:6px 10px;">Release</button>` : "";
+    const complete = canComplete ? `<button class="btn"           data-action="complete" data-id="${r.id}" style="padding:6px 10px;">Complete</button>` : "";
+    const reject   = canReject   ? `<button class="btn danger"    data-action="reject"   data-id="${r.id}" style="padding:6px 10px;">Reject</button>` : "";
+
+    return [view, claim, release, complete, reject].filter(Boolean).join(" ");
   }
 
   function renderTable() {
@@ -126,24 +154,6 @@
     });
   }
 
-  function actionButtonsFor(r) {
-    const s = String(r.status || "").toLowerCase();
-    const mine = me && r.claimed_by === me.id;
-    const canClaim = s === "pending";
-    const canRelease = s === "claimed" && mine;
-    const canComplete = s === "claimed" && mine;
-    const canReject = s === "pending" || (s === "claimed" && mine);
-
-    const view = `<button class="btn" data-action="view" data-id="${r.id}" style="padding:6px 10px;">Open</button>`;
-    const claim = canClaim ? `<button class="btn warn" data-action="claim" data-id="${r.id}" style="padding:6px 10px;">Claim</button>` : "";
-    const release = canRelease ? `<button class="btn secondary" data-action="release" data-id="${r.id}" style="padding:6px 10px;">Release</button>` : "";
-    const complete = canComplete ? `<button class="btn" data-action="complete" data-id="${r.id}" style="padding:6px 10px;">Complete</button>` : "";
-    const reject = canReject ? `<button class="btn danger" data-action="reject" data-id="${r.id}" style="padding:6px 10px;">Reject</button>` : "";
-
-    // Keep it compact
-    return [view, claim, release, complete, reject].filter(Boolean).join(" ");
-  }
-
   function escapeHtml(s) {
     return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
   }
@@ -163,14 +173,14 @@
 
   async function fetchTransfers() {
     const params = new URLSearchParams();
-params.set("status", tabStatus);
-params.set("limit", String(perPage));
-params.set("offset", String((page - 1) * perPage));
-if (startDateEl.value) params.set("start", startDateEl.value);
-if (endDateEl.value) params.set("end", endDateEl.value);
-if (bankFilterEl.value) params.set("bank", bankFilterEl.value);
+    params.set("status", tabStatus);
+    params.set("limit", String(perPage));
+    params.set("offset", String((page - 1) * perPage));
+    if (startDateEl.value) params.set("start", startDateEl.value);
+    if (endDateEl.value) params.set("end", endDateEl.value);
+    if (bankFilterEl.value) params.set("bank", bankFilterEl.value);
 
-const res = await fetch(`/api/transfers?${params.toString()}`, { headers: authHeaders() });
+    const res = await fetch(`/api/transfers?${params.toString()}`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || `Failed to fetch: ${res.status}`);
 
@@ -211,7 +221,6 @@ const res = await fetch(`/api/transfers?${params.toString()}`, { headers: authHe
       try {
         await postJSON(`/api/transfers/${id}/claim`);
         await fetchTransfers();
-        // Open right away for flow
         const updated = rows.find(r => String(r.id) === String(id));
         openModal(updated || row);
       } catch (err) {
@@ -247,56 +256,83 @@ const res = await fetch(`/api/transfers?${params.toString()}`, { headers: authHe
   }
 
   // --- Modal logic
-function fillTreasurySelect() {
-  if (!d_treasury) return;
-  d_treasury.innerHTML =
-    `<option value="">Select treasury</option>` +
-    treasuries
-      .map(t => `<option value="${t.id}">${escapeHtml(t.name || t.label || t.id)}</option>`)
-      .join("");
-}
+  function fillTreasurySelect() {
+    if (!d_treasury) return;
+    d_treasury.innerHTML =
+      `<option value="">Select treasury</option>` +
+      treasuries
+        .map(t => `<option value="${t.id}">${escapeHtml(t.name || t.label || t.id)}</option>`)
+        .join("");
+  }
 
-function openModal(row) {
-  currentRow = row;
-  d_reqId.value = row.id || "";
-  d_status.value = String(row.status || "").toUpperCase();
-  d_user.value = row.user_name || row.cardholder_name || row.user_email || "—";
-  // use created_at if present; fall back to requested_at
-  d_requestedAt.value = fmtDate(row.created_at || row.requested_at);
-  d_amount.value = fmtMoney(row.amount_cents);
-  d_bank.value = row.bank || row.preferred_bank || "—";
-  d_destination.value = maskDest(row);
-  d_bankRef.value = row.bank_reference || "";
-  d_internalNote.value = row.internal_note || "";
+  function setModalActionsFor(row) {
+    const s = String(row.status || "").toLowerCase();
+    const mine = me && row.claimed_by === me.id;
 
-  // Buttons enablement by status/ownership
-  const s = String(row.status || "").toLowerCase();
-  const mine = me && row.claimed_by === me.id;
+    // Hide everything by default
+    claimBtn.style.display = "none";
+    releaseBtn.style.display = "none";
+    rejectBtn.style.display = "none";
+    completeBtn.style.display = "none";
 
-  claimBtn.disabled = !(s === "pending");
-  releaseBtn.disabled = !(s === "claimed" && mine);
-  rejectBtn.disabled = !(s === "pending" || (s === "claimed" && mine));
-  completeBtn.disabled = !(s === "claimed" && mine);
+    // Inputs default to read-only
+    d_treasury.disabled = true;
+    d_bankRef.disabled = true;
+    d_internalNote.disabled = true;
 
-  // Treasury select (always fill)
-  fillTreasurySelect();
+    if (s === "completed" || s === "rejected") {
+      return; // view only
+    }
 
-  modal.style.display = "flex";
-  // prevent page behind from scrolling; modal itself should scroll via CSS
-  document.body.style.overflow = "hidden";
-}
+    if (s === "pending") {
+      claimBtn.style.display = "inline-block";
+      rejectBtn.style.display = "inline-block";
+      return;
+    }
 
-function closeModal() {
-  modal.style.display = "none";
-  currentRow = null;
-  // restore page scrolling
-  document.body.style.overflow = "";
-}
+    if (s === "claimed") {
+      if (mine) {
+        releaseBtn.style.display = "inline-block";
+        completeBtn.style.display = "inline-block";
+        rejectBtn.style.display = "inline-block";
+        d_treasury.disabled = false;
+        d_bankRef.disabled = false;
+        d_internalNote.disabled = false;
+      } else {
+        // claimed by someone else: view only
+      }
+    }
+  }
 
-closeDetails.addEventListener("click", closeModal);
-modal.addEventListener("click", (e) => {
-  if (e.target === modal) closeModal();
-});
+  function openModal(row) {
+    currentRow = row;
+    d_reqId.value = row.id || "";
+    d_status.value = String(row.status || "").toUpperCase();
+    d_user.value = row.user_name || row.cardholder_name || row.user_email || "—";
+    d_requestedAt.value = fmtDate(row.requested_at || row.created_at); // prefer requested_at
+    d_amount.value = fmtMoney(row.amount_cents);
+    d_bank.value = row.bank || row.preferred_bank || "—";
+    d_destination.value = maskDest(row);
+    d_bankRef.value = row.bank_reference || "";
+    d_internalNote.value = row.internal_note || "";
+
+    fillTreasurySelect();
+    setModalActionsFor(row);
+
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden"; // page behind doesn't scroll
+  }
+
+  function closeModal() {
+    modal.style.display = "none";
+    currentRow = null;
+    document.body.style.overflow = ""; // restore
+  }
+
+  closeDetails.addEventListener("click", closeModal);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
 
   // Modal buttons
   claimBtn.addEventListener("click", async () => {
@@ -336,6 +372,7 @@ modal.addEventListener("click", (e) => {
 
   completeBtn.addEventListener("click", async () => {
     if (!currentRow) return;
+
     const bank_reference = d_bankRef.value.trim();
     const treasury_wallet_id = d_treasury.value;
     const internal_note = d_internalNote.value.trim();
@@ -349,16 +386,32 @@ modal.addEventListener("click", (e) => {
       return;
     }
 
+    // prevent double submits
+    const prevText = completeBtn.textContent;
+    completeBtn.disabled = true;
+    completeBtn.textContent = "Completing…";
+
     try {
       await postJSON(`/api/transfers/${currentRow.id}/complete`, {
         bank_reference,
         treasury_wallet_id,
         internal_note
       });
+
+      // Refresh list and reopen read-only
       await fetchTransfers();
-      closeModal();
+      const updated = rows.find(r => String(r.id) === String(currentRow.id));
+      if (updated) {
+        openModal(updated); // will show read-only because status=completed
+      } else {
+        closeModal();
+      }
     } catch (err) {
+      console.error(err);
       alert(`Complete failed: ${err.message}`);
+    } finally {
+      completeBtn.disabled = false;
+      completeBtn.textContent = prevText;
     }
   });
 
@@ -394,11 +447,11 @@ modal.addEventListener("click", (e) => {
     if (!rows.length) return;
     const headers = ["Requested","RequestID","Cardholder","Amount","Bank","DestinationMasked","Status","ClaimedBy","BankRef"];
     const data = rows.map(r => [
-      fmtDate(r.created_at),
+      fmtDate(r.requested_at || r.created_at),
       r.id,
       (r.user_name || r.cardholder_name || r.user_email || "").replace(/,/g," "),
       dollarsOnly(r.amount_cents),
-      r.bank || r.preferred_bank || "",
+      (r.bank || r.preferred_bank || ""),
       maskDest(r).replace(/,/g," "),
       String(r.status||""),
       (r.claimed_by_name || "").replace(/,/g," "),
