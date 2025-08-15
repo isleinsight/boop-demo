@@ -8,127 +8,48 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <meta name="description" content="Log in to your BOOP cardholder account." />
   <style>
-    :root{
-      --brand:#2f80ed; --brand-dark:#1c6fd8; --border:rgba(255,255,255,0.08);
-      --text:#e5e7eb; --muted:#cbd5e1; --white:#fff;
-      --shell:rgba(255,255,255,0.06);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin: 0;
-font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-color: #eef2ff;
-display: flex;
-flex-direction: column;
-min-height: 100vh;
-position: relative;
-overflow-x: hidden;
-background: #0b1220; /* solid base color */
-}
+  body {
+    margin: 0;
+    font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    color: #eef2ff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+    background: #0b1220; /* solid base color */
+  }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: -25vmax; /* oversize so no harsh edges */
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(60vmax 40vmax at 85% -10%, rgba(47,128,237,.25), transparent 60%),
-    radial-gradient(50vmax 35vmax at -10% 110%, rgba(16,185,129,.18), transparent 60%),
-    linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
-  background-repeat: no-repeat;
-  background-size: 140% 140%, 120% 120%, 100% 100%;
-  background-position: center center;
+  /* Oversized gradients so no visible repeat/seam */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -25vmax; /* expand beyond edges */
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60vmax 40vmax at 85% -10%, rgba(47,128,237,.25), transparent 60%),
+      radial-gradient(50vmax 35vmax at -10% 110%, rgba(16,185,129,.18), transparent 60%),
+      linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
+    background-repeat: no-repeat;
+    background-size: 140% 140%, 120% 120%, 100% 100%;
+    background-position: center center;
+  }
 
-    /* NAV */
-    nav{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.5);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);}
-    .nav-container{max-width:1100px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
-    .brand{display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none;font-weight:700}
-    .brand img{height:34px}
-    .nav-actions a{color:var(--text);text-decoration:none;padding:8px 14px;border-radius:10px;border:1px solid transparent;font-weight:500}
-    .nav-actions a:hover{border-color:var(--border)}
+  /* Example: keep your other page styles below */
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+  }
 
-    /* LAYOUT (centered, with small top spacing) */
-    main{
-      flex:1;
-      display:flex;
-      align-items:flex-start;           /* keeps it near the top */
-      justify-content:center;
-      padding:14px 18px 28px;           /* ~14px from the top as requested */
-    }
-    .stack{
-      width:100%;
-      max-width:520px;                   /* narrow, centered column */
-      display:grid;
-      gap:18px;
-      text-align:center;
-    }
-
-    /* Headings & text */
-    .intro h1{margin:6px 0 4px;font-size:clamp(28px,5vw,40px)}
-    .intro p{margin:0;color:var(--muted)}
-
-    /* Card */
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:22px;
-      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
-      text-align:left;
-    }
-    .card h2{margin:0 0 14px;font-size:1.25rem}
-
-    /* Form */
-    form{display:grid;gap:12px}
-    label{font-size:.9rem;color:#dbe3ff}
-    input{
-      width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border);
-      background:rgba(255,255,255,.02); color:#fff; outline:none;
-    }
-    input::placeholder{color:#9fb0d1}
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      padding:12px 16px;border-radius:12px;border:0;cursor:pointer;font-weight:600;
-      background:var(--brand); color:var(--white); box-shadow:0 10px 24px rgba(47,128,237,.15);
-    }
-    .btn:hover{background:var(--brand-dark)}
-    .helper{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
-    .helper a{color:#9cc2ff;text-decoration:none;font-size:.9rem}
-    .helper a:hover{color:#fff;text-decoration:underline}
-    .status{min-height:20px;margin-top:8px;font-size:.95rem}
-    .status.error{color:#ffb4b4}
-    .status.ok{color:#a7f3d0}
-
-    /* Footer */
-    footer{
-      border-top:1px solid var(--border);
-      background:rgba(11,18,32,.45);
-      backdrop-filter:blur(6px);
-    }
-    .footer-inner{
-      max-width:1100px;
-      margin:0 auto;
-      padding:14px 18px;
-      display:flex;
-      gap:12px;
-      align-items:center;
-      justify-content:center;
-      flex-wrap:wrap;
-      color:var(--muted);
-      font-size:.92rem;
-    }
-    .footer-inner a{
-      color:#a9c7ff;
-      text-decoration:none;
-    }
-    .footer-inner a:hover{ text-decoration:underline }
-
-    /* Tiny ring accent (kept subtle) */
-    .ring{position:absolute;inset:-120px auto auto -120px;width:300px;height:300px;border-radius:50%;
-      background:radial-gradient(closest-side, rgba(47,128,237,.35), transparent 70%);filter:blur(6px);pointer-events:none}
-  </style>
+  .container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+</style>
 </head>
 <body>
   <nav>
