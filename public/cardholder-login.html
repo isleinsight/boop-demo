@@ -16,17 +16,30 @@
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      color:#eef2ff;
-      background:
-        radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
-        radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
-      display:flex;
-      flex-direction:column;
-      min-height:100vh;
-    }
+      margin: 0;
+font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+color: #eef2ff;
+display: flex;
+flex-direction: column;
+min-height: 100vh;
+position: relative;
+overflow-x: hidden;
+background: #0b1220; /* solid base color */
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -25vmax; /* oversize so no harsh edges */
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60vmax 40vmax at 85% -10%, rgba(47,128,237,.25), transparent 60%),
+    radial-gradient(50vmax 35vmax at -10% 110%, rgba(16,185,129,.18), transparent 60%),
+    linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
+  background-repeat: no-repeat;
+  background-size: 140% 140%, 120% 120%, 100% 100%;
+  background-position: center center;
 
     /* NAV */
     nav{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.5);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);}
