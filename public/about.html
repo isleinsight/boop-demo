@@ -26,6 +26,11 @@
     .nav .inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:12px}
     .nav img{height:28px;display:block}
     .nav a.home{display:inline-flex;align-items:center;gap:10px;text-decoration:none}
+    /* Pilot badge bar */
+    .pilot{background:#eef2ff;border-bottom:1px solid #c7d2fe}
+    .pilot .inner{max-width:1120px;margin:0 auto;padding:10px 18px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .pilot .tag{background:#c7d2fe;color:#1e40af;border:1px solid #a5b4fc;padding:4px 10px;border-radius:999px;font-weight:600;font-size:.85rem}
+    .pilot small{color:#1e40af}
     /* Sections */
     .wrap{max-width:1120px;margin:0 auto;padding:28px 18px}
     .hero{display:grid;gap:14px;padding:28px 0 16px}
@@ -51,6 +56,13 @@
     summary{cursor:pointer;font-weight:600}
     /* Footer */
     .foot{color:var(--muted);text-align:center;padding:18px 0 36px}
+    /* Pilot notice modal */
+    .hold{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,31,54,.4);backdrop-filter:blur(1px);z-index:9999}
+    .hold .box{background:#fff;border:1px solid var(--stroke);border-radius:14px;max-width:520px;width:92%;padding:20px 18px;box-shadow:0 10px 24px rgba(16,24,40,.15)}
+    .hold h3{margin:0 0 8px}
+    .hold p{margin:8px 0;color:#374151}
+    .hold .close{margin-top:12px}
+    .hold .close .btn{width:100%}
     /* Responsive */
     @media (min-width:760px){
       .grid.cols-2{grid-template-columns:repeat(2,1fr)}
@@ -67,6 +79,14 @@
     </div>
   </header>
 
+  <!-- Pilot badge / explanation -->
+  <div class="pilot" role="status" aria-live="polite">
+    <div class="inner">
+      <span class="tag">Private Pilot</span>
+      <small>We’re in a limited rollout with selected partners. Some portals are available to approved pilot participants only.</small>
+    </div>
+  </div>
+
   <main class="wrap">
     <!-- HERO -->
     <section class="hero">
@@ -79,8 +99,10 @@
           Simple, transparent, and built for everyday life.
         </p>
         <div class="actions">
-          <a class="btn" href="mailto:info@boopcard.com?subject=Become%20a%20BOOP%20Vendor">Become a vendor</a>
-          <a class="btn secondary" href="/contact.html">Contact us</a>
+          <!-- Keep mailto working; label as pilot -->
+          <a class="btn" href="mailto:info@boopcard.com?subject=Pilot%20Vendor%20Inquiry">Join the Pilot (Vendors)</a>
+          <!-- Route non-working to pilot notice -->
+          <a class="btn secondary" href="/pilot/contact" data-hold>Contact us (Pilot)</a>
         </div>
       </div>
     </section>
@@ -110,8 +132,10 @@
           <li><span class="dot"></span><span>Free listing in our vendor directory (opt-in).</span></li>
         </ul>
         <div class="actions">
-          <a class="btn" href="mailto:info@boopcard.com?subject=Vendor%20Signup">Join as a vendor</a>
-          <a class="btn secondary" href="/docs/vendor-guide.pdf">Vendor guide (PDF)</a>
+          <!-- Keep mailto; label as pilot -->
+          <a class="btn" href="mailto:info@boopcard.com?subject=Pilot%20Vendor%20Signup">Join as a vendor (Pilot)</a>
+          <!-- Vendor guide placeholder -->
+          <a class="btn secondary" href="/pilot/vendor-guide" data-hold>Vendor guide (Pilot Version)</a>
         </div>
         <p style="color:var(--muted);font-size:.85rem;margin-top:8px">* Deposit timing depends on bank rails and holidays.</p>
       </div>
@@ -125,7 +149,8 @@
           <li><span class="dot"></span><span>API & secure data room for auditors.</span></li>
         </ul>
         <div class="actions">
-          <a class="btn" href="mailto:gov@boopcard.com?subject=Agency%20Inquiry">Talk to our team</a>
+          <!-- Keep mailto working; clearer subject -->
+          <a class="btn" href="mailto:gov@boopcard.com?subject=Government%20Pilot%20Inquiry">Talk to our team (Pilot)</a>
         </div>
       </div>
     </section>
@@ -180,7 +205,7 @@
         <h2>Frequently asked</h2>
         <details>
           <summary>Where can I use the BOOP Card?</summary>
-          <p>At participating vendors that accept BOOP. We’re adding locations regularly—check the vendor list in your account (coming soon).</p>
+          <p>At participating vendors that accept BOOP. We’re adding locations regularly—check the vendor list in your account (pilot access).</p>
         </details>
         <details>
           <summary>What does it cost?</summary>
@@ -195,8 +220,8 @@
         <h2>Get in touch</h2>
         <p>Email <a href="mailto:info@boopcard.com">info@boopcard.com</a> or call <a href="tel:+1-000-000-0000">+1 (000) 000-0000</a>.</p>
         <div class="actions">
-          <a class="btn" href="mailto:info@boopcard.com?subject=Become%20a%20BOOP%20Vendor">Become a vendor</a>
-          <a class="btn secondary" href="/contact.html">General contact</a>
+          <a class="btn" href="mailto:info@boopcard.com?subject=Pilot%20Vendor%20Inquiry">Become a vendor (Pilot)</a>
+          <a class="btn secondary" href="/pilot/contact" data-hold>General contact (Pilot)</a>
         </div>
       </div>
     </section>
@@ -204,6 +229,25 @@
     <p class="foot">© <span id="y"></span> BOOP. All rights reserved.</p>
   </main>
 
-  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+  <!-- Pilot notice modal (self-contained, no extra page needed) -->
+  <div class="hold" id="hold">
+    <div class="box" role="dialog" aria-modal="true" aria-labelledby="holdTitle">
+      <h3 id="holdTitle">Private Pilot Access</h3>
+      <p>This section is available to approved pilot participants. For access or a live demo, please email <a href="mailto:info@boopcard.com">info@boopcard.com</a>.</p>
+      <div class="close"><button class="btn secondary" onclick="document.getElementById('hold').style.display='none'">Okay</button></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('y').textContent=new Date().getFullYear();
+
+    // Intercept any link with data-hold to show the pilot notice instead of a dead page
+    document.addEventListener('click', (e)=>{
+      const a = e.target.closest('a[data-hold]');
+      if(!a) return;
+      e.preventDefault();
+      document.getElementById('hold').style.display='flex';
+    }, {capture:true});
+  </script>
 </body>
 </html>
