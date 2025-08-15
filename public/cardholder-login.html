@@ -7,135 +7,110 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <meta name="description" content="Log in to your BOOP cardholder account." />
-
   <style>
     :root{
       --brand:#2f80ed; --brand-dark:#1c6fd8;
-      --border:rgba(255,255,255,0.10);
-      --text:#e5e7eb; --muted:#cbd5e1; --white:#fff;
-      --bg:#0b1220;
-      --card-glass:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      --ink:#eaf0ff; --muted:#c8d2e6;
+      --card:#121826; --card-border:rgba(255,255,255,.06);
+      --field:#0f1624; --field-border:#293143;
+      --focus:#5aa2ff; --shadow:0 20px 40px rgba(0,0,0,.35);
+      --radius:16px;
+      --container: 820px;
     }
 
-    /* critical to avoid input overflow */
-    *,*::before,*::after{ box-sizing:border-box }
-
-    html,body{ height:100% }
+    *{box-sizing:border-box}
+    html,body{height:100%}
     body{
       margin:0;
       font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      color:#eef2ff;
-      display:flex; flex-direction:column; min-height:100vh;
-      background:var(--bg); position:relative; overflow-x:hidden;
-    }
+      color:var(--ink);
 
-    /* Non-repeating, oversized gradient (shows on iPad & desktop) */
-    body::before{
-      content:"";
-      position:fixed; z-index:-1; pointer-events:none;
-      inset:-28vmax; /* overscan so no seams */
-      background:
-        radial-gradient(70vmax 48vmax at 15% -10%, rgba(47,128,237,.28), transparent 60%),
-        radial-gradient(65vmax 45vmax at 100% 110%, rgba(16,185,129,.20), transparent 60%),
+      /* Solid base + two large viewport radials + subtle vertical gradient */
+      background-color:#0b1220;
+      background-image:
+        radial-gradient(60vw 55vh at 18% -12%, rgba(47,128,237,.40) 0%, rgba(47,128,237,0) 60%),
+        radial-gradient(55vw 50vh at 108% 118%, rgba(16,185,129,.26) 0%, rgba(16,185,129,0) 60%),
         linear-gradient(180deg, #0b1220 0%, #0d1220 40%, #0b1220 100%);
       background-repeat:no-repeat;
-      background-size:100% 100%, 100% 100%, 100% 100%;
-      will-change:transform;   /* helps Safari/iPad to render it */
-      transform:translateZ(0); /* nudge for iOS WebKit */
+      background-attachment:scroll, scroll, scroll;
+      background-position:center center, center center, center center;
+
+      display:flex; flex-direction:column; min-height:100vh; overflow-x:hidden;
     }
 
     /* NAV */
-    nav{
-      position:sticky; top:0; z-index:10;
-      background:rgba(11,18,32,.5); backdrop-filter:blur(6px);
-      border-bottom:1px solid var(--border);
-    }
-    .nav-container{
-      max-width:960px; margin:0 auto; padding:14px 18px;
-      display:flex; align-items:center; justify-content:space-between;
-    }
-    .brand{display:flex; align-items:center; gap:10px; color:var(--text); text-decoration:none; font-weight:700}
-    .brand img{height:38px; width:auto}
-    .nav-actions a{color:var(--text); text-decoration:none; padding:8px 14px; border-radius:10px; border:1px solid transparent; font-weight:500}
-    .nav-actions a:hover{border-color:var(--border)}
+    nav{position:sticky; top:0; z-index:10; background:rgba(11,18,32,.55); backdrop-filter:blur(6px); border-bottom:1px solid rgba(255,255,255,.06)}
+    .nav-inner{max-width:var(--container); margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between}
+    .brand{display:flex; align-items:center; gap:10px; text-decoration:none}
+    .brand img{height:34px}
+    .nav-actions a{color:var(--ink); text-decoration:none; opacity:.85}
+    .nav-actions a:hover{opacity:1}
 
-    /* MAIN (single, centered column) */
-    main{
-      flex:1;
-      display:flex; align-items:flex-start; justify-content:center;
-      padding: 14px 18px 28px;     /* pulls content higher */
-    }
-    .stack{
-      width:100%; max-width:560px;
-      display:flex; flex-direction:column; align-items:center; text-align:center;
-      gap:18px; margin-top: 10px;  /* header close to top */
-    }
+    /* LAYOUT */
+    main{flex:1; display:flex; align-items:flex-start; justify-content:center}
+    .stack{width:100%; max-width:var(--container); padding:28px 18px 48px; margin:0 auto}
 
-    .intro h1{
-      margin:0;
-      font-size:clamp(28px, 5vw, 40px);
-      line-height:1.15;
-      letter-spacing:.2px;
-    }
-    .intro p{
-      margin:0; color:var(--muted);
-    }
+    /* HEAD */
+    .intro{text-align:center; margin:18px 0 14px}
+    .intro h1{margin:0; font-size:clamp(28px,5vw,44px); letter-spacing:.2px}
+    .intro p{margin:8px 0 0; color:var(--muted)}
 
+    /* CARD */
     .card{
-      width:100%;
-      background:var(--card-glass);
-      border:1px solid var(--border);
-      border-radius:16px; padding:22px;
-      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+      margin:18px auto 0;
+      width:100%; max-width:640px;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+      border:1px solid var(--card-border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:22px;
     }
-    .card h2{ margin:0 0 14px; font-size:1.25rem }
+    .card h2{margin:0 0 12px; font-size:1.2rem; text-align:center}
 
-    form{ display:grid; gap:12px }
-    label{ font-size:.9rem; color:#dbe3ff; text-align:left }
+    /* FORM */
+    form{display:grid; gap:12px}
+    label{font-size:.9rem; color:#dbe3ff}
     input{
       width:100%;
       padding:12px 14px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.03);
-      color:#fff; outline:none;
+      border-radius:12px;
+      border:1px solid var(--field-border);
+      background:var(--field);
+      color:#fff;
+      outline:none;
+      text-align:left;          /* ← keep text left-aligned */
     }
-    input::placeholder{ color:#9fb0d1 }
+    input::placeholder{color:#93a3c4}
+    input:focus{border-color:var(--focus); box-shadow:0 0 0 3px rgba(90,162,255,.25)}
 
     .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:12px 16px; border-radius:10px; border:0; cursor:pointer; font-weight:600;
-      background:var(--brand); color:var(--white);
-      box-shadow:0 10px 24px rgba(47,128,237,.18);
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:12px 16px; border-radius:12px; border:0; cursor:pointer; font-weight:600;
+      background:var(--brand); color:#fff; box-shadow:0 10px 24px rgba(47,128,237,.18);
     }
-    .btn:hover{ background:var(--brand-dark) }
+    .btn:hover{background:var(--brand-dark)}
 
-    .helper{
-      display:flex; justify-content:space-between; align-items:center; margin-top:6px;
+    .helper{display:flex; justify-content:space-between; align-items:center; margin-top:6px}
+    .helper a{color:#a7c3ff; text-decoration:none; font-size:.92rem}
+    .helper a:hover{text-decoration:underline}
+    .status{min-height:20px; margin-top:8px; font-size:.95rem}
+    .status.error{color:#ffb4b4}
+    .status.ok{color:#a7f3d0}
+
+    /* FOOTER */
+    footer{margin-top:auto; border-top:1px solid rgba(255,255,255,.06); background:rgba(11,18,32,.55); backdrop-filter:blur(6px)}
+    .footer-inner{max-width:var(--container); margin:0 auto; padding:14px 18px; display:flex; gap:10px; align-items:center; justify-content:center; color:#b9c6e2; font-size:.92rem}
+    .footer-inner a{color:#c9d7ff; text-decoration:none}
+    .footer-inner a:hover{text-decoration:underline}
+
+    @media (max-width: 520px){
+      .helper{flex-direction:column; gap:8px}
     }
-    .helper a{ color:#9cc2ff; text-decoration:none; font-size:.9rem }
-    .helper a:hover{ color:#fff; text-decoration:underline }
-
-    .status{ min-height:20px; margin-top:8px; font-size:.95rem }
-    .status.error{ color:#ffb4b4 }
-    .status.ok{ color:#a7f3d0 }
-
-    footer{
-      border-top:1px solid var(--border);
-      padding:14px 18px;
-      display:flex; justify-content:center;
-      color:#cbd5e1; font-size:.92rem;
-      background:rgba(11,18,32,.4); backdrop-filter:blur(6px);
-    }
-    .footer-inner{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
-    footer a{ color:#9cc2ff; text-decoration:none }
-    footer a:hover{ color:#fff; text-decoration:underline }
   </style>
 </head>
-
 <body>
   <nav>
-    <div class="nav-container">
+    <div class="nav-inner">
       <a href="index.html" class="brand" aria-label="Back to BOOP home">
         <img src="assets/Boop-Logo.png" alt="BOOP logo" />
       </a>
@@ -182,7 +157,10 @@
     </div>
   </footer>
 
+  <!-- Existing login logic -->
   <script type="module" src="login-handler.js"></script>
-  <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
