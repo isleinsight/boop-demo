@@ -69,6 +69,12 @@
       .grid.cols-3{grid-template-columns:repeat(3,1fr)}
       .hero{grid-template-columns:2fr 1fr;align-items:center}
     }
+    /* FOOTER */
+    footer{margin-top:auto; border-top:1px solid rgba(255,255,255,.06); background:rgba(11,18,32,.55); backdrop-filter:blur(6px)}
+    .footer-inner{max-width:var(--container); margin:0 auto; padding:14px 18px; display:flex; gap:10px; align-items:center; justify-content:center; color:#b9c6e2; font-size:.92rem}
+    .footer-inner a{color:#c9d7ff; text-decoration:none}
+    .footer-inner a:hover{text-decoration:underline}
+
   </style>
 </head>
 <body>
@@ -237,7 +243,11 @@
   </div>
 
  <footer>
-    © <span id="year"></span> BOOP. All rights reserved.
+    <div class="footer-inner">
+      <span>© <span id="y"></span> BOOP</span> •
+      <a href="terms.html">Terms &amp; Conditions</a> •
+      <a href="privacy.html">Privacy Policy</a>
+    </div>
   </footer>
   
   <script>
