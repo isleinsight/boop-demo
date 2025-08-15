@@ -7,159 +7,132 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <meta name="description" content="Log in to your BOOP cardholder account." />
+
   <style>
-  :root{
-    --brand:#2f80ed;
-    --brand-dark:#1c6fd8;
-    --border:rgba(255,255,255,0.08);
-    --glass:rgba(255,255,255,0.08);
-    --text:#e5e7eb;
-    --muted:#cbd5e1;
-    --white:#fff;
-    --bg:#0b1220;
-  }
+    :root{
+      --brand:#2f80ed; --brand-dark:#1c6fd8;
+      --border:rgba(255,255,255,0.10);
+      --text:#e5e7eb; --muted:#cbd5e1; --white:#fff;
+      --bg:#0b1220;
+      --card-glass:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    }
 
-  /* PAGE */
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-    color:#eef2ff;
-    display:flex;
-    flex-direction:column;
-    min-height:100vh;
-    background:var(--bg);
-    position:relative;
-    overflow-x:hidden;
-  }
+    /* critical to avoid input overflow */
+    *,*::before,*::after{ box-sizing:border-box }
 
-  /* Fill the viewport with oversized gradients so no seam ever appears */
-  body::before{
-    content:"";
-    position:fixed;
-    inset:-30vmax;                 /* extend well beyond edges */
-    z-index:-1;
-    pointer-events:none;
-    background:
-      radial-gradient(60vmax 40vmax at 85% -10%, rgba(47,128,237,.25), transparent 60%),
-      radial-gradient(50vmax 35vmax at -10% 110%, rgba(16,185,129,.18), transparent 60%),
-      linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
-    background-repeat:no-repeat;
-    background-size:140% 140%, 120% 120%, 100% 100%;
-    background-position:center center;
-  }
+    html,body{ height:100% }
+    body{
+      margin:0;
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:#eef2ff;
+      display:flex; flex-direction:column; min-height:100vh;
+      background:var(--bg); position:relative; overflow-x:hidden;
+    }
 
-  /* NAV */
-  nav{
-    position:sticky; top:0; z-index:10;
-    background:rgba(11,18,32,.5);
-    backdrop-filter:blur(6px);
-    border-bottom:1px solid var(--border);
-  }
-  .nav-container{
-    max-width:1100px; margin:0 auto; padding:14px 18px;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .brand{display:flex; align-items:center; gap:10px; color:var(--text); text-decoration:none; font-weight:700}
-  .brand img{height:38px; width:auto} /* slightly larger so it’s obvious it’s clickable */
-  .nav-actions a{color:var(--text); text-decoration:none; padding:8px 14px; border-radius:10px; border:1px solid transparent; font-weight:500}
-  .nav-actions a:hover{border-color:var(--border)}
+    /* Non-repeating, oversized gradient (shows on iPad & desktop) */
+    body::before{
+      content:"";
+      position:fixed; z-index:-1; pointer-events:none;
+      inset:-28vmax; /* overscan so no seams */
+      background:
+        radial-gradient(70vmax 48vmax at 15% -10%, rgba(47,128,237,.28), transparent 60%),
+        radial-gradient(65vmax 45vmax at 100% 110%, rgba(16,185,129,.20), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0d1220 40%, #0b1220 100%);
+      background-repeat:no-repeat;
+      background-size:100% 100%, 100% 100%, 100% 100%;
+      will-change:transform;   /* helps Safari/iPad to render it */
+      transform:translateZ(0); /* nudge for iOS WebKit */
+    }
 
-  /* LAYOUT */
-  main{
-    flex:1;
-    display:flex;
-    align-items:flex-start;              /* pull content higher on the page */
-    justify-content:center;
-    padding: clamp(10px, 3vh, 20px) 18px 28px;
-  }
-  .stack{
-    width:100%; max-width:900px;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:28px;
-    align-items:start;
-    margin-top: clamp(10px, 3vh, 16px); /* keeps “Welcome back” closer to top */
-  }
-  @media (max-width: 900px){
-    .stack{ grid-template-columns:1fr; gap:18px; max-width:540px }
-  }
+    /* NAV */
+    nav{
+      position:sticky; top:0; z-index:10;
+      background:rgba(11,18,32,.5); backdrop-filter:blur(6px);
+      border-bottom:1px solid var(--border);
+    }
+    .nav-container{
+      max-width:960px; margin:0 auto; padding:14px 18px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .brand{display:flex; align-items:center; gap:10px; color:var(--text); text-decoration:none; font-weight:700}
+    .brand img{height:38px; width:auto}
+    .nav-actions a{color:var(--text); text-decoration:none; padding:8px 14px; border-radius:10px; border:1px solid transparent; font-weight:500}
+    .nav-actions a:hover{border-color:var(--border)}
 
-  /* INTRO SIDE */
-  .intro h1{
-    margin:0 0 8px;
-    font-size:clamp(28px, 5vw, 40px);
-    line-height:1.15;
-  }
-  .intro p{
-    margin:0;
-    color:var(--muted);
-  }
+    /* MAIN (single, centered column) */
+    main{
+      flex:1;
+      display:flex; align-items:flex-start; justify-content:center;
+      padding: 14px 18px 28px;     /* pulls content higher */
+    }
+    .stack{
+      width:100%; max-width:560px;
+      display:flex; flex-direction:column; align-items:center; text-align:center;
+      gap:18px; margin-top: 10px;  /* header close to top */
+    }
 
-  /* CARD (form container) */
-  .card{
-    background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-    border:1px solid var(--border);
-    border-radius:16px;
-    padding:22px;
-    box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
-  }
-  .card h2{ margin:0 0 14px; font-size:1.25rem }
+    .intro h1{
+      margin:0;
+      font-size:clamp(28px, 5vw, 40px);
+      line-height:1.15;
+      letter-spacing:.2px;
+    }
+    .intro p{
+      margin:0; color:var(--muted);
+    }
 
-  /* FORM */
-  form{ display:grid; gap:12px }
-  label{ font-size:.9rem; color:#dbe3ff }
-  input{
-    width:100%;
-    padding:12px 14px;
-    border-radius:12px;
-    border:1px solid var(--border);
-    background:rgba(255,255,255,.02);
-    color:#fff; outline:none;
-  }
-  input::placeholder{ color:#9fb0d1 }
+    .card{
+      width:100%;
+      background:var(--card-glass);
+      border:1px solid var(--border);
+      border-radius:16px; padding:22px;
+      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .card h2{ margin:0 0 14px; font-size:1.25rem }
 
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    padding:12px 16px; border-radius:12px; border:0; cursor:pointer; font-weight:600;
-    background:var(--brand); color:var(--white);
-    box-shadow:0 10px 24px rgba(47,128,237,.15);
-  }
-  .btn:hover{ background:var(--brand-dark) }
+    form{ display:grid; gap:12px }
+    label{ font-size:.9rem; color:#dbe3ff; text-align:left }
+    input{
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      color:#fff; outline:none;
+    }
+    input::placeholder{ color:#9fb0d1 }
 
-  .helper{
-    display:flex; justify-content:space-between; align-items:center; margin-top:6px;
-  }
-  .helper a{ color:#9cc2ff; text-decoration:none; font-size:.9rem }
-  .helper a:hover{ color:#fff; text-decoration:underline }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:12px 16px; border-radius:10px; border:0; cursor:pointer; font-weight:600;
+      background:var(--brand); color:var(--white);
+      box-shadow:0 10px 24px rgba(47,128,237,.18);
+    }
+    .btn:hover{ background:var(--brand-dark) }
 
-  .status{ min-height:20px; margin-top:8px; font-size:.95rem }
-  .status.error{ color:#ffb4b4 }
-  .status.ok{ color:#a7f3d0 }
+    .helper{
+      display:flex; justify-content:space-between; align-items:center; margin-top:6px;
+    }
+    .helper a{ color:#9cc2ff; text-decoration:none; font-size:.9rem }
+    .helper a:hover{ color:#fff; text-decoration:underline }
 
-  /* RING ACCENT (optional) */
-  .ring{
-    position:absolute; inset:auto -120px -120px auto;
-    width:320px; height:320px; border-radius:50%;
-    background:radial-gradient(closest-side, rgba(47,128,237,.28), transparent 70%);
-    filter:blur(6px); pointer-events:none;
-  }
-  @media (max-width: 900px){ .ring{ display:none } }
+    .status{ min-height:20px; margin-top:8px; font-size:.95rem }
+    .status.error{ color:#ffb4b4 }
+    .status.ok{ color:#a7f3d0 }
 
-  /* FOOTER */
-  footer{
-    border-top:1px solid var(--border);
-    background:rgba(11,18,32,.5);
-    backdrop-filter:blur(6px);
-  }
-  .footer-inner{
-    max-width:1100px; margin:0 auto; padding:14px 18px;
-    color:var(--muted); text-align:center; font-size:.92rem;
-  }
-  .footer-inner a{ color:#9cc2ff; text-decoration:none }
-  .footer-inner a:hover{ text-decoration:underline }
-</style>
+    footer{
+      border-top:1px solid var(--border);
+      padding:14px 18px;
+      display:flex; justify-content:center;
+      color:#cbd5e1; font-size:.92rem;
+      background:rgba(11,18,32,.4); backdrop-filter:blur(6px);
+    }
+    .footer-inner{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+    footer a{ color:#9cc2ff; text-decoration:none }
+    footer a:hover{ color:#fff; text-decoration:underline }
+  </style>
 </head>
+
 <body>
   <nav>
     <div class="nav-container">
@@ -172,8 +145,6 @@
     </div>
   </nav>
 
-  <div class="ring" aria-hidden="true"></div>
-
   <main>
     <div class="stack">
       <section class="intro" aria-label="Welcome">
@@ -182,7 +153,7 @@
       </section>
 
       <section class="card" aria-label="Cardholder login form">
-        <h2 style="text-align:center">Cardholder Login</h2>
+        <h2>Cardholder Login</h2>
         <form id="loginForm" data-role="cardholder" data-redirect="cardholder.html" novalidate>
           <div>
             <label for="email">Email</label>
@@ -211,11 +182,7 @@
     </div>
   </footer>
 
-  <!-- Existing login logic -->
   <script type="module" src="login-handler.js"></script>
-  <script>
-    // keep year current
-    document.getElementById('y').textContent = new Date().getFullYear();
-  </script>
+  <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
 </body>
 </html>
