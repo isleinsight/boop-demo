@@ -298,8 +298,13 @@
   const catsMsg = document.getElementById('catsMsg');
 
   // --- Helpers ---
-  function fmtMoney(n) { return (typeof n === 'number' && Number.isFinite(n)) ? ('BMD $' + n.toFixed(2)) : '—'; }
-  function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch { return iso || '—'; } }
+  function fmtMoney(n) {
+    return (typeof n === 'number' && Number.isFinite(n)) ? ('BMD $' + n.toFixed(2)) : '—';
+  }
+  function fmtDate(iso) {
+    try { return new Date(iso).toLocaleString(); }
+    catch { return iso || '—'; }
+  }
 
   async function fetchJSON(url, opts = {}) {
     const res = await fetch(url, {
@@ -368,11 +373,9 @@
 
     if (cardStatusEl) cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
 
-    // ⬇️ THIS is what “re-enable in selectStudent” meant:
     await Promise.all([
       loadBalance(),
       loadActivity()
-      // loadControls() // uncomment after we build /limits and /categories
     ]);
   }
 
@@ -404,7 +407,6 @@
     }
   }
 
-  // ✅ UPDATED: loadActivity uses /api/transactions/user/:userId
   async function loadActivity() {
     txns = [];
     page = 0;
@@ -484,12 +486,7 @@
     }
   }
 
-  // --- Controls (limits/categories) — functions left in place; not called yet ---
-  async function loadControls() {
-    // will implement after backend routes exist
-  }
-
-  // --- Add Funds modal (unchanged for now) ---
+  // --- Add Funds modal ---
   function openFunds() {
     if (fundsModal) { fundsModal.style.display = 'grid'; fundsModal.setAttribute('aria-hidden', 'false'); }
     if (amountInput) amountInput.focus();
@@ -501,12 +498,17 @@
     if (noteInput) noteInput.value = '';
   }
 
-  if (addFundsBtn) addFundsBtn.onclick = () => { if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; } openFunds(); };
+  if (addFundsBtn) addFundsBtn.onclick = () => {
+    if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; }
+    openFunds();
+  };
   if (closeFunds) closeFunds.onclick = closeFundsModal;
   if (fundsModal) fundsModal.addEventListener('click', (e) => { if (e.target === fundsModal) closeFundsModal(); });
+
   if (confirmFunds) {
     confirmFunds.onclick = async () => {
       if (!amountInput || !fundsMsg) return;
+
       fundsMsg.style.display = 'none';
       const amt = Number(amountInput.value);
       if (!Number.isFinite(amt) || amt <= 0) {
@@ -515,29 +517,43 @@
         fundsMsg.style.display = 'block';
         return;
       }
-      confirmFunds.disabled = true; confirmFunds.textContent = 'Processing…';
+
+      confirmFunds.disabled = true;
+      confirmFunds.textContent = 'Processing…';
+
       try {
-        fetch(`/api/wallets/${currentWalletId}/parent-deposits`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-  body: JSON.stringify({ amount: Number(amountInput.value), note: (noteInput && noteInput.value) || null })
-});
+        const res = await fetch(`/api/wallets/${currentWalletId}/parent-deposits`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ amount: amt, note: (noteInput && noteInput.value) || null })
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            amount: amt,
+            note: (noteInput && noteInput.value) || null
+          })
         });
-        if (!res.ok) throw new Error(await res.text());
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          throw new Error(errText || `HTTP ${res.status}`);
+        }
+
         fundsMsg.textContent = 'Funds added successfully.';
         fundsMsg.className = 'msg ok';
         fundsMsg.style.display = 'block';
-        await loadBalance(); await loadActivity();
+
+        await loadBalance();
+        await loadActivity();
+
         setTimeout(closeFundsModal, 900);
-      } catch {
-        fundsMsg.textContent = 'Failed to add funds.';
+      } catch (e) {
+        fundsMsg.textContent = 'Failed to add funds.' + (e?.message ? ` (${e.message})` : '');
         fundsMsg.className = 'msg error';
         fundsMsg.style.display = 'block';
       } finally {
-        confirmFunds.disabled = false; confirmFunds.textContent = 'Add Funds';
+        confirmFunds.disabled = false;
+        confirmFunds.textContent = 'Add Funds';
       }
     };
   }
