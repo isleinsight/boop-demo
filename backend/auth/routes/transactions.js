@@ -199,33 +199,44 @@ LIMIT $${values.length - 1} OFFSET $${values.length}
 
 // 📄 GET /api/transactions/user/:userId
 router.get('/user/:userId', authenticateToken, async (req, res) => {
-  const { role } = req.user;
+  const callerId = req.user?.userId ?? req.user?.id;
+  const role = (req.user?.role || '').toLowerCase();
   const { userId } = req.params;
-  const limit  = parseInt(req.query.limit, 10)  || 10;
+  const limit  = parseInt(req.query.limit, 10)  || 50;
   const offset = parseInt(req.query.offset, 10) || 0;
 
-  if (role !== 'admin') {
-    return res.status(403).json({ message: 'You do not have permission to view these transactions.' });
+  // authorize: admin OR (same user) OR (parent linked to that student)
+  let allowed = role === 'admin' || String(callerId) === String(userId);
+  if (!allowed && role === 'parent') {
+    const link = await pool.query(
+      `SELECT 1 FROM student_parents WHERE student_id = $1 AND parent_id = $2 LIMIT 1`,
+      [userId, callerId]
+    );
+    allowed = link.rowCount > 0;
   }
+  if (!allowed) return res.status(403).json({ message: 'Not authorized for this student.' });
 
   try {
     const txRes = await pool.query(`
       SELECT
-  t.id,
-  t.wallet_id,
-  t.type,
-  t.amount_cents,
-  t.note,
-  t.created_at,
-  ${NAME_FIELDS_SQL},
-  ${TO_DISPLAY_SQL}
-FROM transactions t
-LEFT JOIN users s ON s.id = t.sender_id
-LEFT JOIN users r ON r.id = t.recipient_id
-${TRANSFER_JOIN_SQL}
-WHERE t.user_id = $1
-ORDER BY t.created_at DESC
-LIMIT $2 OFFSET $3
+        t.id,
+        t.wallet_id,
+        t.user_id,
+        t.type,
+        t.amount_cents,
+        t.note,
+        t.method,
+        t.category,
+        t.created_at,
+        ${NAME_FIELDS_SQL},
+        ${TO_DISPLAY_SQL}
+      FROM transactions t
+      LEFT JOIN users s ON s.id = t.sender_id
+      LEFT JOIN users r ON r.id = t.recipient_id
+      ${TRANSFER_JOIN_SQL}
+      WHERE t.user_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
     const countRes = await pool.query(
@@ -233,16 +244,11 @@ LIMIT $2 OFFSET $3
       [userId]
     );
 
-    txRes.rows.forEach(row => {
-      try {
-        console.log(`🔁 TX ${row.id}: ${row.type.toUpperCase()} | FROM ${row.sender_name} → TO ${row.recipient_name} | $${(row.amount_cents/100).toFixed(2)}`);
-      } catch {}
-    });
-
     return res.status(200).json({
-  transactions: decorateTx(txRes.rows),
-  totalCount: countRes.rows[0].count
-});
+      transactions: decorateTx(txRes.rows),
+      totalCount: countRes.rows[0].count,
+      limit, offset
+    });
   } catch (err) {
     console.error('❌ Failed to load target user transactions:', err);
     return res.status(500).json({ message: 'An error occurred while retrieving transactions.' });
