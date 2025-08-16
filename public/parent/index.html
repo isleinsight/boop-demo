@@ -143,6 +143,68 @@
     #schoolPill{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .modal__card{ max-width:96vw; }
   }
+    /* === Fix cut-off content & force true mobile layout === */
+
+/* 1) Allow horizontal scroll if something *does* overflow (don’t hide it) */
+html, body { overflow-x:auto !important; }
+
+/* 2) Make grid go single-column sooner so nothing is squeezed off-screen */
+@media (max-width: 1000px){
+  .grid { grid-template-columns: 1fr !important; }
+}
+
+/* 3) Prevent flex/grid children from forcing the page wider */
+.card,
+.card__head,
+.row,
+.actions { min-width: 0 !important; }
+
+/* 4) Buttons can shrink and wrap nicely on small screens */
+@media (max-width: 700px){
+  .actions { flex-wrap: wrap; gap: 8px; }
+  .actions .btn-primary,
+  .actions .btn-light {
+    flex: 1 1 140px;       /* shrink before overflowing */
+    max-width: 100%;
+    padding: 10px 12px;
+  }
+  .select { min-width: 0; width: 100%; max-width: 320px; }
+}
+
+/* 5) Table stays within the card; if it needs, it scrolls *inside* the card */
+#activityWrap > div[style*="overflow:auto"]{
+  overflow-x:auto !important;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* === Keep Logout always visible === */
+
+/* Let the header wrap lines if needed (so the logo and logout never collide) */
+.nav-container { flex-wrap: wrap !important; }
+
+/* On small screens, pin Logout to the top-right so it never disappears */
+@media (max-width: 700px){
+  .nav-container { position: relative; }
+  #logoutBtn{
+    position: fixed;
+    top: 8px;
+    right: 10px;
+    z-index: 1000;
+    background: rgba(11,18,32,.92);
+    border: 1px solid rgba(255,255,255,.25);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  /* make sure logo isn’t tiny */
+  .nav-left img { height: 32px !important; }
+}
+
+/* Optional: don’t let the page get “too” wide on big desktops */
+@media (min-width: 1400px){
+  .wrap { max-width: 960px !important; }
+}
 </style>
 </head>
 <body>
