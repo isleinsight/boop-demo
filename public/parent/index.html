@@ -419,16 +419,56 @@
 }
 
   async function loadActivity() {
+  txns = [];
+  page = 0;
+  renderActivity();
+  if (!currentStudentId) return;
+
+  try {
+    const resp = await fetchJSON(`/api/transactions/user/${currentStudentId}?limit=200&offset=0`);
+    const list = Array.isArray(resp) ? resp : (resp.transactions || []);
+
+    txns = list.map(t => {
+      const cents = Number(t.amount_cents || 0);
+      const uid = String(currentStudentId);
+
+      // Decide sign for display:
+      // debit/purchase -> negative; credit/refund -> positive;
+      // transfers: negative if student is sender, positive if student is recipient
+      let sign = 1;
+      const kind = (t.type || '').toLowerCase();
+      if (kind === 'debit' || kind === 'purchase') sign = -1;
+      if (kind === 'credit' || kind === 'refund')  sign =  1;
+      if (kind === 'transfer') {
+        if (String(t.sender_id) === uid)   sign = -1;
+        if (String(t.recipient_id) === uid) sign =  1;
+      }
+
+      const amount = (cents / 100) * sign;
+
+      // What to show in the "Merchant" column
+      const merchant = t.to_display || t.recipient_name || t.sender_name || t.note || '—';
+
+      // Category: your route returns t.category (jsonb in DB). Use a simple string if present.
+      const category =
+        (typeof t.category === 'string' && t.category) ||
+        (t.method ? String(t.method).toUpperCase() : 'GENERAL');
+
+      return {
+        amount,
+        status: (t.status || kind || 'posted').toString().toUpperCase(),
+        category,
+        merchant,
+        created_at: t.created_at
+      };
+    });
+  } catch (e) {
+    console.error(e);
     txns = [];
-    page = 0;
-    renderActivity();
-    if (!currentWalletId) return;
-    try {
-      const list = await fetchJSON(`/api/wallets/${currentWalletId}/transactions`); // adjust if your route differs
-      txns = Array.isArray(list) ? list : (list.transactions || []);
-    } catch { /* ignore */ }
-    renderActivity();
   }
+
+  renderActivity();
+}
 
   function renderActivity() {
     const total = txns.length;
