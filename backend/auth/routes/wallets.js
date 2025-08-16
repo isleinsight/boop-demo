@@ -96,52 +96,52 @@ router.get("/user/:userId", authenticateToken, async (req, res) => {
   }
 });
 
+// --- Parent-funded top-ups (keeps treasury flow untouched) -------------------
 /**
- * POST /api/wallets/:walletId/deposits
- * Body: { amount: number (BMD), note?: string, source?: "HSBC" | "BUTTERFIELD" }
- * Auth: admin OR parent linked to the wallet owner (student)
- * Effects (double-entry):
- *  - INSERT transactions(type='debit',  wallet=treasury, amount_cents=+)
- *  - INSERT transactions(type='credit', wallet=student,  amount_cents=+)
- *  - UPDATE treasury.balance -= amount_cents
- *  - UPDATE student.balance  += amount_cents
- * Returns: { success, wallet_id, balance_cents, transaction_ids: { debit, credit } }
+ * POST /api/wallets/:walletId/parent-deposits
+ * Body: { amount: number, note?: string, source?: "HSBC" | "BUTTERFIELD" }
+ * Double-entry:
+ *   Dr Merchant Settlement (asset down)
+ *   Cr Student Wallet (liability up)
  */
-router.post("/:walletId/deposits", authenticateToken, async (req, res) => {
+router.post("/:walletId/parent-deposits", authenticateToken, async (req, res) => {
   const client = await db.connect();
+  const where = "POST /api/wallets/:walletId/parent-deposits";
   try {
     const { walletId } = req.params;
     const { amount, note, source } = req.body;
 
-    // --- validate amount ---
+    // 1) Validate amount
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0) {
       return res.status(400).json({ message: "Invalid amount." });
     }
     const amount_cents = Math.round(amt * 100);
 
-    // --- resolve treasury wallet id from env ---
-    // default to HSBC; allow override via body.source
-    const treasuryWalletId =
-      (String(source || "").toUpperCase() === "BUTTERFIELD"
-        ? process.env.TREASURY_WALLET_ID_BUTTERFIELD
-        : process.env.TREASURY_WALLET_ID_HSBC) || process.env.TREASURY_WALLET_ID_BUTTERFIELD;
+    // 2) Pick merchant settlement wallet from env
+    const pick = String(source || "").toUpperCase();
+    const MERCH_HSBC = process.env.MERCHANT_WALLET_ID_HSBC;
+    const MERCH_BUTT = process.env.MERCHANT_WALLET_ID_BUTTERFIELD; // optional, if you add one later
+    const merchantWalletId =
+      (pick === "BUTTERFIELD" ? MERCH_BUTT : MERCH_HSBC) || MERCH_BUTT || MERCH_HSBC;
 
-    if (!treasuryWalletId) {
-      return res.status(500).json({ message: "Treasury wallet not configured." });
+    if (!merchantWalletId) {
+      console.error(`${where}: ❌ Missing MERCHANT_WALLET_ID_* env`);
+      return res.status(500).json({ message: "Merchant settlement wallet not configured." });
     }
 
-    // --- load destination (student) wallet + owner ---
+    // 3) Load destination (student) wallet
     const destRes = await client.query(
       `SELECT id, user_id, balance FROM wallets WHERE id = $1`,
       [walletId]
     );
-    if (!destRes.rowCount) return res.status(404).json({ message: "Wallet not found." });
-
+    if (!destRes.rowCount) {
+      return res.status(404).json({ message: "Wallet not found." });
+    }
     const studentWallet = destRes.rows[0];
     const studentUserId = studentWallet.user_id;
 
-    // --- authorization: admin OR linked parent ---
+    // 4) Authorize: admin or linked parent
     const callerId = req.user?.userId ?? req.user?.id;
     const role = (req.user?.role || "").toLowerCase();
     let allowed = role === "admin";
@@ -156,66 +156,66 @@ router.post("/:walletId/deposits", authenticateToken, async (req, res) => {
       return res.status(403).json({ message: "Not authorized to deposit to this wallet." });
     }
 
-    // --- load treasury wallet + ensure sufficient funds (optional) ---
-    const treasRes = await client.query(
+    // 5) Load merchant settlement wallet
+    const merchRes = await client.query(
       `SELECT id, user_id, balance FROM wallets WHERE id = $1`,
-      [treasuryWalletId]
+      [merchantWalletId]
     );
-    if (!treasRes.rowCount) return res.status(500).json({ message: "Treasury wallet not found." });
-    const treasuryWallet = treasRes.rows[0];
+    if (!merchRes.rowCount) {
+      return res.status(500).json({ message: "Merchant settlement wallet not found." });
+    }
+    const merchantWallet = merchRes.rows[0];
+    if (!merchantWallet.user_id) {
+      return res.status(500).json({ message: "Merchant wallet misconfigured (no user_id)." });
+    }
 
-    // If you want to enforce positive treasury balance:
-    // if (Number(treasuryWallet.balance) < amount_cents) {
-    //   return res.status(400).json({ message: "Treasury balance insufficient." });
-    // }
-
+    // 6) Post double-entry
     await client.query("BEGIN");
 
-    // Shared reference for audit linking (idempotency key could go here)
-    const reference_code = `TOPUP:${Date.now()}:${studentWallet.id}:${amount_cents}`;
+    const reference_code = `PARENT_TOPUP:${Date.now()}:${studentWallet.id}:${amount_cents}`;
 
-    // 1) DEBIT treasury (money leaves treasury)
+    // DEBIT merchant (money leaves merchant → to student)
     const debitTx = await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, method, created_at,
          added_by, sender_id, recipient_id, reference_code, metadata
        ) VALUES ($1, $2, 'debit', $3, $4, 'internal', NOW(),
-                 $5, $2, $6, $7, jsonb_build_object('kind','treasury_topup'))
+                 $5, $2, $6, $7, jsonb_build_object('kind','parent_topup'))
        RETURNING id`,
       [
-        treasuryWallet.id,
-        treasuryWallet.user_id,         // user whose wallet is debited
+        merchantWallet.id,
+        merchantWallet.user_id,
         amount_cents,
         note || 'Parent top-up',
         callerId,
-        studentUserId,                  // recipient is the student
+        studentUserId,
         reference_code
       ]
     );
 
-    // 2) CREDIT student (money arrives to student)
+    // CREDIT student
     const creditTx = await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, method, created_at,
          added_by, sender_id, recipient_id, reference_code, metadata
        ) VALUES ($1, $2, 'credit', $3, $4, 'internal', NOW(),
-                 $5, $6, $2, $7, jsonb_build_object('kind','treasury_topup'))
+                 $5, $6, $2, $7, jsonb_build_object('kind','parent_topup'))
        RETURNING id`,
       [
         studentWallet.id,
-        studentUserId,                  // user whose wallet is credited
+        studentUserId,
         amount_cents,
         note || 'Top-up received',
         callerId,
-        treasuryWallet.user_id,         // sender is treasury user
+        merchantWallet.user_id,
         reference_code
       ]
     );
 
-    // 3) Update balances (zero-sum)
+    // 7) Update balances
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
-      [amount_cents, treasuryWallet.id]
+      [amount_cents, merchantWallet.id]
     );
     const newBalRes = await client.query(
       `UPDATE wallets SET balance = balance + $1 WHERE id = $2 RETURNING balance`,
@@ -223,7 +223,6 @@ router.post("/:walletId/deposits", authenticateToken, async (req, res) => {
     );
 
     await client.query("COMMIT");
-
     return res.status(200).json({
       success: true,
       wallet_id: studentWallet.id,
@@ -233,8 +232,8 @@ router.post("/:walletId/deposits", authenticateToken, async (req, res) => {
     });
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
-    console.error("❌ POST /api/wallets/:walletId/deposits (double-entry):", err);
-    return res.status(500).json({ message: "Failed to add funds." });
+    console.error("❌ parent-deposits error:", err);
+    return res.status(500).json({ message: err.message || "Failed to add funds." });
   } finally {
     client.release();
   }
