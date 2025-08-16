@@ -2,11 +2,17 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../../db");
-const { authenticateToken } = require("../middleware/authMiddleware);
+const { authenticateToken } = require("../middleware/authMiddleware");
 
 function isAdmin(req) {
   return (req.user?.role || "").toLowerCase() === "admin";
 }
+
+// ✅ TEMP: quick health checks to verify mounting & path
+router.get("/ping", (_req, res) => res.json({ ok: true, scope: "wallets" }));
+router.get("/user/test", (_req, res) =>
+  res.json({ ok: true, route: "/api/wallets/user/:userId" })
+);
 
 // ✅ Your schema: student_parents(student_id, parent_id)
 // student_id == student's users.id (same as students.user_id)
@@ -52,7 +58,7 @@ router.get("/mine", authenticateToken, async (req, res) => {
 /**
  * GET /api/wallets/user/:userId
  * Admin OR parent linked to that student.
- * Response stays: { wallet_id, balance_cents }
+ * Response: { wallet_id, balance_cents }
  */
 router.get("/user/:userId", authenticateToken, async (req, res) => {
   try {
