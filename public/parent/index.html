@@ -383,37 +383,40 @@
   }
 
   async function loadBalance() {
-    if (balanceAmount) balanceAmount.textContent = '—';
-    if (balanceStatus) balanceStatus.textContent = 'Balance';
-    if (!currentWalletId) {
-      if (balanceMsg) {
-        balanceMsg.textContent = 'Balance unavailable (no wallet found).';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
-      }
-      return;
-    }
-    try {
-  const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
-
-  // backend always gives cents
-  const cents = Number(data.balance_cents ?? 0);
-  if (!Number.isFinite(cents)) throw new Error('No balance_cents field');
-
-  const normalized = cents / 100;
-
-  if (balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
+  if (balanceAmount) balanceAmount.textContent = '—';
   if (balanceStatus) balanceStatus.textContent = 'Balance';
-  if (balanceMsg) balanceMsg.style.display = 'none';
-} catch {
-  if (balanceMsg) {
-    balanceMsg.textContent = 'Balance currently unavailable.';
-    balanceMsg.className = 'msg error';
-    balanceMsg.style.display = 'block';
+
+  // You can keep this guard if you only want to show balance when a wallet exists.
+  // (If you'd rather show $0.00 even without a wallet, remove this block.)
+  if (!currentWalletId) {
+    if (balanceMsg) {
+      balanceMsg.textContent = 'Balance unavailable (no wallet found).';
+      balanceMsg.className = 'msg error';
+      balanceMsg.style.display = 'block';
+    }
+    return;
+  }
+
+  try {
+    const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
+
+    // backend always gives cents
+    const cents = Number(data.balance_cents ?? 0);
+    if (!Number.isFinite(cents)) throw new Error('No balance_cents field');
+
+    const normalized = cents / 100;
+
+    if (balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
+    if (balanceStatus) balanceStatus.textContent = 'Balance';
+    if (balanceMsg) balanceMsg.style.display = 'none';
+  } catch {
+    if (balanceMsg) {
+      balanceMsg.textContent = 'Balance currently unavailable.';
+      balanceMsg.className = 'msg error';
+      balanceMsg.style.display = 'block';
+    }
   }
 }
-    }
-  }
 
   async function loadActivity() {
     txns = [];
