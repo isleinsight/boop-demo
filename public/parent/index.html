@@ -8,222 +8,155 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
-  :root{
-    --ink:#0b1220; --boop:#2f80ed; --boop-dark:#1c6fd8; --muted:#6b7280; --text:#1f2937;
-    --stroke:#e5e7eb; --bg:#f5f8fb; --card:#ffffff; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
-  }
+    :root{
+      /* your palette (unchanged) */
+      --ink:#0b1220; --boop:#2f80ed; --boop-dark:#1c6fd8; --muted:#6b7280; --text:#1f2937;
+      --stroke:#e5e7eb; --bg:#f5f8fb; --card:#ffffff; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
+    }
 
-  *{ box-sizing:border-box; }
-  html, body { margin:0; background:var(--bg); color:var(--text);
-    font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    overflow-x:hidden; }
-  html { font-size:16px; }
-  @media (max-width:420px){ html{ font-size:15px; } }
-  @media (max-width:360px){ html{ font-size:14px; } }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      overflow-x:hidden;
+    }
 
-  /* ── NAV ─────────────────────────────────────────────────────────── */
-  nav { background:#0b1220; color:#fff; }
-  .nav-container{
-    max-width:1120px; width:100%;
-    margin:0 auto; padding:10px 16px;
-    display:flex; align-items:center; justify-content:space-between;
-    gap:12px; flex-wrap:wrap;            /* ✅ allow wrapping so Logout never disappears */
-  }
-  .nav-left{ display:flex; align-items:center; gap:10px; min-width:0; }
-  .nav-left img{ height:clamp(28px,4vw,36px); display:block; }
-  .nav-right{ display:flex; align-items:center; gap:10px; margin-left:auto; }
-  .nav-right a{
-    display:inline-flex; align-items:center; justify-content:center;
-    color:#fff; text-decoration:none; font-weight:600;
-    padding:8px 12px; border:1px solid rgba(255,255,255,.25); border-radius:10px;
-    white-space:nowrap;
-  }
-  /* On small screens, push Logout to a new line and keep it visible */
-  @media (max-width:740px){
-    .nav-right{ width:100%; justify-content:flex-end; order:2; }
-    .nav-right a{ width:auto; }
-    .nav-left{ order:1; }
-  }
+    /* NAV (sticky + resilient) */
+    .nav{
+      position:sticky; top:0; z-index:100;
+      background:#0b1220;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .nav__inner{
+      max-width:1120px;margin:0 auto;
+      padding:10px 16px;
+      display:flex; align-items:center; gap:12px;
+    }
+    .nav__brand{display:flex; align-items:center; gap:10px; min-width:0}
+    .nav__brand img{height:28px; display:block}
+    .nav__spacer{flex:1 1 auto}
+    .nav__actions{display:flex; align-items:center; gap:8px; flex:0 0 auto}
+    #logoutBtn{
+      background:transparent; color:#fff; text-decoration:none; font-weight:600;
+      border:1px solid rgba(255,255,255,.25); border-radius:10px; padding:8px 12px; display:inline-flex;
+    }
+    @media (max-width:540px){
+      .nav__brand img{height:26px}
+      #logoutBtn{position:fixed; right:10px; top:8px; background:rgba(11,18,32,.9)}
+    }
 
-  /* ── LAYOUT / GRID ───────────────────────────────────────────────── */
-  .wrap{ max-width:min(960px, 100%); margin:0 auto; padding:24px 18px; }
-  .grid{
-    display:grid;
-    grid-template-columns:1.35fr 1fr;   /* a bit narrower left column */
-    gap:18px; align-items:start;
-  }
-  @media (max-width:1100px){ .grid{ grid-template-columns:1fr; } } /* ✅ one column when narrow */
-  @media (min-width:1400px){ .wrap{ max-width:900px; } }           /* don’t stretch on very wide screens */
+    /* LAYOUT */
+    .wrap{max-width:1120px;margin:0 auto;padding:18px}
+    .layout{
+      display:grid; gap:18px;
+      grid-template-columns: 1.2fr .8fr; /* content + controls */
+      grid-template-areas:
+        "overview controls"
+        "activity controls";
+    }
+    @media (max-width:1000px){
+      .layout{
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "overview"
+          "activity"
+          "controls";
+      }
+    }
 
-  /* ── CARDS ───────────────────────────────────────────────────────── */
-  .card{
-    background:var(--card); border:1px solid var(--stroke); border-radius:14px;
-    box-shadow:0 10px 24px rgba(16,24,40,.06); min-width:0; /* ✅ prevent overflow */
-  }
-  .card__head{
-    padding:14px 16px; border-bottom:1px solid var(--stroke);
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-  }
-  .card__body{ padding:16px; }
+    /* CARDS */
+    .card{
+      background:var(--card);
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      box-shadow:0 10px 24px rgba(16,24,40,.06);
+      min-width:0; /* allow to shrink */
+    }
+    .card__head{
+      padding:12px 14px;
+      border-bottom:1px solid var(--stroke);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .card__body{padding:14px}
 
-  .pill{ font-size:.8rem; background:#eef2ff; color:#374151; border-radius:999px; padding:4px 10px; border:1px solid #dbeafe; }
-  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-  .select{ padding:10px 12px; border:1px solid var(--stroke); border-radius:10px; background:#fff; font-size:.95rem; min-width:220px; }
+    /* OVERVIEW */
+    .overview{grid-area:overview}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:.8rem;background:#eef2ff;color:#374151;border-radius:999px;padding:4px 10px;border:1px solid #dbeafe}
+    .select{padding:10px 12px;border:1px solid var(--stroke);border-radius:10px;background:#fff;font-size:.95rem;min-width:220px;max-width:100%}
+    .balance{display:flex; align-items:center; gap:16px; flex-wrap:wrap}
+    .balance__amount{font-size:2rem; font-weight:700; color:var(--ink)}
+    .balance__status{color:var(--muted); font-size:.95rem}
+    .actions{display:flex; gap:8px; flex-wrap:wrap}
+    .btn-primary{background:var(--boop);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+    .btn-primary:hover{background:var(--boop-dark)}
+    .btn-light{background:#fff;color:var(--boop);border:1px solid var(--stroke);border-radius:10px;padding:10px 14px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 
-  .balance{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  .balance__amount{ font-size:clamp(1.6rem, 2.4vw, 2rem); font-weight:700; color:var(--ink); }
-  .balance__status{ color:var(--muted); font-size:.95rem; }
-  .actions{ display:flex; gap:8px; flex-wrap:wrap; }
-  .btn-primary{
-    background:var(--boop); color:#fff; border:0; border-radius:10px;
-    padding:10px 14px; font-weight:600; text-decoration:none;
-    display:inline-flex; align-items:center; justify-content:center;
-  }
-  .btn-primary:hover{ background:var(--boop-dark); }
-  .btn-light{
-    background:#fff; color:var(--boop); border:1px solid var(--stroke); border-radius:10px;
-    padding:10px 14px; font-weight:600; text-decoration:none;
-    display:inline-flex; align-items:center; justify-content:center;
-  }
+    @media (max-width:700px){
+      .actions .btn-primary, .actions .btn-light{flex:1 1 140px}
+      .select{min-width:0; flex:1 1 220px}
+    }
 
-  /* Buttons shrink nicely on phones */
-  @media (max-width:680px){
-    .actions{ width:100%; }
-    .actions .btn-primary, .actions .btn-light{ flex:1 1 160px; padding:10px 12px; }
-    .select{ min-width:0; width:100%; max-width:320px; }
-  }
+    /* ACTIVITY */
+    .activity{grid-area:activity}
+    table{width:100%; border-collapse:collapse}
+    th,td{padding:12px 10px; border-bottom:1px solid var(--stroke); text-align:left}
+    th{font-weight:600;color:#374151}
+    td.small{color:var(--muted);font-size:.92rem}
+    .tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.8rem;font-weight:600;background:#eef2ff;color:#1f2937;border:1px solid #dbeafe}
+    .empty{color:var(--muted); text-align:center; padding:30px 8px}
+    .pager{display:flex; justify-content:flex-end; gap:8px; padding-top:10px}
+    .pager button{border:1px solid var(--stroke); background:#fff; color:#111827; border-radius:8px; padding:8px 10px; cursor:pointer}
+    .pager button:disabled{opacity:.5; cursor:not-allowed}
+    .table-scroll{overflow:auto; -webkit-overflow-scrolling:touch}
 
-  /* ── TABLE (no sideways scroll; squish + hide minor cols on phones) ── */
-  table{ width:100%; border-collapse:collapse; table-layout:fixed; }
-  th, td{ padding:12px 10px; border-bottom:1px solid var(--stroke); text-align:left; word-break:break-word; }
-  th{ font-weight:600; color:#374151; }
-  td.small{ color:var(--muted); font-size:.92rem; }
-  .tag{ display:inline-block; padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:600; background:#eef2ff; color:#1f2937; border:1px solid #dbeafe; }
-  .empty{ color:var(--muted); text-align:center; padding:30px 8px; }
-  /* keep the table’s own scroll (if ever needed) inside its card, not the page */
-  #activityWrap > div[style*="overflow:auto"]{ overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
-  /* On narrow screens, hide Category & Status so it fits without scrolling */
-  @media (max-width:560px){
-    th:nth-child(3), th:nth-child(5), td:nth-child(3), td:nth-child(5){ display:none; }
-  }
+    /* CONTROLS */
+    .controls{grid-area:controls}
+    .summary h3{margin:0 0 6px} .summary p{margin:0;color:var(--muted)}
+    .controls .row{align-items:center}
+    .controls label{display:block;font-weight:600;margin-bottom:6px}
+    .input, select.input{width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:10px;outline:none;font-size:.95rem}
+    .input:focus{border-color:var(--boop)}
+    .switch{display:flex;align-items:center;gap:10px;margin:6px 0}
+    .switch input{transform:scale(1.1)}
+    .msg{font-size:.92rem;margin-top:6px;display:none}
+    .msg.error{color:var(--danger)} .msg.ok{color:var(--ok)}
 
-  .pager{ display:flex; justify-content:flex-end; gap:8px; padding-top:10px; }
-  .pager button{ border:1px solid var(--stroke); background:#fff; color:#111827; border-radius:8px; padding:8px 10px; cursor:pointer; }
-  .pager button:disabled{ opacity:.5; cursor:not-allowed; }
+    /* FOOTER */
+    footer{padding:22px;color:#6b7280;text-align:center;margin-top:20px}
+    footer a{color:var(--boop);text-decoration:none;font-weight:600}
 
-  /* ── SUMMARY / CONTROLS ───────────────────────────────────────────── */
-  .summary h3{ margin:0 0 6px; }
-  .summary p{ margin:0; color:var(--muted); }
-  .controls .row{ align-items:center; }
-  .controls label{ display:block; font-weight:600; margin-bottom:6px; }
-  .input, select.input{ width:100%; padding:12px 14px; border:1px solid var(--stroke); border-radius:10px; outline:none; font-size:.95rem; }
-  .input:focus{ border-color:var(--boop); }
-  .switch{ display:flex; align-items:center; gap:10px; margin:6px 0; }
-  .switch input{ transform:scale(1.1); }
-  .msg{ font-size:.92rem; margin-top:6px; display:none; }
-  .msg.error{ color:var(--danger); }
-  .msg.ok{ color:var(--ok); }
-
-  /* ── MODALS ───────────────────────────────────────────────────────── */
-  .modal{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:50; padding:16px; }
-  .modal__card{ width:100%; max-width:520px; background:#fff; border-radius:14px; border:1px solid var(--stroke); box-shadow:0 20px 50px rgba(0,0,0,.15); overflow:hidden; }
-  .modal__head{ padding:14px 16px; border-bottom:1px solid var(--stroke); display:flex; align-items:center; justify-content:space-between; }
-  .modal__body{ padding:16px; display:grid; gap:12px; }
-  .modal__foot{ padding:14px 16px; border-top:1px solid var(--stroke); display:flex; gap:10px; justify-content:flex-end; }
-  .close{ background:#f3f4f6; border:1px solid var(--stroke); color:#111827; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer; }
-
-  /* ── FOOTER ───────────────────────────────────────────────────────── */
-  footer{ padding:22px; color:#6b7280; text-align:center; margin-top:20px; }
-  footer a{ color:var(--boop); text-decoration:none; font-weight:600; }
-
-  /* ── EXTRA small screens tweaks ───────────────────────────────────── */
-  @media (max-width:680px){
-    .wrap{ padding:16px 14px; }
-    .balance{ gap:10px; }
-    #schoolPill{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .modal__card{ max-width:96vw; }
-  }
-    /* === Fix cut-off content & force true mobile layout === */
-
-/* 1) Allow horizontal scroll if something *does* overflow (don’t hide it) */
-html, body { overflow-x:auto !important; }
-
-/* 2) Make grid go single-column sooner so nothing is squeezed off-screen */
-@media (max-width: 1000px){
-  .grid { grid-template-columns: 1fr !important; }
-}
-
-/* 3) Prevent flex/grid children from forcing the page wider */
-.card,
-.card__head,
-.row,
-.actions { min-width: 0 !important; }
-
-/* 4) Buttons can shrink and wrap nicely on small screens */
-@media (max-width: 700px){
-  .actions { flex-wrap: wrap; gap: 8px; }
-  .actions .btn-primary,
-  .actions .btn-light {
-    flex: 1 1 140px;       /* shrink before overflowing */
-    max-width: 100%;
-    padding: 10px 12px;
-  }
-  .select { min-width: 0; width: 100%; max-width: 320px; }
-}
-
-/* 5) Table stays within the card; if it needs, it scrolls *inside* the card */
-#activityWrap > div[style*="overflow:auto"]{
-  overflow-x:auto !important;
-  -webkit-overflow-scrolling:touch;
-}
-
-/* === Keep Logout always visible === */
-
-/* Let the header wrap lines if needed (so the logo and logout never collide) */
-.nav-container { flex-wrap: wrap !important; }
-
-/* On small screens, pin Logout to the top-right so it never disappears */
-@media (max-width: 700px){
-  .nav-container { position: relative; }
-  #logoutBtn{
-    position: fixed;
-    top: 8px;
-    right: 10px;
-    z-index: 1000;
-    background: rgba(11,18,32,.92);
-    border: 1px solid rgba(255,255,255,.25);
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 10px;
-    white-space: nowrap;
-  }
-  /* make sure logo isn’t tiny */
-  .nav-left img { height: 32px !important; }
-}
-
-/* Optional: don’t let the page get “too” wide on big desktops */
-@media (min-width: 1400px){
-  .wrap { max-width: 960px !important; }
-}
-</style>
+    /* MODALS (unchanged) */
+    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.45);z-index:50;padding:16px}
+    .modal__card{width:100%;max-width:520px;background:#fff;border-radius:14px;border:1px solid var(--stroke);box-shadow:0 20px 50px rgba(0,0,0,.15);overflow:hidden}
+    .modal__head{padding:14px 16px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between}
+    .modal__body{padding:16px;display:grid;gap:12px}
+    .modal__foot{padding:14px 16px;border-top:1px solid var(--stroke);display:flex;gap:10px;justify-content:flex-end}
+    .close{background:#f3f4f6;border:1px solid var(--stroke);color:#111827;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+  </style>
 </head>
 <body>
-<nav>
-  <div class="nav-container">
-    <div class="nav-left">
-      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+  <!-- NAV -->
+  <header class="nav">
+    <div class="nav__inner nav-container">
+      <div class="nav__brand nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav__spacer"></div>
+      <div class="nav__actions nav-right">
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
     </div>
-    <div class="nav-right">
-      <a href="#" id="logoutBtn">Log Out</a>
-    </div>
-  </div>
-</nav>
+  </header>
 
-<main class="wrap">
-  <section class="grid">
-    <!-- LEFT -->
-    <div>
-      <div class="card" id="studentCard">
+  <!-- MAIN -->
+  <main class="wrap">
+    <section class="layout">
+      <!-- OVERVIEW (student + balance + quick actions + identity bits) -->
+      <div class="card overview" id="studentCard">
         <div class="card__head">
           <div class="row">
             <strong>Student</strong>
@@ -234,10 +167,18 @@ html, body { overflow-x:auto !important; }
           <span id="schoolPill" class="pill" style="display:none"></span>
         </div>
         <div class="card__body">
-          <div class="balance">
-            <div class="balance__amount" id="balanceAmount">—</div>
-            <div class="balance__status" id="balanceStatus">Balance</div>
+          <div class="row" style="justify-content:space-between;align-items:flex-start">
+            <div style="min-width:200px">
+              <h3 id="studentName" style="margin:0 0 4px">—</h3>
+              <p id="studentInfo" class="small" style="margin:0;color:var(--muted)">Loading student details…</p>
+              <p id="cardStatus" class="small" style="margin:6px 0 0;color:var(--muted)"></p>
+            </div>
+            <div class="balance">
+              <div class="balance__amount" id="balanceAmount">—</div>
+              <div class="balance__status" id="balanceStatus">Balance</div>
+            </div>
           </div>
+
           <div class="actions" style="margin-top:12px">
             <button id="addFundsBtn" class="btn-primary" type="button">Add Funds</button>
             <a id="freezeBtn" class="btn-light" href="javascript:void(0)">Freeze Card</a>
@@ -246,23 +187,24 @@ html, body { overflow-x:auto !important; }
         </div>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <!-- ACTIVITY (full width under overview on mobile) -->
+      <div class="card activity">
         <div class="card__head">
           <strong>Recent activity</strong>
           <span class="pill" id="activityCountPill" style="display:none"></span>
         </div>
         <div class="card__body" id="activityWrap">
           <div class="empty" id="activityEmpty">No recent transactions.</div>
-          <div style="overflow:auto">
+          <div class="table-scroll">
             <table id="activityTable" style="display:none">
               <thead>
-              <tr>
-                <th>Date</th>
-                <th>Merchant</th>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Status</th>
-              </tr>
+                <tr>
+                  <th>Date</th>
+                  <th>Merchant</th>
+                  <th>Category</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
               </thead>
               <tbody id="activityTbody"></tbody>
             </table>
@@ -273,27 +215,15 @@ html, body { overflow-x:auto !important; }
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- RIGHT -->
-    <aside>
-      <div class="card summary">
-        <div class="card__head"><strong>Overview</strong></div>
-        <div class="card__body">
-          <h3 id="studentName">—</h3>
-          <p id="studentInfo" class="small">Loading student details…</p>
-          <p id="cardStatus" class="small" style="margin-top:6px;color:var(--muted)"></p>
-        </div>
-      </div>
-
-      <!-- Controls (limits/categories — left in UI, not called yet) -->
-      <div class="card controls" style="margin-top:16px">
+      <!-- CONTROLS -->
+      <aside class="card controls summary">
         <div class="card__head"><strong>Controls</strong></div>
         <div class="card__body">
           <div>
             <label for="limitInput">Monthly spending limit (BMD)</label>
             <input id="limitInput" class="input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 150.00" />
-            <div style="display:flex;gap:8px;margin-top:10px">
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
               <button id="saveLimitBtn" class="btn-primary" type="button">Save limit</button>
               <button id="clearLimitBtn" class="btn-light" type="button">Clear</button>
             </div>
@@ -309,436 +239,321 @@ html, body { overflow-x:auto !important; }
             <div class="switch"><input id="cat_electronics" type="checkbox"> <span>Allow: Electronics</span></div>
             <div class="switch"><input id="cat_entertainment" type="checkbox"> <span>Allow: Entertainment</span></div>
             <div class="switch"><input id="cat_other" type="checkbox"> <span>Allow: Other</span></div>
-            <div style="display:flex;gap:8px;margin-top:10px">
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
               <button id="saveCatsBtn" class="btn-primary" type="button">Save categories</button>
               <button id="resetCatsBtn" class="btn-light" type="button">Reset</button>
             </div>
             <div id="catsMsg" class="msg" aria-live="polite"></div>
           </div>
         </div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- Add Funds Modal -->
+  <div id="fundsModal" class="modal" aria-hidden="true">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="fundsTitle">
+      <div class="modal__head">
+        <strong id="fundsTitle">Add Funds</strong>
+        <button class="close" id="closeFunds">Close</button>
       </div>
-    </aside>
-  </section>
-</main>
-
-<!-- Add Funds Modal -->
-<div id="fundsModal" class="modal" aria-hidden="true">
-  <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="fundsTitle">
-    <div class="modal__head">
-      <strong id="fundsTitle">Add Funds</strong>
-      <button class="close" id="closeFunds">Close</button>
-    </div>
-    <div class="modal__body">
-      <label>Amount (BMD)
-        <input id="amountInput" class="input" type="number" inputmode="decimal" min="1" step="0.01" placeholder="25.00" />
-      </label>
-      <label>Note (optional)
-        <input id="noteInput" class="input" type="text" placeholder="Top-up for lunches" />
-      </label>
-      <div id="fundsMsg" class="msg" aria-live="polite"></div>
-    </div>
-    <div class="modal__foot">
-      <button id="confirmFunds" class="btn-primary">Add Funds</button>
+      <div class="modal__body">
+        <label>Amount (BMD)
+          <input id="amountInput" class="input" type="number" inputmode="decimal" min="1" step="0.01" placeholder="25.00" />
+        </label>
+        <label>Note (optional)
+          <input id="noteInput" class="input" type="text" placeholder="Top-up for lunches" />
+        </label>
+        <div id="fundsMsg" class="msg" aria-live="polite"></div>
+      </div>
+      <div class="modal__foot">
+        <button id="confirmFunds" class="btn-primary">Add Funds</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Request Another Child Modal -->
-<div id="requestModal" class="modal" aria-hidden="true">
-  <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="reqTitle">
-    <div class="modal__head">
-      <strong id="reqTitle">Request another child</strong>
-      <button class="close" id="closeRequest">Close</button>
-    </div>
-    <div class="modal__body">
-      <label>Child’s full name
-        <input id="reqName" class="input" type="text" placeholder="First Last" />
-      </label>
-      <label>Date of birth
-        <input id="reqDob" class="input" type="date" />
-      </label>
-      <label>School (optional)
-        <input id="reqSchool" class="input" type="text" placeholder="School name" />
-      </label>
-      <label>Notes (optional)
-        <input id="reqNotes" class="input" type="text" placeholder="Anything else we should know" />
-      </label>
-      <div id="reqMsg" class="msg" aria-live="polite"></div>
-    </div>
-    <div class="modal__foot">
-      <button id="submitRequest" class="btn-primary">Submit request</button>
+  <!-- Request Another Child Modal -->
+  <div id="requestModal" class="modal" aria-hidden="true">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="reqTitle">
+      <div class="modal__head">
+        <strong id="reqTitle">Request another child</strong>
+        <button class="close" id="closeRequest">Close</button>
+      </div>
+      <div class="modal__body">
+        <label>Child’s full name
+          <input id="reqName" class="input" type="text" placeholder="First Last" />
+        </label>
+        <label>Date of birth
+          <input id="reqDob" class="input" type="date" />
+        </label>
+        <label>School (optional)
+          <input id="reqSchool" class="input" type="text" placeholder="School name" />
+        </label>
+        <label>Notes (optional)
+          <input id="reqNotes" class="input" type="text" placeholder="Anything else we should know" />
+        </label>
+        <div id="reqMsg" class="msg" aria-live="polite"></div>
+      </div>
+      <div class="modal__foot">
+        <button id="submitRequest" class="btn-primary">Submit request</button>
+      </div>
     </div>
   </div>
-</div>
 
-<footer>
-  © <span id="year"></span> BOOP. All rights reserved.
-  &nbsp;•&nbsp; <a href="/terms.html">Terms</a> &nbsp;•&nbsp; <a href="/privacy.html">Privacy</a>
-</footer>
+  <footer>
+    © <span id="year"></span> BOOP. All rights reserved.
+    &nbsp;•&nbsp; <a href="/terms.html">Terms</a> &nbsp;•&nbsp; <a href="/privacy.html">Privacy</a>
+  </footer>
 
-<script>
-(function () {
-  // --- Year ---
-  const yearEl = document.getElementById('year');
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
+  <!-- ===== JS (unchanged from your working version) ===== -->
+  <script>
+  (function () {
+    // --- Year ---
+    const yearEl = document.getElementById('year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-  // --- Auth guard ---
-  const token = localStorage.getItem('boop_jwt');
-  if (!token) {
-    window.location.href = '../index.html';
-    return;
-  }
+    // --- Auth guard ---
+    const token = localStorage.getItem('boop_jwt');
+    if (!token) { window.location.href = '../index.html'; return; }
 
-  // --- State ---
-  let parentId = null;
-  let students = [];
-  let currentStudentId = null;
-  let currentWalletId = null;
-  let txns = [];
-  let page = 0;
-  const PAGE_SIZE = 8;
+    // --- State ---
+    let parentId = null;
+    let students = [];
+    let currentStudentId = null;
+    let currentWalletId = null;
+    let txns = [];
+    let page = 0;
+    const PAGE_SIZE = 8;
 
-  // --- El refs ---
-  const studentSelect = document.getElementById('studentSelect');
-  const schoolPill = document.getElementById('schoolPill');
-  const studentNameEl = document.getElementById('studentName');
-  const studentInfoEl = document.getElementById('studentInfo');
-  const cardStatusEl = document.getElementById('cardStatus');
+    // --- El refs ---
+    const studentSelect = document.getElementById('studentSelect');
+    const schoolPill = document.getElementById('schoolPill');
+    const studentNameEl = document.getElementById('studentName');
+    const studentInfoEl = document.getElementById('studentInfo');
+    const cardStatusEl = document.getElementById('cardStatus');
 
-  const balanceAmount = document.getElementById('balanceAmount');
-  const balanceStatus = document.getElementById('balanceStatus');
-  const balanceMsg = document.getElementById('balanceMsg');
+    const balanceAmount = document.getElementById('balanceAmount');
+    const balanceStatus = document.getElementById('balanceStatus');
+    const balanceMsg = document.getElementById('balanceMsg');
 
-  const activityEmpty = document.getElementById('activityEmpty');
-  const activityTable = document.getElementById('activityTable');
-  const activityTbody = document.getElementById('activityTbody');
-  const activityCountPill = document.getElementById('activityCountPill');
-  const prevBtn = document.getElementById('prevPage');
-  const nextBtn = document.getElementById('nextPage');
+    const activityEmpty = document.getElementById('activityEmpty');
+    const activityTable = document.getElementById('activityTable');
+    const activityTbody = document.getElementById('activityTbody');
+    const activityCountPill = document.getElementById('activityCountPill');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
 
-  const addFundsBtn = document.getElementById('addFundsBtn');
-  const fundsModal = document.getElementById('fundsModal');
-  const closeFunds = document.getElementById('closeFunds');
-  const confirmFunds = document.getElementById('confirmFunds');
-  const amountInput = document.getElementById('amountInput');
-  const noteInput = document.getElementById('noteInput');
-  const fundsMsg = document.getElementById('fundsMsg');
+    const addFundsBtn = document.getElementById('addFundsBtn');
+    const fundsModal = document.getElementById('fundsModal');
+    const closeFunds = document.getElementById('closeFunds');
+    const confirmFunds = document.getElementById('confirmFunds');
+    const amountInput = document.getElementById('amountInput');
+    const noteInput = document.getElementById('noteInput');
+    const fundsMsg = document.getElementById('fundsMsg');
 
-  const requestChildBtn = document.getElementById('requestChildBtn'); // may not exist
-  const requestModal = document.getElementById('requestModal');
-  const closeRequest = document.getElementById('closeRequest');
-  const submitRequest = document.getElementById('submitRequest');
-  const reqName = document.getElementById('reqName');
-  const reqDob = document.getElementById('reqDob');
-  const reqSchool = document.getElementById('reqSchool');
-  const reqNotes = document.getElementById('reqNotes');
-  const reqMsg = document.getElementById('reqMsg');
+    const requestChildBtn = document.getElementById('requestChildBtn'); // may not exist
+    const requestModal = document.getElementById('requestModal');
+    const closeRequest = document.getElementById('closeRequest');
+    const submitRequest = document.getElementById('submitRequest');
+    const reqName = document.getElementById('reqName');
+    const reqDob = document.getElementById('reqDob');
+    const reqSchool = document.getElementById('reqSchool');
+    const reqNotes = document.getElementById('reqNotes');
+    const reqMsg = document.getElementById('reqMsg');
 
-  const limitInput = document.getElementById('limitInput');
-  const saveLimitBtn = document.getElementById('saveLimitBtn');
-  const clearLimitBtn = document.getElementById('clearLimitBtn');
-  const limitMsg = document.getElementById('limitMsg');
+    const limitInput = document.getElementById('limitInput');
+    const saveLimitBtn = document.getElementById('saveLimitBtn');
+    const clearLimitBtn = document.getElementById('clearLimitBtn');
+    const limitMsg = document.getElementById('limitMsg');
 
-  const saveCatsBtn = document.getElementById('saveCatsBtn');
-  const resetCatsBtn = document.getElementById('resetCatsBtn');
-  const catsMsg = document.getElementById('catsMsg');
+    const saveCatsBtn = document.getElementById('saveCatsBtn');
+    const resetCatsBtn = document.getElementById('resetCatsBtn');
+    const catsMsg = document.getElementById('catsMsg');
 
-  // --- Helpers ---
-  function fmtMoney(n) {
-    return (typeof n === 'number' && Number.isFinite(n)) ? ('BMD $' + n.toFixed(2)) : '—';
-  }
-  function fmtDate(iso) {
-    try { return new Date(iso).toLocaleString(); }
-    catch { return iso || '—'; }
-  }
-
-  async function fetchJSON(url, opts = {}) {
-    const res = await fetch(url, {
-      ...opts,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...(opts.headers || {})
-      }
-    });
-    if (!res.ok) throw new Error(await res.text().catch(()=>'HTTP error'));
-    return res.json();
-  }
-
-  // --- Data loaders ---
-  async function loadMe() {
-    const me = await fetchJSON('/api/me');
-    if ((me.role || '').toLowerCase() !== 'parent') {
-      alert('This portal is for Parent accounts.');
-      window.location.href = '/';
-      return;
-    }
-    parentId = me.id;
-  }
-
-  async function loadAssignedStudents() {
-    const detail = await fetchJSON(`/api/users/${parentId}`);
-    students = detail.assigned_students || [];
-    renderStudentOptions();
-    if (students.length) {
-      selectStudent(students[0].id);
-    } else {
-      if (studentSelect) studentSelect.innerHTML = '<option>No students linked</option>';
-      activityEmpty.textContent = 'No students found.';
-    }
-  }
-
-  function renderStudentOptions() {
-    if (!studentSelect) return;
-    studentSelect.innerHTML = students.map(s => {
-      const full = `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Student';
-      return `<option value="${s.id}">${full}</option>`;
-    }).join('');
-    studentSelect.onchange = () => selectStudent(studentSelect.value);
-  }
-
-  async function selectStudent(studentId) {
-    currentStudentId = studentId;
-    if (balanceMsg) balanceMsg.style.display = 'none';
-    page = 0;
-
-    const stu = await fetchJSON(`/api/users/${studentId}`);
-    currentWalletId = stu.wallet_id || null;
-
-    const name = `${stu.first_name || ''} ${stu.last_name || ''}`.trim();
-    if (studentNameEl) studentNameEl.textContent = name || 'Student';
-
-    const sProfile = stu.student_profile || {};
-    const school = sProfile.school_name ? `School: ${sProfile.school_name}` : '';
-    if (schoolPill) {
-      schoolPill.style.display = school ? 'inline-block' : 'none';
-      schoolPill.textContent = school;
-    }
-    const grade = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
-    if (studentInfoEl) studentInfoEl.textContent = [grade].filter(Boolean).join(' • ') || '—';
-
-    if (cardStatusEl) cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
-
-    await Promise.all([
-      loadBalance(),
-      loadActivity()
-    ]);
-  }
-
-  async function loadBalance() {
-    if (balanceAmount) balanceAmount.textContent = '—';
-    if (balanceStatus) balanceStatus.textContent = 'Balance';
-    if (!currentWalletId) {
-      if (balanceMsg) {
-        balanceMsg.textContent = 'Balance unavailable (no wallet found).';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
-      }
-      return;
-    }
-    try {
-      const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
-      const cents = Number(data.balance_cents ?? 0);
-      if (!Number.isFinite(cents)) throw new Error('No balance_cents field');
-      const normalized = cents / 100;
-      if (balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
-      if (balanceStatus) balanceStatus.textContent = 'Balance';
-      if (balanceMsg) balanceMsg.style.display = 'none';
-    } catch {
-      if (balanceMsg) {
-        balanceMsg.textContent = 'Balance currently unavailable.';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
-      }
-    }
-  }
-
-  async function loadActivity() {
-    txns = [];
-    page = 0;
-    renderActivity();
-    if (!currentStudentId) return;
-
-    try {
-      const resp = await fetchJSON(`/api/transactions/user/${currentStudentId}?limit=200&offset=0`);
-      const list = Array.isArray(resp) ? resp : (resp.transactions || []);
-
-      txns = list.map(t => {
-        const cents = Number(t.amount_cents || 0);
-        const uid = String(currentStudentId);
-        let sign = 1;
-        const kind = (t.type || '').toLowerCase();
-        if (kind === 'debit' || kind === 'purchase') sign = -1;
-        if (kind === 'credit' || kind === 'refund')  sign =  1;
-        if (kind === 'transfer') {
-          if (String(t.sender_id) === uid)   sign = -1;
-          if (String(t.recipient_id) === uid) sign =  1;
-        }
-        const amount = (cents / 100) * sign;
-        const merchant = t.to_display || t.recipient_name || t.sender_name || t.note || '—';
-        const category =
-          (typeof t.category === 'string' && t.category) ||
-          (t.method ? String(t.method).toUpperCase() : 'GENERAL');
-
-        return {
-          amount,
-          status: (t.status || kind || 'posted').toString().toUpperCase(),
-          category,
-          merchant,
-          created_at: t.created_at
-        };
+    // --- Helpers ---
+    function fmtMoney(n){ return (typeof n==='number'&&Number.isFinite(n))?('BMD $'+n.toFixed(2)):'—'; }
+    function fmtDate(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso||'—'; } }
+    async function fetchJSON(url, opts = {}){
+      const res = await fetch(url, {
+        ...opts,
+        headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}
       });
-    } catch (e) {
-      console.error(e);
-      txns = [];
+      if(!res.ok) throw new Error(await res.text().catch(()=> 'HTTP error'));
+      return res.json();
     }
 
-    renderActivity();
-  }
-
-  function renderActivity() {
-    const total = txns.length;
-    if (activityCountPill) {
-      activityCountPill.style.display = total ? 'inline-block' : 'none';
-      activityCountPill.textContent = `${total} items`;
+    // --- Data loaders ---
+    async function loadMe(){
+      const me = await fetchJSON('/api/me');
+      if((me.role||'').toLowerCase()!=='parent'){ alert('This portal is for Parent accounts.'); window.location.href='/'; return; }
+      parentId = me.id;
     }
-    const start = page * PAGE_SIZE, end = start + PAGE_SIZE, slice = txns.slice(start, end);
-    if (prevBtn) { prevBtn.disabled = page === 0; prevBtn.onclick = () => { if (page > 0) { page--; renderActivity(); } }; }
-    if (nextBtn) { nextBtn.disabled = end >= total; nextBtn.onclick = () => { if (end < total) { page++; renderActivity(); } }; }
 
-    if (!slice.length) {
-      if (activityEmpty) activityEmpty.style.display = 'block';
-      if (activityTable) activityTable.style.display = 'none';
-      return;
+    async function loadAssignedStudents(){
+      const detail = await fetchJSON(`/api/users/${parentId}`);
+      students = detail.assigned_students || [];
+      renderStudentOptions();
+      if(students.length){ selectStudent(students[0].id); }
+      else{
+        if(studentSelect) studentSelect.innerHTML = '<option>No students linked</option>';
+        if(activityEmpty) activityEmpty.textContent = 'No students found.';
+      }
     }
-    if (activityEmpty) activityEmpty.style.display = 'none';
-    if (activityTable) activityTable.style.display = 'table';
-    if (activityTbody) {
-      activityTbody.innerHTML = slice.map(tx => {
-        const amt = Number(tx.amount || 0);
-        const amtStr = (amt < 0 ? '-' : '+') + fmtMoney(Math.abs(amt));
-        const status = (tx.status || 'posted').toString().toUpperCase();
-        const cat = tx.category || 'GENERAL';
-        const merchant = tx.merchant || '—';
-        const date = tx.created_at;
-        return `<tr>
-          <td class="small">${fmtDate(date)}</td>
-          <td>${merchant}</td>
-          <td><span class="tag">${cat}</span></td>
-          <td>${amt < 0 ? '<span style="color:#ef4444">' + amtStr + '</span>' : '<span style="color:#10b981">' + amtStr + '</span>'}</td>
-          <td class="small">${status}</td>
-        </tr>`;
+
+    function renderStudentOptions(){
+      if(!studentSelect) return;
+      studentSelect.innerHTML = students.map(s=>{
+        const full = `${s.first_name||''} ${s.last_name||''}`.trim() || 'Student';
+        return `<option value="${s.id}">${full}</option>`;
       }).join('');
+      studentSelect.onchange = () => selectStudent(studentSelect.value);
     }
-  }
 
-  // --- Add Funds modal ---
-  function openFunds() {
-    if (fundsModal) { fundsModal.style.display = 'grid'; fundsModal.setAttribute('aria-hidden', 'false'); }
-    if (amountInput) amountInput.focus();
-  }
-  function closeFundsModal() {
-    if (fundsModal) { fundsModal.style.display = 'none'; fundsModal.setAttribute('aria-hidden', 'true'); }
-    if (fundsMsg) fundsMsg.style.display = 'none';
-    if (amountInput) amountInput.value = '';
-    if (noteInput) noteInput.value = '';
-  }
+    async function selectStudent(studentId){
+      currentStudentId = studentId;
+      if(balanceMsg) balanceMsg.style.display='none';
+      page = 0;
 
-  if (addFundsBtn) addFundsBtn.onclick = () => {
-    if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; }
-    openFunds();
-  };
-  if (closeFunds) closeFunds.onclick = closeFundsModal;
-  if (fundsModal) fundsModal.addEventListener('click', (e) => { if (e.target === fundsModal) closeFundsModal(); });
+      const stu = await fetchJSON(`/api/users/${studentId}`);
+      currentWalletId = stu.wallet_id || null;
 
-  if (confirmFunds) {
-    confirmFunds.onclick = async () => {
-      if (!amountInput || !fundsMsg) return;
+      const name = `${stu.first_name||''} ${stu.last_name||''}`.trim();
+      if(studentNameEl) studentNameEl.textContent = name || 'Student';
 
-      fundsMsg.style.display = 'none';
-      const amt = Number(amountInput.value);
-      if (!Number.isFinite(amt) || amt <= 0) {
-        fundsMsg.textContent = 'Please enter a valid amount.';
-        fundsMsg.className = 'msg error';
-        fundsMsg.style.display = 'block';
+      const sProfile = stu.student_profile || {};
+      const school = sProfile.school_name ? `School: ${sProfile.school_name}` : '';
+      if(schoolPill){ schoolPill.style.display = school ? 'inline-block' : 'none'; schoolPill.textContent = school; }
+      const grade = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
+      if(studentInfoEl) studentInfoEl.textContent = [grade].filter(Boolean).join(' • ') || '—';
+      if(cardStatusEl) cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
+
+      await Promise.all([loadBalance(), loadActivity()]);
+    }
+
+    async function loadBalance(){
+      if(balanceAmount) balanceAmount.textContent = '—';
+      if(balanceStatus) balanceStatus.textContent = 'Balance';
+      if(!currentWalletId){
+        if(balanceMsg){ balanceMsg.textContent='Balance unavailable (no wallet found).'; balanceMsg.className='msg error'; balanceMsg.style.display='block'; }
         return;
       }
-
-      confirmFunds.disabled = true;
-      confirmFunds.textContent = 'Processing…';
-
-      try {
-        const res = await fetch(`/api/wallets/${currentWalletId}/parent-deposits`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            amount: amt,
-            note: (noteInput && noteInput.value) || null
-          })
-        });
-
-        if (!res.ok) {
-          const errText = await res.text().catch(() => '');
-          throw new Error(errText || `HTTP ${res.status}`);
-        }
-
-        fundsMsg.textContent = 'Funds added successfully.';
-        fundsMsg.className = 'msg ok';
-        fundsMsg.style.display = 'block';
-
-        await loadBalance();
-        await loadActivity();
-
-        setTimeout(closeFundsModal, 900);
-      } catch (e) {
-        fundsMsg.textContent = 'Failed to add funds.' + (e?.message ? ` (${e.message})` : '');
-        fundsMsg.className = 'msg error';
-        fundsMsg.style.display = 'block';
-      } finally {
-        confirmFunds.disabled = false;
-        confirmFunds.textContent = 'Add Funds';
+      try{
+        const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
+        const cents = Number(data.balance_cents ?? 0);
+        if(!Number.isFinite(cents)) throw new Error('No balance_cents field');
+        const normalized = cents / 100;
+        if(balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
+        if(balanceStatus) balanceStatus.textContent = 'Balance';
+        if(balanceMsg) balanceMsg.style.display='none';
+      }catch{
+        if(balanceMsg){ balanceMsg.textContent='Balance currently unavailable.'; balanceMsg.className='msg error'; balanceMsg.style.display='block'; }
       }
-    };
-  }
+    }
 
-  // --- Init ---
-  (async function init() {
-    try {
-      await loadMe();
-      if (!parentId) return;
-      await loadAssignedStudents();
-    } catch (e) {
-      console.error(e);
-      alert('Unable to load your account. Please sign in again.');
-      window.location.href = '../index.html';
+    async function loadActivity(){
+      txns = []; page = 0; renderActivity();
+      if(!currentStudentId) return;
+      try{
+        const resp = await fetchJSON(`/api/transactions/user/${currentStudentId}?limit=200&offset=0`);
+        const list = Array.isArray(resp) ? resp : (resp.transactions || []);
+        txns = list.map(t=>{
+          const cents = Number(t.amount_cents || 0);
+          const uid = String(currentStudentId);
+          let sign = 1;
+          const kind = (t.type || '').toLowerCase();
+          if (kind==='debit'||kind==='purchase') sign = -1;
+          if (kind==='credit'||kind==='refund')  sign =  1;
+          if (kind==='transfer'){ if(String(t.sender_id)===uid) sign=-1; if(String(t.recipient_id)===uid) sign=1; }
+          const amount = (cents/100)*sign;
+          const merchant = t.to_display || t.recipient_name || t.sender_name || t.note || '—';
+          const category = (typeof t.category==='string' && t.category) || (t.method ? String(t.method).toUpperCase() : 'GENERAL');
+          return { amount, status:(t.status||kind||'posted').toString().toUpperCase(), category, merchant, created_at:t.created_at };
+        });
+      }catch(e){ console.error(e); txns = []; }
+      renderActivity();
+    }
+
+    function renderActivity(){
+      const total = txns.length;
+      if(activityCountPill){ activityCountPill.style.display = total ? 'inline-block':'none'; activityCountPill.textContent = `${total} items`; }
+      const start = page*PAGE_SIZE, end = start+PAGE_SIZE, slice = txns.slice(start,end);
+      if(prevBtn){ prevBtn.disabled = page===0; prevBtn.onclick = ()=>{ if(page>0){ page--; renderActivity(); } }; }
+      if(nextBtn){ nextBtn.disabled = end>=total; nextBtn.onclick = ()=>{ if(end<total){ page++; renderActivity(); } }; }
+      if(!slice.length){ if(activityEmpty) activityEmpty.style.display='block'; if(activityTable) activityTable.style.display='none'; return; }
+      if(activityEmpty) activityEmpty.style.display='none';
+      if(activityTable) activityTable.style.display='table';
+      if(activityTbody){
+        activityTbody.innerHTML = slice.map(tx=>{
+          const amt = Number(tx.amount||0);
+          const amtStr = (amt<0?'-':'+') + fmtMoney(Math.abs(amt));
+          const status = (tx.status||'posted').toString().toUpperCase();
+          const cat = tx.category || 'GENERAL';
+          const merchant = tx.merchant || '—';
+          const date = tx.created_at;
+          return `<tr>
+            <td class="small">${fmtDate(date)}</td>
+            <td>${merchant}</td>
+            <td><span class="tag">${cat}</span></td>
+            <td>${amt<0?'<span style="color:#ef4444">'+amtStr+'</span>':'<span style="color:#10b981">'+amtStr+'</span>'}</td>
+            <td class="small">${status}</td>
+          </tr>`;
+        }).join('');
+      }
+    }
+
+    // --- Add Funds modal ---
+    function openFunds(){ if(fundsModal){ fundsModal.style.display='grid'; fundsModal.setAttribute('aria-hidden','false'); } if(amountInput) amountInput.focus(); }
+    function closeFundsModal(){ if(fundsModal){ fundsModal.style.display='none'; fundsModal.setAttribute('aria-hidden','true'); } if(fundsMsg) fundsMsg.style.display='none'; if(amountInput) amountInput.value=''; if(noteInput) noteInput.value=''; }
+    if(addFundsBtn) addFundsBtn.onclick = ()=>{ if(!currentWalletId){ alert('Wallet unavailable for this student.'); return; } openFunds(); };
+    if(closeFunds) closeFunds.onclick = closeFundsModal;
+    if(fundsModal) fundsModal.addEventListener('click', e=>{ if(e.target===fundsModal) closeFundsModal(); });
+    if(confirmFunds){
+      confirmFunds.onclick = async ()=>{
+        if(!amountInput || !fundsMsg) return;
+        fundsMsg.style.display='none';
+        const amt = Number(amountInput.value);
+        if(!Number.isFinite(amt) || amt<=0){
+          fundsMsg.textContent='Please enter a valid amount.'; fundsMsg.className='msg error'; fundsMsg.style.display='block'; return;
+        }
+        confirmFunds.disabled=true; confirmFunds.textContent='Processing…';
+        try{
+          const res = await fetch(`/api/wallets/${currentWalletId}/parent-deposits`, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+            body: JSON.stringify({ amount: amt, note: (noteInput && noteInput.value) || null })
+          });
+          if(!res.ok){ const err = await res.text().catch(()=> ''); throw new Error(err || `HTTP ${res.status}`); }
+          fundsMsg.textContent='Funds added successfully.'; fundsMsg.className='msg ok'; fundsMsg.style.display='block';
+          await loadBalance(); await loadActivity(); setTimeout(closeFundsModal, 900);
+        }catch(e){
+          fundsMsg.textContent='Failed to add funds.' + (e?.message?` (${e.message})`:''); fundsMsg.className='msg error'; fundsMsg.style.display='block';
+        }finally{ confirmFunds.disabled=false; confirmFunds.textContent='Add Funds'; }
+      };
+    }
+
+    // --- Init ---
+    (async function init(){
+      try{ await loadMe(); if(!parentId) return; await loadAssignedStudents(); }
+      catch(e){ console.error(e); alert('Unable to load your account. Please sign in again.'); window.location.href='../index.html'; }
+    })();
+
+    // --- Logout ---
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn){
+      logoutBtn.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try{
+          const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
+          if(me.id && token){
+            await fetch(`/api/users/${me.id}/signout`, { method:'POST', headers:{ 'Authorization':`Bearer ${token}` } }).catch(()=>{});
+          }
+        }finally{
+          localStorage.removeItem('boop_jwt'); localStorage.removeItem('boopUser'); sessionStorage.clear();
+          window.location.href='../index.html';
+        }
+      });
     }
   })();
-
-  // --- Logout ---
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
-        if (me.id && token) {
-          await fetch(`/api/users/${me.id}/signout`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-          }).catch(() => {});
-        }
-      } finally {
-        localStorage.removeItem('boop_jwt');
-        localStorage.removeItem('boopUser');
-        sessionStorage.clear();
-        window.location.href = '../index.html';
-      }
-    });
-  }
-})();
-</script>
+  </script>
 </body>
 </html>
