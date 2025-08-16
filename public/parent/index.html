@@ -52,7 +52,8 @@
   }
 
   .wrap{max-width:1120px;margin:0 auto;padding:24px 18px}
-  .grid{display:grid;grid-template-columns:1.6fr .9fr;gap:18px;align-items:start}
+  /* 🔧 Adjusted from 1.6fr .9fr → 1.4fr 1fr (~58%/42%) */
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
   @media (max-width:900px){ .grid{grid-template-columns:1fr} }
 
   .card{
@@ -117,27 +118,19 @@
 
   /* ===== Responsive overhaul ===== */
 
-  /* 1) Tighter max width so big screens don't feel too wide */
-  .wrap{ max-width: 960px; } /* was 1120px */
-
-  /* 2) Prevent any horizontal scrollbar */
+  .wrap{ max-width: 960px; } /* narrower overall */
   html, body { overflow-x: hidden; }
-
-  /* 3) Allow grid children to shrink */
   .grid > * { min-width: 0; }
   .card { min-width: 0; }
 
-  /* 4) Tables & long content wrap */
   table { table-layout: fixed; }
   th, td { word-wrap: break-word; word-break: break-word; }
 
-  /* 5) Activity scroll area only scrolls inside */
   #activityWrap > div[style*="overflow:auto"]{
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* 6) Navigation wraps so Logout never disappears */
   .nav-container{
     display:flex;
     align-items:center;
@@ -155,12 +148,10 @@
     border-radius:10px;
   }
 
-  /* 7) Stack earlier */
   @media (max-width: 1100px){
     .grid{ grid-template-columns: 1fr; }
   }
 
-  /* 8) Extra mobile tuning */
   @media (max-width: 680px){
     .wrap{ padding: 16px 14px; }
     .nav-right{ width:100%; display:flex; justify-content:flex-end; }
@@ -179,7 +170,6 @@
     .modal__card{ max-width:96vw; }
   }
 
-  /* 9) Narrower on very large screens */
   @media (min-width:1400px){
     .wrap{ max-width:900px; }
   }
