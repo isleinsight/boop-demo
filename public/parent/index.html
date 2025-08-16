@@ -517,7 +517,11 @@
       }
       confirmFunds.disabled = true; confirmFunds.textContent = 'Processing…';
       try {
-        const res = await fetch(`/api/wallets/${currentWalletId}/deposits`, {
+        fetch(`/api/wallets/${currentWalletId}/parent-deposits`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+  body: JSON.stringify({ amount: Number(amountInput.value), note: (noteInput && noteInput.value) || null })
+});
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ amount: amt, note: (noteInput && noteInput.value) || null })
