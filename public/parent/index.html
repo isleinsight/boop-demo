@@ -14,64 +14,54 @@
   }
 
   *{ box-sizing:border-box; }
-  html, body { margin:0; background:var(--bg); color:var(--text); font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; overflow-x:hidden; }
+  html, body { margin:0; background:var(--bg); color:var(--text);
+    font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    overflow-x:hidden; }
+  html { font-size:16px; }
+  @media (max-width:420px){ html{ font-size:15px; } }
+  @media (max-width:360px){ html{ font-size:14px; } }
 
-  /* ── NAV ─────────────────────────────────────────────────────────────── */
+  /* ── NAV ─────────────────────────────────────────────────────────── */
   nav { background:#0b1220; color:#fff; }
   .nav-container{
-    max-width:1120px;
-    margin:0 auto;
-    padding:10px 16px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    flex-wrap:wrap;            /* ✅ allow wrapping so logout never disappears */
+    max-width:1120px; width:100%;
+    margin:0 auto; padding:10px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; flex-wrap:wrap;            /* ✅ allow wrapping so Logout never disappears */
   }
   .nav-left{ display:flex; align-items:center; gap:10px; min-width:0; }
-  .nav-left img{ height:28px; display:block; max-width:100%; }
+  .nav-left img{ height:clamp(28px,4vw,36px); display:block; }
   .nav-right{ display:flex; align-items:center; gap:10px; margin-left:auto; }
   .nav-right a{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    color:#fff;
-    text-decoration:none;
-    font-weight:600;
-    padding:8px 12px;
-    border:1px solid rgba(255,255,255,.25);
-    border-radius:10px;
-    white-space:nowrap;        /* keep word “Log Out” together */
+    display:inline-flex; align-items:center; justify-content:center;
+    color:#fff; text-decoration:none; font-weight:600;
+    padding:8px 12px; border:1px solid rgba(255,255,255,.25); border-radius:10px;
+    white-space:nowrap;
   }
-
-  /* When space is tight, push Logout to its own line, right-aligned */
-  @media (max-width:700px){
+  /* On small screens, push Logout to a new line and keep it visible */
+  @media (max-width:740px){
     .nav-right{ width:100%; justify-content:flex-end; order:2; }
+    .nav-right a{ width:auto; }
     .nav-left{ order:1; }
   }
 
-  /* ── LAYOUT / GRID ───────────────────────────────────────────────────── */
-  .wrap{ max-width:960px; margin:0 auto; padding:24px 18px; }  /* a bit narrower by default */
+  /* ── LAYOUT / GRID ───────────────────────────────────────────────── */
+  .wrap{ max-width:min(960px, 100%); margin:0 auto; padding:24px 18px; }
   .grid{
     display:grid;
-    grid-template-columns:1.4fr 1fr;   /* ≈58%/42% so left isn’t too wide */
-    gap:18px;
-    align-items:start;
+    grid-template-columns:1.35fr 1fr;   /* a bit narrower left column */
+    gap:18px; align-items:start;
   }
-  @media (max-width:1100px){ .grid{ grid-template-columns:1fr; } } /* ✅ one column on smaller screens */
-  @media (min-width:1400px){ .wrap{ max-width:900px; } }           /* don’t stretch too wide on huge screens */
+  @media (max-width:1100px){ .grid{ grid-template-columns:1fr; } } /* ✅ one column when narrow */
+  @media (min-width:1400px){ .wrap{ max-width:900px; } }           /* don’t stretch on very wide screens */
 
-  /* ── CARDS ───────────────────────────────────────────────────────────── */
+  /* ── CARDS ───────────────────────────────────────────────────────── */
   .card{
-    background:var(--card);
-    border:1px solid var(--stroke);
-    border-radius:14px;
-    box-shadow:0 10px 24px rgba(16,24,40,.06);
-    min-width:0;  /* ✅ prevent overflow in grid */
+    background:var(--card); border:1px solid var(--stroke); border-radius:14px;
+    box-shadow:0 10px 24px rgba(16,24,40,.06); min-width:0; /* ✅ prevent overflow */
   }
   .card__head{
-    padding:14px 16px;
-    border-bottom:1px solid var(--stroke);
+    padding:14px 16px; border-bottom:1px solid var(--stroke);
     display:flex; align-items:center; justify-content:space-between; gap:10px;
   }
   .card__body{ padding:16px; }
@@ -81,43 +71,49 @@
   .select{ padding:10px 12px; border:1px solid var(--stroke); border-radius:10px; background:#fff; font-size:.95rem; min-width:220px; }
 
   .balance{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  .balance__amount{ font-size:2rem; font-weight:700; color:var(--ink); }
+  .balance__amount{ font-size:clamp(1.6rem, 2.4vw, 2rem); font-weight:700; color:var(--ink); }
   .balance__status{ color:var(--muted); font-size:.95rem; }
   .actions{ display:flex; gap:8px; flex-wrap:wrap; }
-
   .btn-primary{
-    background:var(--boop); color:#fff; border:0; border-radius:10px; padding:10px 14px; font-weight:600;
-    text-decoration:none; display:inline-flex; align-items:center; justify-content:center;
+    background:var(--boop); color:#fff; border:0; border-radius:10px;
+    padding:10px 14px; font-weight:600; text-decoration:none;
+    display:inline-flex; align-items:center; justify-content:center;
   }
   .btn-primary:hover{ background:var(--boop-dark); }
   .btn-light{
-    background:#fff; color:var(--boop); border:1px solid var(--stroke); border-radius:10px; padding:10px 14px; font-weight:600;
-    text-decoration:none; display:inline-flex; align-items:center; justify-content:center;
+    background:#fff; color:var(--boop); border:1px solid var(--stroke); border-radius:10px;
+    padding:10px 14px; font-weight:600; text-decoration:none;
+    display:inline-flex; align-items:center; justify-content:center;
   }
 
-  /* ── TABLES (no horizontal page scroll) ──────────────────────────────── */
-  table{ width:100%; border-collapse:collapse; table-layout:fixed; } /* fixed layout + word-break keeps table inside */
+  /* Buttons shrink nicely on phones */
+  @media (max-width:680px){
+    .actions{ width:100%; }
+    .actions .btn-primary, .actions .btn-light{ flex:1 1 160px; padding:10px 12px; }
+    .select{ min-width:0; width:100%; max-width:320px; }
+  }
+
+  /* ── TABLE (no sideways scroll; squish + hide minor cols on phones) ── */
+  table{ width:100%; border-collapse:collapse; table-layout:fixed; }
   th, td{ padding:12px 10px; border-bottom:1px solid var(--stroke); text-align:left; word-break:break-word; }
   th{ font-weight:600; color:#374151; }
   td.small{ color:var(--muted); font-size:.92rem; }
-
   .tag{ display:inline-block; padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:600; background:#eef2ff; color:#1f2937; border:1px solid #dbeafe; }
   .empty{ color:var(--muted); text-align:center; padding:30px 8px; }
-
-  /* Make the table’s scroll be inside the section, not the whole page */
-  #activityWrap > div[style*="overflow:auto"]{
-    overflow-x:auto !important;
-    -webkit-overflow-scrolling:touch;
+  /* keep the table’s own scroll (if ever needed) inside its card, not the page */
+  #activityWrap > div[style*="overflow:auto"]{ overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
+  /* On narrow screens, hide Category & Status so it fits without scrolling */
+  @media (max-width:560px){
+    th:nth-child(3), th:nth-child(5), td:nth-child(3), td:nth-child(5){ display:none; }
   }
 
   .pager{ display:flex; justify-content:flex-end; gap:8px; padding-top:10px; }
   .pager button{ border:1px solid var(--stroke); background:#fff; color:#111827; border-radius:8px; padding:8px 10px; cursor:pointer; }
   .pager button:disabled{ opacity:.5; cursor:not-allowed; }
 
-  /* ── SUMMARY / CONTROLS ──────────────────────────────────────────────── */
+  /* ── SUMMARY / CONTROLS ───────────────────────────────────────────── */
   .summary h3{ margin:0 0 6px; }
   .summary p{ margin:0; color:var(--muted); }
-
   .controls .row{ align-items:center; }
   .controls label{ display:block; font-weight:600; margin-bottom:6px; }
   .input, select.input{ width:100%; padding:12px 14px; border:1px solid var(--stroke); border-radius:10px; outline:none; font-size:.95rem; }
@@ -128,7 +124,7 @@
   .msg.error{ color:var(--danger); }
   .msg.ok{ color:var(--ok); }
 
-  /* ── MODALS ──────────────────────────────────────────────────────────── */
+  /* ── MODALS ───────────────────────────────────────────────────────── */
   .modal{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:50; padding:16px; }
   .modal__card{ width:100%; max-width:520px; background:#fff; border-radius:14px; border:1px solid var(--stroke); box-shadow:0 20px 50px rgba(0,0,0,.15); overflow:hidden; }
   .modal__head{ padding:14px 16px; border-bottom:1px solid var(--stroke); display:flex; align-items:center; justify-content:space-between; }
@@ -136,20 +132,14 @@
   .modal__foot{ padding:14px 16px; border-top:1px solid var(--stroke); display:flex; gap:10px; justify-content:flex-end; }
   .close{ background:#f3f4f6; border:1px solid var(--stroke); color:#111827; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer; }
 
-  /* ── FOOTER ──────────────────────────────────────────────────────────── */
+  /* ── FOOTER ───────────────────────────────────────────────────────── */
   footer{ padding:22px; color:#6b7280; text-align:center; margin-top:20px; }
   footer a{ color:var(--boop); text-decoration:none; font-weight:600; }
 
-  /* ── SMALL SCREEN TWEAKS ─────────────────────────────────────────────── */
+  /* ── EXTRA small screens tweaks ───────────────────────────────────── */
   @media (max-width:680px){
     .wrap{ padding:16px 14px; }
-    .row{ gap:8px; flex-wrap:wrap; }
-    .select{ min-width:0; width:100%; max-width:320px; }
     .balance{ gap:10px; }
-    .balance__amount{ font-size:1.6rem; }
-    .actions{ gap:8px; width:100%; }
-    .actions .btn-primary, .actions .btn-light{ flex:1 1 auto; min-width:140px; }
-    .pager{ justify-content:center; }
     #schoolPill{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .modal__card{ max-width:96vw; }
   }
