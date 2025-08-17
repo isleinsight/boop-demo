@@ -121,36 +121,24 @@
 }
 
 /* TERMS AGREEMENT */
-/* Make this row span the full form width so it has room */
-.terms { grid-column: 1 / -1; }
+/* Span full width of the form grid if you use one */
+.terms-float { grid-column: 1 / -1; display:block; max-width:100%; line-height:1.4; color:#dbe3ff; }
 
-/* Keep checkbox + text on the same line, allow the text to wrap */
-.terms-flex {
-  display: inline-flex;         /* inline so it sizes to content */
-  align-items: flex-start;      /* top-align with multi-line text */
-  gap: 10px;
-  max-width: 100%;
-  line-height: 1.4;
-  color: #dbe3ff;
-  cursor: pointer;
+/* Force checkbox to the left, text flows beside it and wraps */
+.terms-float input[type="checkbox"] {
+  float: left;
+  margin: 2px 10px 0 0;
 }
 
-.terms-flex input[type="checkbox"] {
-  flex: 0 0 auto;               /* never shrink */
-  margin: 2px 0 0 0;            /* optically centers with text */
+/* Make text a block so it wraps while respecting the float */
+.terms-float span {
+  display: block;
+  overflow: hidden;   /* ensures text doesn’t slide under the checkbox */
 }
 
-.terms-flex span {
-  display: inline;              /* keep it inline so it wraps next to box */
-  min-width: 0;
-  white-space: normal;          /* allow wrapping */
-}
-
-.terms-flex a {
-  color: #c9d7ff;               /* same as footer links */
-  text-decoration: none;
-}
-.terms-flex a:hover { color: #fff; text-decoration: underline; }
+/* Link color to match footer */
+.terms-float a { color:#c9d7ff; text-decoration:none; }
+.terms-float a:hover { color:#fff; text-decoration:underline; }
   </style>
 </head>
 <body>
@@ -203,11 +191,11 @@
           </div>
 
 <div class="terms">
-  <label class="terms-flex">
-    <input type="checkbox" id="agree" required />
-    <span>I agree to the <a href="terms.html">Terms &amp; Conditions</a> and the
-      <a href="privacy.html">Privacy Policy</a>.</span>
-  </label>
+  <label class="terms-float">
+  <input type="checkbox" id="agree" required />
+  <span>I agree to the <a href="terms.html">Terms &amp; Conditions</a> and the
+    <a href="privacy.html">Privacy Policy</a>.</span>
+</label>
 </div>
 
           <button id="createBtn" class="btn" type="submit">Create account</button>
