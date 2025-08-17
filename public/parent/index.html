@@ -22,7 +22,7 @@
     .brand{display:flex;align-items:center;gap:10px}
     .brand img{height:28px}
 
-    /* Subbar with logout link under header */
+    /* Subbar with logout link */
     .subbar{background:#eef2f7;border-bottom:1px solid var(--stroke)}
     .subbar__inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;justify-content:flex-end}
     .logout-link{font-weight:600}
@@ -62,7 +62,7 @@
     .pager button{border:1px solid var(--stroke);background:#fff;color:#111827;border-radius:8px;padding:8px 10px;cursor:pointer}
     .pager button:disabled{opacity:.5;cursor:not-allowed}
 
-    /* Compact activity feed (PayPal-ish) */
+    /* Compact activity feed */
     .activity-feed { display: grid; gap: 10px; }
     .activity-item {
       display: grid;
@@ -73,45 +73,19 @@
       border-radius: 12px;
       background: #fff;
     }
-    .activity-title {
-      font-weight: 600;
-      color: var(--ink);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .activity-amount {
-      font-weight: 700;
-      justify-self: end;
-    }
+    .activity-title { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .activity-amount { font-weight: 700; justify-self: end; }
     .activity-amount.pos { color: var(--ok); }
     .activity-amount.neg { color: var(--danger); }
-    .activity-meta {
-      grid-column: 1 / -1;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 14px;
-      font-size: .9rem;
-      color: var(--muted);
-    }
-    .activity-tag {
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: .8rem;
-      border: 1px solid #dbeafe;
-      background: #eef2ff;
-      color: #1f2937;
-    }
+    .activity-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: .9rem; color: var(--muted); }
+    .activity-tag { padding: 2px 8px; border-radius: 999px; font-size: .8rem; border: 1px solid #dbeafe; background: #eef2ff; color: #1f2937; }
     @media (max-width: 520px){
       .activity-item{ padding: 10px; }
       .activity-title{ font-size: .95rem; }
       .activity-meta{ font-size: .85rem; }
     }
 
-    /* Freeze card (button stays visible even when narrower) */
     .actions .btn-light{white-space:nowrap}
-
-    /* Prevent horizontal cut-off on tiny screens */
     body{overflow-x:hidden}
 
     footer{padding:22px;color:#6b7280;text-align:center;margin-top:20px}
@@ -119,35 +93,22 @@
   </style>
 </head>
 <body>
-
-  <!-- Header with logo only -->
+  <!-- Header -->
   <header class="site-head">
-    <div class="site-head__inner">
-      <div class="brand">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
-    </div>
+    <div class="site-head__inner"><div class="brand"><img src="../assets/Boop-Logo.png" alt="BOOP Logo" /></div></div>
   </header>
-
-  <!-- Subbar with Logout under the header -->
-  <div class="subbar">
-    <div class="subbar__inner">
-      <a href="#" id="logoutBtn" class="logout-link">Log out</a>
-    </div>
-  </div>
+  <!-- Subbar -->
+  <div class="subbar"><div class="subbar__inner"><a href="#" id="logoutBtn" class="logout-link">Log out</a></div></div>
 
   <main class="wrap">
     <section class="grid">
-      <!-- LEFT: Student + Activity -->
       <div>
         <!-- Student & Balance -->
         <div class="card" id="studentCard">
           <div class="card__head">
             <div class="row">
               <strong>Student</strong>
-              <select id="studentSelect" class="select" aria-label="Choose student">
-                <option>Loading…</option>
-              </select>
+              <select id="studentSelect" class="select"><option>Loading…</option></select>
             </div>
             <span id="schoolPill" class="pill" style="display:none"></span>
           </div>
@@ -158,544 +119,68 @@
                 <div class="balance__status" id="balanceStatus">Balance</div>
               </div>
               <div class="actions">
-                <button id="addFundsBtn" class="btn-primary" type="button">Add Funds</button>
-                <button id="freezeBtn" class="btn-light" type="button">Freeze Card</button>
+                <button id="addFundsBtn" class="btn-primary">Add Funds</button>
+                <button id="freezeBtn" class="btn-light">Freeze Card</button>
               </div>
             </div>
-            <div id="balanceMsg" class="msg" aria-live="polite"></div>
+            <div id="balanceMsg" class="msg"></div>
           </div>
         </div>
-
         <!-- Activity -->
         <div class="card" style="margin-top:16px">
-          <div class="card__head">
-            <strong>Recent activity</strong>
-            <span class="pill" id="activityCountPill" style="display:none"></span>
-          </div>
+          <div class="card__head"><strong>Recent activity</strong><span class="pill" id="activityCountPill" style="display:none"></span></div>
           <div class="card__body" id="activityWrap">
             <div class="empty" id="activityEmpty">No recent transactions.</div>
             <div id="activityFeed" class="activity-feed" style="display:none"></div>
-            <div class="pager">
-              <button id="prevPage">Prev</button>
-              <button id="nextPage">Next</button>
-            </div>
+            <div class="pager"><button id="prevPage">Prev</button><button id="nextPage">Next</button></div>
           </div>
         </div>
       </div>
-
-      <!-- RIGHT: Overview + Controls -->
+      <!-- Right -->
       <aside>
         <div class="card summary">
           <div class="card__head"><strong>Overview</strong></div>
           <div class="card__body">
             <h3 id="studentName">—</h3>
-            <p id="studentInfo" class="small">Loading student details…</p>
-            <p id="cardStatus" class="small" style="margin-top:6px;color:var(--muted)"></p>
-          </div>
-        </div>
-
-        <div class="card controls" style="margin-top:16px">
-          <div class="card__head"><strong>Controls</strong></div>
-          <div class="card__body">
-            <div>
-              <label for="limitInput">Monthly spending limit (BMD)</label>
-              <input id="limitInput" class="input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 150.00" />
-              <div style="display:flex;gap:8px;margin-top:10px">
-                <button id="saveLimitBtn" class="btn-primary" type="button">Save limit</button>
-                <button id="clearLimitBtn" class="btn-light" type="button">Clear</button>
-              </div>
-              <div id="limitMsg" class="msg" aria-live="polite"></div>
-            </div>
-
-            <hr style="border:none;border-top:1px solid var(--stroke);margin:16px 0">
-
-            <div>
-              <label>Category safeguards</label>
-              <div class="row" style="flex-direction:column;align-items:flex-start">
-                <label class="row"><input id="cat_food" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Groceries & Essentials</span></label>
-                <label class="row"><input id="cat_fastfood" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Fast food</span></label>
-                <label class="row"><input id="cat_electronics" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Electronics</span></label>
-                <label class="row"><input id="cat_entertainment" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Entertainment</span></label>
-                <label class="row"><input id="cat_other" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Other</span></label>
-              </div>
-              <div style="display:flex;gap:8px;margin-top:10px">
-                <button id="saveCatsBtn" class="btn-primary" type="button">Save categories</button>
-                <button id="resetCatsBtn" class="btn-light" type="button">Reset</button>
-              </div>
-              <div id="catsMsg" class="msg" aria-live="polite"></div>
-            </div>
+            <p id="studentInfo">Loading student details…</p>
+            <p id="cardStatus" style="margin-top:6px;color:var(--muted)"></p>
           </div>
         </div>
       </aside>
     </section>
   </main>
 
-  <!-- Add Funds Modal -->
-  <div id="fundsModal" class="modal" aria-hidden="true" style="position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.45);z-index:50;padding:16px">
-    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="fundsTitle" style="width:100%;max-width:520px;background:#fff;border-radius:14px;border:1px solid var(--stroke);box-shadow:0 20px 50px rgba(0,0,0,.15);overflow:hidden">
-      <div class="modal__head" style="padding:14px 16px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between">
-        <strong id="fundsTitle">Add Funds</strong>
-        <button class="btn-light" id="closeFunds">Close</button>
-      </div>
-      <div class="modal__body" style="padding:16px;display:grid;gap:12px">
-        <label>Amount (BMD)
-          <input id="amountInput" class="input" type="number" inputmode="decimal" min="1" step="0.01" placeholder="25.00" />
-        </label>
-        <label>Note (optional)
-          <input id="noteInput" class="input" type="text" placeholder="Top-up for lunches" />
-        </label>
-        <div id="fundsMsg" class="msg" aria-live="polite"></div>
-      </div>
-      <div class="modal__foot" style="padding:14px 16px;border-top:1px solid var(--stroke);display:flex;gap:10px;justify-content:flex-end">
-        <button id="confirmFunds" class="btn-primary">Add Funds</button>
-      </div>
-    </div>
-  </div>
-
-  <footer>
-    © <span id="year"></span> BOOP. All rights reserved.
-    &nbsp;•&nbsp; <a href="/terms.html">Terms</a> &nbsp;•&nbsp; <a href="/privacy.html">Privacy</a>
-  </footer>
+  <footer>© <span id="year"></span> BOOP. All rights reserved.</footer>
 
 <script>
 (function () {
-  // --- Year ---
-  const yearEl = document.getElementById('year');
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
+  const yearEl = document.getElementById('year'); if (yearEl) yearEl.textContent = new Date().getFullYear();
+  const token = localStorage.getItem('boop_jwt'); if (!token) { window.location.href = '../index.html'; return; }
 
-  // --- Auth guard ---
-  const token = localStorage.getItem('boop_jwt');
-  if (!token) {
-    window.location.href = '../index.html';
-    return;
-  }
+  let parentId=null,students=[],currentStudentId=null,currentWalletId=null,txns=[],page=0; const PAGE_SIZE=8;
+  const studentSelect=document.getElementById('studentSelect'), schoolPill=document.getElementById('schoolPill'),
+        studentNameEl=document.getElementById('studentName'), studentInfoEl=document.getElementById('studentInfo'), cardStatusEl=document.getElementById('cardStatus'),
+        balanceAmount=document.getElementById('balanceAmount'), balanceStatus=document.getElementById('balanceStatus'), balanceMsg=document.getElementById('balanceMsg'),
+        activityEmpty=document.getElementById('activityEmpty'), activityFeed=document.getElementById('activityFeed'), activityCountPill=document.getElementById('activityCountPill'),
+        prevBtn=document.getElementById('prevPage'), nextBtn=document.getElementById('nextPage'),
+        addFundsBtn=document.getElementById('addFundsBtn'), freezeBtn=document.getElementById('freezeBtn');
 
-  // --- State ---
-  let parentId = null;
-  let students = [];
-  let currentStudentId = null;
-  let currentWalletId = null;
-  let txns = [];
-  let page = 0;
-  const PAGE_SIZE = 8;
+  function fmtMoney(n){return (typeof n==='number'&&Number.isFinite(n))?('BMD $'+n.toFixed(2)):'—';}
+  async function fetchJSON(url,opts={}){const res=await fetch(url,{...opts,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}});if(!res.ok)throw new Error(await res.text().catch(()=> 'HTTP error'));return res.json();}
 
-  // --- El refs ---
-  const studentSelect = document.getElementById('studentSelect');
-  const schoolPill = document.getElementById('schoolPill');
-  const studentNameEl = document.getElementById('studentName');
-  const studentInfoEl = document.getElementById('studentInfo');
-  const cardStatusEl = document.getElementById('cardStatus');
+  async function loadMe(){const me=await fetchJSON('/api/me');if((me.role||'').toLowerCase()!=='parent'){window.location.href='/';return;}parentId=me.id;}
+  async function loadAssignedStudents(){const detail=await fetchJSON(`/api/users/${parentId}`);students=detail.assigned_students||[];renderStudentOptions();if(students.length){selectStudent(students[0].id);}else{studentSelect.innerHTML='<option>No students</option>';activityEmpty.textContent='No students found.';}}
+  function renderStudentOptions(){studentSelect.innerHTML=students.map(s=>`<option value="${s.id}">${(s.first_name||'')+' '+(s.last_name||'')}</option>`).join('');studentSelect.onchange=()=>selectStudent(studentSelect.value);}
+  async function selectStudent(id){currentStudentId=id;const stu=await fetchJSON(`/api/users/${id}`);currentWalletId=stu.wallet_id||null;studentNameEl.textContent=`${stu.first_name||''} ${stu.last_name||''}`;await loadBalance();}
+  
+  function setFreezeButtonUI(isFrozen){freezeBtn.textContent=isFrozen?'Unfreeze Card':'Freeze Card';}
+  async function loadBalance(){if(!currentWalletId){balanceMsg.textContent='No wallet.';balanceMsg.style.display='block';return;}try{const data=await fetchJSON(`/api/wallets/user/${currentStudentId}`);const cents=Number(data.balance_cents||0);balanceAmount.textContent=fmtMoney(cents/100);setFreezeButtonUI(!!data.is_frozen);cardStatusEl.textContent=data.is_frozen?'Card: FROZEN':'Card: ACTIVE';balanceMsg.style.display='none';}catch{balanceMsg.textContent='Balance unavailable';balanceMsg.style.display='block';}}
 
-  const balanceAmount = document.getElementById('balanceAmount');
-  const balanceStatus = document.getElementById('balanceStatus');
-  const balanceMsg = document.getElementById('balanceMsg');
+  if(freezeBtn){freezeBtn.onclick=async()=>{if(!currentWalletId)return;const frozen=/unfreeze/i.test(freezeBtn.textContent);const path=frozen?`/api/wallets/${currentWalletId}/unfreeze`:`/api/wallets/${currentWalletId}/freeze`;await fetch(path,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}});await loadBalance();};}
 
-  const activityEmpty = document.getElementById('activityEmpty');
-  const activityFeed = document.getElementById('activityFeed');
-  const activityCountPill = document.getElementById('activityCountPill');
-  const prevBtn = document.getElementById('prevPage');
-  const nextBtn = document.getElementById('nextPage');
+  const logoutBtn=document.getElementById('logoutBtn');if(logoutBtn){logoutBtn.onclick=e=>{e.preventDefault();localStorage.removeItem('boop_jwt');localStorage.removeItem('boopUser');window.location.href='../index.html';};}
 
-  const addFundsBtn = document.getElementById('addFundsBtn');
-  const fundsModal = document.getElementById('fundsModal');
-  const closeFunds = document.getElementById('closeFunds');
-  const confirmFunds = document.getElementById('confirmFunds');
-  const amountInput = document.getElementById('amountInput');
-  const noteInput = document.getElementById('noteInput');
-  const fundsMsg = document.getElementById('fundsMsg');
-
-  const requestChildBtn = document.getElementById('requestChildBtn'); // optional trigger
-  const requestModal = document.getElementById('requestModal');
-  const closeRequest = document.getElementById('closeRequest');
-  const submitRequest = document.getElementById('submitRequest');
-  const reqName = document.getElementById('reqName');
-  const reqDob = document.getElementById('reqDob');
-  const reqSchool = document.getElementById('reqSchool');
-  const reqNotes = document.getElementById('reqNotes');
-  const reqMsg = document.getElementById('reqMsg');
-
-  const limitInput = document.getElementById('limitInput');
-  const saveLimitBtn = document.getElementById('saveLimitBtn');
-  const clearLimitBtn = document.getElementById('clearLimitBtn');
-  const limitMsg = document.getElementById('limitMsg');
-
-  const saveCatsBtn = document.getElementById('saveCatsBtn');
-  const resetCatsBtn = document.getElementById('resetCatsBtn');
-  const catsMsg = document.getElementById('catsMsg');
-
-  // --- Helpers ---
-  function fmtMoney(n) { return (typeof n === 'number' && Number.isFinite(n)) ? ('BMD $' + n.toFixed(2)) : '—'; }
-  function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch { return iso || '—'; } }
-
-  async function fetchJSON(url, opts = {}) {
-    const res = await fetch(url, {
-      ...opts,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...(opts.headers || {})
-      }
-    });
-    if (!res.ok) throw new Error(await res.text().catch(()=>'HTTP error'));
-    return res.json();
-  }
-
-  // --- Data loaders ---
-  async function loadMe() {
-    const me = await fetchJSON('/api/me');
-    if ((me.role || '').toLowerCase() !== 'parent') {
-      alert('This portal is for Parent accounts.');
-      window.location.href = '/';
-      return;
-    }
-    parentId = me.id;
-  }
-
-  async function loadAssignedStudents() {
-    const detail = await fetchJSON(`/api/users/${parentId}`);
-    students = detail.assigned_students || [];
-    renderStudentOptions();
-    if (students.length) {
-      selectStudent(students[0].id);
-    } else {
-      if (studentSelect) studentSelect.innerHTML = '<option>No students linked</option>';
-      activityEmpty.textContent = 'No students found.';
-    }
-  }
-
-  function renderStudentOptions() {
-    if (!studentSelect) return;
-    studentSelect.innerHTML = students.map(s => {
-      const full = `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Student';
-      return `<option value="${s.id}">${full}</option>`;
-    }).join('');
-    studentSelect.onchange = () => selectStudent(studentSelect.value);
-  }
-
-  async function selectStudent(studentId) {
-    currentStudentId = studentId;
-    if (balanceMsg) balanceMsg.style.display = 'none';
-    page = 0;
-
-    const stu = await fetchJSON(`/api/users/${studentId}`);
-    currentWalletId = stu.wallet_id || null;
-
-    const name = `${stu.first_name || ''} ${stu.last_name || ''}`.trim();
-    if (studentNameEl) studentNameEl.textContent = name || 'Student';
-
-    const sProfile = stu.student_profile || {};
-    const school = sProfile.school_name ? `School: ${sProfile.school_name}` : '';
-    if (schoolPill) {
-      schoolPill.style.display = school ? 'inline-block' : 'none';
-      schoolPill.textContent = school;
-    }
-    const grade = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
-    if (studentInfoEl) studentInfoEl.textContent = [grade].filter(Boolean).join(' • ') || '—';
-
-    if (cardStatusEl) cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
-
-    await Promise.all([loadBalance(), loadActivity()]);
-  }
-
-  async function loadBalance() {
-    if (balanceAmount) balanceAmount.textContent = '—';
-    if (balanceStatus) balanceStatus.textContent = 'Balance';
-    if (!currentWalletId) {
-      if (balanceMsg) {
-        balanceMsg.textContent = 'Balance unavailable (no wallet found).';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
-      }
-      return;
-    }
-    try {
-      const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
-      const cents = Number(data.balance_cents ?? 0);
-      if (!Number.isFinite(cents)) throw new Error('No balance_cents field');
-      const normalized = cents / 100;
-      if (balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
-      if (balanceStatus) balanceStatus.textContent = 'Balance';
-      if (balanceMsg) balanceMsg.style.display = 'none';
-    } catch {
-      if (balanceMsg) {
-        balanceMsg.textContent = 'Balance currently unavailable.';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
-      }
-    }
-  }
-
-  async function loadActivity() {
-    txns = [];
-    page = 0;
-    renderActivity();
-    if (!currentStudentId) return;
-
-    try {
-      const resp = await fetchJSON(`/api/transactions/user/${currentStudentId}?limit=200&offset=0`);
-      const list = Array.isArray(resp) ? resp : (resp.transactions || []);
-
-      txns = list.map(t => {
-        const cents = Number(t.amount_cents || 0);
-        const uid = String(currentStudentId);
-        let sign = 1;
-        const kind = (t.type || '').toLowerCase();
-        if (kind === 'debit' || kind === 'purchase') sign = -1;
-        if (kind === 'credit' || kind === 'refund')  sign =  1;
-        if (kind === 'transfer') {
-          if (String(t.sender_id) === uid)   sign = -1;
-          if (String(t.recipient_id) === uid) sign =  1;
-        }
-        const amount = (cents / 100) * sign;
-        const merchant = t.to_display || t.recipient_name || t.sender_name || t.note || '—';
-        const category =
-          (typeof t.category === 'string' && t.category) ||
-          (t.method ? String(t.method).toUpperCase() : 'GENERAL');
-
-        return {
-          amount,
-          status: (t.status || kind || 'posted').toString().toUpperCase(),
-          category,
-          merchant,
-          created_at: t.created_at
-        };
-      });
-    } catch (e) {
-      console.error(e);
-      txns = [];
-    }
-
-    renderActivity();
-  }
-
-  function renderActivity() {
-    const total = txns.length;
-    if (activityCountPill) {
-      activityCountPill.style.display = total ? 'inline-block' : 'none';
-      activityCountPill.textContent = `${total} items`;
-    }
-
-    const start = page * PAGE_SIZE, end = start + PAGE_SIZE, slice = txns.slice(start, end);
-    if (prevBtn) { prevBtn.disabled = page === 0; prevBtn.onclick = () => { if (page > 0) { page--; renderActivity(); } }; }
-    if (nextBtn) { nextBtn.disabled = end >= total; nextBtn.onclick = () => { if (end < total) { page++; renderActivity(); } }; }
-
-    if (!slice.length) {
-      if (activityEmpty) activityEmpty.style.display = 'block';
-      if (activityFeed) activityFeed.style.display = 'none';
-      return;
-    }
-    if (activityEmpty) activityEmpty.style.display = 'none';
-    if (activityFeed) activityFeed.style.display = 'grid';
-
-    if (activityFeed) {
-      activityFeed.innerHTML = slice.map(tx => {
-        const amt = Number(tx.amount || 0);
-        const amtClass = amt < 0 ? 'neg' : 'pos';
-        const amtStr = (amt < 0 ? '-' : '+') + ' ' + (typeof amt === 'number' ? `BMD $${Math.abs(amt).toFixed(2)}` : '—');
-        const title = tx.merchant || '—';
-        const metaBits = [
-          (tx.status || 'POSTED').toString().toUpperCase(),
-          tx.category ? `Category: ${tx.category}` : null,
-          tx.created_at ? new Date(tx.created_at).toLocaleString() : null
-        ].filter(Boolean);
-
-        return `
-          <div class="activity-item">
-            <div class="activity-title">${title}</div>
-            <div class="activity-amount ${amtClass}">${amtStr}</div>
-            <div class="activity-meta">
-              <span>${metaBits.join(' • ')}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-  }
-
-  // --- Add Funds modal ---
-  function openFunds() {
-    if (fundsModal) { fundsModal.style.display = 'grid'; fundsModal.setAttribute('aria-hidden', 'false'); }
-    if (amountInput) amountInput.focus();
-  }
-  function closeFundsModal() {
-    if (fundsModal) { fundsModal.style.display = 'none'; fundsModal.setAttribute('aria-hidden', 'true'); }
-    if (fundsMsg) fundsMsg.style.display = 'none';
-    if (amountInput) amountInput.value = '';
-    if (noteInput) noteInput.value = '';
-  }
-
-  if (addFundsBtn) addFundsBtn.onclick = () => { if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; } openFunds(); };
-  if (closeFunds) closeFunds.onclick = closeFundsModal;
-  if (fundsModal) fundsModal.addEventListener('click', (e) => { if (e.target === fundsModal) closeFundsModal(); });
-
-  if (confirmFunds) {
-    confirmFunds.onclick = async () => {
-      if (!amountInput || !fundsMsg) return;
-      fundsMsg.style.display = 'none';
-      const amt = Number(amountInput.value);
-      if (!Number.isFinite(amt) || amt <= 0) {
-        fundsMsg.textContent = 'Please enter a valid amount.';
-        fundsMsg.className = 'msg error';
-        fundsMsg.style.display = 'block';
-        return;
-      }
-      confirmFunds.disabled = true; confirmFunds.textContent = 'Processing…';
-      try {
-        const res = await fetch(`/api/wallets/${currentWalletId}/parent-deposits`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ amount: amt, note: (noteInput && noteInput.value) || null })
-        });
-        if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
-        fundsMsg.textContent = 'Funds added successfully.';
-        fundsMsg.className = 'msg ok';
-        fundsMsg.style.display = 'block';
-        await loadBalance(); await loadActivity();
-        setTimeout(closeFundsModal, 900);
-      } catch (e) {
-        fundsMsg.textContent = 'Failed to add funds.' + (e?.message ? ` (${e.message})` : '');
-        fundsMsg.className = 'msg error';
-        fundsMsg.style.display = 'block';
-      } finally {
-        confirmFunds.disabled = false; confirmFunds.textContent = 'Add Funds';
-      }
-    };
-  }
-
-  // --- (Optional) Controls hooks (not wired to backend yet) ---
-  function loadControls() {}
-  if (saveCatsBtn) saveCatsBtn.onclick = () => {};
-  if (resetCatsBtn) resetCatsBtn.onclick = () => {};
-  if (saveLimitBtn) saveLimitBtn.onclick = () => {};
-  if (clearLimitBtn) clearLimitBtn.onclick = () => {};
-
-  // --- Freeze button (placeholder; wire to your route if available) ---
-  const freezeBtn = document.getElementById('freezeBtn');
-  if (freezeBtn) {
-    freezeBtn.addEventListener('click', () => {
-      alert('Freeze route not implemented yet on this page.');
-    });
-  }
-
-  // --- Init ---
-  (async function init() {
-    try {
-      await loadMe();
-      if (!parentId) return;
-      await loadAssignedStudents();
-    } catch (e) {
-      console.error(e);
-      alert('Unable to load your account. Please sign in again.');
-      window.location.href = '../index.html';
-    }
-  })();
-
-  const freezeBtn = document.getElementById('freezeBtn');
-
-function setFreezeButtonUI(isFrozen) {
-  if (!freezeBtn) return;
-  freezeBtn.textContent = isFrozen ? 'Unfreeze Card' : 'Freeze Card';
-  freezeBtn.className = isFrozen ? 'btn-light' : 'btn-light';
-}
-
-async function loadBalance() {
-  if (balanceAmount) balanceAmount.textContent = '—';
-  if (balanceStatus) balanceStatus.textContent = 'Balance';
-  if (!currentWalletId) {
-    if (balanceMsg) {
-      balanceMsg.textContent = 'Balance unavailable (no wallet found).';
-      balanceMsg.className = 'msg error';
-      balanceMsg.style.display = 'block';
-    }
-    return;
-  }
-  try {
-    const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
-    const cents = Number(data.balance_cents ?? 0);
-    if (!Number.isFinite(cents)) throw new Error('No balance_cents field');
-
-    const normalized = cents / 100;
-    if (balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
-
-    // Show frozen state
-    const frozen = !!data.is_frozen;
-    setFreezeButtonUI(frozen);
-    if (cardStatusEl) {
-      cardStatusEl.textContent = frozen ? 'Card: FROZEN' : 'Card: ACTIVE';
-    }
-
-    if (balanceMsg) balanceMsg.style.display = 'none';
-  } catch {
-    if (balanceMsg) {
-      balanceMsg.textContent = 'Balance currently unavailable.';
-      balanceMsg.className = 'msg error';
-      balanceMsg.style.display = 'block';
-    }
-  }
-}
-
-// click handler
-if (freezeBtn) {
-  freezeBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (!currentWalletId) return;
-
-    // decide action based on current label
-    const isCurrentlyFrozen = /unfreeze/i.test(freezeBtn.textContent);
-    const path = isCurrentlyFrozen
-      ? `/api/wallets/${currentWalletId}/unfreeze`
-      : `/api/wallets/${currentWalletId}/freeze`;
-
-    // optional: prompt for a reason when freezing
-    let reason = '';
-    if (!isCurrentlyFrozen) {
-      reason = prompt('Reason for freezing? (optional)') || '';
-    }
-
-    freezeBtn.disabled = true;
-    try {
-      const res = await fetch(path, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ reason })
-      });
-      if (!res.ok) throw new Error(await res.text().catch(()=> 'HTTP error'));
-
-      // refresh UI
-      await loadBalance();
-      await loadActivity();
-    } catch (err) {
-      alert('Failed to update freeze status.');
-    } finally {
-      freezeBtn.disabled = false;
-    }
-  });
-}
-
-  // --- Logout ---
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
-        if (me.id && token) {
-          await fetch(`/api/users/${me.id}/signout`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-          }).catch(() => {});
-        }
-      } finally {
-        localStorage.removeItem('boop_jwt');
-        localStorage.removeItem('boopUser');
-        sessionStorage.clear();
-        window.location.href = '../index.html';
-      }
-    });
-  }
+  (async()=>{await loadMe();if(parentId)await loadAssignedStudents();})();
 })();
 </script>
 </body>
