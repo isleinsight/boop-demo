@@ -4,7 +4,7 @@ const router = express.Router();
 const db = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// --- Claim TTL (minutes)
+// --- settings --------------------------------------------------------------
 const CLAIM_TTL_MINUTES = 30;
 
 // --- helpers ---------------------------------------------------------------
@@ -30,7 +30,6 @@ async function releaseExpiredClaims() {
   }
 }
 
-// Is this parent linked to this student?
 async function parentLinkedToStudent(parentId, studentUserId) {
   const q = `
     SELECT 1
@@ -54,7 +53,6 @@ async function ensureBankCounterparty(client, bank, destination_masked) {
   const first_name = safeBank;        // e.g., "HSBC" / "Butterfield"
   const last_name  = `•••• ${last4}`; // e.g., "•••• 4987"
 
-  // Use role/type 'vendor' to satisfy users_role_check
   const upsertSql = `
     INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
     VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
@@ -86,10 +84,9 @@ function requireAccountsRole(req, res, next) {
   next();
 }
 
-/**
- * GET /api/transfers
- * Admin queue (status filter etc.)
- */
+// -------------------------------------------------------------------------
+// Admin queue
+// GET /api/transfers?status=pending|claimed|completed|rejected&start=YYYY-MM-DD&end=YYYY-MM-DD&bank=HSBC&limit=25&offset=0
 router.get('/', requireAccountsRole, async (req, res) => {
   try {
     await releaseExpiredClaims();
@@ -143,7 +140,7 @@ router.get('/', requireAccountsRole, async (req, res) => {
       LIMIT $${values.length-1} OFFSET $${values.length};
     `;
     const { rows: itemsRaw } = await db.query(listSql, values);
-    const items = itemsRaw.map(r => ({ ...r, created_at: r.requested_at })); // compatibility
+    const items = itemsRaw.map(r => ({ ...r, created_at: r.requested_at }));
 
     res.json({ items, total });
   } catch (err) {
@@ -152,7 +149,7 @@ router.get('/', requireAccountsRole, async (req, res) => {
   }
 });
 
-// small wrapper so POST & PATCH share handlers
+// --- small wrapper so POST & PATCH share handlers -------------------------
 const wrap = (fn) => (req, res, next) => fn(req, res).catch(next);
 
 // --- CLAIM -----------------------------------------------------------------
@@ -491,37 +488,33 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
 
     // 1) Try: bank account on the student (t.user_id), match bank + last4
     const q1 = `
-      SELECT
-        ba.account_number,
-        ba.bank_name
-      FROM transfers t
-      JOIN bank_accounts ba
-        ON ba.user_id = t.user_id
-       AND ba.deleted_at IS NULL
-       AND (t.bank IS NULL OR ba.bank_name = t.bank)
-       AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
-     WHERE t.id = $1
-     LIMIT 1
+      SELECT ba.account_number, ba.bank_name
+        FROM transfers t
+        JOIN bank_accounts ba
+          ON ba.user_id = t.user_id
+         AND ba.deleted_at IS NULL
+         AND (t.bank IS NULL OR ba.bank_name = t.bank)
+         AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
+       WHERE t.id = $1
+       LIMIT 1
     `;
     const r1 = await db.query(q1, [id]);
     if (r1.rowCount) return res.json(r1.rows[0]);
 
     // 2) Fallback: bank account on a linked parent, match bank + last4
     const q2 = `
-      SELECT
-        ba.account_number,
-        ba.bank_name
-      FROM transfers t
-      JOIN student_parents sp
-        ON sp.student_id = t.user_id
-      JOIN bank_accounts ba
-        ON ba.user_id = sp.parent_id
-       AND ba.deleted_at IS NULL
-       AND (t.bank IS NULL OR ba.bank_name = t.bank)
-       AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
-     WHERE t.id = $1
-     ORDER BY ba.created_at DESC
-     LIMIT 1
+      SELECT ba.account_number, ba.bank_name
+        FROM transfers t
+        JOIN student_parents sp
+          ON sp.student_id = t.user_id
+        JOIN bank_accounts ba
+          ON ba.user_id = sp.parent_id
+         AND ba.deleted_at IS NULL
+         AND (t.bank IS NULL OR ba.bank_name = t.bank)
+         AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
+       WHERE t.id = $1
+       ORDER BY ba.created_at DESC
+       LIMIT 1
     `;
     const r2 = await db.query(q2, [id]);
     if (r2.rowCount) return res.json(r2.rows[0]);
@@ -588,14 +581,14 @@ router.post('/', async (req, res) => {
     const last4 = String(ba.rows[0].last4 || '').slice(-4);
     const destination_masked = `${bank} •••• ${last4}`;
 
-    // Soft balance check (wallets.balance is cents)
+    // Soft balance check
     try {
       const w = await db.query(`SELECT balance FROM wallets WHERE user_id = $1 LIMIT 1`, [userId]);
       const walletCents = Number(w.rows?.[0]?.balance || 0);
       if (!Number.isNaN(walletCents) && amt > walletCents) {
         return res.status(400).json({ message: 'Amount exceeds available balance.' });
       }
-    } catch { /* ignore soft check errors */ }
+    } catch {}
 
     const ins = await db.query(
       `
@@ -622,28 +615,30 @@ router.post('/', async (req, res) => {
 router.post('/parent', async (req, res) => {
   try {
     const me = req.user || {};
-    const role = (me.role || '').toLowerCase();
-    const type = (me.type || '').toLowerCase();
-    const parentId = me.userId || me.id;
-
-    const isAdmin  = role === 'admin';
-    const isParent = role === 'parent' || type === 'parent';
-    if (!isParent && !isAdmin) {
-      return res.status(403).json({ message: 'Only parents may submit this transfer.' });
+    allower: {
+      const role = (me.role || '').toLowerCase();
+      const type = (me.type || '').toLowerCase();
+      const isAdmin  = role === 'admin';
+      const isParent = role === 'parent' || type === 'parent';
+      if (!isParent && !isAdmin) {
+        return res.status(403).json({ message: 'Only parents may submit this transfer.' });
+      }
     }
 
+    const parentId = me.userId || me.id;
     const { student_id, bank_account_id, amount_cents, memo = '' } = req.body || {};
     const amt = Number(amount_cents);
     if (!student_id || !bank_account_id || !Number.isFinite(amt) || amt <= 0) {
       return res.status(400).json({ message: 'Invalid student, bank account, or amount.' });
     }
 
-    if (!isAdmin) {
+    // parent must be linked to student (unless admin)
+    if ((me.role || '').toLowerCase() !== 'admin') {
       const linked = await parentLinkedToStudent(parentId, student_id);
       if (!linked) return res.status(403).json({ message: 'Not authorized for this student.' });
     }
 
-    // Verify bank account belongs to the *parent*
+    // Bank account belongs to the *parent*
     const ba = await db.query(
       `SELECT bank_name AS bank, RIGHT(account_number, 4) AS last4
          FROM bank_accounts
@@ -657,14 +652,14 @@ router.post('/parent', async (req, res) => {
     const last4 = String(ba.rows[0].last4 || '').slice(-4);
     const destination_masked = `${bank} •••• ${last4}`;
 
-    // Soft balance check on the *student* wallet
+    // Soft balance check on the student
     try {
       const w = await db.query(`SELECT balance FROM wallets WHERE user_id = $1 LIMIT 1`, [student_id]);
       const walletCents = Number(w.rows?.[0]?.balance || 0);
       if (!Number.isNaN(walletCents) && amt > walletCents) {
-        return res.status(400).json({ message: 'Amount exceeds student\'s available balance.' });
+        return res.status(400).json({ message: "Amount exceeds student's available balance." });
       }
-    } catch { /* ignore */ }
+    } catch {}
 
     const ins = await db.query(
       `
@@ -688,11 +683,8 @@ router.post('/parent', async (req, res) => {
   }
 });
 
-/**
- * Latest transfer for a specific student (by user_id).
- * GET /api/transfers/student/:id/latest
- * Returns {} if none exist.
- */
+// --- Latest transfer for a specific student --------------------------------
+// GET /api/transfers/student/:id/latest
 router.get('/student/:id/latest', async (req, res) => {
   try {
     const me = req.user || {};
@@ -704,22 +696,18 @@ router.get('/student/:id/latest', async (req, res) => {
       return res.status(400).json({ message: 'Missing student id.' });
     }
 
-    // ---- Authorization ----------------------------------------------------
     let authorized = false;
     if (role === 'admin') {
       authorized = true;
     } else if (role === 'parent') {
-      // Parent must be linked to this student
       authorized = await parentLinkedToStudent(requesterId, studentId);
     } else if (role === 'cardholder' || role === 'cardholder_assistance') {
-      // Cardholders can only see their own latest transfer
       authorized = String(requesterId) === String(studentId);
     }
 
     if (!authorized) {
       return res.status(403).json({ message: 'Not authorized for this student.' });
     }
-    // ----------------------------------------------------------------------
 
     const { rows } = await db.query(
       `
@@ -734,7 +722,7 @@ router.get('/student/:id/latest', async (req, res) => {
 
     if (!rows.length) return res.json({});
     const r = rows[0];
-    return res.json({ ...r, created_at: r.requested_at }); // compatibility mirror
+    return res.json({ ...r, created_at: r.requested_at });
   } catch (e) {
     console.error('GET /api/transfers/student/:id/latest error', e);
     return res.status(500).json({ message: 'Failed to load latest transfer.' });
