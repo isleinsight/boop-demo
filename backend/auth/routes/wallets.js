@@ -8,14 +8,18 @@ function isAdmin(req) {
   return (req.user?.role || "").toLowerCase() === "admin";
 }
 
-// ✅ TEMP: quick health checks to verify mounting & path
+// ───────────────────────────────────────────────────────────────
+// Health probes (optional; handy for quick checks)
+// /api/wallets/ping -> { ok: true, scope: 'wallets' }
+// /api/wallets/user/test -> { ok: true, route: '/api/wallets/user/:userId' }
 router.get("/ping", (_req, res) => res.json({ ok: true, scope: "wallets" }));
 router.get("/user/test", (_req, res) =>
   res.json({ ok: true, route: "/api/wallets/user/:userId" })
 );
 
-// ✅ Your schema: student_parents(student_id, parent_id)
-// student_id == student's users.id (same as students.user_id)
+// ───────────────────────────────────────────────────────────────
+// Helpers
+// student_parents(student_id, parent_id) where student_id = users.id (student)
 async function parentLinkedToStudent(parentId, studentUserId) {
   const q = `
     SELECT 1
@@ -27,10 +31,8 @@ async function parentLinkedToStudent(parentId, studentUserId) {
   return rows.length > 0;
 }
 
-/**
- * GET /api/wallets/mine — (unchanged)
- * returns: { wallet_id, balance_cents }
- */
+// ───────────────────────────────────────────────────────────────
+// GET /api/wallets/mine  -> { wallet_id, balance_cents }
 router.get("/mine", authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.userId ?? req.user?.id;
@@ -44,27 +46,27 @@ router.get("/mine", authenticateToken, async (req, res) => {
       LIMIT 1
     `;
     const { rows } = await db.query(q, [userId]);
-
     if (!rows.length) return res.json({ wallet_id: null, balance_cents: 0 });
 
     const w = rows[0];
-    return res.json({ wallet_id: w.id, balance_cents: Number(w.balance || 0) });
+    return res.json({
+      wallet_id: w.id,
+      balance_cents: Number(w.balance || 0),
+    });
   } catch (err) {
     console.error("❌ wallets/mine error:", err.stack || err);
     return res.status(500).json({ message: "Failed to load wallet." });
   }
 });
 
-/**
- * GET /api/wallets/user/:userId
- * Admin OR parent linked to that student.
- * Response: { wallet_id, balance_cents }
- */
+// ───────────────────────────────────────────────────────────────
+// GET /api/wallets/user/:userId  (admin or linked parent)
+// -> { wallet_id, balance_cents, is_frozen, frozen_at, frozen_by, frozen_reason }
 router.get("/user/:userId", authenticateToken, async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Auth: admin ok; otherwise must be a parent linked to this student
+    // Auth: admin OR linked parent
     if (!isAdmin(req)) {
       const requesterId = req.user?.userId ?? req.user?.id;
       const role = (req.user?.role || "").toLowerCase();
@@ -78,7 +80,7 @@ router.get("/user/:userId", authenticateToken, async (req, res) => {
     }
 
     const q = `
-      SELECT id, balance
+      SELECT id, balance, is_frozen, frozen_at, frozen_by, frozen_reason
       FROM wallets
       WHERE user_id = $1
       ORDER BY created_at ASC
@@ -86,27 +88,40 @@ router.get("/user/:userId", authenticateToken, async (req, res) => {
     `;
     const { rows } = await db.query(q, [userId]);
 
-    if (!rows.length) return res.json({ wallet_id: null, balance_cents: 0 });
+    if (!rows.length) {
+      return res.json({
+        wallet_id: null,
+        balance_cents: 0,
+        is_frozen: false,
+        frozen_at: null,
+        frozen_by: null,
+        frozen_reason: null,
+      });
+    }
 
     const w = rows[0];
-    return res.json({ wallet_id: w.id, balance_cents: Number(w.balance || 0) });
+    return res.json({
+      wallet_id: w.id,
+      balance_cents: Number(w.balance || 0),
+      is_frozen: !!w.is_frozen,
+      frozen_at: w.frozen_at,
+      frozen_by: w.frozen_by,
+      frozen_reason: w.frozen_reason || null,
+    });
   } catch (err) {
     console.error("❌ wallets/user/:userId error:", err);
     return res.status(500).json({ message: "Failed to load wallet." });
   }
 });
 
-// --- Parent-funded top-ups (keeps treasury flow untouched) -------------------
-/**
- * POST /api/wallets/:walletId/parent-deposits
- * Body: { amount: number, note?: string, source?: "HSBC" | "BUTTERFIELD" }
- * Double-entry:
- *   Dr Merchant Settlement (asset down)
- *   Cr Student Wallet (liability up)
- */
+// ───────────────────────────────────────────────────────────────
+// POST /api/wallets/:walletId/parent-deposits
+// Body: { amount: number, note?: string, source?: "HSBC" | "BUTTERFIELD" }
+// Double-entry:
+//   Dr Merchant Settlement (asset down)
+//   Cr Student Wallet (liability up)
 router.post("/:walletId/parent-deposits", authenticateToken, async (req, res) => {
   const client = await db.connect();
-  const where = "POST /api/wallets/:walletId/parent-deposits";
   try {
     const { walletId } = req.params;
     const { amount, note, source } = req.body;
@@ -118,30 +133,28 @@ router.post("/:walletId/parent-deposits", authenticateToken, async (req, res) =>
     }
     const amount_cents = Math.round(amt * 100);
 
-    // 2) Pick merchant settlement wallet from env
+    // 2) Select merchant settlement wallet from env
     const pick = String(source || "").toUpperCase();
     const MERCH_HSBC = process.env.MERCHANT_WALLET_ID_HSBC;
-    const MERCH_BUTT = process.env.MERCHANT_WALLET_ID_BUTTERFIELD; // optional, if you add one later
+    const MERCH_BUTT = process.env.MERCHANT_WALLET_ID_BUTTERFIELD;
     const merchantWalletId =
       (pick === "BUTTERFIELD" ? MERCH_BUTT : MERCH_HSBC) || MERCH_BUTT || MERCH_HSBC;
 
     if (!merchantWalletId) {
-      console.error(`${where}: ❌ Missing MERCHANT_WALLET_ID_* env`);
+      console.error("parent-deposits: Missing MERCHANT_WALLET_ID_* env");
       return res.status(500).json({ message: "Merchant settlement wallet not configured." });
     }
 
-    // 3) Load destination (student) wallet
+    // 3) Destination (student) wallet
     const destRes = await client.query(
       `SELECT id, user_id, balance FROM wallets WHERE id = $1`,
       [walletId]
     );
-    if (!destRes.rowCount) {
-      return res.status(404).json({ message: "Wallet not found." });
-    }
+    if (!destRes.rowCount) return res.status(404).json({ message: "Wallet not found." });
     const studentWallet = destRes.rows[0];
     const studentUserId = studentWallet.user_id;
 
-    // 4) Authorize: admin or linked parent
+    // 4) Authorize: admin OR parent linked to that student
     const callerId = req.user?.userId ?? req.user?.id;
     const role = (req.user?.role || "").toLowerCase();
     let allowed = role === "admin";
@@ -156,7 +169,7 @@ router.post("/:walletId/parent-deposits", authenticateToken, async (req, res) =>
       return res.status(403).json({ message: "Not authorized to deposit to this wallet." });
     }
 
-    // 5) Load merchant settlement wallet
+    // 5) Merchant settlement wallet
     const merchRes = await client.query(
       `SELECT id, user_id, balance FROM wallets WHERE id = $1`,
       [merchantWalletId]
@@ -174,45 +187,47 @@ router.post("/:walletId/parent-deposits", authenticateToken, async (req, res) =>
 
     const reference_code = `PARENT_TOPUP:${Date.now()}:${studentWallet.id}:${amount_cents}`;
 
-    // DEBIT merchant (money leaves merchant → to student)
+    // Debit merchant
     const debitTx = await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, method, created_at,
          added_by, sender_id, recipient_id, reference_code, metadata
-       ) VALUES ($1, $2, 'debit', $3, $4, 'internal', NOW(),
-                 $5, $2, $6, $7, jsonb_build_object('kind','parent_topup'))
+       )
+       VALUES ($1, $2, 'debit', $3, $4, 'internal', NOW(),
+               $5, $2, $6, $7, jsonb_build_object('kind','parent_topup'))
        RETURNING id`,
       [
         merchantWallet.id,
         merchantWallet.user_id,
         amount_cents,
-        note || 'Parent top-up',
+        note || "Parent top-up",
         callerId,
         studentUserId,
-        reference_code
+        reference_code,
       ]
     );
 
-    // CREDIT student
+    // Credit student
     const creditTx = await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, method, created_at,
          added_by, sender_id, recipient_id, reference_code, metadata
-       ) VALUES ($1, $2, 'credit', $3, $4, 'internal', NOW(),
-                 $5, $6, $2, $7, jsonb_build_object('kind','parent_topup'))
+       )
+       VALUES ($1, $2, 'credit', $3, $4, 'internal', NOW(),
+               $5, $6, $2, $7, jsonb_build_object('kind','parent_topup'))
        RETURNING id`,
       [
         studentWallet.id,
         studentUserId,
         amount_cents,
-        note || 'Top-up received',
+        note || "Top-up received",
         callerId,
         merchantWallet.user_id,
-        reference_code
+        reference_code,
       ]
     );
 
-    // 7) Update balances
+    // Balances
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
       [amount_cents, merchantWallet.id]
@@ -228,7 +243,7 @@ router.post("/:walletId/parent-deposits", authenticateToken, async (req, res) =>
       wallet_id: studentWallet.id,
       balance_cents: Number(newBalRes.rows[0].balance || 0),
       transaction_ids: { debit: debitTx.rows[0].id, credit: creditTx.rows[0].id },
-      reference_code
+      reference_code,
     });
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
@@ -239,67 +254,19 @@ router.post("/:walletId/parent-deposits", authenticateToken, async (req, res) =>
   }
 });
 
-// --- include in the SELECTs so client can render status ---
-/**
- * (unchanged path) GET /api/wallets/user/:userId
- * now also returns is_frozen
- */
-router.get("/user/:userId", authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    // Auth: admin OR linked parent
-    if (!isAdmin(req)) {
-      const requesterId = req.user?.userId ?? req.user?.id;
-      const role = (req.user?.role || "").toLowerCase();
-      if (role !== "parent") return res.status(403).json({ message: "Admin or linked parent required." });
-      const linked = await parentLinkedToStudent(requesterId, userId);
-      if (!linked) return res.status(403).json({ message: "Not authorized for this student." });
-    }
-
-    const q = `
-      SELECT id, balance, is_frozen, frozen_at, frozen_by, frozen_reason
-      FROM wallets
-      WHERE user_id = $1
-      ORDER BY created_at ASC
-      LIMIT 1
-    `;
-    const { rows } = await db.query(q, [userId]);
-
-    if (!rows.length) return res.json({ wallet_id: null, balance_cents: 0, is_frozen: false });
-
-    const w = rows[0];
-    return res.json({
-      wallet_id: w.id,
-      balance_cents: Number(w.balance || 0),
-      is_frozen: !!w.is_frozen,
-      frozen_at: w.frozen_at,
-      frozen_by: w.frozen_by,
-      frozen_reason: w.frozen_reason || null
-    });
-  } catch (err) {
-    console.error("❌ wallets/user/:userId error:", err);
-    return res.status(500).json({ message: "Failed to load wallet." });
-  }
-});
-
-/**
- * POST /api/wallets/:walletId/freeze
- * Body: { reason?: string }
- * Auth: admin OR parent linked to the student owning this wallet
- */
+// ───────────────────────────────────────────────────────────────
+// POST /api/wallets/:walletId/freeze   Body: { reason?: string }
+// Auth: admin OR parent linked to the student owning this wallet
 router.post("/:walletId/freeze", authenticateToken, async (req, res) => {
   const { walletId } = req.params;
-  const reason = (req.body?.reason || '').toString().slice(0, 500);
+  const reason = (req.body?.reason || "").toString().slice(0, 500);
 
   try {
-    // find wallet owner
     const wq = `SELECT user_id FROM wallets WHERE id = $1`;
     const wres = await db.query(wq, [walletId]);
     if (!wres.rowCount) return res.status(404).json({ message: "Wallet not found." });
     const studentUserId = wres.rows[0].user_id;
 
-    // auth: admin or linked parent
     if (!isAdmin(req)) {
       const requesterId = req.user?.userId ?? req.user?.id;
       const role = (req.user?.role || "").toLowerCase();
@@ -308,7 +275,6 @@ router.post("/:walletId/freeze", authenticateToken, async (req, res) => {
       if (!linked) return res.status(403).json({ message: "Not authorized for this student." });
     }
 
-    // update
     const uq = `
       UPDATE wallets
       SET is_frozen = true,
@@ -327,9 +293,8 @@ router.post("/:walletId/freeze", authenticateToken, async (req, res) => {
   }
 });
 
-/**
- * POST /api/wallets/:walletId/unfreeze
- */
+// ───────────────────────────────────────────────────────────────
+// POST /api/wallets/:walletId/unfreeze
 router.post("/:walletId/unfreeze", authenticateToken, async (req, res) => {
   const { walletId } = req.params;
 
