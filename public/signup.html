@@ -123,25 +123,27 @@
 /* TERMS AGREEMENT */
 .terms label {
   display: flex;
-  align-items: center;   /* align checkbox and text */
-  gap: 8px;              /* space between box and text */
+  align-items: center;   /* aligns checkbox + text */
+  gap: 8px;
   font-size: .9rem;
-  color: #dbe3ff;        /* softer ink */
+  color: #dbe3ff;
   cursor: pointer;
+  flex-wrap: wrap;       /* allow text to wrap neatly */
+  line-height: 1.4;      /* better readability */
 }
 
 .terms input[type="checkbox"] {
-  margin: 0;             /* remove browser default offset */
-  flex-shrink: 0;        /* keep checkbox size stable */
+  margin: 0;
+  flex-shrink: 0;        /* keeps box from shrinking */
 }
 
 .terms a {
-  color: #c9d7ff;        /* same as footer links */
+  color: #c9d7ff;        /* matches footer */
   text-decoration: none;
 }
 .terms a:hover {
-  text-decoration: underline;
   color: #fff;
+  text-decoration: underline;
 }
   </style>
 </head>
