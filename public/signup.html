@@ -120,14 +120,28 @@
   text-align: left; /* 👈 Left aligned instead of centered */
 }
 
-/* TERMS CHECKBOX LINKS */
+/* TERMS AGREEMENT */
+.terms {
+  display: flex;
+  align-items: flex-start;   /* top-align checkbox with text */
+  gap: 8px;                  /* space between checkbox and text */
+  margin-top: 6px;
+  font-size: .9rem;
+  color: #dbe3ff;            /* softer ink */
+}
+
+.terms input[type="checkbox"] {
+  margin-top: 3px;           /* align with first line of text */
+}
+
 .terms a {
-  color: #c9d7ff; /* same as footer links */
+  color: #c9d7ff;            /* same color as footer links */
   text-decoration: none;
 }
+
 .terms a:hover {
   text-decoration: underline;
-  color: #fff; /* brighten slightly on hover */
+  color: #fff;               /* brighten on hover */
 }
   </style>
 </head>
@@ -180,10 +194,12 @@
             </div>
           </div>
 
-          <label class="terms">
-            <input id="agree" type="checkbox" required />
-            <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a> and the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span>
-          </label>
+          <div class="terms">
+  <label>
+    <input type="checkbox" required />
+    <span>I agree to the <a href="terms.html">Terms &amp; Conditions</a> and the <a href="privacy.html">Privacy Policy</a>.</span>
+  </label>
+</div>
 
           <button id="createBtn" class="btn" type="submit">Create account</button>
           <div class="helper">
