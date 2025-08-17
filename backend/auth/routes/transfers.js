@@ -663,4 +663,57 @@ router.post('/parent', async (req, res) => {
   }
 });
 
+/**
+ * Latest transfer for a specific student (by user_id).
+ * GET /api/transfers/student/:id/latest
+ * Returns {} if none exist.
+ */
+router.get('/student/:id/latest', async (req, res) => {
+  try {
+    const me = req.user || {};
+    const role = String(me.role || '').toLowerCase();
+    const requesterId = me.userId || me.id;
+    const studentId = String(req.params.id || '').trim();
+
+    if (!studentId) {
+      return res.status(400).json({ message: 'Missing student id.' });
+    }
+
+    // ---- Authorization ----------------------------------------------------
+    let authorized = false;
+    if (role === 'admin') {
+      authorized = true;
+    } else if (role === 'parent') {
+      // Parent must be linked to this student
+      authorized = await parentLinkedToStudent(requesterId, studentId);
+    } else if (role === 'cardholder' || role === 'cardholder_assistance') {
+      // Cardholders can only see their own latest transfer
+      authorized = String(requesterId) === String(studentId);
+    }
+
+    if (!authorized) {
+      return res.status(403).json({ message: 'Not authorized for this student.' });
+    }
+    // ----------------------------------------------------------------------
+
+    const { rows } = await db.query(
+      `
+      SELECT id, requested_at, status, amount_cents
+        FROM transfers
+       WHERE user_id = $1
+       ORDER BY requested_at DESC
+       LIMIT 1
+      `,
+      [studentId]
+    );
+
+    if (!rows.length) return res.json({});
+    const r = rows[0];
+    return res.json({ ...r, created_at: r.requested_at }); // compatibility mirror
+  } catch (e) {
+    console.error('GET /api/transfers/student/:id/latest error', e);
+    return res.status(500).json({ message: 'Failed to load latest transfer.' });
+  }
+});
+
 module.exports = router;
