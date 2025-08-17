@@ -30,6 +30,18 @@ async function releaseExpiredClaims() {
   }
 }
 
+// Is this parent linked to this student?
+async function parentLinkedToStudent(parentId, studentUserId) {
+  const q = `
+    SELECT 1
+      FROM student_parents
+     WHERE student_id = $1 AND parent_id = $2
+     LIMIT 1
+  `;
+  const { rows } = await db.query(q, [studentUserId, parentId]);
+  return rows.length > 0;
+}
+
 // Create (or reuse) a virtual counterparty user based on bank + last4
 async function ensureBankCounterparty(client, bank, destination_masked) {
   const safeBank = String(bank || 'Bank').trim();
@@ -75,12 +87,7 @@ function requireAccountsRole(req, res, next) {
 
 /**
  * GET /api/transfers
- * Query: status=pending|claimed|completed|rejected (default pending)
- *        start=YYYY-MM-DD, end=YYYY-MM-DD, bank=HSBC|Butterfield
- *        limit=25, offset=0
- * Returns: { items: [...], total: number }
- *
- * NOTE: returns `requested_at` (canonical) and also `created_at` mirror for older UI.
+ * Admin queue (status filter etc.)
  */
 router.get('/', requireAccountsRole, async (req, res) => {
   try {
@@ -204,7 +211,6 @@ async function doReject(req, res) {
   try {
     await client.query('BEGIN');
 
-    // Move transfer to rejected (pending/claimed only) and get needed fields
     const rej = await client.query(
       `
       UPDATE transfers
@@ -223,10 +229,8 @@ async function doReject(req, res) {
     }
     const t = rej.rows[0];
 
-    // ensure we have a recipient counterparty so the "TO" column shows a name
     const recipientId = await ensureBankCounterparty(client, t.bank, t.destination_masked);
 
-    // Insert a zero-amount activity transaction for the cardholder with recipient set
     await client.query(
       `
       INSERT INTO transactions (
@@ -266,7 +270,6 @@ router.patch('/:id/reject', requireAccountsRole, wrap(doReject));
 router.post('/:id/reject',  requireAccountsRole, wrap(doReject)); // POST alias
 
 // --- COMPLETE (double-entry + debits) -------------------------------------
-/** COMPLETE — double-entry + atomic debits with virtual counterparty recipient */
 async function doComplete(req, res) {
   const id = req.params.id; // transfer id
   const me = req.user.userId || req.user.id;
@@ -281,38 +284,10 @@ async function doComplete(req, res) {
 
   await releaseExpiredClaims();
 
-  // Helper: find-or-create a virtual counterparty user for this bank/destination
-  async function ensureBankCounterparty(client, bank, destination_masked) {
-    const safeBank = String(bank || 'Bank').trim();
-    const mask = String(destination_masked || '').trim();
-    const last4Match = mask.match(/(\d{4})\s*$/);
-    const last4 = last4Match ? last4Match[1] : '0000';
-
-    // Stable unique email slug so we re-use the same counterparty each time
-    const slug = `${safeBank}-${last4}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const email = `counterparty+${slug}@boop.local`;
-    const first_name = safeBank;        // e.g., "HSBC" / "Butterfield"
-    const last_name  = `•••• ${last4}`; // e.g., "•••• 4987"
-
-    // Upsert a user that satisfies your users_role_check (role/type = 'vendor')
-    const upsertSql = `
-      INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
-      VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
-      ON CONFLICT (email)
-      DO UPDATE SET first_name = EXCLUDED.first_name,
-                    last_name  = EXCLUDED.last_name,
-                    updated_at = NOW()
-      RETURNING id
-    `;
-    const { rows } = await client.query(upsertSql, [email, first_name, last_name]);
-    return rows[0].id;
-  }
-
   const client = await getDbClient();
   try {
     await client.query('BEGIN');
 
-    // Lock transfer and validate claim ownership + TTL freshness
     const { rows: trows } = await client.query(
       `
       SELECT id, user_id, amount_cents, status, claimed_by, claimed_at,
@@ -342,7 +317,6 @@ async function doComplete(req, res) {
       return res.status(400).json({ message: 'Invalid amount on transfer.' });
     }
 
-    // Fetch wallets
     const { rows: uwRows } = await client.query(
       `SELECT id AS wallet_id FROM wallets WHERE user_id = $1 LIMIT 1`,
       [t.user_id]
@@ -367,7 +341,6 @@ async function doComplete(req, res) {
     const treasuryWalletId = twRows[0].wallet_id;
     const treasuryUserId   = twRows[0].treasury_user_id;
 
-    // Prevent double-complete creating duplicate transactions
     const { rows: existingTxn } = await client.query(
       `SELECT 1 FROM transactions WHERE transfer_id = $1 LIMIT 1`,
       [id]
@@ -377,7 +350,6 @@ async function doComplete(req, res) {
       return res.status(409).json({ message: 'Transfer already completed.' });
     }
 
-    // Build (or reuse) the counterparty user (recipient)
     const recipientId = await ensureBankCounterparty(client, t.bank, t.destination_masked);
 
     // 1) Debit user wallet balance
@@ -415,13 +387,10 @@ async function doComplete(req, res) {
     const toMask    = t.destination_masked || 'bank destination';
     const bankLabel = t.bank || 'Bank';
 
-    // Notes: cardholder's original memo, and admin internal note (for treasury side)
     const userNote      = t.memo || null;
-    const treasuryNote  = internal_note?.trim()
-      ? internal_note.trim()
-      : `Bank reference ${ref}`;
+    const treasuryNote  = internal_note?.trim() ? internal_note.trim() : `Bank reference ${ref}`;
 
-    // 3a) User debit — visible in cardholder history (includes note = t.memo)
+    // 3a) User debit — visible in cardholder history
     await client.query(
       `
       INSERT INTO transactions (
@@ -441,18 +410,14 @@ async function doComplete(req, res) {
         userNote,
         `Transfer to ${bankLabel} ${toMask}`,
         ref,
-        JSON.stringify({
-          via: 'transfer',
-          role: 'user',
-          counterparty_name: `${bankLabel} ${toMask}`
-        }),
+        JSON.stringify({ via: 'transfer', role: 'user', counterparty_name: `${bankLabel} ${toMask}` }),
         t.id,
         recipientId,
         now
       ]
     );
 
-    // 3b) Treasury debit — internal accounting (includes note = internal_note or reference)
+    // 3b) Treasury debit — internal accounting
     await client.query(
       `
       INSERT INTO transactions (
@@ -472,11 +437,7 @@ async function doComplete(req, res) {
         treasuryNote,
         `Bank payout for transfer ${t.id} → ${toMask}`,
         ref,
-        JSON.stringify({
-          via: 'transfer',
-          role: 'treasury',
-          counterparty_name: `${bankLabel} ${toMask}`
-        }),
+        JSON.stringify({ via: 'transfer', role: 'treasury', counterparty_name: `${bankLabel} ${toMask}` }),
         t.id,
         recipientId,
         now
@@ -514,7 +475,6 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // First try: match by bank name and last4 from destination_masked
     const q1 = `
       SELECT ba.account_number
         FROM transfers t
@@ -527,11 +487,8 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
        LIMIT 1
     `;
     const r1 = await db.query(q1, [id]);
-    if (r1.rowCount) {
-      return res.json({ account_number: r1.rows[0].account_number });
-    }
+    if (r1.rowCount) return res.json({ account_number: r1.rows[0].account_number });
 
-    // Fallback: most recent active account for the same user
     const q2 = `
       SELECT ba.account_number
         FROM bank_accounts ba
@@ -542,9 +499,7 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
        LIMIT 1
     `;
     const r2 = await db.query(q2, [id]);
-    if (r2.rowCount) {
-      return res.json({ account_number: r2.rows[0].account_number });
-    }
+    if (r2.rowCount) return res.json({ account_number: r2.rows[0].account_number });
 
     return res.status(404).json({ message: 'Bank account not found for this transfer.' });
   } catch (err) {
@@ -569,7 +524,7 @@ router.get('/mine/latest', async (req, res) => {
     );
     if (!rows.length) return res.json({});
     const r = rows[0];
-    res.json({ ...r, created_at: r.requested_at }); // compatibility mirror
+    res.json({ ...r, created_at: r.requested_at });
   } catch (e) {
     console.error('transfers/mine/latest error', e);
     res.status(500).json({ message: 'Failed to load latest transfer.' });
@@ -631,6 +586,80 @@ router.post('/', async (req, res) => {
   } catch (e) {
     console.error('POST /api/transfers error:', e);
     res.status(500).json({ message: 'Failed to submit transfer request.' });
+  }
+});
+
+/**
+ * Parent-initiated transfer request on behalf of a student.
+ * POST /api/transfers/parent
+ * Body: { student_id, bank_account_id, amount_cents, memo? }
+ */
+router.post('/parent', async (req, res) => {
+  try {
+    const me = req.user || {};
+    const role = (me.role || '').toLowerCase();
+    const type = (me.type || '').toLowerCase();
+    const parentId = me.userId || me.id;
+
+    const isAdmin  = role === 'admin';
+    const isParent = role === 'parent' || type === 'parent';
+    if (!isParent && !isAdmin) {
+      return res.status(403).json({ message: 'Only parents may submit this transfer.' });
+    }
+
+    const { student_id, bank_account_id, amount_cents, memo = '' } = req.body || {};
+    const amt = Number(amount_cents);
+    if (!student_id || !bank_account_id || !Number.isFinite(amt) || amt <= 0) {
+      return res.status(400).json({ message: 'Invalid student, bank account, or amount.' });
+    }
+
+    if (!isAdmin) {
+      const linked = await parentLinkedToStudent(parentId, student_id);
+      if (!linked) return res.status(403).json({ message: 'Not authorized for this student.' });
+    }
+
+    // Verify bank account belongs to the *parent*
+    const ba = await db.query(
+      `SELECT bank_name AS bank, RIGHT(account_number, 4) AS last4
+         FROM bank_accounts
+        WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+        LIMIT 1`,
+      [bank_account_id, parentId]
+    );
+    if (!ba.rowCount) return res.status(404).json({ message: 'Bank account not found.' });
+
+    const bank = ba.rows[0].bank;
+    const last4 = String(ba.rows[0].last4 || '').slice(-4);
+    const destination_masked = `${bank} •••• ${last4}`;
+
+    // Soft balance check on the *student* wallet
+    try {
+      const w = await db.query(`SELECT balance FROM wallets WHERE user_id = $1 LIMIT 1`, [student_id]);
+      const walletCents = Number(w.rows?.[0]?.balance || 0);
+      if (!Number.isNaN(walletCents) && amt > walletCents) {
+        return res.status(400).json({ message: 'Amount exceeds student\'s available balance.' });
+      }
+    } catch { /* ignore */ }
+
+    const ins = await db.query(
+      `
+      INSERT INTO transfers (
+        user_id, amount_cents, bank, destination_masked, status, requested_at, memo
+      ) VALUES ($1, $2, $3, $4, 'pending', NOW(), $5)
+      RETURNING id, user_id, amount_cents, bank, destination_masked, status, requested_at
+      `,
+      [student_id, amt, bank, destination_masked, memo]
+    );
+
+    const row = ins.rows[0];
+    return res.status(201).json({
+      message: 'Transfer request submitted.',
+      ...row,
+      created_at: row.requested_at
+    });
+  } catch (e) {
+    console.error('POST /api/transfers/parent error:', e);
+    return res.status(500).json({ message: 'Failed to submit transfer request.' });
   }
 });
 
