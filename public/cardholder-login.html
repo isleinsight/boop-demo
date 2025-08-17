@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Cardholder Login – BOOP</title>
+  <title>Create Cardholder Account – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Create your BOOP cardholder account." />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <meta name="description" content="Log in to your BOOP cardholder account." />
+
   <style>
     :root{
       --brand:#2f80ed; --brand-dark:#1c6fd8;
@@ -16,6 +17,7 @@
       --focus:#5aa2ff; --shadow:0 20px 40px rgba(0,0,0,.35);
       --radius:16px;
       --container: 820px;
+      --danger:#ffb4b4; --ok:#a7f3d0;
     }
 
     *{box-sizing:border-box}
@@ -25,7 +27,7 @@
       font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       color:var(--ink);
 
-      /* Solid base + two large viewport radials + subtle vertical gradient */
+      /* Same background treatment as cardholder.html */
       background-color:#0b1220;
       background-image:
         radial-gradient(60vw 55vh at 18% -12%, rgba(47,128,237,.40) 0%, rgba(47,128,237,0) 60%),
@@ -70,7 +72,10 @@
     /* FORM */
     form{display:grid; gap:12px}
     label{font-size:.9rem; color:#dbe3ff}
-    input{
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    @media (max-width:560px){ .row{grid-template-columns:1fr} }
+
+    input, select{
       width:100%;
       padding:12px 14px;
       border-radius:12px;
@@ -78,10 +83,13 @@
       background:var(--field);
       color:#fff;
       outline:none;
-      text-align:left;          /* ← keep text left-aligned */
+      text-align:left;
     }
     input::placeholder{color:#93a3c4}
     input:focus{border-color:var(--focus); box-shadow:0 0 0 3px rgba(90,162,255,.25)}
+
+    .terms{display:flex; align-items:flex-start; gap:10px; color:#cfe0ff; font-size:.92rem}
+    .terms input{transform:translateY(3px)}
 
     .btn{
       display:inline-flex; align-items:center; justify-content:center;
@@ -89,23 +97,21 @@
       background:var(--brand); color:#fff; box-shadow:0 10px 24px rgba(47,128,237,.18);
     }
     .btn:hover{background:var(--brand-dark)}
+    .btn[disabled]{opacity:.6; cursor:not-allowed}
 
-    .helper{display:flex; justify-content:space-between; align-items:center; margin-top:6px}
-    .helper a{color:#a7c3ff; text-decoration:none; font-size:.92rem}
+    .helper{display:flex; justify-content:center; gap:10px; margin-top:6px; font-size:.95rem}
+    .helper a{color:#a7c3ff; text-decoration:none}
     .helper a:hover{text-decoration:underline}
-    .status{min-height:20px; margin-top:8px; font-size:.95rem}
-    .status.error{color:#ffb4b4}
-    .status.ok{color:#a7f3d0}
+
+    .status{min-height:20px; margin-top:6px; font-size:.95rem; text-align:center}
+    .status.error{color:var(--danger)}
+    .status.ok{color:var(--ok)}
 
     /* FOOTER */
     footer{margin-top:auto; border-top:1px solid rgba(255,255,255,.06); background:rgba(11,18,32,.55); backdrop-filter:blur(6px)}
-    .footer-inner{max-width:var(--container); margin:0 auto; padding:14px 18px; display:flex; gap:10px; align-items:center; justify-content:center; color:#b9c6e2; font-size:.92rem}
+    .footer-inner{max-width:var(--container); margin:0 auto; padding:14px 18px; display:flex; gap:10px; align-items:center; justify-content:center; color:#b9c6e2; font-size:.92rem; flex-wrap:wrap}
     .footer-inner a{color:#c9d7ff; text-decoration:none}
     .footer-inner a:hover{text-decoration:underline}
-
-    @media (max-width: 520px){
-      .helper{flex-direction:column; gap:8px}
-    }
   </style>
 </head>
 <body>
@@ -115,35 +121,59 @@
         <img src="assets/Boop-Logo.png" alt="BOOP logo" />
       </a>
       <div class="nav-actions">
-        <a href="index.html">Home</a>
+        <a href="cardholder.html">Log in</a>
       </div>
     </div>
   </nav>
 
   <main>
     <div class="stack">
-      <section class="intro" aria-label="Welcome">
-        <h1>Welcome back.</h1>
-        <p>Log in to view your balance, recent activity, and card details.</p>
+      <section class="intro" aria-label="Create your BOOP account">
+        <h1>Create your cardholder account</h1>
+        <p>Set up your BOOP account to view balance, spend, and manage your card.</p>
       </section>
 
-      <section class="card" aria-label="Cardholder login form">
-        <h2>Cardholder Login</h2>
-        <form id="loginForm" data-role="cardholder" data-redirect="cardholder.html" novalidate>
+      <section class="card" aria-label="Cardholder signup form">
+        <h2>Sign up</h2>
+        <form id="signupForm" novalidate>
+          <div class="row">
+            <div>
+              <label for="first_name">First name</label>
+              <input id="first_name" name="first_name" placeholder="Jane" required />
+            </div>
+            <div>
+              <label for="last_name">Last name</label>
+              <input id="last_name" name="last_name" placeholder="Doe" required />
+            </div>
+          </div>
+
           <div>
             <label for="email">Email</label>
-            <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+            <input id="email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
           </div>
-          <div>
-            <label for="password">Password</label>
-            <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password" />
+
+          <div class="row">
+            <div>
+              <label for="password">Password</label>
+              <input id="password" type="password" name="password" placeholder="Create a password" autocomplete="new-password" required minlength="8" />
+            </div>
+            <div>
+              <label for="confirm">Confirm password</label>
+              <input id="confirm" type="password" placeholder="Re-enter password" autocomplete="new-password" required minlength="8" />
+            </div>
           </div>
-          <button class="btn" type="submit">Log in</button>
+
+          <label class="terms">
+            <input id="agree" type="checkbox" required />
+            <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a> and the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+          </label>
+
+          <button id="createBtn" class="btn" type="submit">Create account</button>
           <div class="helper">
-            <a href="forgot-password.html">Forgot your password?</a>
-            <a href="signup.html">Create an account</a>
+            <span>Already have an account?</span> <a href="cardholder.html">Log in</a>
           </div>
-          <p id="loginStatus" class="status" role="status" aria-live="polite"></p>
+
+          <p id="signupStatus" class="status" role="status" aria-live="polite"></p>
         </form>
       </section>
     </div>
@@ -157,10 +187,96 @@
     </div>
   </footer>
 
-  <!-- Existing login logic -->
-  <script type="module" src="login-handler.js"></script>
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
+
+    // ---- Configure endpoints (adjust if your backend uses a different path) ----
+    const REGISTER_ENDPOINT = '/auth/register-cardholder'; // expected body: { first_name, last_name, email, password }
+    const LOGIN_ENDPOINT    = '/auth/login';               // expected body: { email, password } -> { token, user }
+    const REDIRECT_TO       = 'cardholder.html';           // go here after auto-login
+
+    const f = document.getElementById('signupForm');
+    const statusEl = document.getElementById('signupStatus');
+    const btn = document.getElementById('createBtn');
+
+    function showStatus(msg, type){
+      statusEl.textContent = msg || '';
+      statusEl.className = 'status ' + (type || '');
+    }
+
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showStatus('', '');
+      btn.disabled = true;
+
+      const first_name = f.first_name.value.trim();
+      const last_name  = f.last_name.value.trim();
+      const email      = f.email.value.trim().toLowerCase();
+      const password   = f.password.value;
+      const confirm    = document.getElementById('confirm').value;
+      const agree      = document.getElementById('agree').checked;
+
+      // basic validations
+      if (!first_name || !last_name || !email || !password || !confirm) {
+        showStatus('Please fill in all fields.', 'error'); btn.disabled = false; return;
+      }
+      if (password !== confirm) {
+        showStatus('Passwords do not match.', 'error'); btn.disabled = false; return;
+      }
+      if (!agree) {
+        showStatus('You must agree to the Terms and Privacy Policy.', 'error'); btn.disabled = false; return;
+      }
+
+      try {
+        // 1) Create the account (role = cardholder handled server-side)
+        const regRes = await fetch(REGISTER_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ first_name, last_name, email, password })
+        });
+
+        if (!regRes.ok) {
+          const t = await regRes.text().catch(()=> '');
+          throw new Error(t || `Failed to create account (HTTP ${regRes.status})`);
+        }
+
+        // Optional: if backend sends { message: "...", id: "..."} you can read it here
+        // const regData = await regRes.json().catch(()=> ({}));
+
+        showStatus('Account created. Signing you in…', 'ok');
+
+        // 2) Auto-login to obtain token and redirect
+        const loginRes = await fetch(LOGIN_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        if (!loginRes.ok) {
+          const t = await loginRes.text().catch(()=> '');
+          throw new Error(t || `Account created, but login failed (HTTP ${loginRes.status}). Please log in manually.`);
+        }
+        const loginData = await loginRes.json();
+        // Expecting something like { token, user }
+        if (loginData && loginData.token) {
+          localStorage.setItem('boop_jwt', loginData.token);
+          localStorage.setItem('boopUser', JSON.stringify(loginData.user || {}));
+        }
+
+        // 3) Redirect
+        window.location.href = REDIRECT_TO;
+
+      } catch (err) {
+        console.error(err);
+        // Try to show a cleaner server message if it looks like JSON
+        let m = String(err.message || 'Something went wrong.');
+        try {
+          const parsed = JSON.parse(m);
+          m = parsed.message || m;
+        } catch {}
+        showStatus(m, 'error');
+        btn.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>
