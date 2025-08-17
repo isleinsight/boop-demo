@@ -103,4 +103,48 @@ router.get('/recent', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/treasury/merchant-wallets
+// Return list of merchant wallets configured in ENV
+router.get('/merchant-wallets', async (req, res) => {
+  try {
+    // Example: Collect wallet IDs from environment variables
+    // Adjust keys to match your naming (e.g. MERCHANT_WALLET_ID_HSBC, MERCHANT_WALLET_ID_BUTTERFIELD, etc.)
+    const wallets = [
+      {
+        id: process.env.MERCHANT_WALLET_ID_HSBC,
+        name: "HSBC Merchant Wallet"
+      },
+      {
+        id: process.env.MERCHANT_WALLET_ID_BUTTERFIELD,
+        name: "Butterfield Merchant Wallet"
+      }
+    ].filter(w => w.id); // drop undefined ones
+
+    // Optionally fetch live balances for each wallet
+    // If you already have a helper like `getWalletBalance(walletId)`, use it here
+    const enriched = [];
+    for (const w of wallets) {
+      let balance_cents = null;
+      try {
+        // replace with your wallet balance API
+        const balRes = await fetch(`${process.env.API_BASE_URL}/wallets/${w.id}`, {
+          headers: { Authorization: `Bearer ${process.env.PLATFORM_TOKEN}` }
+        });
+        if (balRes.ok) {
+          const j = await balRes.json();
+          balance_cents = Number(j.balance_cents) || 0;
+        }
+      } catch (e) {
+        console.warn("Failed to fetch balance for", w.id, e.message);
+      }
+      enriched.push({ ...w, balance_cents });
+    }
+
+    res.json(enriched);
+  } catch (err) {
+    console.error("merchant-wallets error", err);
+    res.status(500).json({ message: "Failed to load merchant wallets" });
+  }
+});
+
 module.exports = router;
