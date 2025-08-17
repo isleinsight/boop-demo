@@ -8,114 +8,436 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
 
   <style>
+
     :root {
-      --ink: #1a2b4a;
-      --muted: #6b7280;
-      --blue: #2f80ed;
-      --blue-dark: #1c6fd8;
-      --bg: #f5f8fb;
-      --card: #fff;
-      --stroke: #e6ebf1;
-      --ok: #16a34a;
-      --danger: #e11d48;
-      --warn: #f59e0b;
-    }
+  --ink: #1a2b4a;
+  --muted: #6b7280;
+  --blue: #2f80ed;
+  --blue-dark: #1c6fd8;
+  --bg: #f5f8fb;
+  --card: #fff;
+  --stroke: #e6ebf1;
+  --ok: #16a34a;
+  --danger: #e11d48;
+  --warn: #f59e0b;
+}
 
-    body { font-family:'Poppins',sans-serif; background:var(--bg); margin:0; color:#333; }
+body {
+  font-family: 'Poppins', sans-serif;
+  background: var(--bg);
+  margin: 0;
+  color: #333;
+}
 
-    .nav-container{display:flex;justify-content:space-between;align-items:center;background:#0b1220;padding:10px 16px}
-    .nav-left img{height:28px}
-    .nav-right{display:flex;gap:14px;align-items:center}
-    .nav-right a{color:#fff;text-decoration:none;font-weight:600}
-    .nav-dropdown{position:relative}
-    .nav-dropdown .dropbtn{cursor:pointer}
-    .dropdown-content{display:none;position:absolute;right:0;background:#fff;min-width:180px;border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,.15);overflow:hidden}
-    .dropdown-content a{display:block;padding:10px 12px;color:#111827;text-decoration:none}
-    .dropdown-content a:hover{background:#f3f4f6}
-    .nav-dropdown:hover .dropdown-content{display:block}
+.container {
+  max-width: 1100px;
+  margin: 40px auto;
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  padding: 24px;
+}
 
-    .container {
-      max-width: 1100px; margin: 40px auto; background: var(--card); border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,.06); padding: 24px;
-    }
+.top-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
 
-    .top-row{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:16px}
-    .top-row h2{margin:0;color:#1a2b4a;font-size:1.4rem}
+.top-row h2 {
+  margin: 0;
+  color: #1a2b4a;
+  font-size: 1.4rem;
+}
 
-    .notice{background:#f9fafb;border:1px solid var(--stroke);border-radius:10px;padding:10px 12px;color:#475569;font-size:.92rem;margin-bottom:16px}
+.notice {
+  background: #f9fafb;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #475569;
+  font-size: 0.92rem;
+  margin-bottom: 16px;
+}
 
-    .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-    .tab-btn{padding:8px 12px;border:1px solid var(--stroke);border-radius:8px;background:#fff;color:var(--blue);cursor:pointer;font-weight:600}
-    .tab-btn.active{border-color:var(--blue);color:#fff;background:var(--blue)}
-    .tab-btn:hover{border-color:var(--blue);color:#fff;background:var(--blue)}
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
 
-    .filters{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:14px}
-    .filters>div{display:flex;flex-direction:column;gap:6px;flex:1 1 160px}
-    .filters input,.filters select{padding:10px 12px;border:1px solid var(--stroke);border-radius:8px;font-size:.95rem;width:100%}
-    .filters .spacer{flex:1}
-    .filters .btn-group{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.tab-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--blue);
+  cursor: pointer;
+  font-weight: 600;
+  box-sizing: border-box;
+}
 
-    .btn{background:var(--blue);color:#fff;border:1px solid var(--blue);padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600;min-width:100px}
-    .btn:hover{background:var(--blue-dark);border-color:var(--blue-dark)}
-    .btn.secondary{background:#6b7280;border-color:#6b7280}
-    .btn.secondary:hover{background:#4b5563;border-color:#4b5563}
-    .btn.danger{background:var(--danger);border-color:var(--danger)}
-    .btn.warn{background:var(--warn);border-color:var(--warn);color:#111827}
+.tab-btn.active {
+  border-color: var(--blue);
+  color: #fff;
+  background: var(--blue);
+}
 
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{padding:12px 14px;border-bottom:1px solid var(--stroke);text-align:left;font-size:.95rem}
-    th{background:#f9fafb;color:#1a2b4a;font-weight:600}
-    tr:hover{background:#f7fafc}
+.tab-btn:hover {
+  border-color: var(--blue);
+  color: #fff;
+  background: var(--blue);
+}
 
-    .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:.8rem;font-weight:600;border:1px solid var(--stroke)}
-    .s-pending{background:#fffbeb;border-color:#fde68a;color:#92400e}
-    .s-claimed{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
-    .s-completed{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-    .s-rejected{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+/* Filters */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px; /* Increased gap for better spacing */
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
 
-    .pagination{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:16px}
-    .pagination button{padding:8px 16px;background:#6b7280;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.9rem}
-    .pagination button:hover{background:#4b5563}
-    #paginationInfo{font-size:.9rem;color:#4b5563}
+.filters > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 160px; /* Allow inputs to shrink but maintain reasonable size */
+}
 
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;padding:24px}
-    .modal-content{width:100%;max-width:640px;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.2);padding:18px}
-    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .modal-header h3{margin:0;font-size:1.2rem;color:#1a2b4a}
-    .close{cursor:pointer;font-size:24px;line-height:1}
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-    .field label{font-size:.9rem;color:#334155}
-    .field input,.field select,.field textarea{padding:10px 12px;border:1px solid var(--stroke);border-radius:8px;font-size:.95rem}
-    .modal-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;margin-top:10px}
-    .muted{color:var(--muted);font-size:.9rem}
+.filters input,
+.filters select {
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  width: 100%; /* Full width within flex item */
+  box-sizing: border-box;
+}
 
-    @media (max-width:768px){
-      .two-col{grid-template-columns:1fr}
-      .pagination{flex-direction:column;gap:8px}
-      .pagination button{width:100%}
-    }
+.filters .spacer {
+  flex: 1;
+}
+
+.filters .button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px; /* Spacing between buttons */
+  align-items: center;
+}
+
+.btn {
+  background: var(--blue);
+  color: #fff;
+  border: 1px solid var(--blue);
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  box-sizing: border-box;
+  min-width: 100px; /* Consistent button size */
+}
+
+.btn:hover {
+  background: var(--blue-dark);
+  border-color: var(--blue-dark);
+  color: #fff;
+}
+
+.btn.secondary {
+  background: #6b7280;
+  border-color: #6b7280;
+}
+
+.btn.secondary:hover {
+  background: #4b5563;
+  border-color: #4b5563;
+}
+
+.btn.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn.warn {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: #111827;
+}
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+th,
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--stroke);
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+th {
+  background: #f9fafb;
+  color: #1a2b4a;
+  font-weight: 600;
+}
+
+tr:hover {
+  background: #f7fafc;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--stroke);
+}
+
+.s-pending {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.s-claimed {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.s-completed {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.s-rejected {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pagination button {
+  padding: 8px 16px;
+  background: #6b7280;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.pagination button:hover {
+  background: #4b5563;
+}
+
+#paginationInfo {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+/* Drawer / Modal */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;                 /* gives breathing room so content never touches edges */
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;              /* cap the height to viewport */
+  overflow: auto;                /* scroll inside the modal */
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2);
+  padding: 18px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1a2b4a;
+}
+
+.close {
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.field label {
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .top-row > div {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-start;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filters > div {
+    flex: 1 1 100%; /* Full width for inputs */
+  }
+
+  .filters input,
+  .filters select {
+    width: 100%;
+  }
+
+  .filters .button-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tab-btn {
+    width: 100%;
+    text-align: center;
+    color: #374151;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pagination button {
+    width: 100%;
+  }
+}
   </style>
 </head>
 <body>
-  <!-- Screen guard for small viewports -->
-  <div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
-    <div style="max-width:540px;">
-      <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
-      <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
-    </div>
+<div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; 
+  display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
+  <div style="max-width:540px;">
+    <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
+    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
   </div>
-  <script>
-    (function(){
-      const minWidth = 900;
-      const guard = document.getElementById('screenGuard');
-      function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
-      window.addEventListener('resize', update, { passive:true });
-      update();
-    })();
-  </script>
-
-  <!-- Top Nav -->
+</div>
+<script>
+  (function(){
+    const minWidth = 900; // tweak if you want to allow tablets
+    const guard = document.getElementById('screenGuard');
+    function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
+    window.addEventListener('resize', update, { passive:true });
+    update();
+  })();
+</script>
+  <!-- Top Nav (Accounts dropdown rules mirror your other pages) -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -126,9 +448,11 @@
         <div class="nav-dropdown">
           <a href="#" class="dropbtn" style="color:white;">Accounts</a>
           <div class="dropdown-content">
+            <!-- Add Funds hidden for treasury in JS -->
             <a href="add-funds.html" id="addFundsLink">Add Funds</a>
             <a href="transfer.html" aria-current="page">Transfer</a>
             <a href="reports.html">Reports</a>
+            <!-- Manage Treasury hidden for accountant in JS -->
             <a href="manage-treasury.html" id="manageTreasuryLink" style="display:none;">Manage Treasury</a>
           </div>
         </div>
@@ -149,7 +473,7 @@
     </div>
 
     <div class="notice">
-      Requests can be <strong>claimed</strong> by an accountant to prevent double processing.
+      Requests can be <strong>claimed</strong> by an accountant to prevent double processing.  
       Mark as <strong>Completed</strong> only after you’ve moved the funds in the bank and recorded the <em>Bank Reference</em>.
     </div>
 
@@ -180,10 +504,8 @@
         </select>
       </div>
       <div class="spacer"></div>
-      <div class="btn-group">
-        <button id="applyFiltersBtn" class="btn">Apply</button>
-        <button id="clearFiltersBtn" class="btn secondary">Clear</button>
-      </div>
+      <button id="applyFiltersBtn" class="btn">Apply</button>
+      <button id="clearFiltersBtn" class="btn secondary">Clear</button>
     </div>
 
     <!-- Table -->
@@ -266,10 +588,10 @@
       <!-- Action form -->
       <div class="two-col">
         <div class="field">
-          <!-- label text changed to Merchant -->
-          <label for="d_treasury">Source Merchant Wallet</label>
+          <label for="d_treasury">Source Treasury</label>
           <select id="d_treasury">
-            <option value="">Select wallet</option>
+            <option value="">Select treasury</option>
+            <!-- filled by JS from /api/treasury/treasury-wallets -->
           </select>
         </div>
         <div class="field">
@@ -296,29 +618,28 @@
     </div>
   </div>
 
-  <!-- Permissions + page logic -->
+  <!-- Permissions + nav visibility -->
   <script>
-    (function(){
-      // ---------- Auth / nav ----------
-      const token = localStorage.getItem("boop_jwt");
-      if (!token) { localStorage.clear(); window.location.href = "login.html"; return; }
-
-      let me = null;
-      const headers = { "Content-Type":"application/json", "Authorization":`Bearer ${token}` };
-
-      async function loadMe(){
-        const res = await fetch("/api/me", { headers });
-        me = await res.json();
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+        const me = await res.json();
         if (res.status !== 200) throw new Error("Auth failed");
+
+        // must be admin + accountant OR treasury
         if (me.role !== "admin" || !["accountant","treasury","viewer"].includes(me.type)) {
           throw new Error("Not authorized");
         }
         localStorage.setItem("boopUser", JSON.stringify(me));
-        // Nav visibility
+
+        // Nav rules
         const addFundsLink = document.getElementById("addFundsLink");
         const manageTreasuryLink = document.getElementById("manageTreasuryLink");
         if (me.type === "treasury" && addFundsLink) addFundsLink.style.display = "none";
         if (me.type === "accountant" && manageTreasuryLink) manageTreasuryLink.style.display = "none";
+
         // Logout
         document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
           e.preventDefault();
@@ -326,297 +647,16 @@
           localStorage.clear();
           window.location.href = "login.html";
         });
+
+      } catch (err) {
+        localStorage.clear();
+        window.location.href = "login.html";
       }
-
-      // ---------- State ----------
-      let statusTab = "pending";
-      let startDate = "";
-      let endDate = "";
-      let bankFilter = "";
-      let page = 0;
-      const PAGE_SIZE = 25;
-      let items = [];
-      let currentRow = null; // selected transfer row data
-
-      // ---------- Refs ----------
-      const tabs = document.querySelectorAll(".tab-btn");
-      const startEl = document.getElementById("startDate");
-      const endEl = document.getElementById("endDate");
-      const bankEl = document.getElementById("bankFilter");
-      const applyFiltersBtn = document.getElementById("applyFiltersBtn");
-      const clearFiltersBtn = document.getElementById("clearFiltersBtn");
-
-      const tbody = document.getElementById("transferTableBody");
-      const prevPageBtn = document.getElementById("prevPageBtn");
-      const nextPageBtn = document.getElementById("nextPageBtn");
-      const paginationInfo = document.getElementById("paginationInfo");
-
-      const refreshBtn = document.getElementById("refreshBtn");
-      const exportBtn = document.getElementById("exportBtn");
-
-      const detailsModal = document.getElementById("detailsModal");
-      const closeDetails = document.getElementById("closeDetails");
-      const d_reqId = document.getElementById("d_reqId");
-      const d_status = document.getElementById("d_status");
-      const d_user = document.getElementById("d_user");
-      const d_requestedAt = document.getElementById("d_requestedAt");
-      const d_amount = document.getElementById("d_amount");
-      const d_bank = document.getElementById("d_bank");
-      const d_destination = document.getElementById("d_destination");
-
-      const d_treasury = document.getElementById("d_treasury"); // holds merchant wallets now
-      const d_bankRef = document.getElementById("d_bankRef");
-      const d_internalNote = document.getElementById("d_internalNote");
-
-      const claimBtn = document.getElementById("claimBtn");
-      const releaseBtn = document.getElementById("releaseBtn");
-      const rejectBtn = document.getElementById("rejectBtn");
-      const completeBtn = document.getElementById("completeBtn");
-
-      // ---------- Utils ----------
-      const fmtMoney = c => "BMD $" + (Number(c||0)/100).toFixed(2);
-      const fmtDate = iso => { try { return new Date(iso).toLocaleString(); } catch { return iso||"—"; } };
-      function flashRow(tr, ok=true){ tr.style.background = ok ? "#ecfdf5" : "#fef2f2"; setTimeout(()=> tr.style.background = "", 600); }
-
-      // ---------- Load lists ----------
-      async function loadTransfers(){
-        const params = new URLSearchParams();
-        params.set("status", statusTab);
-        if (startDate) params.set("start", startDate);
-        if (endDate) params.set("end", endDate);
-        if (bankFilter) params.set("bank", bankFilter);
-        params.set("limit", PAGE_SIZE);
-        params.set("offset", page*PAGE_SIZE);
-
-        tbody.innerHTML = `<tr><td colspan="8" class="muted">Loading…</td></tr>`;
-        try{
-          const res = await fetch(`/api/transfers?${params.toString()}`, { headers });
-          const j = await res.json();
-          if (!res.ok) throw new Error(j.message || "Failed to load");
-          items = j.items || [];
-          renderTable(items, j.total || 0);
-        }catch(e){
-          tbody.innerHTML = `<tr><td colspan="8" class="muted">Failed to load transfers.</td></tr>`;
-          console.error(e);
-        }
-      }
-
-      function renderTable(rows, total){
-        if (!rows.length){
-          tbody.innerHTML = `<tr><td colspan="8" class="muted">No results.</td></tr>`;
-        } else {
-          tbody.innerHTML = rows.map(r => {
-            const pillClass = r.status === "pending" ? "s-pending" :
-                              r.status === "claimed" ? "s-claimed" :
-                              r.status === "completed" ? "s-completed" : "s-rejected";
-            const claimed = r.claimed_by_name ? r.claimed_by_name : (r.claimed_by ? `User ${r.claimed_by}` : "—");
-            return `
-              <tr data-id="${r.id}">
-                <td>${fmtDate(r.requested_at || r.created_at)}</td>
-                <td>${r.id}</td>
-                <td>${r.cardholder_name || r.cardholder_email || r.user_id}</td>
-                <td>${fmtMoney(r.amount_cents)}</td>
-                <td>${r.destination_masked || "—"}</td>
-                <td><span class="status-pill ${pillClass}">${r.status}</span></td>
-                <td>${claimed}</td>
-                <td><button class="btn secondary btn-open" data-id="${r.id}">Open</button></td>
-              </tr>
-            `;
-          }).join("");
-        }
-        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-        paginationInfo.textContent = `Page ${page+1} of ${totalPages}`;
-        prevPageBtn.disabled = page === 0;
-        nextPageBtn.disabled = (page+1) >= totalPages;
-
-        // bind open buttons
-        tbody.querySelectorAll(".btn-open").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const id = btn.getAttribute("data-id");
-            const data = items.find(x => String(x.id) === String(id));
-            if (data) openDetails(data, btn.closest("tr"));
-          });
-        });
-      }
-
-      // ---------- Merchant wallets (dropdown) ----------
-      async function loadMerchantWalletsIntoSelect(selectEl){
-        selectEl.innerHTML = `<option value="">Loading…</option>`;
-        let r = await fetch('/api/treasury/merchant-wallets', { headers }).catch(()=>null);
-        if (!r || r.status === 404) {
-          // fallback to your old treasury list if merchant endpoint not present yet
-          r = await fetch('/api/treasury/treasury-wallets', { headers }).catch(()=>null);
-        }
-        if (!r){ selectEl.innerHTML = `<option value="">Failed to load</option>`; return; }
-        const wallets = await r.json().catch(()=>[]);
-        if (!Array.isArray(wallets) || !wallets.length){
-          selectEl.innerHTML = `<option value="">No wallets found</option>`;
-          return;
-        }
-        selectEl.innerHTML = `<option value="">Select wallet</option>` + wallets.map(w => {
-          const name = w.name || w.label || w.bank_name || "Wallet";
-          const bal = (typeof w.balance_cents === "number") ? ` — ${fmtMoney(w.balance_cents)}` : "";
-          return `<option value="${w.id}">${name}${bal}</option>`;
-        }).join("");
-      }
-
-      // ---------- Details modal ----------
-      function openModal(){ detailsModal.style.display = "flex"; }
-      function closeModal(){ detailsModal.style.display = "none"; currentRow = null; }
-
-      function openDetails(row, tr){
-        currentRow = { ...row, _tr: tr };
-        d_reqId.value = row.id;
-        d_status.value = (row.status || '').toUpperCase();
-        d_user.value = row.cardholder_name || row.cardholder_email || row.user_id;
-        d_requestedAt.value = fmtDate(row.requested_at || row.created_at);
-        d_amount.value = fmtMoney(row.amount_cents);
-        d_bank.value = row.bank || "—";
-        d_destination.value = row.destination_masked || "—";
-        d_bankRef.value = row.bank_reference || "";
-        d_internalNote.value = "";
-
-        // Load merchant wallets every time we open (so balances are fresh)
-        loadMerchantWalletsIntoSelect(d_treasury);
-        openModal();
-      }
-      closeDetails.addEventListener("click", closeModal);
-      detailsModal.addEventListener("click", (e)=> { if (e.target === detailsModal) closeModal(); });
-
-      // ---------- Actions ----------
-      async function postJSON(url, method, bodyObj){
-        const res = await fetch(url, { method, headers, body: JSON.stringify(bodyObj||{}) });
-        const json = await res.json().catch(()=> ({}));
-        if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
-        return json;
-      }
-
-      claimBtn.addEventListener("click", async ()=>{
-        if (!currentRow) return;
-        const id = currentRow.id;
-        try{
-          await postJSON(`/api/transfers/${id}/claim`, "PATCH", {});
-          currentRow.status = "claimed";
-          d_status.value = "CLAIMED";
-          if (currentRow._tr) flashRow(currentRow._tr, true);
-          await loadTransfers();
-        }catch(e){ alert(e.message || "Failed to claim"); if (currentRow._tr) flashRow(currentRow._tr, false); }
-      });
-
-      releaseBtn.addEventListener("click", async ()=>{
-        if (!currentRow) return;
-        const id = currentRow.id;
-        try{
-          await postJSON(`/api/transfers/${id}/release`, "PATCH", {});
-          currentRow.status = "pending";
-          d_status.value = "PENDING";
-          if (currentRow._tr) flashRow(currentRow._tr, true);
-          await loadTransfers();
-        }catch(e){ alert(e.message || "Failed to release"); if (currentRow._tr) flashRow(currentRow._tr, false); }
-      });
-
-      rejectBtn.addEventListener("click", async ()=>{
-        if (!currentRow) return;
-        const id = currentRow.id;
-        const reason = prompt("Reason for rejection (optional):") || "";
-        try{
-          await postJSON(`/api/transfers/${id}/reject`, "PATCH", { reason });
-          currentRow.status = "rejected";
-          d_status.value = "REJECTED";
-          if (currentRow._tr) flashRow(currentRow._tr, true);
-          await loadTransfers();
-          closeModal();
-        }catch(e){ alert(e.message || "Failed to reject"); if (currentRow._tr) flashRow(currentRow._tr, false); }
-      });
-
-      completeBtn.addEventListener("click", async ()=>{
-        if (!currentRow) return;
-        const id = currentRow.id;
-        const bank_reference = (d_bankRef.value || "").trim();
-        const internal_note = (d_internalNote.value || "").trim();
-        const treasury_wallet_id = d_treasury.value; // this is actually a MERCHANT wallet id now
-        if (!bank_reference || bank_reference.length < 4) { alert("Bank reference is required (min 4 chars)."); return; }
-        if (!treasury_wallet_id) { alert("Select a Source Merchant Wallet."); return; }
-
-        // Safety: must be claimed and still fresh (server will re-check)
-        try{
-          await postJSON(`/api/transfers/${id}/complete`, "PATCH", {
-            bank_reference, internal_note, treasury_wallet_id
-          });
-          currentRow.status = "completed";
-          d_status.value = "COMPLETED";
-          if (currentRow._tr) flashRow(currentRow._tr, true);
-          await loadTransfers();
-          closeModal();
-        }catch(e){ alert(e.message || "Failed to complete"); if (currentRow._tr) flashRow(currentRow._tr, false); }
-      });
-
-      // ---------- Filters / Tabs / Pagination ----------
-      tabs.forEach(t => t.addEventListener("click", () => {
-        tabs.forEach(x => x.classList.remove("active"));
-        t.classList.add("active");
-        statusTab = t.getAttribute("data-status");
-        page = 0;
-        loadTransfers();
-      }));
-
-      applyFiltersBtn.addEventListener("click", ()=>{
-        startDate = startEl.value || "";
-        endDate = endEl.value || "";
-        bankFilter = bankEl.value || "";
-        page = 0;
-        loadTransfers();
-      });
-
-      clearFiltersBtn.addEventListener("click", ()=>{
-        startEl.value = endEl.value = "";
-        bankEl.value = "";
-        startDate = endDate = bankFilter = "";
-        page = 0;
-        loadTransfers();
-      });
-
-      prevPageBtn.addEventListener("click", ()=>{ if (page>0){ page--; loadTransfers(); }});
-      nextPageBtn.addEventListener("click", ()=>{ page++; loadTransfers(); });
-
-      refreshBtn.addEventListener("click", loadTransfers);
-
-      exportBtn.addEventListener("click", ()=>{
-        // quick CSV export of current table rows
-        const headers = ["Requested","Request ID","Cardholder","Amount","Destination","Status","Claimed By"];
-        const lines = [headers.join(",")];
-        items.forEach(r=>{
-          lines.push([
-            JSON.stringify(fmtDate(r.requested_at || r.created_at)),
-            JSON.stringify(r.id),
-            JSON.stringify(r.cardholder_name || r.cardholder_email || r.user_id),
-            JSON.stringify(fmtMoney(r.amount_cents)),
-            JSON.stringify(r.destination_masked || ""),
-            JSON.stringify(r.status || ""),
-            JSON.stringify(r.claimed_by_name || (r.claimed_by ? `User ${r.claimed_by}` : "")),
-          ].join(","));
-        });
-        const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = `transfers_${statusTab}.csv`;
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(url);
-      });
-
-      // ---------- Init ----------
-      (async function init(){
-        try{
-          await loadMe();
-          await loadTransfers();
-        }catch{
-          localStorage.clear();
-          window.location.href = "login.html";
-        }
-      })();
     })();
   </script>
 
-  <script type="module" src="../assets/hamburger.js"></script>
+  <!-- Page logic (separate file) -->
+  <script type="module" src="transfers.js"></script>
+      <script type="module" src="../assets/hamburger.js"></script>
 </body>
 </html>
