@@ -22,10 +22,14 @@
     .brand{display:flex;align-items:center;gap:10px}
     .brand img{height:28px}
 
-    /* Subbar with logout link */
+    /* Subbar with navigation links */
     .subbar{background:#eef2f7;border-bottom:1px solid var(--stroke)}
-    .subbar__inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;justify-content:flex-end}
-    .logout-link{font-weight:600}
+    .subbar__inner{
+      max-width:1120px;margin:0 auto;padding:10px 16px;
+      display:flex;gap:18px;justify-content:flex-end;flex-wrap:wrap;
+    }
+    .subbar__inner a{font-weight:600;text-decoration:underline;color:#1c6fd8}
+    .subbar__inner a[aria-current="page"]{text-decoration:none;border-bottom:2px solid #1c6fd8}
 
     /* Main layout */
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
@@ -94,10 +98,21 @@
 <body>
   <!-- Header -->
   <header class="site-head">
-    <div class="site-head__inner"><div class="brand"><img src="../assets/Boop-Logo.png" alt="BOOP Logo" /></div></div>
+    <div class="site-head__inner">
+      <div class="brand">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+    </div>
   </header>
-  <!-- Subbar -->
-  <div class="subbar"><div class="subbar__inner"><a href="#" id="logoutBtn" class="logout-link">Log out</a></div></div>
+
+  <!-- Subbar (now with matching menu) -->
+  <div class="subbar">
+    <div class="subbar__inner">
+      <a href="/parent/parent-portal.html" aria-current="page">Parent Portal</a>
+      <a href="/parent/transfer.html">Transfer</a>
+      <a href="#" id="logoutBtn">Log out</a>
+    </div>
+  </div>
 
   <main class="wrap">
     <section class="grid">
@@ -211,10 +226,10 @@
   </div>
 
   <footer style="padding:22px;color:#6b7280;text-align:center;margin-top:20px">
-  © <span id="year"></span> BOOP. All rights reserved.
-  &nbsp;•&nbsp; <a href="terms.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Terms and Conditions</a>
-  &nbsp;•&nbsp; <a href="privacy.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Privacy Policy</a>
-</footer>
+    © <span id="year"></span> BOOP. All rights reserved.
+    &nbsp;•&nbsp; <a href="terms.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Terms and Conditions</a>
+    &nbsp;•&nbsp; <a href="privacy.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Privacy Policy</a>
+  </footer>
 
 <script>
 (function () {
