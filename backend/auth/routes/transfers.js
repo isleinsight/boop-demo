@@ -78,8 +78,9 @@ router.use(authenticateToken);
 
 // Only allow admin + (accountant/treasury/viewer) to access transfers admin
 function requireAccountsRole(req, res, next) {
-  const { role, type } = req.user || {};
-  if (role !== 'admin' || !['accountant', 'treasury', 'viewer'].includes((type || '').toLowerCase())) {
+  const role = String(req.user?.role || '').toLowerCase();
+  const type = String(req.user?.type || '').toLowerCase();
+  if (role !== 'admin' || !['accountant','treasury','viewer'].includes(type)) {
     return res.status(403).json({ message: 'Not authorized for transfers.' });
   }
   next();
@@ -367,7 +368,7 @@ async function doComplete(req, res) {
       return res.status(409).json({ message: 'Insufficient user balance.' });
     }
 
-    // 2) Debit treasury wallet balance
+    // 2) Debit treasury (or merchant) wallet balance
     const { rowCount: treUpd } = await client.query(
       `
       UPDATE wallets
@@ -417,7 +418,7 @@ async function doComplete(req, res) {
       ]
     );
 
-    // 3b) Treasury debit — internal accounting
+    // 3b) Treasury/merchant debit — internal accounting
     await client.query(
       `
       INSERT INTO transactions (
@@ -475,7 +476,20 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // First try: match by bank name and last4 from destination_masked for the STUDENT (t.user_id)
+    // Enforce: only the current claimer may view full bank details
+    const me = req.user.userId || req.user.id;
+    const r0 = await db.query(
+      `SELECT status, claimed_by FROM transfers WHERE id = $1 LIMIT 1`,
+      [id]
+    );
+    if (!r0.rowCount) return res.status(404).json({ message: 'Transfer not found.' });
+
+    const { status, claimed_by } = r0.rows[0];
+    if (String(status).toLowerCase() !== 'claimed' || String(claimed_by) !== String(me)) {
+      return res.status(403).json({ message: 'Bank details available only to the current claimer.' });
+    }
+
+    // First try: bank account belongs to the student (t.user_id)
     const q1 = `
       SELECT
         ba.account_number,
@@ -499,8 +513,7 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
       return res.json(r1.rows[0]);
     }
 
-    // Fallback: the bank account likely belongs to the PARENT who submitted on behalf of the student.
-    // Search any parent linked to this student (via student_parents), matching bank name + last4.
+    // Fallback: bank account belongs to a linked parent (parent-submitted transfer)
     const q2 = `
       SELECT
         ba.account_number,
@@ -526,33 +539,6 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
     if (r2.rowCount) {
       return res.json(r2.rows[0]);
     }
-
-    // As a final fallback, if you want: most recent active bank account among linked parents
-    // (only if you feel safe doing so; otherwise keep it strict to last4 + bank match)
-    const q3 = `
-      SELECT
-        ba.account_number,
-        ba.bank_name,
-        ba.holder_name      AS account_holder_name,
-        ba.routing_number,
-        ba.iban,
-        ba.swift,
-        ba.country
-      FROM transfers t
-      JOIN student_parents sp
-        ON sp.student_id = t.user_id
-      JOIN bank_accounts ba
-        ON ba.user_id = sp.parent_id
-       AND ba.deleted_at IS NULL
-     WHERE t.id = $1
-     ORDER BY ba.created_at DESC
-     LIMIT 1
-    `;
-    // Uncomment this block if you want the looser fallback:
-    // const r3 = await db.query(q3, [id]);
-    // if (r3.rowCount) {
-    //   return res.json(r3.rows[0]);
-    // }
 
     return res.status(404).json({ message: 'Bank account not found for this transfer.' });
   } catch (err) {
