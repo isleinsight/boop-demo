@@ -4,64 +4,125 @@
   <meta charset="UTF-8" />
   <title>BOOP — Bermuda’s Official Onboarding Payments</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <meta name="description" content="BOOP helps Bermuda move assistance funds quickly and safely." />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
     :root{
-      --brand:#2f80ed; --brand-dark:#1c6fd8; --ink:#1a2b4a; --muted:#6b7280;
-      --bg:#0b1220; --card:#0f172a; --glass:rgba(255,255,255,0.08);
-      --ring:rgba(47,128,237,0.35); --success:#10b981; --border:rgba(255,255,255,0.08); --white:#fff;
+      --brand:#2f80ed; --brand-dark:#1c6fd8;
+      --ink:#eaf0ff; --muted:#cbd5e1;
+      --bg:#0b1220; --card:#0f172a;
+      --border:rgba(255,255,255,.08);
+      --glass:rgba(255,255,255,0.06);
+      --ring:rgba(47,128,237,.32);
+      --success:#10b981; --warning:#f59e0b;
+      --container:1100px;
+      --radius:16px;
+      --shadow:0 20px 50px rgba(0,0,0,.35);
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0; font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      color:#eef2ff;
-      background:
-        radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
-        radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
+      color:var(--ink);
+      background-color:var(--bg);
+      background-image:
+        radial-gradient(60vw 55vh at 18% -12%, rgba(47,128,237,.40) 0%, rgba(47,128,237,0) 60%),
+        radial-gradient(55vw 50vh at 108% 118%, rgba(16,185,129,.26) 0%, rgba(16,185,129,0) 60%),
+        linear-gradient(180deg, #0b1220 0%, #0d1220 40%, #0b1220 100%);
+      background-repeat:no-repeat;
+      background-attachment:scroll, fixed, scroll;
+      background-position:center center, center center, center center;
     }
-    nav{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.5);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);}
-    .nav-container{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:#e5e7eb;text-decoration:none;letter-spacing:.2px;}
+
+    /* NAV */
+    nav{position:sticky; top:0; z-index:10; background:rgba(11,18,32,.55); backdrop-filter:blur(6px); border-bottom:1px solid var(--border)}
+    .nav-container{max-width:var(--container); margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between}
+    .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:#dbe3ff; font-weight:700; letter-spacing:.2px}
     .brand img{height:34px}
-    .nav-actions a{color:#e5e7eb;text-decoration:none;font-weight:500;padding:8px 14px;border-radius:10px;border:1px solid transparent;}
+    .nav-actions{display:flex; gap:10px; align-items:center}
+    .nav-actions a{color:#e5e7eb; text-decoration:none; font-weight:500; padding:8px 14px; border-radius:12px; border:1px solid transparent}
     .nav-actions a:hover{border-color:var(--border)}
-    .nav-actions .outline{border-color:var(--border);color:#cbd5e1;}
-    .nav-actions .primary{background:var(--brand);color:var(--white);border-color:transparent;}
+    .nav-actions .outline{border-color:var(--border); color:#cbd5e1}
+    .nav-actions .primary{background:var(--brand); color:#fff}
     .nav-actions .primary:hover{background:var(--brand-dark)}
-    .hero{max-width:1100px;margin:42px auto 24px;padding:0 18px;display:grid;grid-template-columns:1.1fr .9fr;gap:30px;}
-    @media (max-width: 900px){ .hero{grid-template-columns:1fr} }
-    .hero h1{margin:10px 0 12px 0;font-size:clamp(28px,5vw,44px);line-height:1.15;font-weight:700;letter-spacing:.2px;}
-    .hero p.lead{margin:0;color:#cbd5e1;font-size:clamp(15px,2.3vw,18px);}
-    .cta-row{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:600;border:1px solid transparent;box-shadow:0 10px 24px rgba(47,128,237,.15);}
-    .btn.primary{background:var(--brand);color:var(--white)}
+
+    /* HERO */
+    header.hero{max-width:var(--container); margin:38px auto 28px; padding:0 18px}
+    .hero-grid{
+      display:grid; grid-template-columns:1.15fr .85fr; gap:28px; align-items:stretch;
+    }
+    @media (max-width:980px){ .hero-grid{grid-template-columns:1fr} }
+
+    .hero h1{margin:6px 0 12px; font-size:clamp(30px,5.4vw,48px); line-height:1.12; letter-spacing:.2px; color:#fff}
+    .hero .lead{margin:0; color:var(--muted); font-size:clamp(15px,2.2vw,18px)}
+    .cta-row{display:flex; gap:12px; flex-wrap:wrap; margin-top:20px}
+    .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; border-radius:12px; text-decoration:none; font-weight:600; border:1px solid transparent; box-shadow:0 12px 28px rgba(47,128,237,.18)}
+    .btn.primary{background:var(--brand); color:#fff}
     .btn.primary:hover{background:var(--brand-dark)}
-    .btn.ghost{border-color:var(--border);color:#e5e7eb;background:transparent}
-    .btn.ghost:hover{border-color:#93c5fd;color:#fff}
-    .portal-card{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);}
-    .portal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .pill{font-size:.78rem;color:#a5b4fc;border:1px solid var(--border);background:var(--glass);padding:4px 10px;border-radius:999px;}
-    .portal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+    .btn.ghost{border-color:var(--border); color:#e5e7eb; background:transparent}
+    .btn.ghost:hover{border-color:#93c5fd; color:#fff}
+
+    .portal-card{
+      margin-top:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .portal-header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px}
+    .pill{font-size:.78rem; color:#a5b4fc; border:1px solid var(--border); background:var(--glass); padding:4px 10px; border-radius:999px; white-space:nowrap}
+
+    .portal-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px}
     @media (max-width:560px){ .portal-grid{grid-template-columns:1fr} }
-    .portal-grid a{border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center;text-decoration:none;color:#e5e7eb;font-weight:600;background:rgba(255,255,255,.02);}
-    .portal-grid a:hover{border-color:#93c5fd;color:#fff}
-    .section{max-width:1100px;margin:18px auto 40px;padding:0 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-    @media (max-width: 900px){ .section{grid-template-columns:1fr} }
-    .feature{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));border:1px solid var(--border);border-radius:16px;padding:18px;}
-    .feature h3{margin:0 0 8px 0;font-size:1.05rem}
-    .feature p{margin:0;color:#cbd5e1;font-size:.95rem}
-    footer{border-top:1px solid var(--border);color:#9ca3af;text-align:center;padding:18px;margin-top:28px;font-size:.9rem;}
-    .ring{position:absolute; inset: -120px auto auto -120px; width:380px;height:380px;background: radial-gradient(closest-side, var(--ring), transparent 70%);border-radius:50%;filter: blur(6px);pointer-events:none;}
+    .portal-grid a{border:1px solid var(--border); border-radius:12px; padding:12px 14px; text-align:center; text-decoration:none; color:#e5e7eb; font-weight:600; background:rgba(255,255,255,.02)}
+    .portal-grid a:hover{border-color:#93c5fd; color:#fff}
+
+    /* Right side “illustration” becomes content so it's not empty */
+    .showcase{
+      display:grid; gap:14px; align-content:start;
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .showcase .logo{height:40px; opacity:.92}
+    .showcase p{margin:0; color:var(--muted); line-height:1.6}
+    .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+    @media (max-width:560px){ .stats{grid-template-columns:repeat(2,1fr)} }
+    .stat{
+      border:1px solid var(--border);
+      border-radius:12px; padding:12px; background:rgba(255,255,255,.02);
+      text-align:center
+    }
+    .stat .num{font-weight:700; color:#fff; font-size:1.1rem}
+    .stat .label{color:#cbd5e1; font-size:.85rem}
+
+    .bullets{margin:0; padding-left:18px; color:var(--muted); line-height:1.6}
+
+    /* Features below hero */
+    .section{max-width:var(--container); margin:8px auto 40px; padding:0 18px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+    @media (max-width:980px){ .section{grid-template-columns:1fr} }
+    .feature{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03)); border:1px solid var(--border); border-radius:var(--radius); padding:18px}
+    .feature h3{margin:0 0 8px; color:#fff; font-size:1.08rem}
+    .feature p{margin:0; color:var(--muted)}
+
+    /* Footer */
+    footer{border-top:1px solid var(--border); color:#b9c6e2; text-align:center; padding:18px; margin-top:28px; font-size:.92rem}
+    footer a{color:#c9d7ff; text-decoration:none}
+    footer a:hover{text-decoration:underline}
+
+    /* Decorative ring */
+    .ring{position:absolute; inset:-120px auto auto -120px; width:380px; height:380px; background:radial-gradient(closest-side, var(--ring), transparent 70%); border-radius:50%; filter:blur(6px); pointer-events:none}
   </style>
 </head>
 <body>
   <nav>
     <div class="nav-container">
-      <a class="brand" href="#">
+      <a class="brand" href="index.html" aria-label="BOOP home">
         <img src="assets/Boop-Logo.png" alt="BOOP logo" />
       </a>
       <div class="nav-actions">
@@ -74,43 +135,64 @@
   <div class="ring" aria-hidden="true"></div>
 
   <header class="hero" role="banner">
-    <div>
-      <h1>Bermuda’s Official Onboarding Payments.</h1>
-      <p class="lead">
-        BOOP is how Bermuda sends and tracks program funds. Simple to use, quick to audit,
-        and built for real life.
-      </p>
-      <div class="cta-row" role="group" aria-label="Primary actions">
-        <a class="btn primary" href="signup.html" aria-label="Create a new BOOP account">Create account</a>
-        <a class="btn ghost" href="cardholder-login.html" aria-label="Log in to BOOP">Log in</a>
-        <a class="btn ghost" href="health.html" aria-label="Open the Health Portal">Health Bracelets</a>
+    <div class="hero-grid">
+      <!-- LEFT: headline + CTAs + quick portal links -->
+      <div>
+        <h1>Bermuda’s Official Onboarding Payments.</h1>
+        <p class="lead">
+          BOOP is how Bermuda sends and tracks program funds. Simple to use, quick to audit,
+          and built for real life.
+        </p>
+
+        <div class="cta-row" role="group" aria-label="Primary actions">
+          <a class="btn primary" href="signup.html">Create account</a>
+          <a class="btn ghost" href="cardholder-login.html">Log in</a>
+          <a class="btn ghost" href="health.html">Health Bracelets</a>
+        </div>
+
+        <div class="portal-card" aria-label="Pick your portal">
+          <div class="portal-header">
+            <strong style="color:#fff">Pick your portal</strong>
+            <span class="pill">Fast • Clear • Secure</span>
+          </div>
+          <div class="portal-grid">
+            <a href="cardholder-login.html">Cardholder Login</a>
+            <a href="signup.html">Sign Up</a>
+            <a href="parent-portal.html">Parent Portal</a>
+            <a href="vendor/vendor-login.html">Vendor Portal</a>
+          </div>
+        </div>
       </div>
 
-      <div class="portal-card" style="margin-top:20px;">
-        <div class="portal-header">
-          <strong>Pick your portal</strong>
-          <span class="pill">Fast. Clear. Secure.</span>
-        </div>
-        <div class="portal-grid">
-          <a href="cardholder-login.html">Cardholder Login</a>
-          <a href="signup.html">Sign Up</a>
-          <a href="parent-portal.html">Parent Portal</a>
-          <a href="vendor/vendor-login.html">Vendor Portal</a>
-        </div>
-      </div>
-    </div>
+      <!-- RIGHT: more content (no empty space) -->
+      <aside class="showcase" aria-label="What BOOP does">
+        <img class="logo" src="assets/Boop-Logo.png" alt="BOOP wordmark" />
+        <p>
+          Keep everyone on the same page. Add funds, see what was spent, and export a report—
+          all in a few clicks. No chasing emails. No guessing where money went.
+        </p>
 
-    <div class="portal-card" aria-label="What BOOP does">
-      <img src="assets/Boop-Logo.png" alt="BOOP wordmark" style="height:46px;opacity:.9;margin-bottom:10px;">
-      <p style="color:#cbd5e1;line-height:1.6;margin:0 0 12px;">
-        BOOP keeps everyone on the same page. Add funds, see what was spent, and export a report—
-        all in a few clicks. No chasing emails. No guessing where money went.
-      </p>
-      <ul style="margin:0;color:#cbd5e1;padding-left:18px;line-height:1.6;">
-        <li>Send funds instantly to a card</li>
-        <li>See every transaction in one place</li>
-        <li>Download clean reports anytime</li>
-      </ul>
+        <div class="stats" aria-label="Quick stats">
+          <div class="stat">
+            <div class="num">Instant</div>
+            <div class="label">Top-ups</div>
+          </div>
+          <div class="stat">
+            <div class="num">100%</div>
+            <div class="label">Audit trail</div>
+          </div>
+          <div class="stat">
+            <div class="num">24/7</div>
+            <div class="label">Access</div>
+          </div>
+        </div>
+
+        <ul class="bullets" aria-label="Benefits">
+          <li>Send funds instantly to a card</li>
+          <li>View every transaction in one place</li>
+          <li>Download clean reports anytime</li>
+        </ul>
+      </aside>
     </div>
   </header>
 
@@ -131,6 +213,8 @@
 
   <footer>
     © <span id="year"></span> BOOP. All rights reserved.
+    &nbsp;•&nbsp; <a href="terms.html">Terms &amp; Conditions</a>
+    &nbsp;•&nbsp; <a href="privacy.html">Privacy Policy</a>
   </footer>
 
   <script>
