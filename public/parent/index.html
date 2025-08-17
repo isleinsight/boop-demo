@@ -590,6 +590,91 @@
     }
   })();
 
+  const freezeBtn = document.getElementById('freezeBtn');
+
+function setFreezeButtonUI(isFrozen) {
+  if (!freezeBtn) return;
+  freezeBtn.textContent = isFrozen ? 'Unfreeze Card' : 'Freeze Card';
+  freezeBtn.className = isFrozen ? 'btn-light' : 'btn-light';
+}
+
+async function loadBalance() {
+  if (balanceAmount) balanceAmount.textContent = '—';
+  if (balanceStatus) balanceStatus.textContent = 'Balance';
+  if (!currentWalletId) {
+    if (balanceMsg) {
+      balanceMsg.textContent = 'Balance unavailable (no wallet found).';
+      balanceMsg.className = 'msg error';
+      balanceMsg.style.display = 'block';
+    }
+    return;
+  }
+  try {
+    const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
+    const cents = Number(data.balance_cents ?? 0);
+    if (!Number.isFinite(cents)) throw new Error('No balance_cents field');
+
+    const normalized = cents / 100;
+    if (balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
+
+    // Show frozen state
+    const frozen = !!data.is_frozen;
+    setFreezeButtonUI(frozen);
+    if (cardStatusEl) {
+      cardStatusEl.textContent = frozen ? 'Card: FROZEN' : 'Card: ACTIVE';
+    }
+
+    if (balanceMsg) balanceMsg.style.display = 'none';
+  } catch {
+    if (balanceMsg) {
+      balanceMsg.textContent = 'Balance currently unavailable.';
+      balanceMsg.className = 'msg error';
+      balanceMsg.style.display = 'block';
+    }
+  }
+}
+
+// click handler
+if (freezeBtn) {
+  freezeBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!currentWalletId) return;
+
+    // decide action based on current label
+    const isCurrentlyFrozen = /unfreeze/i.test(freezeBtn.textContent);
+    const path = isCurrentlyFrozen
+      ? `/api/wallets/${currentWalletId}/unfreeze`
+      : `/api/wallets/${currentWalletId}/freeze`;
+
+    // optional: prompt for a reason when freezing
+    let reason = '';
+    if (!isCurrentlyFrozen) {
+      reason = prompt('Reason for freezing? (optional)') || '';
+    }
+
+    freezeBtn.disabled = true;
+    try {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ reason })
+      });
+      if (!res.ok) throw new Error(await res.text().catch(()=> 'HTTP error'));
+
+      // refresh UI
+      await loadBalance();
+      await loadActivity();
+    } catch (err) {
+      alert('Failed to update freeze status.');
+    } finally {
+      freezeBtn.disabled = false;
+    }
+  });
+}
+
   // --- Logout ---
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
