@@ -475,31 +475,84 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // First try: match by bank name and last4 from destination_masked for the STUDENT (t.user_id)
     const q1 = `
-      SELECT ba.account_number
-        FROM transfers t
-        JOIN bank_accounts ba
-          ON ba.user_id = t.user_id
-         AND ba.deleted_at IS NULL
-         AND (t.bank IS NULL OR ba.bank_name = t.bank)
-         AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
-       WHERE t.id = $1
-       LIMIT 1
+      SELECT
+        ba.account_number,
+        ba.bank_name,
+        ba.holder_name      AS account_holder_name,
+        ba.routing_number,
+        ba.iban,
+        ba.swift,
+        ba.country
+      FROM transfers t
+      JOIN bank_accounts ba
+        ON ba.user_id = t.user_id
+       AND ba.deleted_at IS NULL
+       AND (t.bank IS NULL OR ba.bank_name = t.bank)
+       AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
+     WHERE t.id = $1
+     LIMIT 1
     `;
     const r1 = await db.query(q1, [id]);
-    if (r1.rowCount) return res.json({ account_number: r1.rows[0].account_number });
+    if (r1.rowCount) {
+      return res.json(r1.rows[0]);
+    }
 
+    // Fallback: the bank account likely belongs to the PARENT who submitted on behalf of the student.
+    // Search any parent linked to this student (via student_parents), matching bank name + last4.
     const q2 = `
-      SELECT ba.account_number
-        FROM bank_accounts ba
-        JOIN transfers t ON t.user_id = ba.user_id
-       WHERE t.id = $1
-         AND ba.deleted_at IS NULL
-       ORDER BY ba.created_at DESC
-       LIMIT 1
+      SELECT
+        ba.account_number,
+        ba.bank_name,
+        ba.holder_name      AS account_holder_name,
+        ba.routing_number,
+        ba.iban,
+        ba.swift,
+        ba.country
+      FROM transfers t
+      JOIN student_parents sp
+        ON sp.student_id = t.user_id
+      JOIN bank_accounts ba
+        ON ba.user_id = sp.parent_id
+       AND ba.deleted_at IS NULL
+       AND (t.bank IS NULL OR ba.bank_name = t.bank)
+       AND RIGHT(ba.account_number, 4) = RIGHT(t.destination_masked, 4)
+     WHERE t.id = $1
+     ORDER BY ba.created_at DESC
+     LIMIT 1
     `;
     const r2 = await db.query(q2, [id]);
-    if (r2.rowCount) return res.json({ account_number: r2.rows[0].account_number });
+    if (r2.rowCount) {
+      return res.json(r2.rows[0]);
+    }
+
+    // As a final fallback, if you want: most recent active bank account among linked parents
+    // (only if you feel safe doing so; otherwise keep it strict to last4 + bank match)
+    const q3 = `
+      SELECT
+        ba.account_number,
+        ba.bank_name,
+        ba.holder_name      AS account_holder_name,
+        ba.routing_number,
+        ba.iban,
+        ba.swift,
+        ba.country
+      FROM transfers t
+      JOIN student_parents sp
+        ON sp.student_id = t.user_id
+      JOIN bank_accounts ba
+        ON ba.user_id = sp.parent_id
+       AND ba.deleted_at IS NULL
+     WHERE t.id = $1
+     ORDER BY ba.created_at DESC
+     LIMIT 1
+    `;
+    // Uncomment this block if you want the looser fallback:
+    // const r3 = await db.query(q3, [id]);
+    // if (r3.rowCount) {
+    //   return res.json(r3.rows[0]);
+    // }
 
     return res.status(404).json({ message: 'Bank account not found for this transfer.' });
   } catch (err) {
