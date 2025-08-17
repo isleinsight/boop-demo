@@ -1,5 +1,5 @@
 // public/accounts/transfers.js
-// Client logic for Admin → Transfers
+// Client logic for Admin → Transfers (Merchant wallet aware)
 
 (() => {
   const token = localStorage.getItem("boop_jwt");
@@ -30,7 +30,7 @@
   const d_amount = document.getElementById("d_amount");
   const d_bank = document.getElementById("d_bank");
   const d_destination = document.getElementById("d_destination");
-  const d_treasury = document.getElementById("d_treasury");
+  const d_treasury = document.getElementById("d_treasury"); // now filled with merchant wallets
   const d_bankRef = document.getElementById("d_bankRef");
   const d_internalNote = document.getElementById("d_internalNote");
   const claimBtn = document.getElementById("claimBtn");
@@ -51,7 +51,8 @@
   const perPage = 20;
   let totalPages = 1;
   let rows = []; // last fetched page
-  let treasuries = []; // from /api/treasury/treasury-wallets
+  // Holds MERCHANT wallets (fallback to treasury wallets if endpoint missing)
+  let treasuries = [];
   let currentRow = null; // row shown in modal
 
   // --- Helpers
@@ -59,7 +60,7 @@
 
   function fmtMoney(cents) {
     const n = Number(cents || 0) / 100;
-    return `$${n.toFixed(2)}`;
+    return `BMD $${n.toFixed(2)}`;
   }
   function dollarsOnly(v) {
     const n = Number(v || 0) / 100;
@@ -106,15 +107,24 @@
   }
 
   // --- Networking
+  // Load MERCHANT wallets; fallback to treasury list if merchant endpoint doesn't exist yet
   async function fetchTreasuries() {
     try {
-      const res = await fetch("/api/treasury/treasury-wallets", { headers: authHeaders() });
-      const data = await res.json();
-      if (!res.ok || !Array.isArray(data)) throw new Error(data.message || "Failed to load treasuries");
+      let res = await fetch("/api/treasury/merchant-wallets", { headers: authHeaders() }).catch(()=>null);
+      let data = null;
+
+      if (!res || res.status === 404) {
+        // fallback to old endpoint
+        res = await fetch("/api/treasury/treasury-wallets", { headers: authHeaders() }).catch(()=>null);
+      }
+      if (!res) throw new Error("No wallet endpoint available");
+      data = await res.json();
+      if (!Array.isArray(data)) throw new Error(data?.message || "Failed to load merchant wallets");
+
       treasuries = data;
     } catch (e) {
       treasuries = [];
-      console.warn("treasury fetch error", e);
+      console.warn("merchant/treasury wallet fetch error", e);
     }
   }
 
@@ -203,7 +213,7 @@
       const actions = actionButtonsFor(r);
       return `
         <tr data-id="${r.id}">
-          <td>${fmtDate(r.requested_at)}</td>
+          <td>${fmtDate(r.requested_at || r.created_at)}</td>
           <td>${r.id}</td>
           <td>${escapeHtml(who)}</td>
           <td>${fmtMoney(r.amount_cents)}</td>
@@ -311,9 +321,13 @@
   function fillTreasurySelect() {
     if (!d_treasury) return;
     d_treasury.innerHTML =
-      `<option value="">Select treasury</option>` +
+      `<option value="">Select wallet</option>` +
       treasuries
-        .map(t => `<option value="${t.id}">${escapeHtml(t.name || t.label || t.id)}</option>`)
+        .map(t => {
+          const name = t.name || t.label || t.bank_name || `Wallet ${t.id}`;
+          const bal = typeof t.balance_cents === "number" ? ` — ${fmtMoney(t.balance_cents)}` : "";
+          return `<option value="${t.id}">${escapeHtml(name + bal)}</option>`;
+        })
         .join("");
   }
 
@@ -478,15 +492,15 @@
     if (!currentRow) return;
 
     const bank_reference = d_bankRef.value.trim();
-    const treasury_wallet_id = d_treasury.value;
+    const treasury_wallet_id = d_treasury.value; // holds MERCHANT wallet id now
     const internal_note = d_internalNote.value.trim();
 
     if (!treasury_wallet_id) {
-      alert("Please select the Source Treasury.");
+      alert("Please select the Source Merchant Wallet.");
       return;
     }
-    if (!bank_reference) {
-      alert("Please paste the Bank Reference # from the bank portal.");
+    if (!bank_reference || bank_reference.length < 4) {
+      alert("Please paste the Bank Reference # (min 4 characters).");
       return;
     }
 
@@ -574,7 +588,7 @@
   // --- Boot
   (async function init(){
     try {
-      await fetchTreasuries();
+      await fetchTreasuries();   // loads merchant wallets (or fallback)
       await fetchTransfers();
     } catch (err) {
       showErr(err);
