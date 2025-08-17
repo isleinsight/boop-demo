@@ -476,7 +476,7 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Enforce: only the current claimer may view full bank details
+    // Only the current claimer can view bank details
     const me = req.user.userId || req.user.id;
     const r0 = await db.query(
       `SELECT status, claimed_by FROM transfers WHERE id = $1 LIMIT 1`,
@@ -489,16 +489,11 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
       return res.status(403).json({ message: 'Bank details available only to the current claimer.' });
     }
 
-    // First try: bank account belongs to the student (t.user_id)
+    // 1) Try: bank account on the student (t.user_id), match bank + last4
     const q1 = `
       SELECT
         ba.account_number,
-        ba.bank_name,
-        ba.holder_name      AS account_holder_name,
-        ba.routing_number,
-        ba.iban,
-        ba.swift,
-        ba.country
+        ba.bank_name
       FROM transfers t
       JOIN bank_accounts ba
         ON ba.user_id = t.user_id
@@ -509,20 +504,13 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
      LIMIT 1
     `;
     const r1 = await db.query(q1, [id]);
-    if (r1.rowCount) {
-      return res.json(r1.rows[0]);
-    }
+    if (r1.rowCount) return res.json(r1.rows[0]);
 
-    // Fallback: bank account belongs to a linked parent (parent-submitted transfer)
+    // 2) Fallback: bank account on a linked parent, match bank + last4
     const q2 = `
       SELECT
         ba.account_number,
-        ba.bank_name,
-        ba.holder_name      AS account_holder_name,
-        ba.routing_number,
-        ba.iban,
-        ba.swift,
-        ba.country
+        ba.bank_name
       FROM transfers t
       JOIN student_parents sp
         ON sp.student_id = t.user_id
@@ -536,9 +524,7 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
      LIMIT 1
     `;
     const r2 = await db.query(q2, [id]);
-    if (r2.rowCount) {
-      return res.json(r2.rows[0]);
-    }
+    if (r2.rowCount) return res.json(r2.rows[0]);
 
     return res.status(404).json({ message: 'Bank account not found for this transfer.' });
   } catch (err) {
