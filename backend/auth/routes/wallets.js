@@ -239,4 +239,130 @@ router.post("/:walletId/parent-deposits", authenticateToken, async (req, res) =>
   }
 });
 
+// --- include in the SELECTs so client can render status ---
+/**
+ * (unchanged path) GET /api/wallets/user/:userId
+ * now also returns is_frozen
+ */
+router.get("/user/:userId", authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Auth: admin OR linked parent
+    if (!isAdmin(req)) {
+      const requesterId = req.user?.userId ?? req.user?.id;
+      const role = (req.user?.role || "").toLowerCase();
+      if (role !== "parent") return res.status(403).json({ message: "Admin or linked parent required." });
+      const linked = await parentLinkedToStudent(requesterId, userId);
+      if (!linked) return res.status(403).json({ message: "Not authorized for this student." });
+    }
+
+    const q = `
+      SELECT id, balance, is_frozen, frozen_at, frozen_by, frozen_reason
+      FROM wallets
+      WHERE user_id = $1
+      ORDER BY created_at ASC
+      LIMIT 1
+    `;
+    const { rows } = await db.query(q, [userId]);
+
+    if (!rows.length) return res.json({ wallet_id: null, balance_cents: 0, is_frozen: false });
+
+    const w = rows[0];
+    return res.json({
+      wallet_id: w.id,
+      balance_cents: Number(w.balance || 0),
+      is_frozen: !!w.is_frozen,
+      frozen_at: w.frozen_at,
+      frozen_by: w.frozen_by,
+      frozen_reason: w.frozen_reason || null
+    });
+  } catch (err) {
+    console.error("❌ wallets/user/:userId error:", err);
+    return res.status(500).json({ message: "Failed to load wallet." });
+  }
+});
+
+/**
+ * POST /api/wallets/:walletId/freeze
+ * Body: { reason?: string }
+ * Auth: admin OR parent linked to the student owning this wallet
+ */
+router.post("/:walletId/freeze", authenticateToken, async (req, res) => {
+  const { walletId } = req.params;
+  const reason = (req.body?.reason || '').toString().slice(0, 500);
+
+  try {
+    // find wallet owner
+    const wq = `SELECT user_id FROM wallets WHERE id = $1`;
+    const wres = await db.query(wq, [walletId]);
+    if (!wres.rowCount) return res.status(404).json({ message: "Wallet not found." });
+    const studentUserId = wres.rows[0].user_id;
+
+    // auth: admin or linked parent
+    if (!isAdmin(req)) {
+      const requesterId = req.user?.userId ?? req.user?.id;
+      const role = (req.user?.role || "").toLowerCase();
+      if (role !== "parent") return res.status(403).json({ message: "Admin or linked parent required." });
+      const linked = await parentLinkedToStudent(requesterId, studentUserId);
+      if (!linked) return res.status(403).json({ message: "Not authorized for this student." });
+    }
+
+    // update
+    const uq = `
+      UPDATE wallets
+      SET is_frozen = true,
+          frozen_at = NOW(),
+          frozen_by = $2,
+          frozen_reason = NULLIF($3, '')
+      WHERE id = $1
+      RETURNING id, is_frozen, frozen_at, frozen_by, frozen_reason
+    `;
+    const ures = await db.query(uq, [walletId, (req.user?.userId ?? req.user?.id) || null, reason]);
+
+    return res.json({ message: "Wallet frozen.", wallet: ures.rows[0] });
+  } catch (err) {
+    console.error("❌ freeze wallet error:", err);
+    return res.status(500).json({ message: "Failed to freeze wallet." });
+  }
+});
+
+/**
+ * POST /api/wallets/:walletId/unfreeze
+ */
+router.post("/:walletId/unfreeze", authenticateToken, async (req, res) => {
+  const { walletId } = req.params;
+
+  try {
+    const wq = `SELECT user_id FROM wallets WHERE id = $1`;
+    const wres = await db.query(wq, [walletId]);
+    if (!wres.rowCount) return res.status(404).json({ message: "Wallet not found." });
+    const studentUserId = wres.rows[0].user_id;
+
+    if (!isAdmin(req)) {
+      const requesterId = req.user?.userId ?? req.user?.id;
+      const role = (req.user?.role || "").toLowerCase();
+      if (role !== "parent") return res.status(403).json({ message: "Admin or linked parent required." });
+      const linked = await parentLinkedToStudent(requesterId, studentUserId);
+      if (!linked) return res.status(403).json({ message: "Not authorized for this student." });
+    }
+
+    const uq = `
+      UPDATE wallets
+      SET is_frozen = false,
+          frozen_at = NULL,
+          frozen_by = NULL,
+          frozen_reason = NULL
+      WHERE id = $1
+      RETURNING id, is_frozen
+    `;
+    const ures = await db.query(uq, [walletId]);
+
+    return res.json({ message: "Wallet unfrozen.", wallet: ures.rows[0] });
+  } catch (err) {
+    console.error("❌ unfreeze wallet error:", err);
+    return res.status(500).json({ message: "Failed to unfreeze wallet." });
+  }
+});
+
 module.exports = router;
