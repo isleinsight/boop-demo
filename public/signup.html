@@ -121,27 +121,27 @@
 }
 
 /* TERMS AGREEMENT */
-.terms {
+.terms label {
   display: flex;
-  align-items: flex-start;   /* top-align checkbox with text */
-  gap: 8px;                  /* space between checkbox and text */
-  margin-top: 6px;
+  align-items: center;   /* align checkbox and text */
+  gap: 8px;              /* space between box and text */
   font-size: .9rem;
-  color: #dbe3ff;            /* softer ink */
+  color: #dbe3ff;        /* softer ink */
+  cursor: pointer;
 }
 
 .terms input[type="checkbox"] {
-  margin-top: 3px;           /* align with first line of text */
+  margin: 0;             /* remove browser default offset */
+  flex-shrink: 0;        /* keep checkbox size stable */
 }
 
 .terms a {
-  color: #c9d7ff;            /* same color as footer links */
+  color: #c9d7ff;        /* same as footer links */
   text-decoration: none;
 }
-
 .terms a:hover {
   text-decoration: underline;
-  color: #fff;               /* brighten on hover */
+  color: #fff;
 }
   </style>
 </head>
