@@ -1,9 +1,51 @@
+// ./auth/routes/students.js
 const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
 
 const { authenticateToken } = require("../middleware/authMiddleware");
 const logAdminAction = require("../middleware/log-admin-action");
+
+/*
+-- Run these once if you don't already have storage for limits/categories:
+
+CREATE TABLE IF NOT EXISTS student_limits (
+  student_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  monthly_limit_cents INTEGER NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS student_categories (
+  student_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  allow JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+*/
+
+function isAdmin(req) {
+  return (req.user?.role || "").toLowerCase() === "admin";
+}
+
+// Check if the requester can act on this student (admin, linked parent, or the student)
+async function canActOnStudent(req, studentId) {
+  const userId = req.user?.userId ?? req.user?.id;
+  const role = (req.user?.role || "").toLowerCase();
+
+  if (!userId) return false;
+  if (isAdmin(req)) return true;
+  if (userId === studentId) return true; // the student themselves
+
+  // linked parent?
+  if (role === "parent") {
+    const link = await pool.query(
+      `SELECT 1 FROM student_parents WHERE student_id = $1 AND parent_id = $2 LIMIT 1`,
+      [studentId, userId]
+    );
+    return link.rowCount > 0;
+  }
+
+  return false;
+}
 
 // ✅ POST /api/students — Create a student entry
 router.post("/", async (req, res) => {
@@ -72,10 +114,6 @@ router.get("/:id", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   const { id: user_id } = req.params;
 
-  console.log("🔄 PATCH /api/students/:id triggered");
-  console.log("👉 Incoming user_id:", user_id);
-  console.log("📦 Body data:", req.body);
-
   const fieldsToUpdate = [];
   const values = [];
 
@@ -95,7 +133,6 @@ router.patch("/:id", async (req, res) => {
   }
 
   if (fieldsToUpdate.length === 0) {
-    console.log("⚠️ No fields provided for update.");
     return res.status(400).json({ message: "No fields to update" });
   }
 
@@ -103,21 +140,15 @@ router.patch("/:id", async (req, res) => {
 
   const updateQuery = `
     UPDATE students
-    SET ${fieldsToUpdate.join(", ")}
+    SET ${fieldsToUpdate.join(", ")}, updated_at = NOW()
     WHERE user_id = $${values.length}
     RETURNING *
   `;
 
-  console.log("📝 Update Query:", updateQuery);
-  console.log("🧮 Query Values:", values);
-
   try {
     const result = await pool.query(updateQuery, values);
-    console.log("🟢 Update Result:", result.rowCount);
 
     if (result.rowCount === 0) {
-      console.log("📭 No matching student found — inserting instead.");
-
       const insertRes = await pool.query(
         `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
          VALUES ($1, $2, $3, $4)
@@ -125,14 +156,12 @@ router.patch("/:id", async (req, res) => {
         [user_id, req.body.school_name, req.body.grade_level || null, req.body.expiry_date]
       );
 
-      console.log("✅ Inserted new student:", insertRes.rows[0]);
-
-      return res.status(201).json({ message: "Student created", student: insertRes.rows[0] });
+      return res
+        .status(201)
+        .json({ message: "Student created", student: insertRes.rows[0] });
     }
 
-    console.log("✅ Student updated:", result.rows[0]);
     res.json({ message: "Student updated", student: result.rows[0] });
-
   } catch (err) {
     console.error("❌ Error in PATCH /api/students/:id:", err);
     res.status(500).json({ message: "Update failed" });
@@ -178,7 +207,7 @@ router.post("/:id/parents", authenticateToken, async (req, res) => {
       action: "link_parent",
       target_user_id: parent_id,
       type: req.user.type,
-      status: "completed"
+      status: "completed",
     });
 
     res.json({ message: "Parent linked to student" });
@@ -191,7 +220,7 @@ router.post("/:id/parents", authenticateToken, async (req, res) => {
       target_user_id: parent_id,
       type: req.user?.type || "unknown",
       status: "failed",
-      error_message: err.message
+      error_message: err.message,
     });
 
     res.status(500).json({ message: "Linking failed" });
@@ -203,12 +232,15 @@ router.get("/:id/parents", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT u.id, u.first_name, u.last_name, u.email
       FROM student_parents sp
       JOIN users u ON sp.parent_id = u.id
       WHERE sp.student_id = $1
-    `, [id]);
+    `,
+      [id]
+    );
 
     res.json(result.rows);
   } catch (err) {
@@ -222,13 +254,16 @@ router.get("/for-parent/:parentId", async (req, res) => {
   const { parentId } = req.params;
 
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT s.*, u.first_name, u.last_name, u.email
       FROM student_parents sp
       JOIN students s ON sp.student_id = s.user_id
       JOIN users u ON s.user_id = u.id
       WHERE sp.parent_id = $1
-    `, [parentId]);
+    `,
+      [parentId]
+    );
 
     res.json(result.rows);
   } catch (err) {
@@ -251,6 +286,181 @@ router.delete("/:id/parents/:parentId", async (req, res) => {
   } catch (err) {
     console.error("❌ Error unlinking parent:", err);
     res.status(500).json({ message: "Unlink failed" });
+  }
+});
+
+
+// =====================================================================
+// 📦 LIMITS
+// =====================================================================
+
+// GET /api/students/:id/limits  -> { monthly_limit: number|null }
+router.get("/:id/limits", authenticateToken, async (req, res) => {
+  const { id: studentId } = req.params;
+
+  try {
+    if (!(await canActOnStudent(req, studentId))) {
+      return res.status(403).json({ message: "Not authorized." });
+    }
+
+    const r = await pool.query(
+      `SELECT monthly_limit_cents FROM student_limits WHERE student_id = $1`,
+      [studentId]
+    );
+
+    if (!r.rowCount) {
+      return res.json({ monthly_limit: null });
+    }
+
+    const cents = Number(r.rows[0].monthly_limit_cents || 0);
+    return res.json({ monthly_limit: (cents / 100) });
+  } catch (err) {
+    console.error("❌ GET limits error:", err);
+    res.status(500).json({ message: "Failed to load limit." });
+  }
+});
+
+// PUT /api/students/:id/limits  Body: { monthly_limit: number }
+router.put("/:id/limits", authenticateToken, async (req, res) => {
+  const { id: studentId } = req.params;
+  const amt = Number(req.body?.monthly_limit);
+
+  if (!Number.isFinite(amt) || amt < 0) {
+    return res.status(400).json({ message: "Invalid monthly_limit." });
+  }
+
+  try {
+    if (!(await canActOnStudent(req, studentId))) {
+      return res.status(403).json({ message: "Not authorized." });
+    }
+
+    const cents = Math.round(amt * 100);
+
+    const up = await pool.query(
+      `INSERT INTO student_limits (student_id, monthly_limit_cents, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (student_id)
+       DO UPDATE SET monthly_limit_cents = EXCLUDED.monthly_limit_cents, updated_at = NOW()
+       RETURNING monthly_limit_cents`,
+      [studentId, cents]
+    );
+
+    return res.json({ monthly_limit: (Number(up.rows[0].monthly_limit_cents) / 100) });
+  } catch (err) {
+    console.error("❌ PUT limits error:", err);
+    res.status(500).json({ message: "Failed to save limit." });
+  }
+});
+
+// DELETE /api/students/:id/limits
+router.delete("/:id/limits", authenticateToken, async (req, res) => {
+  const { id: studentId } = req.params;
+
+  try {
+    if (!(await canActOnStudent(req, studentId))) {
+      return res.status(403).json({ message: "Not authorized." });
+    }
+
+    await pool.query(`DELETE FROM student_limits WHERE student_id = $1`, [studentId]);
+    return res.json({ message: "Limit cleared." });
+  } catch (err) {
+    console.error("❌ DELETE limits error:", err);
+    res.status(500).json({ message: "Failed to clear limit." });
+  }
+});
+
+
+// =====================================================================
+// 🧩 CATEGORIES (allow-list)
+// =====================================================================
+
+// sensible default if nothing saved yet
+const DEFAULT_ALLOW = {
+  food: true,
+  fastfood: false,
+  electronics: false,
+  entertainment: true,
+  other: true,
+};
+
+// GET /api/students/:id/categories -> { allow: {...} }
+router.get("/:id/categories", authenticateToken, async (req, res) => {
+  const { id: studentId } = req.params;
+
+  try {
+    if (!(await canActOnStudent(req, studentId))) {
+      return res.status(403).json({ message: "Not authorized." });
+    }
+
+    const r = await pool.query(
+      `SELECT allow FROM student_categories WHERE student_id = $1`,
+      [studentId]
+    );
+
+    if (!r.rowCount) {
+      return res.json({ allow: DEFAULT_ALLOW });
+    }
+
+    const allow = r.rows[0].allow || {};
+    return res.json({ allow: {
+      ...DEFAULT_ALLOW,
+      ...allow,
+    }});
+  } catch (err) {
+    console.error("❌ GET categories error:", err);
+    res.status(500).json({ message: "Failed to load categories." });
+  }
+});
+
+// PUT /api/students/:id/categories  Body: { allow: { ... } }
+router.put("/:id/categories", authenticateToken, async (req, res) => {
+  const { id: studentId } = req.params;
+  const incoming = req.body?.allow || {};
+
+  // coerce booleans, merge with defaults
+  const normalized = {
+    food: !!incoming.food,
+    fastfood: !!incoming.fastfood,
+    electronics: !!incoming.electronics,
+    entertainment: !!incoming.entertainment,
+    other: !!incoming.other,
+  };
+
+  try {
+    if (!(await canActOnStudent(req, studentId))) {
+      return res.status(403).json({ message: "Not authorized." });
+    }
+
+    const up = await pool.query(
+      `INSERT INTO student_categories (student_id, allow, updated_at)
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (student_id)
+       DO UPDATE SET allow = EXCLUDED.allow, updated_at = NOW()
+       RETURNING allow`,
+      [studentId, JSON.stringify(normalized)]
+    );
+
+    return res.json({ allow: up.rows[0].allow });
+  } catch (err) {
+    console.error("❌ PUT categories error:", err);
+    res.status(500).json({ message: "Failed to save categories." });
+  }
+});
+
+// DELETE /api/students/:id/categories -> reset to defaults (by deleting row)
+router.delete("/:id/categories", authenticateToken, async (req, res) => {
+  const { id: studentId } = req.params;
+
+  try {
+    if (!(await canActOnStudent(req, studentId))) {
+      return res.status(403).json({ message: "Not authorized." });
+    }
+
+    await pool.query(`DELETE FROM student_categories WHERE student_id = $1`, [studentId]);
+    return res.json({ message: "Categories reset to defaults.", allow: DEFAULT_ALLOW });
+  } catch (err) {
+    console.error("❌ DELETE categories error:", err);
+    res.status(500).json({ message: "Failed to reset categories." });
   }
 });
 
