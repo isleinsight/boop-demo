@@ -6,107 +6,141 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Parents can track spending, add funds, and manage their child's BOOP Card." />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/styles.css" />
   <style>
     :root{
       --ink:#0b1220; --boop:#2f80ed; --boop-dark:#1c6fd8; --muted:#6b7280; --text:#1f2937;
       --stroke:#e5e7eb; --bg:#f5f8fb; --card:#ffffff; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    img{max-width:100%;display:block}
+    a{color:var(--boop);text-decoration:underline}
 
-    /* NAV */
-    .nav{background:#0b1220;}
-    .nav__inner{max-width:1120px;margin:0 auto;padding:12px 18px;display:flex;align-items:center}
-    .nav__brand img{height:32px;display:block}
+    /* Header (logo only) */
+    .site-head{background:#0b1220}
+    .site-head__inner{max-width:1120px;margin:0 auto;padding:12px 16px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{height:28px}
 
-    /* NEW logout bar */
-    .logout-bar{
-      margin: 10px 0 18px;
-      text-align: right;
-    }
-    .logout-bar a{
-      color: var(--boop-dark);
-      font-weight: 600;
-      text-decoration: underline;
-    }
-    .logout-bar a:hover{color:var(--boop)}
+    /* Subbar with logout link under header */
+    .subbar{background:#eef2f7;border-bottom:1px solid var(--stroke)}
+    .subbar__inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;justify-content:flex-end}
+    .logout-link{font-weight:600}
 
-    /* LAYOUT */
-    .wrap{max-width:1120px;margin:0 auto;padding:24px 18px}
-    .layout{display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start}
-    @media (max-width:900px){ .layout{grid-template-columns:1fr} }
+    /* Main layout */
+    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start}
+    @media (max-width:1024px){ .grid{grid-template-columns:1.3fr .9fr} }
+    @media (max-width:860px){ .grid{grid-template-columns:1fr} }
 
-    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;box-shadow:0 10px 24px rgba(16,24,40,.06)}
-    .card__head{padding:14px 16px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .card__body{padding:16px}
-
-    .pill{font-size:.8rem;background:#eef2ff;color:#374151;border-radius:999px;padding:4px 10px;border:1px solid #dbeafe}
+    /* Cards */
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;box-shadow:0 8px 20px rgba(16,24,40,.06)}
+    .card__head{padding:12px 14px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .card__body{padding:14px}
+    .pill{font-size:.8rem;background:#eef2ff;color:#374151;border-radius:999px;padding:4px 10px;border:1px solid #dbeafe;white-space:nowrap}
 
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .select{padding:10px 12px;border:1px solid var(--stroke);border-radius:10px;background:#fff;font-size:.95rem;min-width:220px}
 
-    .balance{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .balance{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .balance__amount{font-size:2rem;font-weight:700;color:var(--ink)}
     .balance__status{color:var(--muted);font-size:.95rem}
-
     .actions{display:flex;gap:8px;flex-wrap:wrap}
 
-    table{width:100%;border-collapse:collapse}
-    th, td{padding:12px 10px;border-bottom:1px solid var(--stroke);text-align:left}
-    th{font-weight:600;color:#374151}
-    td.small{color:var(--muted);font-size:.92rem}
-    .tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.8rem;font-weight:600;background:#eef2ff;color:#1f2937;border:1px solid #dbeafe}
-    .empty{color:var(--muted);text-align:center;padding:30px 8px}
+    .btn-primary{background:var(--boop);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+    .btn-primary:hover{background:var(--boop-dark)}
+    .btn-light{background:#fff;color:var(--boop);border:1px solid var(--stroke);border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+
+    .input, select.input{width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:10px;outline:none;font-size:.95rem;background:#fff}
+    .input:focus{border-color:var(--boop)}
+    .msg{font-size:.92rem;margin-top:6px;display:none}
+    .msg.error{color:var(--danger)} .msg.ok{color:var(--ok)}
+
+    .empty{color:var(--muted);text-align:center;padding:20px 8px}
 
     .pager{display:flex;justify-content:flex-end;gap:8px;padding-top:10px}
     .pager button{border:1px solid var(--stroke);background:#fff;color:#111827;border-radius:8px;padding:8px 10px;cursor:pointer}
     .pager button:disabled{opacity:.5;cursor:not-allowed}
 
-    .summary h3{margin:0 0 6px}
-    .summary p{margin:0;color:var(--muted)}
+    /* Compact activity feed (PayPal-ish) */
+    .activity-feed { display: grid; gap: 10px; }
+    .activity-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .activity-title {
+      font-weight: 600;
+      color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .activity-amount {
+      font-weight: 700;
+      justify-self: end;
+    }
+    .activity-amount.pos { color: var(--ok); }
+    .activity-amount.neg { color: var(--danger); }
+    .activity-meta {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      font-size: .9rem;
+      color: var(--muted);
+    }
+    .activity-tag {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: .8rem;
+      border: 1px solid #dbeafe;
+      background: #eef2ff;
+      color: #1f2937;
+    }
+    @media (max-width: 520px){
+      .activity-item{ padding: 10px; }
+      .activity-title{ font-size: .95rem; }
+      .activity-meta{ font-size: .85rem; }
+    }
 
-    .controls .row{align-items:center}
-    .controls label{display:block;font-weight:600;margin-bottom:6px}
-    .input, select.input{width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:10px;outline:none;font-size:.95rem}
-    .input:focus{border-color:var(--boop)}
+    /* Freeze card (button stays visible even when narrower) */
+    .actions .btn-light{white-space:nowrap}
 
-    .switch{display:flex;align-items:center;gap:10px;margin:6px 0}
-    .switch input{transform:scale(1.1)}
-
-    .msg{font-size:.92rem;margin-top:6px;display:none}
-    .msg.error{color:var(--danger)} .msg.ok{color:var(--ok)}
-
-    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.45);z-index:50;padding:16px}
-    .modal__card{width:100%;max-width:520px;background:#fff;border-radius:14px;border:1px solid var(--stroke);box-shadow:0 20px 50px rgba(0,0,0,.15);overflow:hidden}
-    .modal__head{padding:14px 16px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between}
-    .modal__body{padding:16px;display:grid;gap:12px}
-    .modal__foot{padding:14px 16px;border-top:1px solid var(--stroke);display:flex;gap:10px;justify-content:flex-end}
-    .close{background:#f3f4f6;border:1px solid var(--stroke);color:#111827;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+    /* Prevent horizontal cut-off on tiny screens */
+    body{overflow-x:hidden}
 
     footer{padding:22px;color:#6b7280;text-align:center;margin-top:20px}
     footer a{color:var(--boop);text-decoration:none;font-weight:600}
   </style>
 </head>
 <body>
-  <!-- NAV -->
-  <header class="nav">
-    <div class="nav__inner nav-container">
-      <div class="nav__brand nav-left">
+
+  <!-- Header with logo only -->
+  <header class="site-head">
+    <div class="site-head__inner">
+      <div class="brand">
         <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
     </div>
   </header>
 
-  <!-- LOGOUT bar -->
-  <main class="wrap">
-    <div class="logout-bar">
-      <a href="#" id="logoutBtn">Log Out</a>
+  <!-- Subbar with Logout under the header -->
+  <div class="subbar">
+    <div class="subbar__inner">
+      <a href="#" id="logoutBtn" class="logout-link">Log out</a>
     </div>
+  </div>
 
-    <section class="layout">
-      <!-- LEFT -->
+  <main class="wrap">
+    <section class="grid">
+      <!-- LEFT: Student + Activity -->
       <div>
+        <!-- Student & Balance -->
         <div class="card" id="studentCard">
           <div class="card__head">
             <div class="row">
@@ -119,17 +153,20 @@
           </div>
           <div class="card__body">
             <div class="balance">
-              <div class="balance__amount" id="balanceAmount">—</div>
-              <div class="balance__status" id="balanceStatus">Balance</div>
-            </div>
-            <div class="actions" style="margin-top:12px">
-              <button id="addFundsBtn" class="btn-primary" type="button">Add Funds</button>
-              <a id="freezeBtn" class="btn-light" href="javascript:void(0)">Freeze Card</a>
+              <div>
+                <div class="balance__amount" id="balanceAmount">—</div>
+                <div class="balance__status" id="balanceStatus">Balance</div>
+              </div>
+              <div class="actions">
+                <button id="addFundsBtn" class="btn-primary" type="button">Add Funds</button>
+                <button id="freezeBtn" class="btn-light" type="button">Freeze Card</button>
+              </div>
             </div>
             <div id="balanceMsg" class="msg" aria-live="polite"></div>
           </div>
         </div>
 
+        <!-- Activity -->
         <div class="card" style="margin-top:16px">
           <div class="card__head">
             <strong>Recent activity</strong>
@@ -137,20 +174,7 @@
           </div>
           <div class="card__body" id="activityWrap">
             <div class="empty" id="activityEmpty">No recent transactions.</div>
-            <div style="overflow:auto">
-              <table id="activityTable" style="display:none">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Merchant</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="activityTbody"></tbody>
-              </table>
-            </div>
+            <div id="activityFeed" class="activity-feed" style="display:none"></div>
             <div class="pager">
               <button id="prevPage">Prev</button>
               <button id="nextPage">Next</button>
@@ -159,7 +183,7 @@
         </div>
       </div>
 
-      <!-- RIGHT -->
+      <!-- RIGHT: Overview + Controls -->
       <aside>
         <div class="card summary">
           <div class="card__head"><strong>Overview</strong></div>
@@ -187,11 +211,13 @@
 
             <div>
               <label>Category safeguards</label>
-              <div class="switch"><input id="cat_food" type="checkbox"> <span>Allow: Groceries & Essentials</span></div>
-              <div class="switch"><input id="cat_fastfood" type="checkbox"> <span>Allow: Fast food</span></div>
-              <div class="switch"><input id="cat_electronics" type="checkbox"> <span>Allow: Electronics</span></div>
-              <div class="switch"><input id="cat_entertainment" type="checkbox"> <span>Allow: Entertainment</span></div>
-              <div class="switch"><input id="cat_other" type="checkbox"> <span>Allow: Other</span></div>
+              <div class="row" style="flex-direction:column;align-items:flex-start">
+                <label class="row"><input id="cat_food" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Groceries & Essentials</span></label>
+                <label class="row"><input id="cat_fastfood" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Fast food</span></label>
+                <label class="row"><input id="cat_electronics" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Electronics</span></label>
+                <label class="row"><input id="cat_entertainment" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Entertainment</span></label>
+                <label class="row"><input id="cat_other" type="checkbox" style="transform:scale(1.1)"> <span>Allow: Other</span></label>
+              </div>
               <div style="display:flex;gap:8px;margin-top:10px">
                 <button id="saveCatsBtn" class="btn-primary" type="button">Save categories</button>
                 <button id="resetCatsBtn" class="btn-light" type="button">Reset</button>
@@ -205,13 +231,13 @@
   </main>
 
   <!-- Add Funds Modal -->
-  <div id="fundsModal" class="modal" aria-hidden="true">
-    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="fundsTitle">
-      <div class="modal__head">
+  <div id="fundsModal" class="modal" aria-hidden="true" style="position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.45);z-index:50;padding:16px">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="fundsTitle" style="width:100%;max-width:520px;background:#fff;border-radius:14px;border:1px solid var(--stroke);box-shadow:0 20px 50px rgba(0,0,0,.15);overflow:hidden">
+      <div class="modal__head" style="padding:14px 16px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between">
         <strong id="fundsTitle">Add Funds</strong>
-        <button class="close" id="closeFunds">Close</button>
+        <button class="btn-light" id="closeFunds">Close</button>
       </div>
-      <div class="modal__body">
+      <div class="modal__body" style="padding:16px;display:grid;gap:12px">
         <label>Amount (BMD)
           <input id="amountInput" class="input" type="number" inputmode="decimal" min="1" step="0.01" placeholder="25.00" />
         </label>
@@ -220,7 +246,7 @@
         </label>
         <div id="fundsMsg" class="msg" aria-live="polite"></div>
       </div>
-      <div class="modal__foot">
+      <div class="modal__foot" style="padding:14px 16px;border-top:1px solid var(--stroke);display:flex;gap:10px;justify-content:flex-end">
         <button id="confirmFunds" class="btn-primary">Add Funds</button>
       </div>
     </div>
@@ -231,7 +257,7 @@
     &nbsp;•&nbsp; <a href="/terms.html">Terms</a> &nbsp;•&nbsp; <a href="/privacy.html">Privacy</a>
   </footer>
 
- <script>
+<script>
 (function () {
   // --- Year ---
   const yearEl = document.getElementById('year');
@@ -265,8 +291,7 @@
   const balanceMsg = document.getElementById('balanceMsg');
 
   const activityEmpty = document.getElementById('activityEmpty');
-  const activityTable = document.getElementById('activityTable');
-  const activityTbody = document.getElementById('activityTbody');
+  const activityFeed = document.getElementById('activityFeed');
   const activityCountPill = document.getElementById('activityCountPill');
   const prevBtn = document.getElementById('prevPage');
   const nextBtn = document.getElementById('nextPage');
@@ -279,7 +304,7 @@
   const noteInput = document.getElementById('noteInput');
   const fundsMsg = document.getElementById('fundsMsg');
 
-  const requestChildBtn = document.getElementById('requestChildBtn'); // may not exist
+  const requestChildBtn = document.getElementById('requestChildBtn'); // optional trigger
   const requestModal = document.getElementById('requestModal');
   const closeRequest = document.getElementById('closeRequest');
   const submitRequest = document.getElementById('submitRequest');
@@ -288,6 +313,15 @@
   const reqSchool = document.getElementById('reqSchool');
   const reqNotes = document.getElementById('reqNotes');
   const reqMsg = document.getElementById('reqMsg');
+
+  const limitInput = document.getElementById('limitInput');
+  const saveLimitBtn = document.getElementById('saveLimitBtn');
+  const clearLimitBtn = document.getElementById('clearLimitBtn');
+  const limitMsg = document.getElementById('limitMsg');
+
+  const saveCatsBtn = document.getElementById('saveCatsBtn');
+  const resetCatsBtn = document.getElementById('resetCatsBtn');
+  const catsMsg = document.getElementById('catsMsg');
 
   // --- Helpers ---
   function fmtMoney(n) { return (typeof n === 'number' && Number.isFinite(n)) ? ('BMD $' + n.toFixed(2)) : '—'; }
@@ -325,7 +359,7 @@
       selectStudent(students[0].id);
     } else {
       if (studentSelect) studentSelect.innerHTML = '<option>No students linked</option>';
-      if (activityEmpty) activityEmpty.textContent = 'No students found.';
+      activityEmpty.textContent = 'No students found.';
     }
   }
 
@@ -375,7 +409,6 @@
       return;
     }
     try {
-      // Uses your existing /api/wallets/user/:userId route (returns {wallet_id, balance_cents})
       const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
       const cents = Number(data.balance_cents ?? 0);
       if (!Number.isFinite(cents)) throw new Error('No balance_cents field');
@@ -383,7 +416,7 @@
       if (balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
       if (balanceStatus) balanceStatus.textContent = 'Balance';
       if (balanceMsg) balanceMsg.style.display = 'none';
-    } catch (e) {
+    } catch {
       if (balanceMsg) {
         balanceMsg.textContent = 'Balance currently unavailable.';
         balanceMsg.className = 'msg error';
@@ -392,7 +425,6 @@
     }
   }
 
-  // Activity uses /api/transactions/user/:userId (admin-only route in your backend, but you’re an authenticated parent with access controlled by your code)
   async function loadActivity() {
     txns = [];
     page = 0;
@@ -442,32 +474,40 @@
       activityCountPill.style.display = total ? 'inline-block' : 'none';
       activityCountPill.textContent = `${total} items`;
     }
+
     const start = page * PAGE_SIZE, end = start + PAGE_SIZE, slice = txns.slice(start, end);
     if (prevBtn) { prevBtn.disabled = page === 0; prevBtn.onclick = () => { if (page > 0) { page--; renderActivity(); } }; }
     if (nextBtn) { nextBtn.disabled = end >= total; nextBtn.onclick = () => { if (end < total) { page++; renderActivity(); } }; }
 
     if (!slice.length) {
       if (activityEmpty) activityEmpty.style.display = 'block';
-      if (activityTable) activityTable.style.display = 'none';
+      if (activityFeed) activityFeed.style.display = 'none';
       return;
     }
     if (activityEmpty) activityEmpty.style.display = 'none';
-    if (activityTable) activityTable.style.display = 'table';
-    if (activityTbody) {
-      activityTbody.innerHTML = slice.map(tx => {
+    if (activityFeed) activityFeed.style.display = 'grid';
+
+    if (activityFeed) {
+      activityFeed.innerHTML = slice.map(tx => {
         const amt = Number(tx.amount || 0);
-        const amtStr = (amt < 0 ? '-' : '+') + fmtMoney(Math.abs(amt));
-        const status = (tx.status || 'posted').toString().toUpperCase();
-        const cat = tx.category || 'GENERAL';
-        const merchant = tx.merchant || '—';
-        const date = tx.created_at;
-        return `<tr>
-          <td class="small">${fmtDate(date)}</td>
-          <td>${merchant}</td>
-          <td><span class="tag">${cat}</span></td>
-          <td>${amt < 0 ? '<span style="color:#ef4444">' + amtStr + '</span>' : '<span style="color:#10b981">' + amtStr + '</span>'}</td>
-          <td class="small">${status}</td>
-        </tr>`;
+        const amtClass = amt < 0 ? 'neg' : 'pos';
+        const amtStr = (amt < 0 ? '-' : '+') + ' ' + (typeof amt === 'number' ? `BMD $${Math.abs(amt).toFixed(2)}` : '—');
+        const title = tx.merchant || '—';
+        const metaBits = [
+          (tx.status || 'POSTED').toString().toUpperCase(),
+          tx.category ? `Category: ${tx.category}` : null,
+          tx.created_at ? new Date(tx.created_at).toLocaleString() : null
+        ].filter(Boolean);
+
+        return `
+          <div class="activity-item">
+            <div class="activity-title">${title}</div>
+            <div class="activity-amount ${amtClass}">${amtStr}</div>
+            <div class="activity-meta">
+              <span>${metaBits.join(' • ')}</span>
+            </div>
+          </div>
+        `;
       }).join('');
     }
   }
@@ -484,17 +524,13 @@
     if (noteInput) noteInput.value = '';
   }
 
-  if (addFundsBtn) addFundsBtn.onclick = () => {
-    if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; }
-    openFunds();
-  };
+  if (addFundsBtn) addFundsBtn.onclick = () => { if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; } openFunds(); };
   if (closeFunds) closeFunds.onclick = closeFundsModal;
   if (fundsModal) fundsModal.addEventListener('click', (e) => { if (e.target === fundsModal) closeFundsModal(); });
 
   if (confirmFunds) {
     confirmFunds.onclick = async () => {
       if (!amountInput || !fundsMsg) return;
-
       fundsMsg.style.display = 'none';
       const amt = Number(amountInput.value);
       if (!Number.isFinite(amt) || amt <= 0) {
@@ -503,54 +539,41 @@
         fundsMsg.style.display = 'block';
         return;
       }
-
-      confirmFunds.disabled = true;
-      confirmFunds.textContent = 'Processing…';
-
+      confirmFunds.disabled = true; confirmFunds.textContent = 'Processing…';
       try {
         const res = await fetch(`/api/wallets/${currentWalletId}/parent-deposits`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            amount: amt,
-            note: (noteInput && noteInput.value) || null
-          })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ amount: amt, note: (noteInput && noteInput.value) || null })
         });
-
-        if (!res.ok) {
-          const errText = await res.text().catch(() => '');
-          throw new Error(errText || `HTTP ${res.status}`);
-        }
-
+        if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
         fundsMsg.textContent = 'Funds added successfully.';
         fundsMsg.className = 'msg ok';
         fundsMsg.style.display = 'block';
-
-        await loadBalance();
-        await loadActivity();
-
+        await loadBalance(); await loadActivity();
         setTimeout(closeFundsModal, 900);
       } catch (e) {
         fundsMsg.textContent = 'Failed to add funds.' + (e?.message ? ` (${e.message})` : '');
         fundsMsg.className = 'msg error';
         fundsMsg.style.display = 'block';
       } finally {
-        confirmFunds.disabled = false;
-        confirmFunds.textContent = 'Add Funds';
+        confirmFunds.disabled = false; confirmFunds.textContent = 'Add Funds';
       }
     };
   }
 
-  // --- Freeze Card click (kept as a “button-looking link”) ---
+  // --- (Optional) Controls hooks (not wired to backend yet) ---
+  function loadControls() {}
+  if (saveCatsBtn) saveCatsBtn.onclick = () => {};
+  if (resetCatsBtn) resetCatsBtn.onclick = () => {};
+  if (saveLimitBtn) saveLimitBtn.onclick = () => {};
+  if (clearLimitBtn) clearLimitBtn.onclick = () => {};
+
+  // --- Freeze button (placeholder; wire to your route if available) ---
   const freezeBtn = document.getElementById('freezeBtn');
   if (freezeBtn) {
-    // keep it styled as a button; add a no-op handler for now so it behaves like a control
-    freezeBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      alert('Freeze Card: not wired yet.');
+    freezeBtn.addEventListener('click', () => {
+      alert('Freeze route not implemented yet on this page.');
     });
   }
 
@@ -567,7 +590,7 @@
     }
   })();
 
-  // --- Logout (now in the separate logout bar) ---
+  // --- Logout ---
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async (e) => {
