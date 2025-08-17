@@ -139,6 +139,43 @@
 /* Link color to match footer */
 .terms-float a { color:#c9d7ff; text-decoration:none; }
 .terms-float a:hover { color:#fff; text-decoration:underline; }
+
+
+    /* Make this row span the whole form grid so it has room */
+form#signupForm .terms-wrap { grid-column: 1 / -1; }
+
+/* Force checkbox + text to be side-by-side; text wraps neatly */
+form#signupForm .terms-row{
+  display: grid;
+  grid-template-columns: 22px minmax(0,1fr); /* checkbox | text */
+  align-items: start;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* Keep the box size consistent */
+form#signupForm .terms-row input[type="checkbox"]{
+  width: 18px; height: 18px; margin: 2px 0 0 0; flex: 0 0 auto;
+}
+
+/* Ensure long text wraps next to the box (not underneath) */
+form#signupForm .terms-text{
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.4;
+  color: #dbe3ff; /* your light ink */
+}
+
+/* Match footer link color */
+form#signupForm .terms-text a{
+  color: #c9d7ff;
+  text-decoration: none;
+}
+form#signupForm .terms-text a:hover{
+  color: #ffffff;
+  text-decoration: underline;
+}
+    
   </style>
 </head>
 <body>
