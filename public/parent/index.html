@@ -14,22 +14,27 @@
     *{box-sizing:border-box}
     html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
     img{max-width:100%;display:block}
-    a{color:var(--boop);text-decoration:underline}
+    a{color:var(--boop)}
 
-    /* Header (logo only) */
+    /* Header (logo) */
     .site-head{background:#0b1220}
     .site-head__inner{max-width:1120px;margin:0 auto;padding:12px 16px}
     .brand{display:flex;align-items:center;gap:10px}
     .brand img{height:28px}
 
-    /* Subbar with navigation links */
+    /* Subbar (MATCHES transfer page) */
     .subbar{background:#eef2f7;border-bottom:1px solid var(--stroke)}
     .subbar__inner{
       max-width:1120px;margin:0 auto;padding:10px 16px;
-      display:flex;gap:18px;justify-content:flex-end;flex-wrap:wrap;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
     }
-    .subbar__inner a{font-weight:600;text-decoration:underline;color:#1c6fd8}
-    .subbar__inner a[aria-current="page"]{text-decoration:none;border-bottom:2px solid #1c6fd8}
+    .subnav-left{display:flex;gap:14px;flex-wrap:wrap}
+    .subnav-left a{
+      color:#111827;text-decoration:none;font-weight:600;
+      padding:6px 10px;border-radius:8px;
+    }
+    .subnav-left a.active{background:#e5e7eb}
+    .logout-link{font-weight:600;color:#2f80ed;text-decoration:underline}
 
     /* Main layout */
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
@@ -67,16 +72,11 @@
     .pager button{border:1px solid var(--stroke);background:#fff;color:#111827;border-radius:8px;padding:8px 10px;cursor:pointer}
     .pager button:disabled{opacity:.5;cursor:not-allowed}
 
-    /* Compact activity feed */
+    /* Activity feed */
     .activity-feed { display: grid; gap: 10px; }
     .activity-item {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 6px 10px;
-      padding: 10px 12px;
-      border: 1px solid var(--stroke);
-      border-radius: 12px;
-      background: #fff;
+      display: grid; grid-template-columns: 1fr auto; gap: 6px 10px;
+      padding: 10px 12px; border: 1px solid var(--stroke); border-radius: 12px; background: #fff;
     }
     .activity-title { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .activity-amount { font-weight: 700; justify-self: end; }
@@ -92,25 +92,27 @@
 
     body{overflow-x:hidden}
     footer{padding:22px;color:#6b7280;text-align:center;margin-top:20px}
-    footer a{color:var(--boop);text-decoration:none;font-weight:600}
+    footer a{color:#2f80ed;text-decoration:none;font-weight:600}
   </style>
 </head>
 <body>
   <!-- Header -->
   <header class="site-head">
     <div class="site-head__inner">
-      <div class="brand">
+      <a class="brand" href="../index.html" aria-label="BOOP home">
         <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-      </div>
+      </a>
     </div>
   </header>
 
-  <!-- Subbar (now with matching menu) -->
+  <!-- Subbar (Home • Transfer • Logout) -->
   <div class="subbar">
     <div class="subbar__inner">
-      <a href="/parent/index.html" aria-current="page">Parent Portal</a>
-      <a href="/parent/transfer.html">Transfer</a>
-      <a href="#" id="logoutBtn">Log out</a>
+      <nav class="subnav-left" aria-label="Parent navigation">
+        <a href="index.html" class="active" aria-current="page">Home</a>
+        <a href="transfer.html">Transfer</a>
+      </nav>
+      <a href="#" id="logoutBtn" class="logout-link">Log out</a>
     </div>
   </div>
 
@@ -227,8 +229,8 @@
 
   <footer style="padding:22px;color:#6b7280;text-align:center;margin-top:20px">
     © <span id="year"></span> BOOP. All rights reserved.
-    &nbsp;•&nbsp; <a href="terms.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Terms and Conditions</a>
-    &nbsp;•&nbsp; <a href="privacy.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Privacy Policy</a>
+    &nbsp;•&nbsp; <a href="../terms.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Terms and Conditions</a>
+    &nbsp;•&nbsp; <a href="../privacy.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Privacy Policy</a>
   </footer>
 
 <script>
