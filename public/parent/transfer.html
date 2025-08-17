@@ -190,7 +190,7 @@
     &nbsp;•&nbsp; <a href="../privacy.html">Privacy Policy</a>
   </footer>
 
-  <script>
+<script>
   // Year
   document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -336,6 +336,55 @@
     }
     destination.addEventListener('change', (e)=> selectedBank = e.target.value);
 
+    // Add Bank modal (inline, simple)
+    const addBankModal = document.createElement('div');
+    addBankModal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;';
+    addBankModal.innerHTML = `
+      <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:520px;width:92%;">
+        <h3 style="margin:0 0 10px;">Add bank account</h3>
+        <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Bank</label>
+        <select id="abBank" style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+          <option value="Butterfield">Butterfield (Bank of N.T. Butterfield & Son)</option>
+          <option value="HSBC Bermuda">HSBC Bermuda</option>
+          <option value="Clarien Bank">Clarien Bank</option>
+        </select>
+        <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account holder name</label>
+        <input id="abHolder" type="text" placeholder="Full name on account" style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+        <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account number</label>
+        <input id="abAccount" type="text" inputmode="numeric" placeholder="e.g. 0123456789" style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+        <div id="abMsg" class="help" style="margin-top:8px;"></div>
+        <div class="row" style="margin-top:12px;">
+          <button id="abSave" class="btn primary">Save bank</button>
+          <button id="abCancel" class="btn ghost">Cancel</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(addBankModal);
+    function openAddBank(){ addBankModal.style.display='flex'; }
+    function closeAddBank(){ addBankModal.style.display='none'; }
+    addBankBtn.addEventListener('click', openAddBank);
+    addBankModal.addEventListener('click', (e)=>{ if (e.target === addBankModal) closeAddBank(); });
+    addBankModal.querySelector('#abCancel').addEventListener('click', closeAddBank);
+    addBankModal.querySelector('#abSave').addEventListener('click', async ()=>{
+      const abMsg = addBankModal.querySelector('#abMsg');
+      const holder = addBankModal.querySelector('#abHolder').value.trim();
+      const bank = addBankModal.querySelector('#abBank').value;
+      const account = addBankModal.querySelector('#abAccount').value.trim();
+      if (!holder || !bank || !account){ abMsg.textContent='Please fill in all fields.'; return; }
+      try{
+        const res = await fetch('/api/bank-accounts', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          body: JSON.stringify({ holder_name: holder, bank_name: bank, account_number: account })
+        });
+        const saved = await res.json();
+        if (!res.ok) throw new Error(saved.message || 'Failed to add bank.');
+        closeAddBank();
+        showFlash('Bank account saved.', true);
+        await loadBanks();
+      }catch(e){ abMsg.textContent = e.message || 'Could not save bank.'; }
+    });
+
     // Preview calculation
     function updatePreview(){
       const amt = Number(amountEl.value);
@@ -381,7 +430,7 @@
       confirmBtn.disabled = true; modalMsg.textContent = "Submitting…";
       try{
         const amtCents = Math.round(Number(amountEl.value) * 100);
-        const res = await fetch('/api/transfers/parent', {   // <-- parent endpoint
+        const res = await fetch('/api/transfers/parent', {
           method:'POST',
           headers:{
             'Content-Type':'application/json',
@@ -389,7 +438,7 @@
             Authorization:`Bearer ${token}`
           },
           body: JSON.stringify({
-            student_id: currentStudentId,                  // <-- correct field name
+            student_id: currentStudentId,
             bank_account_id: selectedBank,
             amount_cents: amtCents,
             memo: memoEl.value || ""
