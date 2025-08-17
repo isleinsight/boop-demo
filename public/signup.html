@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Create your BOOP account</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Sign up for a BOOP Cardholder account." />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#0b1220; --boop:#2f80ed; --boop-dark:#1c6fd8; --muted:#6b7280; --text:#1f2937;
+      --stroke:#e5e7eb; --bg:#f5f8fb; --card:#ffffff; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    a{color:var(--boop);text-decoration:underline}
+    img{max-width:100%;display:block}
+
+    .site-head{background:#0b1220}
+    .site-head__inner{max-width:720px;margin:0 auto;padding:16px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{height:28px}
+
+    .wrap{max-width:720px;margin:0 auto;padding:20px 16px}
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;box-shadow:0 10px 24px rgba(16,24,40,.06)}
+    .card__head{padding:16px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between}
+    .card__body{padding:16px;display:grid;gap:12px}
+
+    label{font-weight:600}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:640px){ .row{grid-template-columns:1fr} }
+
+    .input{width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:10px;background:#fff;font-size:1rem;outline:none}
+    .input:focus{border-color:var(--boop)}
+    .btn-primary{background:var(--boop);color:#fff;border:0;border-radius:10px;padding:12px 16px;font-weight:600;cursor:pointer}
+    .btn-primary:hover{background:var(--boop-dark)}
+    .help{color:var(--muted);font-size:.92rem}
+    .msg{font-size:.95rem;display:none;margin-top:4px}
+    .msg.error{color:var(--danger)} .msg.ok{color:var(--ok)}
+
+    footer{padding:22px;color:#6b7280;text-align:center;margin:24px 0}
+    footer a{color:var(--boop);text-decoration:underline;font-weight:600}
+  </style>
+</head>
+<body>
+  <header class="site-head">
+    <div class="site-head__inner">
+      <div class="brand">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card">
+      <div class="card__head">
+        <strong>Create your BOOP account</strong>
+      </div>
+      <div class="card__body">
+        <div class="row">
+          <div>
+            <label for="firstName">First name</label>
+            <input id="firstName" class="input" type="text" autocomplete="given-name" />
+          </div>
+          <div>
+            <label for="lastName">Last name</label>
+            <input id="lastName" class="input" type="text" autocomplete="family-name" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="email">Email</label>
+            <input id="email" class="input" type="email" autocomplete="email" />
+          </div>
+          <div>
+            <label for="phone">Phone (optional)</label>
+            <input id="phone" class="input" type="tel" autocomplete="tel" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="password">Password</label>
+            <input id="password" class="input" type="password" autocomplete="new-password" />
+            <div class="help">At least 8 characters.</div>
+          </div>
+          <div>
+            <label for="password2">Confirm password</label>
+            <input id="password2" class="input" type="password" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <button id="submitBtn" class="btn-primary" type="button">Create account</button>
+        <div id="msg" class="msg" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <footer>
+      © <span id="year"></span> BOOP. All rights reserved.
+      &nbsp;•&nbsp; <a href="/terms.html">Terms and Conditions</a>
+      &nbsp;•&nbsp; <a href="/privacy.html">Privacy Policy</a>
+    </footer>
+  </main>
+
+  <script>
+    (function(){
+      const yearEl = document.getElementById('year');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+      const el = {
+        first: document.getElementById('firstName'),
+        last: document.getElementById('lastName'),
+        email: document.getElementById('email'),
+        phone: document.getElementById('phone'),
+        pw1: document.getElementById('password'),
+        pw2: document.getElementById('password2'),
+        submit: document.getElementById('submitBtn'),
+        msg: document.getElementById('msg')
+      };
+
+      function show(msg, ok=false){
+        el.msg.textContent = msg;
+        el.msg.className = 'msg ' + (ok ? 'ok' : 'error');
+        el.msg.style.display = 'block';
+      }
+
+      el.submit.onclick = async () => {
+        el.msg.style.display = 'none';
+
+        const first = (el.first.value || '').trim();
+        const last = (el.last.value || '').trim();
+        const email = (el.email.value || '').trim();
+        const phone = (el.phone.value || '').trim();
+        const pw1 = el.pw1.value || '';
+        const pw2 = el.pw2.value || '';
+
+        if (!first || !last || !email || !pw1) {
+          return show('Please fill out all required fields.');
+        }
+        if (pw1.length < 8) {
+          return show('Password must be at least 8 characters.');
+        }
+        if (pw1 !== pw2) {
+          return show('Passwords do not match.');
+        }
+
+        el.submit.disabled = true;
+        el.submit.textContent = 'Creating…';
+
+        try {
+          const res = await fetch('/api/users/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              first_name: first,
+              last_name: last,
+              email,
+              phone,
+              password: pw1
+            })
+          });
+
+          const data = await res.json().catch(()=> ({}));
+          if (!res.ok) {
+            throw new Error(data?.message || `HTTP ${res.status}`);
+          }
+
+          show('Signup successful! You can log in now.', true);
+          // optional: redirect to login
+          setTimeout(() => { window.location.href = '/index.html'; }, 900);
+        } catch (e) {
+          show(e.message || 'Failed to sign up.');
+        } finally {
+          el.submit.disabled = false;
+          el.submit.textContent = 'Create account';
+        }
+      };
+    })();
+  </script>
+</body>
+</html>
