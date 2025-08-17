@@ -167,6 +167,27 @@
       border: 1px solid #f8c4c1;
       display: block;
     }
+
+    /* Inline checkbox + label, wraps neatly on small screens */
+#addUserForm .check-row{
+  display: grid;
+  grid-template-columns: 22px minmax(0,1fr); /* box | text */
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 2px;
+}
+
+#addUserForm .check-row input[type="checkbox"]{
+  width: 18px;
+  height: 18px;
+  margin: 0;            /* remove default offsets */
+  flex: 0 0 auto;
+}
+
+#addUserForm .check-row label{
+  line-height: 1.4;
+  margin: 0;
+}
   </style>
 </head>
 <body>
@@ -255,12 +276,12 @@
         </select>
       </div>
 
-      <div id="assistanceContainer" style="display: none;">
-        <label>
-          On Assistance
-          <input type="checkbox" id="onAssistance" />
-        </label>
-      </div>
+      <div id="assistanceContainer" style="display:none;">
+  <div class="check-row">
+    <input type="checkbox" id="onAssistance" />
+    <label for="onAssistance">On Assistance</label>
+  </div>
+</div>
 
       <div id="vendorFields" style="display:none;">
         <label for="businessName">Business Name</label>
