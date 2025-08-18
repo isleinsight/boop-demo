@@ -95,8 +95,6 @@
       font-weight: 500;
     }
 
-  
-
     /* Modal */
     .modal {
       display: none;
@@ -155,8 +153,8 @@
         <div class="nav-dropdown">
           <a href="#" class="dropbtn" style="color: white;">Accounts</a>
           <div class="dropdown-content">
-            <a href="add-funds.html">Add Funds</a>
-            <a href="transfer.html">Transfer</a>
+            <a href="add-funds.html" id="addFundsLink">Add Funds</a>
+            <a href="transfer.html" id="transferLink">Transfer</a>
             <a href="reports.html">Reports</a>
             <a href="manage-treasury.html" id="manageTreasuryLink" style="display:none;">Manage Treasury</a>
           </div>
@@ -167,6 +165,38 @@
       </div>
     </div>
   </nav>
+
+  <!-- Role-based Accounts menu toggle -->
+  <script>
+    (function () {
+      try {
+        const user = JSON.parse(localStorage.getItem("boopUser") || "null");
+        const addFundsLink       = document.getElementById("addFundsLink");
+        const transferLink       = document.getElementById("transferLink");
+        const manageTreasuryLink = document.getElementById("manageTreasuryLink");
+
+        if (!user || user.role !== "admin") return;
+        const type = String(user.type || "").toLowerCase();
+
+        if (type === "treasury") {
+          if (manageTreasuryLink) manageTreasuryLink.style.display = "block";
+          if (addFundsLink)       addFundsLink.style.display       = "none";
+          if (transferLink)       transferLink.style.display       = "none";
+        } else if (type === "accountant") {
+          if (manageTreasuryLink) manageTreasuryLink.style.display = "none";
+          if (addFundsLink)       addFundsLink.style.display       = "block";
+          if (transferLink)       transferLink.style.display       = "block";
+        } else {
+          if (manageTreasuryLink) manageTreasuryLink.style.display = "none";
+          if (addFundsLink)       addFundsLink.style.display       = "none";
+          if (transferLink)       transferLink.style.display       = "none";
+        }
+      } catch (e) {
+        console.warn("Nav role toggle error:", e);
+      }
+    })();
+  </script>
+
   <!-- Main Content -->
   <div class="container">
     <h2 style="margin-top:0;">Recent Transactions</h2>
@@ -356,6 +386,6 @@
       });
     }
   </script>
-      <script type="module" src="../assets/hamburger.js"></script>
+  <script type="module" src="../assets/hamburger.js"></script>
 </body>
 </html>
