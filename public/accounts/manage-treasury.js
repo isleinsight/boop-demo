@@ -1,4 +1,3 @@
-<script>
 document.addEventListener("DOMContentLoaded", () => {
   const user  = JSON.parse(localStorage.getItem("boopUser"));
   const token = localStorage.getItem("boop_jwt");
@@ -33,14 +32,13 @@ document.addEventListener("DOMContentLoaded", () => {
     label.style.fontSize = ".95rem";
     label.style.color = "#334155";
 
-    // Put the selector **inside** the card, just above the Amount field
+    // Put the selector inside the card, just above the Amount field
     const host   = document.querySelector(".container-small") || document.body;
     const marker = document.querySelector('label[for="adjustAmount"]');
     if (host && marker) {
       host.insertBefore(label, marker);
       host.insertBefore(walletSelect, marker);
     } else {
-      // fallback (shouldn't hit, but keeps previous behavior safe)
       host.prepend(walletSelect);
       host.prepend(label);
     }
@@ -52,28 +50,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---- Helpers
   const auth = { Authorization: `Bearer ${token}` };
-  const dollars = c => `$${(Number(c||0)/100).toFixed(2)}`;
-  const showStatus = (msg, color="") => { statusMessage.textContent = msg; statusMessage.style.color = color; };
+  const dollars = c => `$${(Number(c || 0) / 100).toFixed(2)}`;
+  const showStatus = (msg, color = "") => {
+    statusMessage.textContent = msg;
+    statusMessage.style.color = color;
+  };
 
   // ---- API wrappers (with graceful fallback)
   async function getTreasuryWallets() {
     const r = await fetch("/api/treasury/treasury-wallets", { headers: auth });
-    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).message || "Failed to load treasuries");
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || "Failed to load treasuries");
     return r.json();
   }
+
   async function getBalance(walletId) {
     // Prefer wallet-scoped endpoint; fall back to generic with query
     let r = await fetch(`/api/treasury/wallet/${walletId}/balance`, { headers: auth });
-    if (r.status === 404) r = await fetch(`/api/treasury/balance?wallet_id=${encodeURIComponent(walletId)}`, { headers: auth });
-    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).message || "Failed to load balance");
+    if (r.status === 404) {
+      r = await fetch(`/api/treasury/balance?wallet_id=${encodeURIComponent(walletId)}`, { headers: auth });
+    }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || "Failed to load balance");
     return r.json();
   }
+
   async function getRecent(walletId) {
     let r = await fetch(`/api/treasury/wallet/${walletId}/recent`, { headers: auth });
-    if (r.status === 404) r = await fetch(`/api/treasury/recent?wallet_id=${encodeURIComponent(walletId)}`, { headers: auth });
-    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).message || "Failed to load recent");
+    if (r.status === 404) {
+      r = await fetch(`/api/treasury/recent?wallet_id=${encodeURIComponent(walletId)}`, { headers: auth });
+    }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || "Failed to load recent");
     return r.json();
   }
+
   async function postAdjust(walletId, payload) {
     // Prefer wallet-scoped endpoint; fall back to generic and include wallet_id in body
     let r = await fetch(`/api/treasury/wallet/${walletId}/adjust`, {
@@ -88,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ ...payload, wallet_id: walletId }),
       });
     }
-    const j = await r.json().catch(()=>({}));
+    const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.message || "Adjustment failed");
     return j;
   }
@@ -96,36 +104,45 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---- UI fills
   function fillWalletSelect() {
     walletSelect.innerHTML = wallets
-      .map(w => `<option value="${w.id}">${(w.name || w.label || `Wallet ${w.id}`)}</option>`)
+      .map(w => `<option value="${w.id}">${w.name || w.label || `Wallet ${w.id}`}</option>`)
       .join("");
     if (wallets.length) currentWalletId = wallets[0].id;
   }
+
   async function refreshBalance() {
     if (!currentWalletId) return;
     try {
       const { balance_cents = 0 } = await getBalance(currentWalletId);
       balanceDisplay.textContent = dollars(balance_cents);
     } catch (e) {
-      console.error(e); balanceDisplay.textContent = "Error"; showStatus(e.message, "red");
+      console.error(e);
+      balanceDisplay.textContent = "Error";
+      showStatus(e.message, "red");
     }
   }
+
   async function refreshRecent() {
     const box = document.querySelector(".transaction-placeholder");
     if (!box || !currentWalletId) return;
-    box.textContent = "Loading…";
+    box.textContent = "Loading...";
     try {
       const data = await getRecent(currentWalletId);
-      if (!Array.isArray(data) || !data.length) { box.textContent = "No transactions yet."; return; }
+      if (!Array.isArray(data) || !data.length) {
+        box.textContent = "No transactions yet.";
+        return;
+      }
       box.innerHTML = "<strong>Recent Transactions:</strong><ul style='list-style:none;padding-left:0;margin-top:6px;'>";
       data.forEach(tx => {
-        const sign = (tx.type||"").toLowerCase() === "credit" ? "+" : "-";
+        const sign = (tx.type || "").toLowerCase() === "credit" ? "+" : "-";
         const color = sign === "+" ? "green" : "red";
-        const amt = dollars(Math.abs(Number(tx.amount_cents||0)));
+        const amt = dollars(Math.abs(Number(tx.amount_cents || 0)));
         box.innerHTML += `<li style="color:${color}">${sign}${amt} — ${tx.note || tx.description || ""}</li>`;
       });
       box.innerHTML += "</ul>";
     } catch (e) {
-      console.error(e); box.textContent = "Failed to load transactions."; showStatus(e.message, "red");
+      console.error(e);
+      box.textContent = "Failed to load transactions.";
+      showStatus(e.message, "red");
     }
   }
 
@@ -140,22 +157,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const amount = parseFloat(amountInput.value);
     const note   = noteInput.value.trim();
     const type   = typeSelect.value; // "credit" or "debit"
+
     if (!currentWalletId) return showStatus("Select a treasury wallet first.", "red");
     if (isNaN(amount) || amount <= 0) return showStatus("Amount must be greater than zero.", "red");
     if (!note) return showStatus("Note is required.", "red");
 
     try {
-      await postAdjust(currentWalletId, { amount_cents: Math.round(amount*100), type, note });
+      await postAdjust(currentWalletId, { amount_cents: Math.round(amount * 100), type, note });
       showStatus("✅ Adjustment successful!", "green");
-      amountInput.value = ""; noteInput.value = "";
-      await refreshBalance(); await refreshRecent();
+      amountInput.value = "";
+      noteInput.value = "";
+      await refreshBalance();
+      await refreshRecent();
     } catch (e) {
-      console.error(e); showStatus(e.message || "Unknown error.", "red");
+      console.error(e);
+      showStatus(e.message || "Unknown error.", "red");
     }
   });
 
   // ---- Boot
-  (async function init(){
+  (async function init() {
     try {
       wallets = await getTreasuryWallets(); // each: { id, name/label }
       if (!Array.isArray(wallets) || !wallets.length) throw new Error("No treasury wallets configured.");
@@ -166,6 +187,5 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(e);
       showStatus(e.message || "Failed to initialize.", "red");
     }
-  })();  // end init()
-});      // end DOMContentLoaded
-</script>
+  })(); // end init
+}); // end DOMContentLoaded
