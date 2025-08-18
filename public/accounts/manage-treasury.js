@@ -1,9 +1,10 @@
+<script>
 document.addEventListener("DOMContentLoaded", () => {
   const user  = JSON.parse(localStorage.getItem("boopUser"));
   const token = localStorage.getItem("boop_jwt");
 
-  // ---- Permission: admin + (treasury|accountant)
-  if (!user || user.role !== "admin" || !["treasury","accountant"].includes(user.type)) {
+  // ---- Permission: admin + treasury (no accountant)
+  if (!user || user.role !== "admin" || user.type !== "treasury") {
     alert("🚫 You do not have access to this page.");
     return (window.location.href = "login.html");
   }
@@ -25,14 +26,24 @@ document.addEventListener("DOMContentLoaded", () => {
     walletSelect.style.padding = "8px 10px";
     walletSelect.style.border = "1px solid #e6ebf1";
     walletSelect.style.borderRadius = "8px";
+
     const label = document.createElement("label");
     label.textContent = "Source Treasury";
     label.style.display = "block";
     label.style.fontSize = ".95rem";
     label.style.color = "#334155";
-    const host = document.querySelector(".balance-row") || document.body;
-    host.prepend(walletSelect);
-    host.prepend(label);
+
+    // Put the selector **inside** the card, just above the Amount field
+    const host   = document.querySelector(".container-small") || document.body;
+    const marker = document.querySelector('label[for="adjustAmount"]');
+    if (host && marker) {
+      host.insertBefore(label, marker);
+      host.insertBefore(walletSelect, marker);
+    } else {
+      // fallback (shouldn't hit, but keeps previous behavior safe)
+      host.prepend(walletSelect);
+      host.prepend(label);
+    }
   }
 
   // ---- State
@@ -157,3 +168,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })();  // end init()
 });      // end DOMContentLoaded
+</script>
