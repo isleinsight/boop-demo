@@ -1,4 +1,3 @@
-// backend/auth/routes/transfers.js
 const express = require('express');
 const router = express.Router();
 const db = require('../../db');
@@ -54,7 +53,6 @@ async function ensureBankCounterparty(client, bank, destination_masked) {
   const first_name = safeBank;        // e.g., "HSBC" / "Butterfield"
   const last_name  = `•••• ${last4}`; // e.g., "•••• 4987"
 
-  // Use role/type 'vendor' to satisfy users_role_check
   const upsertSql = `
     INSERT INTO users (email, first_name, last_name, role, type, status, created_at, updated_at)
     VALUES ($1, $2, $3, 'vendor', 'vendor', 'active', NOW(), NOW())
@@ -68,16 +66,29 @@ async function ensureBankCounterparty(client, bank, destination_masked) {
   return rows[0].id;
 }
 
-// Accept wallet.id **or** user.id to resolve the treasury wallet
+// Accept wallet.id **or** user.id; prefer true treasuries but allow "treasury/merchant" by name as fallback
 async function resolveTreasuryWallet(client, idOrUserId) {
-  const q = `
+  const key = String(idOrUserId);
+  // First: direct id or user_id match
+  const q1 = `
     SELECT id AS wallet_id, user_id AS treasury_user_id, is_treasury, name
       FROM wallets
      WHERE (id::text = $1 OR user_id::text = $1)
      LIMIT 1
   `;
-  const { rows } = await client.query(q, [String(idOrUserId)]);
-  return rows[0] || null;
+  const r1 = await client.query(q1, [key]);
+  if (r1.rows[0]) return r1.rows[0];
+
+  // Fallback: look for an *actual* treasury wallet owned by that user id
+  const q2 = `
+    SELECT id AS wallet_id, user_id AS treasury_user_id, is_treasury, name
+      FROM wallets
+     WHERE user_id::text = $1
+     ORDER BY (is_treasury DESC), created_at ASC
+     LIMIT 1
+  `;
+  const r2 = await client.query(q2, [key]);
+  return r2.rows[0] || null;
 }
 
 // --- Health ---------------------------------------------------------------
@@ -155,7 +166,7 @@ router.get('/', requireAccountsRole, async (req, res) => {
       LIMIT $${values.length-1} OFFSET $${values.length};
     `;
     const { rows: itemsRaw } = await db.query(listSql, values);
-    const items = itemsRaw.map(r => ({ ...r, created_at: r.requested_at })); // compatibility
+    const items = itemsRaw.map(r => ({ ...r, created_at: r.requested_at }));
 
     res.json({ items, total });
   } catch (err) {
@@ -340,16 +351,20 @@ async function doComplete(req, res) {
     }
     const userWalletId = uwRows[0].wallet_id;
 
-    // <-- key change: resolve by wallet.id OR user.id, and verify is_treasury
+    // Resolve the treasury/merchant wallet from wallet.id OR treasury user.id
     const tw = await resolveTreasuryWallet(client, treasury_wallet_id);
     if (!tw || !tw.wallet_id) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Treasury wallet not found.' });
     }
-    if (!tw.is_treasury) {
+    // Accept if flagged OR name indicates a treasury/merchant
+    const nameOk = String(tw.name || '').toLowerCase().startsWith('treasury')
+                || String(tw.name || '').toLowerCase().startsWith('merchant');
+    if (!tw.is_treasury && !nameOk) {
       await client.query('ROLLBACK');
       return res.status(409).json({ message: 'Selected wallet is not marked as treasury.' });
     }
+
     const treasuryWalletId = tw.wallet_id;
     const treasuryUserId   = tw.treasury_user_id;
 
@@ -397,7 +412,7 @@ async function doComplete(req, res) {
     const now = new Date();
     const ref = String(bank_reference).trim();
     const toMask    = t.destination_masked || 'bank destination';
-    aconst bankLabel = t.bank || 'Bank';
+    const bankLabel = t.bank || 'Bank';
 
     const userNote      = t.memo || null;
     const treasuryNote  = internal_note?.trim() ? internal_note.trim() : `Bank reference ${ref}`;
@@ -665,7 +680,7 @@ router.post('/parent', async (req, res) => {
     if (!ba.rowCount) return res.status(404).json({ message: 'Bank account not found.' });
 
     const bank = ba.rows[0].bank;
-    const last4 = String(ba.rows[0].last4 || '').slice(-4);
+    the last4 = String(ba.rows[0].last4 || '').slice(-4);
     const destination_masked = `${bank} •••• ${last4}`;
 
     // Soft balance check on the *student* wallet
@@ -720,10 +735,8 @@ router.get('/student/:id/latest', async (req, res) => {
     if (role === 'admin') {
       authorized = true;
     } else if (role === 'parent') {
-      // Parent must be linked to this student
       authorized = await parentLinkedToStudent(requesterId, studentId);
     } else if (role === 'cardholder' || role === 'cardholder_assistance') {
-      // Cardholders can only see their own latest transfer
       authorized = String(requesterId) === String(studentId);
     }
 
@@ -745,7 +758,7 @@ router.get('/student/:id/latest', async (req, res) => {
 
     if (!rows.length) return res.json({});
     const r = rows[0];
-    return res.json({ ...r, created_at: r.requested_at }); // compatibility mirror
+    return res.json({ ...r, created_at: r.requested_at });
   } catch (e) {
     console.error('GET /api/transfers/student/:id/latest error', e);
     return res.status(500).json({ message: 'Failed to load latest transfer.' });
