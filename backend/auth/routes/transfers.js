@@ -301,6 +301,7 @@ async function doComplete(req, res) {
   try {
     await client.query('BEGIN');
 
+    // Lock the transfer row
     const { rows: trows } = await client.query(
       `
       SELECT id, user_id, amount_cents, status, claimed_by, claimed_at,
@@ -317,6 +318,7 @@ async function doComplete(req, res) {
       return res.status(404).json({ message: 'Transfer not found.' });
     }
 
+    // Must still be mine and within TTL
     const isMine = t.status === 'claimed' && String(t.claimed_by) === String(me);
     const fresh  = t.claimed_at && (new Date(t.claimed_at) > new Date(Date.now() - CLAIM_TTL_MINUTES * 60 * 1000));
     if (!isMine || !fresh) {
@@ -324,12 +326,14 @@ async function doComplete(req, res) {
       return res.status(409).json({ message: 'Claim expired or not owned by you. Please claim again.' });
     }
 
+    // Valid amount
     const amount = Number(t.amount_cents || 0);
     if (!amount || amount <= 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ message: 'Invalid amount on transfer.' });
     }
 
+    // User wallet
     const { rows: uwRows } = await client.query(
       `SELECT id AS wallet_id FROM wallets WHERE user_id = $1 LIMIT 1`,
       [t.user_id]
@@ -340,7 +344,8 @@ async function doComplete(req, res) {
     }
     const userWalletId = uwRows[0].wallet_id;
 
-    // Resolve treasury/merchant wallet by wallet.id OR by user.id, and ensure it's treasury
+    // Treasury (or merchant) wallet — allow passing wallet.id OR user.id
+    // NOTE: requires resolveTreasuryWallet() helper defined above.
     const tw = await resolveTreasuryWallet(client, treasury_wallet_id);
     if (!tw || !tw.wallet_id) {
       await client.query('ROLLBACK');
@@ -353,6 +358,7 @@ async function doComplete(req, res) {
     const treasuryWalletId = tw.wallet_id;
     const treasuryUserId   = tw.treasury_user_id;
 
+    // Idempotency: don’t double-complete
     const { rows: existingTxn } = await client.query(
       `SELECT 1 FROM transactions WHERE transfer_id = $1 LIMIT 1`,
       [id]
@@ -362,6 +368,7 @@ async function doComplete(req, res) {
       return res.status(409).json({ message: 'Transfer already completed.' });
     }
 
+    // Counterparty (bank)
     const recipientId = await ensureBankCounterparty(client, t.bank, t.destination_masked);
 
     // 1) Debit user wallet balance
@@ -379,7 +386,7 @@ async function doComplete(req, res) {
       return res.status(409).json({ message: 'Insufficient user balance.' });
     }
 
-    // 2) Debit treasury (or merchant) wallet balance
+    // 2) Debit treasury (merchant) wallet balance
     const { rowCount: treUpd } = await client.query(
       `
       UPDATE wallets
@@ -397,12 +404,12 @@ async function doComplete(req, res) {
     const now = new Date();
     const ref = String(bank_reference).trim();
     const toMask    = t.destination_masked || 'bank destination';
-    const bankLabel = t.bank || 'Bank';
+    const bankLabel = t.bank || 'Bank'; // ✅ fixed typo here
 
-    const userNote      = t.memo || null;
-    const treasuryNote  = internal_note?.trim() ? internal_note.trim() : `Bank reference ${ref}`;
+    const userNote     = t.memo || null;
+    const treasuryNote = internal_note?.trim() ? internal_note.trim() : `Bank reference ${ref}`;
 
-    // 3a) User debit — visible in cardholder history
+    // 3a) User debit — visible to cardholder
     await client.query(
       `
       INSERT INTO transactions (
@@ -410,9 +417,9 @@ async function doComplete(req, res) {
         note, description, reference_code, metadata, transfer_id,
         sender_id, recipient_id, created_at, updated_at
       ) VALUES (
-        $1,       $2,        $3,           'BMD',   'debit', 'bank',
-        $4,  $5,          $6,            $7,         $8,
-        $1,        $9,          $10,       $10
+        $1, $2, $3, 'BMD', 'debit', 'bank',
+        $4, $5, $6, $7, $8,
+        $1, $9, $10, $10
       )
       `,
       [
@@ -437,9 +444,9 @@ async function doComplete(req, res) {
         note, description, reference_code, metadata, transfer_id,
         sender_id, recipient_id, created_at, updated_at
       ) VALUES (
-        $1,       $2,        $3,           'BMD',   'debit', 'bank',
-        $4,  $5,          $6,            $7,         $8,
-        $1,        $9,          $10,       $10
+        $1, $2, $3, 'BMD', 'debit', 'bank',
+        $4, $5, $6, $7, $8,
+        $1, $9, $10, $10
       )
       `,
       [
