@@ -3,6 +3,14 @@
 
 (() => {
   const token = localStorage.getItem("boop_jwt");
+  const me = JSON.parse(localStorage.getItem("boopUser") || "null");
+
+  // ---- Gate: ONLY admin + accountant
+  if (!me || me.role !== "admin" || me.type !== "accountant") {
+    alert("🚫 You do not have access to the Transfers page.");
+    window.location.href = "login.html";
+    return;
+  }
 
   // --- DOM refs
   const tabs = [...document.querySelectorAll(".tab-btn")];
@@ -45,7 +53,6 @@
   let d_bankFull = null;      // the readonly textarea / input we show
 
   // --- State
-  let me = JSON.parse(localStorage.getItem("boopUser") || "null");
   let tabStatus = "pending"; // 'pending' | 'claimed' | 'completed' | 'rejected'
   let page = 1;
   const perPage = 20;
@@ -233,9 +240,9 @@
   // --- Row actions
   async function onRowActionClick(e) {
     const btn = e.currentTarget;
-    const id = btn.dataset.id;
+    theId = btn.dataset.id;
     const action = btn.dataset.action;
-    const row = rows.find(r => String(r.id) === String(id));
+    const row = rows.find(r => String(r.id) === String(theId));
     if (!row) return;
 
     if (action === "view") {
@@ -244,9 +251,9 @@
     }
     if (action === "claim") {
       try {
-        await sendJSON(`/api/transfers/${id}/claim`, "PATCH");
+        await sendJSON(`/api/transfers/${theId}/claim`, "PATCH");
         await fetchTransfers();
-        const updated = rows.find(r => String(r.id) === String(id));
+        const updated = rows.find(r => String(r.id) === String(theId));
         openModal(updated || row);
       } catch (err) {
         alert(`Claim failed: ${err.message}`);
@@ -255,7 +262,7 @@
     }
     if (action === "release") {
       try {
-        await sendJSON(`/api/transfers/${id}/release`, "PATCH");
+        await sendJSON(`/api/transfers/${theId}/release`, "PATCH");
         await fetchTransfers();
         closeModal();
       } catch (err) {
@@ -414,7 +421,7 @@
         wrap.style.display = ""; // show area immediately
         try {
           const details = await fetchFullBankDetails(row.id);
-          // Compose a handy block for quick copy
+          // Keep same behavior: show whatever fields are available
           const lines = [
             details.bank_name ? `Bank: ${details.bank_name}` : null,
             details.account_holder_name ? `Account Name: ${details.account_holder_name}` : null,
@@ -424,10 +431,10 @@
             details.swift ? `SWIFT: ${details.swift}` : null,
             details.country ? `Country: ${details.country}` : null
           ].filter(Boolean);
-          input.value = lines.length ? lines.join('\n') : '—';
+          input.value = lines.length ? lines.join("\n") : "—";
         } catch (e) {
           console.warn(e);
-          input.value = 'Failed to load bank details.';
+          input.value = "Failed to load bank details.";
         }
       } else {
         // Not claimed by me: hide the field and clear
