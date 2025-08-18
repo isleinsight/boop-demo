@@ -16,10 +16,10 @@ function requireTreasury(req, res, next) {
   next();
 }
 
-function requireTreasuryOrAccountant(req, res, next) {
+function requireAccountant(req, res, next) {
   const role = String(req.user?.role || '').toLowerCase();
   const type = String(req.user?.type || '').toLowerCase();
-  if (role !== 'admin' || !['treasury', 'accountant'].includes(type)) {
+  if (role !== 'admin' || type !== 'accountant') {
     return res.status(403).json({ message: 'Forbidden' });
   }
   next();
@@ -56,8 +56,9 @@ router.get('/wallet-id', authenticateToken, requireTreasury, async (req, res) =>
   }
 });
 
-// ---------- list all treasury/merchant wallets (for selectors) ----------
-router.get('/treasury-wallets', authenticateToken, requireTreasury, async (_req, res) => {
+// ---------- lists for selectors ----------
+// Add Funds page → ACCOUNTANTS ONLY → TREASURY WALLETS ONLY
+router.get('/treasury-wallets', authenticateToken, requireAccountant, async (_req, res) => {
   try {
     const { rows } = await db.query(`
       SELECT id,
@@ -65,8 +66,7 @@ router.get('/treasury-wallets', authenticateToken, requireTreasury, async (_req,
              balance AS balance_cents
       FROM wallets
       WHERE is_treasury = true
-         OR name ILIKE 'treasury%%'
-         OR name ILIKE 'merchant%%'
+         OR name ILIKE 'treasury%'
       ORDER BY name
     `);
     if (!rows.length) return res.status(404).json({ message: 'No treasury wallets found in database.' });
@@ -77,18 +77,16 @@ router.get('/treasury-wallets', authenticateToken, requireTreasury, async (_req,
   }
 });
 
-// For the Transfers screen: allow accountants OR treasury admins.
-// Returns the same list as /treasury-wallets.
-router.get('/merchant-wallets', authenticateToken, requireTreasuryOrAccountant, async (_req, res) => {
+// Transfers page → ACCOUNTANTS ONLY → MERCHANT WALLETS ONLY
+router.get('/merchant-wallets', authenticateToken, requireAccountant, async (_req, res) => {
   try {
     const { rows } = await db.query(`
       SELECT id,
-             COALESCE(name,'Treasury Wallet') AS name,
+             COALESCE(name,'Merchant Wallet') AS name,
              balance AS balance_cents
       FROM wallets
-      WHERE is_treasury = true
-         OR name ILIKE 'treasury%%'
-         OR name ILIKE 'merchant%%'
+      WHERE name ILIKE 'merchant%'
+         OR COALESCE(is_merchant, false) = true
       ORDER BY name
     `);
     res.json(rows);
@@ -101,7 +99,10 @@ router.get('/merchant-wallets', authenticateToken, requireTreasuryOrAccountant, 
 // ---------- balance (preferred wallet-scoped, plus a query fallback) ----------
 router.get('/wallet/:id/balance', authenticateToken, requireTreasury, async (req, res) => {
   try {
-    const { rows } = await db.query(`SELECT balance AS balance_cents FROM wallets WHERE id = $1 LIMIT 1`, [req.params.id]);
+    const { rows } = await db.query(
+      `SELECT balance AS balance_cents FROM wallets WHERE id = $1 LIMIT 1`,
+      [req.params.id]
+    );
     if (!rows.length) return res.status(404).json({ message: 'Wallet not found.' });
     res.json({ balance_cents: Number(rows[0].balance_cents || 0) });
   } catch (err) {
@@ -114,7 +115,10 @@ router.get('/balance', authenticateToken, requireTreasury, async (req, res) => {
   try {
     const id = req.query.wallet_id;
     if (!id) return res.status(400).json({ message: 'wallet_id is required' });
-    const { rows } = await db.query(`SELECT balance AS balance_cents FROM wallets WHERE id = $1 LIMIT 1`, [id]);
+    const { rows } = await db.query(
+      `SELECT balance AS balance_cents FROM wallets WHERE id = $1 LIMIT 1`,
+      [id]
+    );
     if (!rows.length) return res.status(404).json({ message: 'Wallet not found.' });
     res.json({ balance_cents: Number(rows[0].balance_cents || 0) });
   } catch (err) {
