@@ -23,14 +23,6 @@ function requireAccountant(req, res, next) {
   }
   next();
 }
-function requireAccountantOrTreasury(req, res, next) {
-  const role = String(req.user?.role || '').toLowerCase();
-  const type = String(req.user?.type || '').toLowerCase();
-  if (role !== 'admin' || !['treasury','accountant'].includes(type)) {
-    return res.status(403).json({ message: 'Forbidden' });
-  }
-  next();
-}
 async function getDbClient() {
   if (db?.pool?.connect) return db.pool.connect();
   if (typeof db.getClient === 'function') return db.getClient();
@@ -49,7 +41,8 @@ router.get('/wallet-id', authenticateToken, requireTreasury, async (req, res) =>
       SELECT id, COALESCE(name,'Treasury Wallet') AS name
       FROM wallets
       WHERE user_id = $1
-        AND (is_treasury = true OR name ILIKE 'treasury%')
+        AND is_treasury = true
+        AND COALESCE(is_merchant, false) = false
       ORDER BY created_at ASC
       LIMIT 1
     `;
@@ -63,19 +56,18 @@ router.get('/wallet-id', authenticateToken, requireTreasury, async (req, res) =>
 });
 
 /**
- * Add Funds page → ACCOUNTANTS (and Treasury OK).
- * Return **TREASURY wallets only**.
- * Uses is_treasury flag when present, and also accepts name starting with 'treasury'.
+ * Add Funds page → ACCOUNTANTS ONLY
+ * Return **TREASURY wallets only** (not merchants).
  */
-router.get('/treasury-wallets', authenticateToken, requireAccountantOrTreasury, async (_req, res) => {
+router.get('/treasury-wallets', authenticateToken, requireAccountant, async (_req, res) => {
   try {
     const { rows } = await db.query(`
       SELECT id,
              COALESCE(name,'Treasury Wallet') AS name,
              balance AS balance_cents
       FROM wallets
-      WHERE (is_treasury = true)
-         OR (name ILIKE 'treasury%')
+      WHERE is_treasury = true
+        AND COALESCE(is_merchant, false) = false
       ORDER BY name
     `);
     if (!rows.length) return res.status(404).json({ message: 'No treasury wallets found in database.' });
@@ -87,8 +79,8 @@ router.get('/treasury-wallets', authenticateToken, requireAccountantOrTreasury, 
 });
 
 /**
- * Transfers page → ACCOUNTANTS ONLY.
- * Return **MERCHANT wallets only** by name pattern (since there’s no is_merchant column).
+ * Transfers page → ACCOUNTANTS ONLY
+ * Return **MERCHANT wallets only** (not treasuries).
  */
 router.get('/merchant-wallets', authenticateToken, requireAccountant, async (_req, res) => {
   try {
@@ -97,7 +89,8 @@ router.get('/merchant-wallets', authenticateToken, requireAccountant, async (_re
              COALESCE(name,'Merchant Wallet') AS name,
              balance AS balance_cents
       FROM wallets
-      WHERE name ILIKE 'merchant%'
+      WHERE is_merchant = true
+        AND COALESCE(is_treasury, false) = false
       ORDER BY name
     `);
     res.json(rows);
