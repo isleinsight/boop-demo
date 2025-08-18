@@ -59,7 +59,7 @@
 </head>
 <body>
 
-      <!-- Top Nav -->
+  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -70,10 +70,10 @@
         <div class="nav-dropdown">
           <a href="#" class="dropbtn" style="color: white;">Accounts</a>
           <div class="dropdown-content">
-            <a href="add-funds.html">Add Funds</a>
-            <a href="transfer.html">Transfer</a>
+            <a href="add-funds.html" id="addFundsLink">Add Funds</a>
+            <a href="transfer.html" id="transferLink">Transfer</a>
             <a href="reports.html">Reports</a>
-            <a href="manage-treasury.html">Manage Treasury</a>
+            <a href="manage-treasury.html" id="manageTreasuryLink">Manage Treasury</a>
           </div>
         </div>
         <a href="view-users.html">View Users</a>
@@ -82,6 +82,37 @@
       </div>
     </div>
   </nav>
+
+  <!-- Role-based Accounts menu toggle -->
+  <script>
+    (function () {
+      try {
+        const user = JSON.parse(localStorage.getItem("boopUser") || "null");
+        const addFundsLink       = document.getElementById("addFundsLink");
+        const transferLink       = document.getElementById("transferLink");
+        const manageTreasuryLink = document.getElementById("manageTreasuryLink");
+
+        if (!user || user.role !== "admin") return;
+        const type = String(user.type || "").toLowerCase();
+
+        if (type === "treasury") {
+          if (manageTreasuryLink) manageTreasuryLink.style.display = "block";
+          if (addFundsLink)       addFundsLink.style.display       = "none";
+          if (transferLink)       transferLink.style.display       = "none";
+        } else if (type === "accountant") {
+          if (manageTreasuryLink) manageTreasuryLink.style.display = "none";
+          if (addFundsLink)       addFundsLink.style.display       = "block";
+          if (transferLink)       transferLink.style.display       = "block";
+        } else {
+          if (manageTreasuryLink) manageTreasuryLink.style.display = "none";
+          if (addFundsLink)       addFundsLink.style.display       = "none";
+          if (transferLink)       transferLink.style.display       = "none";
+        }
+      } catch (e) {
+        console.warn("Nav role toggle error:", e);
+      }
+    })();
+  </script>
 
   <div class="container-small">
     <h3>Manage Treasury Balance</h3>
@@ -109,8 +140,7 @@
 
   <script type="module" src="manage-treasury.js"></script>
   <script>
-
- // 🔓 Logout handler
+    // 🔓 Logout handler
     if (logoutBtn) {
       logoutBtn.addEventListener("click", async (e) => {
         e.preventDefault();
@@ -123,9 +153,8 @@
         window.location.href = "login.html";
       });
     }
-    
   </script>
-      <script type="module" src="../assets/hamburger.js"></script>
-  
+  <script type="module" src="../assets/hamburger.js"></script>
+
 </body>
 </html>
