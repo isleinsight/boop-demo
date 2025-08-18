@@ -116,8 +116,8 @@ svg {
         <div class="nav-dropdown">
           <a href="#" class="dropbtn" style="color: white;">Accounts</a>
           <div class="dropdown-content">
-            <a href="add-funds.html">Add Funds</a>
-            <a href="transfer.html">Transfer</a>
+            <a href="add-funds.html" id="addFundsLink">Add Funds</a>
+            <a href="transfer.html" id="transferLink">Transfer</a>
             <a href="reports.html">Reports</a>
             <a href="manage-treasury.html" id="manageTreasuryLink" style="display:none;">Manage Treasury</a>
           </div>
@@ -128,6 +128,52 @@ svg {
       </div>
     </div>
   </nav>
+
+  <!-- Role-based Accounts menu & tile toggle -->
+  <script>
+    (function () {
+      try {
+        const user = JSON.parse(localStorage.getItem("boopUser") || "null");
+        const addFundsLink       = document.getElementById("addFundsLink");
+        const transferLink       = document.getElementById("transferLink");
+        const manageTreasuryLink = document.getElementById("manageTreasuryLink");
+        const tileAddFunds       = document.getElementById("tileAddFunds");
+        const tileTransfer       = document.getElementById("tileTransfer");
+
+        const type = String(user?.type || "").toLowerCase();
+        if (!user || user.role !== "admin") {
+          // If not allowed, send to login (same rule as your bottom script)
+          window.location.href = "login.html";
+          return;
+        }
+
+        if (type === "treasury") {
+          // Treasury: hide Add Funds + Transfer (links & tiles), show Manage Treasury
+          addFundsLink && (addFundsLink.style.display = "none");
+          transferLink && (transferLink.style.display = "none");
+          manageTreasuryLink && (manageTreasuryLink.style.display = "block");
+          tileAddFunds && (tileAddFunds.style.display = "none");
+          tileTransfer && (tileTransfer.style.display = "none");
+        } else if (type === "accountant") {
+          // Accountant: show Add Funds + Transfer (links & tiles), hide Manage Treasury
+          addFundsLink && (addFundsLink.style.display = "block");
+          transferLink && (transferLink.style.display = "block");
+          manageTreasuryLink && (manageTreasuryLink.style.display = "none");
+          tileAddFunds && (tileAddFunds.style.display = "flex");
+          tileTransfer && (tileTransfer.style.display = "flex");
+        } else {
+          // Other types: hide all account-y things by default
+          addFundsLink && (addFundsLink.style.display = "none");
+          transferLink && (transferLink.style.display = "none");
+          manageTreasuryLink && (manageTreasuryLink.style.display = "none");
+          tileAddFunds && (tileAddFunds.style.display = "none");
+          tileTransfer && (tileTransfer.style.display = "none");
+        }
+      } catch (e) {
+        console.warn("Dashboard role toggle error:", e);
+      }
+    })();
+  </script>
 
   <!-- Main Content -->
   <section class="accounts-hero">
@@ -141,14 +187,14 @@ svg {
 
   <section class="accounts-grid">
     <div class="accounts-grid__links">
-      <a class="tile" href="add-funds.html">
+      <a class="tile" id="tileAddFunds" href="add-funds.html">
         <svg class="tile__icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/></svg>
         <span>
           <span class="tile__title">Add Funds</span><br/>
           <span class="tile__sub">Deposit money into accounts</span>
         </span>
       </a>
-      <a class="tile" href="transfer.html">
+      <a class="tile" id="tileTransfer" href="transfer.html">
         <svg class="tile__icon" viewBox="0 0 24 24" fill="none"><path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke-width="2" stroke-linecap="round"/></svg>
         <span>
           <span class="tile__title">Transfer</span><br/>
@@ -222,6 +268,6 @@ svg {
       });
     });
   </script>
-      <script type="module" src="../assets/hamburger.js"></script>
+  <script type="module" src="../assets/hamburger.js"></script>
 </body>
 </html>
