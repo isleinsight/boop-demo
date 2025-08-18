@@ -113,20 +113,29 @@
   }
 
   // --- Networking
-  // Strictly load MERCHANT wallets (no fallback to treasury wallets)
-  async function fetchTreasuries() {
-    try {
-      const res = await fetch("/api/treasury/merchant-wallets", { headers: authHeaders() });
-      const data = await res.json();
-      if (!res.ok || !Array.isArray(data)) {
-        throw new Error(data?.message || "Failed to load merchant wallets");
-      }
-      treasuries = data;
-    } catch (e) {
-      treasuries = [];
-      console.warn("merchant wallet fetch error", e);
+  // Strictly load MERCHANT wallets; filter out anything that looks like treasury
+async function fetchTreasuries() {
+  try {
+    const res = await fetch("/api/treasury/merchant-wallets", { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok || !Array.isArray(data)) {
+      throw new Error(data?.message || "Failed to load merchant wallets");
     }
+
+    // Accept only items that are clearly not treasury
+    treasuries = data.filter(w => {
+      const name = (w.name || w.label || w.bank_name || "").toString();
+      // Prefer explicit flags if present
+      if (typeof w.is_treasury === "boolean") return !w.is_treasury;
+      if (typeof w.is_merchant === "boolean") return w.is_merchant;
+      // Fallback to name heuristic
+      return !/treasury/i.test(name);
+    });
+  } catch (e) {
+    treasuries = [];
+    console.warn("merchant wallet fetch/filter error", e);
   }
+}
 
   async function fetchTransfers() {
     const params = new URLSearchParams();
