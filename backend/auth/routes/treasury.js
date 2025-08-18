@@ -6,7 +6,7 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 
 console.log('🧭 treasury.js loaded');
 
-// ---------- helpers ----------
+// ───────── helpers ─────────
 function requireTreasury(req, res, next) {
   const role = String(req.user?.role || '').toLowerCase();
   const type = String(req.user?.type || '').toLowerCase();
@@ -23,6 +23,14 @@ function requireAccountant(req, res, next) {
   }
   next();
 }
+function requireAccountantOrTreasury(req, res, next) {
+  const role = String(req.user?.role || '').toLowerCase();
+  const type = String(req.user?.type || '').toLowerCase();
+  if (role !== 'admin' || !['treasury', 'accountant'].includes(type)) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+  next();
+}
 async function getDbClient() {
   if (db?.pool?.connect) return db.pool.connect();
   if (typeof db.getClient === 'function') return db.getClient();
@@ -30,19 +38,17 @@ async function getDbClient() {
   throw new Error('DB client access not available; expose pool.connect()/getClient() on your db helper.');
 }
 
-// ---------- health ----------
+// ───────── health ─────────
 router.get('/ping', (_req, res) => res.json({ ok: true }));
 
-// ---------- wallet id for current treasury admin ----------
+// ───────── current treasury admin’s wallet id ─────────
 router.get('/wallet-id', authenticateToken, requireTreasury, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
     const q = `
       SELECT id, COALESCE(name,'Treasury Wallet') AS name
       FROM wallets
-      WHERE user_id = $1
-        AND is_treasury = true
-        AND COALESCE(is_merchant, false) = false
+      WHERE user_id = $1 AND is_treasury = true
       ORDER BY created_at ASC
       LIMIT 1
     `;
@@ -56,10 +62,11 @@ router.get('/wallet-id', authenticateToken, requireTreasury, async (req, res) =>
 });
 
 /**
- * Add Funds page → ACCOUNTANTS ONLY
- * Return **TREASURY wallets only** (not merchants).
+ * Add Funds page + Manage Treasury selector
+ * Return **TREASURY wallets only**.
+ * Allowed for: accountants OR treasury admins.
  */
-router.get('/treasury-wallets', authenticateToken, requireAccountant, async (_req, res) => {
+router.get('/treasury-wallets', authenticateToken, requireAccountantOrTreasury, async (_req, res) => {
   try {
     const { rows } = await db.query(`
       SELECT id,
@@ -67,7 +74,6 @@ router.get('/treasury-wallets', authenticateToken, requireAccountant, async (_re
              balance AS balance_cents
       FROM wallets
       WHERE is_treasury = true
-        AND COALESCE(is_merchant, false) = false
       ORDER BY name
     `);
     if (!rows.length) return res.status(404).json({ message: 'No treasury wallets found in database.' });
@@ -79,8 +85,9 @@ router.get('/treasury-wallets', authenticateToken, requireAccountant, async (_re
 });
 
 /**
- * Transfers page → ACCOUNTANTS ONLY
- * Return **MERCHANT wallets only** (not treasuries).
+ * Transfers page
+ * Return **MERCHANT wallets only**.
+ * Allowed for: accountants only.
  */
 router.get('/merchant-wallets', authenticateToken, requireAccountant, async (_req, res) => {
   try {
@@ -90,7 +97,6 @@ router.get('/merchant-wallets', authenticateToken, requireAccountant, async (_re
              balance AS balance_cents
       FROM wallets
       WHERE is_merchant = true
-        AND COALESCE(is_treasury, false) = false
       ORDER BY name
     `);
     res.json(rows);
@@ -100,7 +106,7 @@ router.get('/merchant-wallets', authenticateToken, requireAccountant, async (_re
   }
 });
 
-// ---------- balance (wallet-scoped + query fallback) — TREASURY ONLY ----------
+// ───────── balance (wallet-scoped + query fallback) — TREASURY ONLY ─────────
 router.get('/wallet/:id/balance', authenticateToken, requireTreasury, async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -131,7 +137,7 @@ router.get('/balance', authenticateToken, requireTreasury, async (req, res) => {
   }
 });
 
-// ---------- recent transactions — TREASURY ONLY ----------
+// ───────── recent transactions — TREASURY ONLY ─────────
 router.get('/wallet/:id/recent', authenticateToken, requireTreasury, async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -168,7 +174,7 @@ router.get('/recent', authenticateToken, requireTreasury, async (req, res) => {
   }
 });
 
-// ---------- adjust handlers — TREASURY ONLY ----------
+// ───────── adjust handlers — TREASURY ONLY ─────────
 async function doAdjust(req, res) {
   const body = req.body || {};
   const walletId = req.params.id || body.wallet_id;
