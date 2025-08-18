@@ -1,4 +1,3 @@
-<script>
 document.addEventListener("DOMContentLoaded", () => {
   const user  = JSON.parse(localStorage.getItem("boopUser"));
   const token = localStorage.getItem("boop_jwt");
@@ -156,6 +155,5 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(e);
       showStatus(e.message || "Failed to initialize.", "red");
     }
-  })();
-});
-</script>
+  })();  // end init()
+});      // end DOMContentLoaded
