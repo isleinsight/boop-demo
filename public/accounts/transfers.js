@@ -38,7 +38,7 @@
   const d_amount = document.getElementById("d_amount");
   const d_bank = document.getElementById("d_bank");
   const d_destination = document.getElementById("d_destination");
-  const d_treasury = document.getElementById("d_treasury"); // now filled with merchant wallets
+  const d_treasury = document.getElementById("d_treasury"); // MERCHANT wallets only
   const d_bankRef = document.getElementById("d_bankRef");
   const d_internalNote = document.getElementById("d_internalNote");
   const claimBtn = document.getElementById("claimBtn");
@@ -49,18 +49,17 @@
 
   // Dynamic fields we might inject
   let d_balance = document.getElementById("d_balance");
-  let bankDetailsWrap = null; // wrapper div we inject for full bank details
-  let d_bankFull = null;      // the readonly textarea / input we show
+  let bankDetailsWrap = null;
+  let d_bankFull = null;
 
   // --- State
   let tabStatus = "pending"; // 'pending' | 'claimed' | 'completed' | 'rejected'
   let page = 1;
   const perPage = 20;
   let totalPages = 1;
-  let rows = []; // last fetched page
-  // Holds MERCHANT wallets (fallback to treasury wallets if endpoint missing)
-  let treasuries = [];
-  let currentRow = null; // row shown in modal
+  let rows = [];
+  let treasuries = []; // actually merchant wallets
+  let currentRow = null;
 
   // --- Helpers
   const authHeaders = () => ({ Authorization: `Bearer ${token}` });
@@ -114,24 +113,18 @@
   }
 
   // --- Networking
-  // Load MERCHANT wallets; fallback to treasury list if merchant endpoint doesn't exist yet
+  // Strictly load MERCHANT wallets (no fallback to treasury wallets)
   async function fetchTreasuries() {
     try {
-      let res = await fetch("/api/treasury/merchant-wallets", { headers: authHeaders() }).catch(()=>null);
-      let data = null;
-
-      if (!res || res.status === 404) {
-        // fallback to old endpoint
-        res = await fetch("/api/treasury/treasury-wallets", { headers: authHeaders() }).catch(()=>null);
+      const res = await fetch("/api/treasury/merchant-wallets", { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) {
+        throw new Error(data?.message || "Failed to load merchant wallets");
       }
-      if (!res) throw new Error("No wallet endpoint available");
-      data = await res.json();
-      if (!Array.isArray(data)) throw new Error(data?.message || "Failed to load merchant wallets");
-
       treasuries = data;
     } catch (e) {
       treasuries = [];
-      console.warn("merchant/treasury wallet fetch error", e);
+      console.warn("merchant wallet fetch error", e);
     }
   }
 
@@ -237,12 +230,12 @@
     });
   }
 
-  // --- Row actions
+  // --- Row actions (FIXED: use a properly scoped `id`)
   async function onRowActionClick(e) {
     const btn = e.currentTarget;
-    theId = btn.dataset.id;
+    const id = btn.dataset.id;                 // <-- corrected
     const action = btn.dataset.action;
-    const row = rows.find(r => String(r.id) === String(theId));
+    const row = rows.find(r => String(r.id) === String(id));
     if (!row) return;
 
     if (action === "view") {
@@ -251,9 +244,9 @@
     }
     if (action === "claim") {
       try {
-        await sendJSON(`/api/transfers/${theId}/claim`, "PATCH");
+        await sendJSON(`/api/transfers/${id}/claim`, "PATCH");
         await fetchTransfers();
-        const updated = rows.find(r => String(r.id) === String(theId));
+        const updated = rows.find(r => String(r.id) === String(id));
         openModal(updated || row);
       } catch (err) {
         alert(`Claim failed: ${err.message}`);
@@ -262,7 +255,7 @@
     }
     if (action === "release") {
       try {
-        await sendJSON(`/api/transfers/${theId}/release`, "PATCH");
+        await sendJSON(`/api/transfers/${id}/release`, "PATCH");
         await fetchTransfers();
         closeModal();
       } catch (err) {
@@ -379,7 +372,6 @@
       d_internalNote.disabled = false;
 
       toggleFinalizeExtras(true);
-      // full bank details visibility toggled in openModal() after we fetch them
       return;
     }
 
@@ -418,10 +410,9 @@
     if (wrap && input) {
       if (s === "claimed" && mine) {
         input.value = "Loading…";
-        wrap.style.display = ""; // show area immediately
+        wrap.style.display = "";
         try {
           const details = await fetchFullBankDetails(row.id);
-          // Keep same behavior: show whatever fields are available
           const lines = [
             details.bank_name ? `Bank: ${details.bank_name}` : null,
             details.account_holder_name ? `Account Name: ${details.account_holder_name}` : null,
@@ -437,7 +428,6 @@
           input.value = "Failed to load bank details.";
         }
       } else {
-        // Not claimed by me: hide the field and clear
         wrap.style.display = "none";
         input.value = "";
       }
@@ -464,7 +454,7 @@
     try {
       await sendJSON(`/api/transfers/${currentRow.id}/claim`, "PATCH");
       await fetchTransfers();
-      closeModal(); // close after success
+      closeModal();
     } catch (err) {
       alert(`Claim failed: ${err.message}`);
     }
@@ -488,7 +478,7 @@
       try {
         await sendJSON(`/api/transfers/${currentRow.id}/reject`, "PATCH", { reason });
         await fetchTransfers();
-        closeModal(); // close after success
+        closeModal();
       } catch (err) {
         alert(`Reject failed: ${err.message}`);
       }
@@ -499,7 +489,7 @@
     if (!currentRow) return;
 
     const bank_reference = d_bankRef.value.trim();
-    const treasury_wallet_id = d_treasury.value; // holds MERCHANT wallet id now
+    const treasury_wallet_id = d_treasury.value; // MERCHANT wallet id
     const internal_note = d_internalNote.value.trim();
 
     if (!treasury_wallet_id) {
@@ -522,7 +512,7 @@
         internal_note
       });
       await fetchTransfers();
-      closeModal(); // close after success
+      closeModal();
     } catch (err) {
       console.error(err);
       alert(`Complete failed: ${err.message}`);
@@ -595,7 +585,7 @@
   // --- Boot
   (async function init(){
     try {
-      await fetchTreasuries();   // loads merchant wallets (or fallback)
+      await fetchTreasuries();   // loads merchant wallets only
       await fetchTransfers();
     } catch (err) {
       showErr(err);
