@@ -482,7 +482,7 @@ async function doComplete(req, res) {
 router.patch('/:id/complete', requireAccountsRole, wrap(doComplete));
 router.post('/:id/complete',  requireAccountsRole, wrap(doComplete)); // POST alias
 
-// --- BANK DETAILS (full account number for claimed transfers) -------------
+// --- BANK DETAILS (minimal: full account number + bank name [+ holder]) ---
 router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
   try {
     const { id } = req.params;
@@ -505,11 +505,7 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
       SELECT
         ba.account_number,
         ba.bank_name,
-        ba.holder_name   AS account_holder_name,
-        ba.routing_number,
-        ba.iban,
-        ba.swift,
-        ba.country
+        ba.holder_name AS account_holder_name
       FROM transfers t
       JOIN bank_accounts ba
         ON ba.user_id = t.user_id
@@ -527,11 +523,7 @@ router.get('/:id/bank-details', requireAccountsRole, async (req, res) => {
       SELECT
         ba.account_number,
         ba.bank_name,
-        ba.holder_name   AS account_holder_name,
-        ba.routing_number,
-        ba.iban,
-        ba.swift,
-        ba.country
+        ba.holder_name AS account_holder_name
       FROM transfers t
       JOIN student_parents sp
         ON sp.student_id = t.user_id
