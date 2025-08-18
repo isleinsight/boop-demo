@@ -101,14 +101,23 @@ const hashedPassword = await bcrypt.hash(tempPw, 12);
     user.wallet_id = walletId;
   }
 
-  // 🏢 Vendor
-  if (role === "vendor" && vendor) {
-    await client.query(
-      `INSERT INTO vendors (user_id, business_name, phone, category, approved, wallet_id)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [user.id, vendor.name, vendor.phone, vendor.category, vendor.approved === true, user.wallet_id]
-    );
-  }
+  // 🏢 Vendor (free-text category)
+if (role === "vendor" && vendor) {
+  // normalize a bit so you don't get empty strings
+  const businessName = (vendor.name || "").trim();
+  const category     = (vendor.category || "").trim();   // <-- free-text
+  const phone        = (vendor.phone || "").trim();
+  const address      = (vendor.address || "").trim();    // optional
+
+  if (!businessName) throw new Error("Vendor business_name is required");
+  if (!category)     throw new Error("Vendor category is required");
+
+  await client.query(
+    `INSERT INTO vendors (user_id, business_name, phone, category, address, wallet_id)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [user.id, businessName, phone, category, address || null, user.wallet_id]
+  );
+}
 
   // 🎓 Student
   if (role === "student" && student) {
