@@ -6,25 +6,39 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 
 console.log('🧭 treasury.js loaded');
 
+// ---------- helpers ----------
 function requireTreasury(req, res, next) {
-  const { role, type } = req.user || {};
+  const role = String(req.user?.role || '').toLowerCase();
+  const type = String(req.user?.type || '').toLowerCase();
   if (role !== 'admin' || type !== 'treasury') {
     return res.status(403).json({ message: 'Forbidden' });
   }
   next();
 }
 
-// Public ping (mount check)
+function requireTreasuryOrAccountant(req, res, next) {
+  const role = String(req.user?.role || '').toLowerCase();
+  const type = String(req.user?.type || '').toLowerCase();
+  if (role !== 'admin' || !['treasury', 'accountant'].includes(type)) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+  next();
+}
+
+async function getDbClient() {
+  if (db?.pool?.connect) return db.pool.connect();
+  if (typeof db.getClient === 'function') return db.getClient();
+  if (typeof db.connect === 'function') return db.connect();
+  throw new Error('DB client access not available; expose pool.connect()/getClient() on your db helper.');
+}
+
+// ---------- health ----------
 router.get('/ping', (_req, res) => res.json({ ok: true }));
 
-// ────────────────────────────────────────────────────────────────────────────
-// Wallet lookups
-// ────────────────────────────────────────────────────────────────────────────
-
-// Current treasury admin’s first treasury wallet (by user_id)
+// ---------- wallet id for current treasury admin ----------
 router.get('/wallet-id', authenticateToken, requireTreasury, async (req, res) => {
-  const userId = req.user.id || req.user.userId;
   try {
+    const userId = req.user.userId || req.user.id;
     const q = `
       SELECT id, COALESCE(name,'Treasury Wallet') AS name
       FROM wallets
@@ -42,27 +56,17 @@ router.get('/wallet-id', authenticateToken, requireTreasury, async (req, res) =>
   }
 });
 
-// Merchant wallets from ENV (visible only to treasury admins)
-router.get('/merchant-wallets', authenticateToken, requireTreasury, async (_req, res) => {
-  try {
-    const wallets = [
-      { id: process.env.MERCHANT_WALLET_ID_HSBC,       name: 'HSBC Merchant Wallet' },
-      { id: process.env.MERCHANT_WALLET_ID_BUTTERFIELD, name: 'Butterfield Merchant Wallet' },
-    ].filter(w => w.id);
-    return res.json(wallets);
-  } catch (err) {
-    console.error('merchant-wallets error', err);
-    res.status(500).json({ message: 'Failed to load merchant wallets' });
-  }
-});
-
-// (Optional, but kept) list all treasury wallets in DB (treasury-only)
+// ---------- list all treasury/merchant wallets (for selectors) ----------
 router.get('/treasury-wallets', authenticateToken, requireTreasury, async (_req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT id, COALESCE(name,'Treasury Wallet') AS name
+      SELECT id,
+             COALESCE(name,'Treasury Wallet') AS name,
+             balance AS balance_cents
       FROM wallets
-      WHERE is_treasury = true OR name ILIKE 'treasury%'
+      WHERE is_treasury = true
+         OR name ILIKE 'treasury%%'
+         OR name ILIKE 'merchant%%'
       ORDER BY name
     `);
     if (!rows.length) return res.status(404).json({ message: 'No treasury wallets found in database.' });
@@ -73,46 +77,54 @@ router.get('/treasury-wallets', authenticateToken, requireTreasury, async (_req,
   }
 });
 
-// ────────────────────────────────────────────────────────────────────────────
-// Balances / recent activity
-// ────────────────────────────────────────────────────────────────────────────
-
-// Wallet-scoped balance
-router.get('/wallet/:id/balance', authenticateToken, requireTreasury, async (req, res) => {
-  const walletId = req.params.id;
+// For the Transfers screen: allow accountants OR treasury admins.
+// Returns the same list as /treasury-wallets.
+router.get('/merchant-wallets', authenticateToken, requireTreasuryOrAccountant, async (_req, res) => {
   try {
-    const { rows } = await db.query(`SELECT balance FROM wallets WHERE id = $1 LIMIT 1`, [walletId]);
+    const { rows } = await db.query(`
+      SELECT id,
+             COALESCE(name,'Treasury Wallet') AS name,
+             balance AS balance_cents
+      FROM wallets
+      WHERE is_treasury = true
+         OR name ILIKE 'treasury%%'
+         OR name ILIKE 'merchant%%'
+      ORDER BY name
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('❌ /merchant-wallets error:', err);
+    res.status(500).json({ message: 'Failed to load merchant wallets' });
+  }
+});
+
+// ---------- balance (preferred wallet-scoped, plus a query fallback) ----------
+router.get('/wallet/:id/balance', authenticateToken, requireTreasury, async (req, res) => {
+  try {
+    const { rows } = await db.query(`SELECT balance AS balance_cents FROM wallets WHERE id = $1 LIMIT 1`, [req.params.id]);
     if (!rows.length) return res.status(404).json({ message: 'Wallet not found.' });
-    res.json({ balance_cents: Number(rows[0].balance || 0) });
+    res.json({ balance_cents: Number(rows[0].balance_cents || 0) });
   } catch (err) {
     console.error('❌ /wallet/:id/balance error:', err);
     res.status(500).json({ message: 'Failed to retrieve balance' });
   }
 });
 
-// Current user’s first treasury wallet balance (legacy fallback)
 router.get('/balance', authenticateToken, requireTreasury, async (req, res) => {
-  const userId = req.user.id || req.user.userId;
   try {
-    const { rows } = await db.query(
-      `SELECT balance
-         FROM wallets
-        WHERE user_id = $1 AND (is_treasury = true OR name ILIKE 'treasury%')
-        ORDER BY created_at ASC
-        LIMIT 1`,
-      [userId]
-    );
-    if (!rows.length) return res.status(404).json({ message: 'Wallet not found for this user.' });
-    res.json({ balance_cents: Number(rows[0].balance || 0) });
+    const id = req.query.wallet_id;
+    if (!id) return res.status(400).json({ message: 'wallet_id is required' });
+    const { rows } = await db.query(`SELECT balance AS balance_cents FROM wallets WHERE id = $1 LIMIT 1`, [id]);
+    if (!rows.length) return res.status(404).json({ message: 'Wallet not found.' });
+    res.json({ balance_cents: Number(rows[0].balance_cents || 0) });
   } catch (err) {
     console.error('❌ /balance error:', err);
     res.status(500).json({ message: 'Failed to retrieve balance' });
   }
 });
 
-// Wallet-scoped recent transactions (simple list)
+// ---------- recent transactions (wallet-scoped + fallback) ----------
 router.get('/wallet/:id/recent', authenticateToken, requireTreasury, async (req, res) => {
-  const walletId = req.params.id;
   try {
     const { rows } = await db.query(
       `SELECT amount_cents, type, note, description, created_at
@@ -120,7 +132,7 @@ router.get('/wallet/:id/recent', authenticateToken, requireTreasury, async (req,
         WHERE wallet_id = $1
         ORDER BY created_at DESC
         LIMIT 5`,
-      [walletId]
+      [req.params.id]
     );
     res.json(rows);
   } catch (err) {
@@ -129,17 +141,17 @@ router.get('/wallet/:id/recent', authenticateToken, requireTreasury, async (req,
   }
 });
 
-// Current user’s recent transactions (legacy fallback)
 router.get('/recent', authenticateToken, requireTreasury, async (req, res) => {
-  const userId = req.user.id || req.user.userId;
   try {
+    const id = req.query.wallet_id;
+    if (!id) return res.status(400).json({ message: 'wallet_id is required' });
     const { rows } = await db.query(
       `SELECT amount_cents, type, note, description, created_at
          FROM transactions
-        WHERE user_id = $1
+        WHERE wallet_id = $1
         ORDER BY created_at DESC
         LIMIT 5`,
-      [userId]
+      [id]
     );
     res.json(rows);
   } catch (err) {
@@ -148,28 +160,25 @@ router.get('/recent', authenticateToken, requireTreasury, async (req, res) => {
   }
 });
 
-// ────────────────────────────────────────────────────────────────────────────
-/**
- * Adjust a treasury/merchant wallet balance.
- * Body: { wallet_id, amount_cents, type: 'credit'|'debit', note }
- */
-router.post('/adjust', authenticateToken, requireTreasury, async (req, res) => {
-  const { wallet_id, amount_cents, type, note } = req.body || {};
-  const amt = Math.round(Number(amount_cents || 0));
-  const t = String(type || '').toLowerCase();
-  const noteStr = (note || '').slice(0, 255);
+// ---------- adjust handlers (wallet-scoped + generic) ----------
+async function doAdjust(req, res) {
+  const body = req.body || {};
+  const walletId = req.params.id || body.wallet_id;
+  const amt = Math.round(Number(body.amount_cents || 0));
+  const t = String(body.type || '').toLowerCase(); // 'credit'|'debit'
+  const note = (body.note || '').slice(0, 255);
 
-  if (!wallet_id || !Number.isFinite(amt) || amt <= 0 || !['credit', 'debit'].includes(t)) {
+  if (!walletId || !Number.isFinite(amt) || amt <= 0 || !['credit', 'debit'].includes(t)) {
     return res.status(400).json({ message: 'Invalid wallet, amount, or type.' });
   }
 
-  const client = await (db.pool?.connect ? db.pool.connect() : db.getClient());
+  const client = await getDbClient();
   try {
     await client.query('BEGIN');
 
     const { rows: wrows } = await client.query(
       `SELECT id, user_id, balance FROM wallets WHERE id = $1 LIMIT 1`,
-      [wallet_id]
+      [walletId]
     );
     if (!wrows.length) {
       await client.query('ROLLBACK');
@@ -182,14 +191,9 @@ router.post('/adjust', authenticateToken, requireTreasury, async (req, res) => {
       return res.status(409).json({ message: 'Insufficient wallet balance.' });
     }
 
-    // Update balance (+ for credit, - for debit)
     const delta = t === 'credit' ? amt : -amt;
-    await client.query(
-      `UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
-      [delta, wallet_id]
-    );
+    await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [delta, walletId]);
 
-    // Record transaction
     await client.query(
       `
       INSERT INTO transactions (
@@ -202,10 +206,10 @@ router.post('/adjust', authenticateToken, requireTreasury, async (req, res) => {
       `,
       [
         wallet.user_id,
-        wallet_id,
+        walletId,
         Math.abs(amt),
         t,
-        noteStr,
+        note,
         JSON.stringify({ via: 'treasury_adjust' })
       ]
     );
@@ -219,32 +223,9 @@ router.post('/adjust', authenticateToken, requireTreasury, async (req, res) => {
   } finally {
     client.release && client.release();
   }
-});
+}
 
-// Wallet-scoped alias: POST /wallet/:id/adjust  (body: { amount_cents, type, note })
-router.post('/wallet/:id/adjust', authenticateToken, requireTreasury, async (req, res) => {
-  req.body = { ...(req.body || {}), wallet_id: req.params.id };
-  return router.handle(req, res); // re-dispatch to /adjust below
-});
-
-// NOTE: The line above re-dispatches to this router again; since that's tricky in Express,
-// we implement it as a tiny forwarder instead of router.handle() to avoid recursion.
-
-router.post('/wallet/:id/adjust', authenticateToken, requireTreasury, async (req, res, next) => {
-  // This middleware was duplicated by accident; keep only the forwarder below:
-  next();
-});
-
-// Forwarder (final)
-router.post('/wallet/:id/adjust', authenticateToken, requireTreasury, async (req, res) => {
-  const payload = { ...(req.body || {}), wallet_id: req.params.id };
-  // Manually call the /adjust logic:
-  req.body = payload;
-  // reuse the same code path:
-  const fakeReq = req, fakeRes = res;
-  // Invoke the handler directly:
-  return router.stack.find(l => l.route && l.route.path === '/adjust' && l.route.methods.post)
-    .handle(fakeReq, fakeRes);
-});
+router.post('/wallet/:id/adjust', authenticateToken, requireTreasury, doAdjust);
+router.post('/adjust',            authenticateToken, requireTreasury, doAdjust);
 
 module.exports = router;
