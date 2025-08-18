@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vendor Dashboard – BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
+
+    body { font-family:'Poppins',sans-serif; background:#f5f7fa; margin:0; color:var(--ink); }
+
+    /* Top Nav */
+    nav { background:#0b1220; color:#fff; }
+    .nav-container { max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img { height:32px; display:block; }
+    .nav-right { display:flex; gap:16px; align-items:center; }
+    .nav-right a { color:#fff; text-decoration:none; font-size:0.95rem; }
+    .nav-right a:hover { text-decoration:underline; }
+
+    /* Hero */
+    .hero { background:linear-gradient(180deg,#f7fafc,#fff); border-bottom:1px solid var(--stroke); }
+    .hero-inner { max-width:1100px; margin:0 auto; padding:24px 18px; }
+    .hero h1 { margin:0 0 6px; font-size:1.75rem; font-weight:600; }
+    .hero-sub { margin:0; color:#4b5563; }
+
+    /* Quick stats */
+    .stats { max-width:1100px; margin:18px auto 0; padding:0 18px 8px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+    .stat { background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:14px; }
+    .stat .label { color:var(--muted); font-size:0.9rem; margin:0 0 6px; }
+    .stat .value { font-size:1.25rem; font-weight:600; }
+
+    /* Tiles */
+    .tiles { max-width:1100px; margin:10px auto 40px; padding:0 18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+    .tile { display:flex; gap:12px; align-items:center; padding:14px; border:1px solid var(--stroke); background:#fff; border-radius:12px; text-decoration:none; color:var(--ink); box-shadow:0 6px 16px rgba(0,0,0,.06); transition:transform .15s ease, border-color .15s ease; }
+    .tile:hover { border-color:#d7deea; transform:translateY(-1px); }
+    .tile .icon { width:28px; height:28px; flex:0 0 28px; }
+    .tile .title { font-weight:600; font-size:0.98rem; }
+    .tile .sub { color:var(--muted); font-size:.9rem; }
+
+    @media (max-width: 768px) {
+      .nav-right { gap:12px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Auth guard (vendors only) -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+        if (!res.ok) throw new Error("Unauthorized");
+        const me = await res.json();
+        if (!me || me.role !== "vendor") throw new Error("Not a vendor");
+        localStorage.setItem("boopUser", JSON.stringify(me));
+        // expose name for header
+        window.__vendorName = (me.first_name && me.last_name) ? (me.first_name + " " + me.last_name) : (me.email || "Vendor");
+      } catch (err) {
+        localStorage.clear();
+        location.href = "../login.html";
+      }
+    })();
+  </script>
+
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Home</a>
+        <a href="passport-pay.html">Passport&nbsp;Pay</a>
+        <a href="transfer.html">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="#" id="logoutLink">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1 id="welcomeTitle">Welcome</h1>
+      <p class="hero-sub">Use Passport Pay to charge customers, transfer your BOOP balance to your bank, and review your recent transactions.</p>
+    </div>
+  </section>
+
+  <!-- Quick stats (optional live fill; safe to keep even if API not wired yet) -->
+  <section class="stats">
+    <div class="stat">
+      <p class="label">Current Balance</p>
+      <p class="value" id="balanceValue">—</p>
+    </div>
+    <div class="stat">
+      <p class="label">Today’s Sales</p>
+      <p class="value" id="todaysSales">—</p>
+    </div>
+    <div class="stat">
+      <p class="label">Pending Payouts</p>
+      <p class="value" id="pendingPayouts">—</p>
+    </div>
+  </section>
+
+  <!-- Main tiles -->
+  <section class="tiles">
+    <a class="tile" href="passport-pay.html">
+      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>
+        <span class="title">Passport Pay</span><br/>
+        <span class="sub">Charge a BOOP customer by passport URL</span>
+      </span>
+    </a>
+
+    <a class="tile" href="transfer.html">
+      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>
+        <span class="title">Transfer to Bank</span><br/>
+        <span class="sub">Move funds from BOOP to your bank</span>
+      </span>
+    </a>
+
+    <a class="tile" href="transactions.html">
+      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h12M3 18h9" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>
+        <span class="title">Transactions</span><br/>
+        <span class="sub">View your recent activity</span>
+      </span>
+    </a>
+  </section>
+
+  <script>
+    // Fill welcome line
+    document.addEventListener("DOMContentLoaded", () => {
+      const name = window.__vendorName || "Vendor";
+      const title = document.getElementById("welcomeTitle");
+      if (title) title.textContent = `Welcome, ${name}`;
+    });
+
+    // Optional: fetch simple stats if endpoints exist. If not, it silently no-ops.
+    (async function loadStats(){
+      const token = localStorage.getItem("boop_jwt");
+      const setText = (id,v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
+
+      try {
+        // Try a generic "my wallet" balance if you have it, otherwise fallback to users/:id
+        const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
+        let bal = null;
+
+        // Option A: /api/wallets/me
+        let r = await fetch("/api/wallets/me", { headers:{ Authorization:`Bearer ${token}` }}).catch(()=>null);
+        if (r && r.ok) {
+          const j = await r.json(); bal = j?.balance_cents;
+        }
+        // Option B: /api/wallets/user/:id
+        if (bal == null && me?.id) {
+          r = await fetch(`/api/wallets/user/${me.id}`, { headers:{ Authorization:`Bearer ${token}` }}).catch(()=>null);
+          if (r && r.ok) {
+            const j = await r.json(); bal = j?.balance_cents;
+          }
+        }
+
+        if (bal != null) setText("balanceValue", "$" + (Number(bal)/100).toFixed(2));
+      } catch {}
+
+      // Today’s sales & pending payouts are placeholders until wired:
+      setText("todaysSales", "—");
+      setText("pendingPayouts", "—");
+    })();
+
+    // Logout
+    document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await fetch("/api/logout", { method:"POST" }); } catch {}
+      localStorage.clear();
+      location.href = "../login.html";
+    });
+  </script>
+</body>
+</html>
