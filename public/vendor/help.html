@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vendor Dashboard – BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; --bg:#f5f7fa; --panel:#ffffff;
+      --blue:#2f80ed; --blue-dark:#1a5fcc;
+    }
+    *{ box-sizing:border-box }
+    body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
+
+    /* Tiny header (logo + logout only) */
+    .minihead{
+      background:#0b1220; color:#fff;
+    }
+    .minihead-inner{
+      max-width:1100px; margin:0 auto; padding:10px 18px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .minihead img{ height:30px; display:block; }
+    .logout{
+      color:#fff; text-decoration:none; font-size:.95rem; padding:6px 8px; border-radius:6px;
+      background:rgba(255,255,255,.08);
+    }
+    .logout:hover{ background:rgba(255,255,255,.15); }
+
+    /* Hero */
+    .hero{
+      background:linear-gradient(180deg,#f7fafc,#fff);
+      border-bottom:1px solid var(--stroke);
+    }
+    .hero-inner{
+      max-width:1100px; margin:0 auto; padding:22px 18px 18px;
+    }
+    .hero h1{ margin:0 0 6px; font-size:clamp(20px,3vw,28px); font-weight:600; }
+    .hero-sub{ margin:0; color:#4b5563; }
+
+    /* Stats */
+    .stats{
+      max-width:1100px; margin:14px auto 0; padding:0 18px 10px;
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px;
+    }
+    .stat{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:14px; }
+    .stat .label{ color:var(--muted); font-size:.9rem; margin:0 0 6px; }
+    .stat .value{ font-size:1.25rem; font-weight:600; }
+
+    /* Tiles */
+    .tiles{
+      max-width:1100px; margin:12px auto 40px; padding:0 18px;
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px;
+    }
+    .tile{
+      display:flex; gap:12px; align-items:center; padding:14px;
+      border:1px solid var(--stroke); background:#fff; border-radius:12px; text-decoration:none; color:var(--ink);
+      box-shadow:0 6px 16px rgba(0,0,0,.06); transition:transform .15s ease, border-color .15s ease;
+    }
+    .tile:hover{ border-color:#d7deea; transform:translateY(-1px); }
+    .tile .icon{ width:28px; height:28px; flex:0 0 28px; }
+    .tile .title{ font-weight:600; font-size:.98rem; }
+    .tile .sub{ color:var(--muted); font-size:.9rem; }
+
+    /* Recent Activity preview */
+    .panel{
+      max-width:1100px; margin:0 auto 36px; padding:0 18px;
+      display:grid; grid-template-columns: 1fr 1fr; gap:14px;
+    }
+    .card{ background:var(--panel); border:1px solid var(--stroke); border-radius:12px; padding:16px; }
+    .card h2{ margin:0 0 10px; font-size:1.06rem; }
+    .list{ display:grid; gap:10px; }
+    .item{ background:#fff; border:1px solid var(--stroke); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; }
+    .item .left{ display:flex; gap:10px; align-items:center; }
+    .avatar{ width:36px; height:36px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; }
+    .who{ font-weight:600; }
+    .meta{ font-size:.85rem; color:#94a3b8; }
+    .amt{ font-weight:700; white-space:nowrap; }
+    .amt.positive{ color:#16a34a; }
+    .amt.negative{ color:#dc2626; }
+    .empty{ color:#6b7280; border:1px dashed var(--stroke); border-radius:10px; padding:12px; text-align:center; }
+
+    /* Footer */
+    footer{ border-top:1px solid var(--stroke); background:#fff; }
+    .footer-inner{ max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
+    .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
+
+    @media (max-width:900px){ .panel{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <!-- Auth (vendors only) -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+        if (!res.ok) throw new Error("Unauthorized");
+        const me = await res.json();
+        if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
+        localStorage.setItem("boopUser", JSON.stringify(me));
+        window.__vendorName = (me.first_name && me.last_name) ? `${me.first_name} ${me.last_name}` : (me.email || "Vendor");
+      } catch {
+        localStorage.clear(); location.href = "../login.html";
+      }
+    })();
+  </script>
+
+  <!-- Minimal header (logo + logout only) -->
+  <header class="minihead">
+    <div class="minihead-inner">
+      <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      <a href="#" id="logoutLink" class="logout">Log Out</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1 id="welcomeTitle">Welcome</h1>
+      <p class="hero-sub">Quick actions to move money and review activity.</p>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats">
+    <div class="stat">
+      <p class="label">Current Balance</p>
+      <p class="value" id="balanceValue">—</p>
+    </div>
+    <div class="stat">
+      <p class="label">Today’s Sales</p>
+      <p class="value" id="todaysSales">—</p>
+    </div>
+    <div class="stat">
+      <p class="label">Pending Payouts</p>
+      <p class="value" id="pendingPayouts">—</p>
+    </div>
+  </section>
+
+  <!-- Quick actions (three across) -->
+  <section class="tiles">
+    <!-- Keep the icons you liked -->
+    <a class="tile" href="transfer.html">
+      <svg class="icon" viewBox="0 0 24 24" fill="none">
+        <path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span>
+        <span class="title">Transfer to Bank</span><br/>
+        <span class="sub">Move funds from BOOP to your bank</span>
+      </span>
+    </a>
+
+    <a class="tile" href="transactions.html">
+      <svg class="icon" viewBox="0 0 24 24" fill="none">
+        <path d="M3 6h18M3 12h12M3 18h9" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span>
+        <span class="title">Transactions</span><br/>
+        <span class="sub">View recent payments & payouts</span>
+      </span>
+    </a>
+
+    <!-- Third tile as a simple “How-to / Help” that won’t 404 -->
+    <a class="tile" href="../help.html" target="_blank" rel="noopener">
+      <svg class="icon" viewBox="0 0 24 24" fill="none">
+        <path d="M12 18h.01M9.09 9a3 3 0 115.83 1c-.41.77-1.09 1.2-1.67 1.7-.58.5-1.25.93-1.25 1.8V14" stroke="#1f2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>
+        <span class="title">Help & Tips</span><br/>
+        <span class="sub">Transfer how-tos and FAQs</span>
+      </span>
+    </a>
+  </section>
+
+  <!-- Quick recent activity & payout glance -->
+  <section class="panel">
+    <div class="card">
+      <h2>Recent activity</h2>
+      <div id="activityList" class="list">
+        <div class="empty">Loading…</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Recent payouts</h2>
+      <div id="payoutList" class="list">
+        <div class="empty">Loading…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div>© 2025 BOOP</div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Welcome line
+    document.addEventListener("DOMContentLoaded", () => {
+      const name = window.__vendorName || "Vendor";
+      const title = document.getElementById("welcomeTitle");
+      if (title) title.textContent = `Welcome, ${name}`;
+    });
+
+    // Stats + activity
+    (async function init(){
+      const token = localStorage.getItem("boop_jwt");
+      const setText = (id,v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
+
+      // Balance
+      try {
+        let bal = null;
+        let r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
+        if (r.ok) { const j = await r.json(); bal = j?.balance_cents; }
+        if (bal != null) setText("balanceValue", "$" + (Number(bal)/100).toFixed(2));
+      } catch {}
+
+      // Placeholders for now
+      setText("todaysSales", "—");
+      setText("pendingPayouts", "—");
+
+      // Recent activity (pull last 10 from vendor report)
+      try{
+        const qs = new URLSearchParams({ start: new Date(Date.now()-30*864e5).toISOString().slice(0,10), end: new Date().toISOString().slice(0,10), limit:"50", offset:"0" }).toString();
+        const r = await fetch(`/api/vendor/transactions/report?${qs}`, { headers:{ Authorization:`Bearer ${token}` }});
+        const j = await r.json();
+        const rows = (j && j.transactions) || [];
+        renderActivity(rows.slice(0,10));
+      }catch{ renderActivity([]); }
+
+      // Recent payouts (from transfers)
+      try{
+        const r = await fetch(`/api/transfers/mine?limit=10&offset=0`, { headers:{ Authorization:`Bearer ${token}` }});
+        const j = await r.json();
+        const rows = Array.isArray(j?.transfers) ? j.transfers : (Array.isArray(j) ? j : []);
+        renderPayouts(rows.slice(0,10));
+      }catch{ renderPayouts([]); }
+
+      function renderActivity(rows){
+        const box = document.getElementById('activityList');
+        if (!rows.length){ box.innerHTML = `<div class="empty">No recent activity.</div>`; return; }
+        box.innerHTML = rows.map(tx=>{
+          const isCredit = (tx.type||'').toLowerCase()==='credit';
+          const who = isCredit ? (tx.sender_name || 'Customer') : (tx.recipient_name || 'Counterparty');
+          const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : '';
+          const initials = (who?.trim?.()[0] || 'U').toUpperCase();
+          const amt = (Number(tx.amount_cents||0)/100).toFixed(2);
+          return `
+            <div class="item">
+              <div class="left">
+                <div class="avatar">${initials}</div>
+                <div>
+                  <div class="who">${isCredit ? 'Received from' : 'Sent to'} ${who}</div>
+                  <div class="meta">${when}${tx.note ? ' • '+tx.note : ''}</div>
+                </div>
+              </div>
+              <div class="amt ${isCredit ? 'positive' : 'negative'}">${isCredit?'+':'−'}$${amt}</div>
+            </div>`;
+        }).join('');
+      }
+
+      function renderPayouts(rows){
+        const box = document.getElementById('payoutList');
+        if (!rows.length){ box.innerHTML = `<div class="empty">No recent payouts.</div>`; return; }
+        box.innerHTML = rows.map(t=>{
+          const when = t.created_at ? new Date(t.created_at).toLocaleString() : '';
+          const dest = (t.bank_name || 'Bank') + (t.last4 ? ` •••• ${t.last4}` : '');
+          const initials = (dest?.trim?.()[0] || 'B').toUpperCase();
+          const amt = (Number(t.amount_cents||0)/100).toFixed(2);
+          const status = (t.status||'submitted').toLowerCase();
+          return `
+            <div class="item">
+              <div class="left">
+                <div class="avatar">${initials}</div>
+                <div>
+                  <div class="who">Payout to ${dest}</div>
+                  <div class="meta">${when} • ${status}</div>
+                </div>
+              </div>
+              <div class="amt negative">−$${amt}</div>
+            </div>`;
+        }).join('');
+      }
+    })();
+
+    // Logout
+    document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await fetch("/api/logout", { method:"POST" }); } catch {}
+      localStorage.clear();
+      location.href = "../login.html";
+    });
+  </script>
+</body>
+</html>
