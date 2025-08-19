@@ -73,7 +73,6 @@
       </div>
       <div class="nav-right">
         <a href="index.html">Home</a>
-        <a href="passport-pay.html">Passport&nbsp;Pay</a>
         <a href="transfer.html">Transfer</a>
         <a href="transactions.html">Transactions</a>
         <a href="#" id="logoutLink">Log Out</a>
@@ -85,11 +84,11 @@
   <section class="hero">
     <div class="hero-inner">
       <h1 id="welcomeTitle">Welcome</h1>
-      <p class="hero-sub">Use Passport Pay to charge customers, transfer your BOOP balance to your bank, and review your recent transactions.</p>
+      <p class="hero-sub">See your BOOP balance, transfer funds to your bank, and review recent transactions.</p>
     </div>
   </section>
 
-  <!-- Quick stats (optional live fill; safe to keep even if API not wired yet) -->
+  <!-- Quick stats -->
   <section class="stats">
     <div class="stat">
       <p class="label">Current Balance</p>
@@ -105,18 +104,23 @@
     </div>
   </section>
 
-  <!-- Main tiles -->
+  <!-- Main tiles (3 across) -->
   <section class="tiles">
-    <a class="tile" href="passport-pay.html">
-      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
+    <!-- Replaces Passport Pay -->
+    <a class="tile" href="index.html">
+      <svg class="icon" viewBox="0 0 24 24" fill="none">
+        <path d="M3 12l2-2m0 0l7-7 7 7m-9 2v6m-4 4h10m-6-10h6" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+      </svg>
       <span>
-        <span class="title">Passport Pay</span><br/>
-        <span class="sub">Charge a BOOP customer by passport URL</span>
+        <span class="title">Overview</span><br/>
+        <span class="sub">See your balance and stats</span>
       </span>
     </a>
 
     <a class="tile" href="transfer.html">
-      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="icon" viewBox="0 0 24 24" fill="none">
+        <path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+      </svg>
       <span>
         <span class="title">Transfer to Bank</span><br/>
         <span class="sub">Move funds from BOOP to your bank</span>
@@ -124,7 +128,9 @@
     </a>
 
     <a class="tile" href="transactions.html">
-      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h12M3 18h9" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="icon" viewBox="0 0 24 24" fill="none">
+        <path d="M3 6h18M3 12h12M3 18h9" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+      </svg>
       <span>
         <span class="title">Transactions</span><br/>
         <span class="sub">View your recent activity</span>
@@ -166,7 +172,7 @@
         if (bal != null) setText("balanceValue", "$" + (Number(bal)/100).toFixed(2));
       } catch {}
 
-      // Today’s sales & pending payouts are placeholders until wired:
+      // Placeholders until wired:
       setText("todaysSales", "—");
       setText("pendingPayouts", "—");
     })();
