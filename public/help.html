@@ -5,7 +5,6 @@
   <title>Help & FAQs – BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Help and FAQs for BOOP cardholders." />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -19,19 +18,23 @@
       --ring:rgba(47,128,237,0.35);
       --border:rgba(255,255,255,0.08);
       --white:#fff;
-      --nav:#102a43; /* added */
+      --nav:#102a43;
+      --stroke:#e5e7eb;
     }
+
     *{box-sizing:border-box}
-    html,body{height:100%}
+    html, body { height:100% }
     body{
       margin:0;
+      display:flex;             /* sticky footer setup */
+      flex-direction:column;    /* sticky footer setup */
+      min-height:100vh;         /* sticky footer setup */
       font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       color:#eef2ff;
       background:
         radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
         radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
         linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
-      display:flex; flex-direction:column; /* so footer can sit at bottom */
     }
 
     /* NAV */
@@ -64,19 +67,19 @@
       .nav-overlay.active{ display:block; }
     }
 
-    /* ——— Hero ——— */
+    /* Hero */
     .hero{
-      max-width:1100px; margin:42px auto 24px; padding:0 18px;
-      display:grid; grid-template-columns:1fr;
-      gap:18px;
+      max-width:1100px; margin:32px auto 18px; padding:0 18px;
+      text-align:left;   /* ← left align */
     }
     .hero h1{
-      margin:10px 0 8px 0; font-size:clamp(26px,4.2vw,40px); line-height:1.15; font-weight:700;
+      margin:10px 0 6px; font-size:clamp(26px,4.2vw,40px); line-height:1.15; font-weight:700; text-align:left;
     }
-    .hero p.lead{margin:0; color:var(--muted); font-size:clamp(15px,2.2vw,18px);}
+    .hero p.lead{ margin:0; color:var(--muted); font-size:clamp(15px,2.2vw,18px); text-align:left; }
 
-    /* ——— Content ——— */
-    .wrap{max-width:1100px; margin:18px auto 40px; padding:0 18px; flex:1;}
+    /* Content */
+    main{ flex:1 }          /* sticky footer: main takes remaining height */
+    .wrap{max-width:1100px; margin:18px auto 32px; padding:0 18px;}
     .card{
       background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
       border:1px solid var(--border); border-radius:16px; padding:18px;
@@ -85,7 +88,7 @@
     .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
     @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
 
-    /* ——— FAQ accordion ——— */
+    /* FAQ accordion */
     .faq{border:1px solid var(--border); border-radius:12px; overflow:hidden; background:rgba(255,255,255,.02);}
     .faq + .faq{margin-top:10px}
     .faq summary{
@@ -93,6 +96,7 @@
       font-weight:600; color:#e5e7eb; display:flex; align-items:center; justify-content:space-between;
     }
     .faq summary::-webkit-details-marker{display:none}
+    .faq summary span.icon{opacity:.7}
     .faq[open] summary{background:rgba(255,255,255,.03)}
     .faq .content{padding:0 16px 16px 16px; color:#cbd5e1; line-height:1.65; font-size:.98rem}
 
@@ -104,18 +108,19 @@
     .row strong{display:block; margin-bottom:4px}
     .row small{color:#9ca3af}
 
-    footer{
-      border-top:1px solid var(--border);
-      color:#9ca3af; text-align:center; padding:18px;
-      margin-top:28px; font-size:.9rem;
+    /* Footer */
+    footer{ border-top:1px solid var(--stroke); background:#0f172a; color:#9ca3af; }
+    .footer-inner{
+      max-width:1100px; margin:0 auto; padding:16px 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:.9rem;
     }
-
-    .spacer-bottom{height:40px}
+    .footer-links a{ color:#9ca3af; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
   </style>
 </head>
 <body>
 
-  <!-- Top Nav -->
+  <!-- NAV -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -124,7 +129,6 @@
         </a>
       </div>
 
-      <!-- Desktop links -->
       <div class="nav-right" aria-label="Primary">
         <a href="cardholder.html">Home</a>
         <a href="send-request.html" id="sendRequestLink">Send / Request</a>
@@ -135,32 +139,29 @@
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
 
-      <!-- Hamburger for mobile -->
       <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
         <span></span><span></span><span></span>
       </button>
     </div>
 
-    <!-- Mobile slide-out panel + overlay -->
     <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
     <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
       <a href="cardholder.html">Home</a>
-      <a href="send-request.html">Send / Request</a>
-      <a href="transfer.html">Transfer</a>
-      <a href="passport.html">Passport</a>
+      <a href="send-request.html" id="sendRequestLinkMobile">Send / Request</a>
+      <a href="wallet.html">Wallet</a>
       <a href="activity.html">Activity</a>
       <a href="help.html" aria-current="page">Help</a>
       <a href="#" id="logoutBtnMobile">Log Out</a>
     </div>
   </nav>
 
+  <!-- Hero -->
   <header class="hero" role="banner">
-    <div>
-      <h1>Help & FAQs</h1>
-      <p class="lead">Quick answers and simple steps to keep you moving.</p>
-    </div>
+    <h1>Help & FAQs</h1>
+    <p class="lead">Quick answers and simple steps to keep you moving.</p>
   </header>
 
+  <!-- Main -->
   <main class="wrap" role="main">
     <div class="grid">
       <!-- FAQs -->
@@ -236,29 +237,22 @@
         </form>
       </section>
     </div>
-
-    <div class="spacer-bottom"></div>
   </main>
 
+  <!-- Footer (sticky) -->
   <footer>
-    © <span id="year"></span> BOOP. All rights reserved.
+    <div class="footer-inner">
+      <div>© <span id="year"></span> BOOP</div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      </div>
+    </div>
   </footer>
 
   <script>
     // Footer year
     document.getElementById('year').textContent = new Date().getFullYear();
-
-    // Mobile menu
-    (function(){
-      const hamburger = document.getElementById('hamburger');
-      const panel = document.getElementById('mobileMenu');
-      const overlay = document.getElementById('navOverlay');
-      function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
-      function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
-      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
-      overlay?.addEventListener('click', closeMenu);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-    })();
 
     // Prefill email from localStorage if present
     (function(){
@@ -274,6 +268,7 @@
       const email = document.getElementById('helpEmail').value.trim();
       const msg   = document.getElementById('helpMsg').value.trim();
       const status = document.getElementById('helpStatus');
+
       if (!email || !msg){
         status.textContent = 'Please enter your email and a short message.';
         status.style.color = '#fca5a5';
@@ -283,24 +278,36 @@
         status.textContent = 'Thanks! Your message has been sent.';
         status.style.color = '#a5b4fc';
         document.getElementById('helpMsg').value = '';
-      }catch(err){
+      }catch{
         status.textContent = 'Something went wrong. Please try again.';
         status.style.color = '#fca5a5';
       }
     });
 
-    // Logout
-    function wireLogout(id){
-      const el = document.getElementById(id);
-      el?.addEventListener('click', async (e)=>{
-        e.preventDefault();
-        try{ await fetch('/api/logout', { method:'POST' }); }catch{}
-        localStorage.clear();
-        window.location.href = 'cardholder-login.html';
-      });
-    }
-    wireLogout('logoutBtn');
-    wireLogout('logoutBtnMobile');
+    // Mobile menu + logout
+    (function(){
+      const hamburger = document.getElementById('hamburger');
+      const panel = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('navOverlay');
+      function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+      function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
+      overlay?.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+      function attachLogout(id){
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('click', async (e)=>{
+          e.preventDefault();
+          try{ await fetch('/api/logout', { method:'POST' }); }catch{}
+          localStorage.clear();
+          window.location.href = 'cardholder-login.html';
+        });
+      }
+      attachLogout('logoutBtn');
+      attachLogout('logoutBtnMobile');
+    })();
   </script>
 </body>
 </html>
