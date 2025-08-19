@@ -2,526 +2,506 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Request Transfer – BOOP</title>
+  <title>Transfer to Bank – Vendor | BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/styles.css" />
   <style>
-    :root{
-      --ink:#102a43; --muted:#6b7c93; --blue:#2f80ed; --blue-dark:#1a5fcc;
-      --bg:#ffffff; --panel:#ffffff; --stroke:#e5e7eb; --soft:#f8fafc;
-      --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444;
+    :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
+
+    body { font-family:'Poppins',sans-serif; background:#f4f7fa; margin:0; color:var(--ink); }
+
+    /* Top Nav */
+    nav { background:#0b1220; color:#fff; }
+    .nav-container { max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img { height:32px; display:block; }
+    .nav-right { display:flex; gap:16px; align-items:center; }
+    .nav-right a { color:#fff; text-decoration:none; font-size:.95rem; }
+    .nav-right a[aria-current="page"] { text-decoration:underline; }
+
+    /* Shells */
+    .shell { max-width:1050px; margin: 36px auto 24px; background:#fff; padding: 28px 32px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,.08); }
+    h2 { margin:0 0 10px; }
+    h3 { margin:18px 0 8px; font-size:1.06rem; }
+
+    /* Layout */
+    .grid { display:grid; grid-template-columns: 1.1fr .9fr; gap:18px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    .card { border:1px solid var(--stroke); background:#fff; border-radius:12px; padding:16px; }
+
+    /* Form controls */
+    .row { display:flex; gap:12px; }
+    .row > * { flex:1; }
+    @media (max-width: 640px) { .row { flex-direction:column; } }
+
+    label { display:block; font-size:.9rem; color:var(--muted); margin: 6px 0 6px; }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      background:#fff;
     }
-    *{box-sizing:border-box}
-    body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
+    textarea { resize: vertical; min-height: 84px; }
+    button { background:#2f80ed; color:#fff; font-weight:600; border:none; cursor:pointer; transition: background .15s; }
+    button:hover { background:#1c6fd8; }
+    .btn-muted { background:#6b7280; }
+    .btn-muted:hover { background:#4b5563; }
+    .btn-row { display:flex; gap:10px; align-items:center; }
+    @media (max-width:640px){ .btn-row{ flex-direction:column; align-items:stretch; } .btn-row > *{ width:100%; } }
 
-    /* NAV (keeps your cardholder dark nav) */
-    nav{ background:#102a43; color:#fff; position:sticky; top:0; z-index:50; }
-    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
-    .nav-left img{ height:36px; display:block; }
-    .nav-right{ display:flex; align-items:center; gap:18px; }
-    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95;}
-    .nav-right a:hover{ opacity:1; }
-    .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
-    .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
-    .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
-    .hamburger.active span:nth-child(2){ opacity:0; }
-    .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
-    .nav-panel{ display:none; }
-    @media (max-width: 768px){
-      .nav-right{ display:none; }
-      .hamburger{ display:flex; }
-      .nav-panel{
-        display:block; position:fixed; top:0; right:-100%; height:100vh; width:260px;
-        background:#ffffff; color:#111827; box-shadow:-4px 0 14px rgba(0,0,0,.18);
-        transition:right .3s ease; z-index:60; padding:80px 20px 20px;
-      }
-      .nav-panel.active{ right:0; }
-      .nav-panel a{ display:block; color:#111827; text-decoration:none; padding:12px 8px; border-radius:8px; margin-bottom:6px; font-weight:600; }
-      .nav-panel a:hover{ background:#f3f4f6; }
-      .nav-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55; }
-      .nav-overlay.active{ display:block; }
-    }
+    .muted { color:var(--muted); font-size:.92rem; }
+    .balance { font-size:1.25rem; font-weight:600; }
 
-    /* HEADER */
-    .header{
-      max-width:1100px; margin:18px auto 0; padding:0 20px;
-    }
-    .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
-    .sub{ color:var(--muted); margin:0; }
+    /* Bank list */
+    .bank-list { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:12px; }
+    .bank { border:1px solid var(--stroke); border-radius:12px; padding:12px; }
+    .bank h4 { margin:0 0 6px; font-size:1rem; }
+    .bank .muted { font-size:.85rem; }
 
-    /* MAIN */
-    .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
-    .grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:16px; }
-    @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
+    /* Payouts table - compact, PayPal-ish */
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse: collapse; margin-top: 8px; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 10px 12px; border: 1px solid #e6ebf1; text-align: left; font-size: .94rem; white-space: nowrap; }
+    th { background:#f0f4f8; color:#1a2b4a; font-weight:500; }
+    tr:hover { background:#f5f8fb; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid var(--stroke); border-radius:999px; font-size:.8rem; background:#fff; }
 
-    .card{
-      background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
-      box-shadow:0 8px 24px rgba(0,0,0,.06);
-    }
-    .card h2{ margin:0 0 10px; font-size:1.12rem; }
-    .muted{ color:var(--muted); }
+    /* Memo button */
+    .mini-btn { padding:6px 10px; font-size:.86rem; border-radius:8px; background:#eef2ff; color:#1f2937; border:1px solid #e5e7eb; }
+    .mini-btn:hover { background:#e0e7ff; }
 
-    label{ display:block; color:var(--muted); font-size:.92rem; margin:10px 0 6px; }
-    input, select{
-      width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke);
-      background:#fff; color:#111827; font-size:1rem;
-    }
-    input:disabled, select:disabled{ opacity:.7; }
+    /* Pagination */
+    .pagination { display:flex; justify-content:center; align-items:center; gap:10px; margin: 14px 0 2px; }
+    .pagination button { width:auto; min-width:80px; padding:7px 16px; background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.95rem; font-weight:500; }
+    .pagination button:disabled { background:#e5e7eb; color:#bbb; cursor:not-allowed; }
+    #paginationInfo { font-size:.96rem; color:#4b5563; font-weight:500; padding:0 6px; }
 
-    .row{ display:flex; gap:12px; align-items:center; }
-    .row > div{ flex:1; }
+    .status { margin-top:8px; font-weight:500; }
+    .status.ok { color:#16a34a; }
+    .status.err { color:#e74c3c; }
 
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:700;
-      border:1px solid transparent; cursor:pointer;
-    }
-    .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
-    .btn.primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
-    .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
-    .btn.ghost:hover{ border-color:#cbd5e1; }
+    /* Modal (memo) */
+    .modal { display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,.4); z-index:1000; }
+    .modal-content { background:#fff; margin:10% auto; padding:20px; border:1px solid #888; width:90%; max-width:520px; border-radius:10px; position:relative; }
+    .close { position:absolute; top:10px; right:15px; font-size:28px; font-weight:bold; cursor:pointer; }
 
-    .summary{
-      border:1px dashed var(--stroke); border-radius:12px; padding:12px; background:var(--soft); margin-top:10px;
-    }
-    .summary .line{ display:flex; justify-content:space-between; margin:6px 0; }
-
-    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; }
-    .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; }
-    .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; }
-
-    .help{ font-size:.9rem; color:var(--muted); margin-top:8px; }
-
-    .row {
-  display: flex;
-  gap: 12px;
-  align-items: center; /* change from flex-end to center */
-}
-
-#addBankBtn {
-  height: 44px; /* match the select/input height */
-  padding: 0 12px; /* make sure padding is balanced */
-}
-
-    /* Stick a little breathing room at bottom */
-    .page-bottom-spacer{ height:40px; }
+    /* Footer */
+    footer { border-top:1px solid var(--stroke); background:#fff; }
+    .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
+    .footer-links a { color:#6b7280; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover { text-decoration:underline; }
   </style>
 </head>
 <body>
+  <!-- Vendor auth guard -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        let me = JSON.parse(localStorage.getItem("boopUser") || "null");
+        if (!me) {
+          const r = await fetch("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
+          if (!r.ok) throw new Error("Unauthorized");
+          me = await r.json(); localStorage.setItem("boopUser", JSON.stringify(me));
+        }
+        if (me.role !== "vendor") throw new Error("Not a vendor");
+      } catch (e) {
+        localStorage.clear(); location.href = "vendor-login.html";
+      }
+    })();
+  </script>
 
   <!-- Top Nav -->
-<nav>
-  <div class="nav-container">
-    <div class="nav-left">
-      <a href="cardholder.html" aria-label="BOOP home">
-        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
-      </a>
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Home</a>
+        <a href="transfer.html" aria-current="page">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="#" id="logoutLink">Log Out</a>
+      </div>
     </div>
+  </nav>
 
-    <!-- Desktop links -->
-    <div class="nav-right" aria-label="Primary">
-      <a href="cardholder.html">Home</a>
-      <a href="send-request.html" id="sendRequestLink">Send / Request</a>
-      <a href="transfer.html">Transfer</a>
-      <a href="passport.html">Passport</a>
-      <a href="activity.html">Activity</a>
-      <a href="help.html">Help</a>
-      <a href="#" id="logoutBtn">Log Out</a>
-    </div>
+  <div class="shell">
+    <h2>Transfer to Bank</h2>
+    <p class="muted" id="balanceLine">Balance: <span class="balance" id="balanceValue">—</span></p>
 
-    <!-- Mobile toggle -->
-    <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
+    <div class="grid">
+      <!-- Left: Bank accounts + Add -->
+      <div class="card">
+        <h3>Bank Accounts</h3>
+        <div id="bankList" class="bank-list"></div>
 
-  <!-- Mobile panel + overlay -->
-  <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
-  <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
-    <a href="cardholder.html">Home</a>
-    <a href="send-request.html">Send / Request</a>
-    <a href="transfer.html">Transfer</a>
-    <a href="passport.html">Passport</a>
-    <a href="activity.html">Activity</a>
-    <a href="help.html">Help</a>
-    <a href="#" id="logoutBtnMobile">Log Out</a>
-  </div>
-</nav>
-
-<!-- HEADER -->
-<header class="header">
-  <h1>Request a bank transfer</h1>
-  <p class="sub">Submit a request to move money from BOOP to your bank. Our Accounts team will review and process it.</p>
-</header>
-
-<!-- MAIN -->
-<main class="container">
-  <div id="flash" class="alert" style="display:none;"></div>
-
-  <div class="grid">
-    <!-- Left: Request form -->
-    <section class="card">
-      <h2>Create request</h2>
-
-      <div>
-  <label for="destination">Destination account</label>
-  <select id="destination"></select>
-  <div class="help">Saved accounts are masked for your security.</div>
-
-  <!-- Button now sits right under the dropdown -->
-  <button id="addBankBtn" class="btn ghost" type="button" style="margin-top:8px;">
-    Add bank
-  </button>
-</div>
-
-      <label for="amount">Amount (BMD)</label>
-      <input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
-
-      <label for="memo">Memo (optional)</label>
-      <input id="memo" type="text" maxlength="80" placeholder="e.g., Transfer to checking" />
-
-      <div class="summary" id="previewBox" style="display:none;">
-        <div class="line"><span>Amount</span><strong id="pAmount">—</strong></div>
-        <div class="line"><span>Fees</span><strong id="pFee">$0.00</strong></div>
-        <div class="line"><span>Net to bank</span><strong id="pNet">—</strong></div>
-        <div class="line"><span>Arrival estimate</span><strong id="pArrival">1–2 business days</strong></div>
+        <h3 style="margin-top:16px;">Add a Bank Account</h3>
+        <div class="row">
+          <div>
+            <label for="baNickname">Nickname</label>
+            <input id="baNickname" placeholder="e.g. HSBC Checking" />
+          </div>
+          <div>
+            <label for="baHolder">Account Holder</label>
+            <input id="baHolder" placeholder="e.g. Ocean Market Ltd." />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="baBankName">Bank Name</label>
+            <input id="baBankName" placeholder="e.g. HSBC Bermuda" />
+          </div>
+          <div>
+            <label for="baAcctLast4">Account Last 4</label>
+            <input id="baAcctLast4" maxlength="4" inputmode="numeric" placeholder="1234" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="addBankBtn">Add Bank</button>
+          <span class="muted" style="flex:1;">Bermuda banks: no routing number required.</span>
+        </div>
+        <div id="bankStatus" class="status"></div>
       </div>
 
-      <div class="row" style="margin-top:12px;">
-        <button id="reviewBtn" class="btn primary" disabled>Review request</button>
-        <div id="formMsg" class="muted"></div>
+      <!-- Right: New payout request -->
+      <div class="card">
+        <h3>Request Payout</h3>
+        <label for="destBank">Destination Bank</label>
+        <select id="destBank"></select>
+
+        <div class="row">
+          <div>
+            <label for="amount">Amount</label>
+            <input id="amount" type="number" step="0.01" min="0" placeholder="e.g. 120.00" />
+          </div>
+          <div>
+            <label for="memo">Memo (optional)</label>
+            <input id="memo" placeholder="e.g. Friday settlement" />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="requestBtn">Submit Request</button>
+          <button class="btn-muted" id="clearBtn" type="button">Clear</button>
+        </div>
+        <div id="requestStatus" class="status"></div>
       </div>
-    </section>
+    </div>
+  </div>
 
-    <!-- Right: Balance + latest -->
-    <section class="card">
-      <h2>Your balance</h2>
-      <div class="summary">
-        <div class="line"><span>Available</span><strong id="balanceTxt">—</strong></div>
+  <div class="shell" style="margin-top:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0;">Recent Payouts</h3>
+      <button id="exportBtn" class="btn-muted" style="width:auto;">Export CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table id="reqTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>ID</th>
+            <th>Amount</th>
+            <th>Route</th>
+            <th>Status</th>
+            <th>Memo</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <button id="prevPage">Previous</button>
+      <span id="paginationInfo">Page 1 of 1</span>
+      <button id="nextPage">Next</button>
+    </div>
+  </div>
+
+  <!-- Memo Modal -->
+  <div id="noteModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h3 style="margin:0 0 10px;">Payout Memo</h3>
+      <p id="noteContent" style="white-space: pre-wrap; color: #333; margin:0;"></p>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <div>© 2025 BOOP</div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
       </div>
-
-      <h2 style="margin-top:16px;">Latest request</h2>
-<p class="help" style="margin-top:-4px; margin-bottom:8px;">
-  Pending amounts are not deducted from your available balance until the transfer is completed.
-</p>
-<div id="latestBox" class="muted">No requests yet.</div>
-    </section>
-  </div>
-</main>
-
-<div class="page-bottom-spacer"></div>
-
-<!-- Review Modal -->
-<div id="reviewModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
-  <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:480px;width:92%;">
-    <h3 style="margin:0 0 10px;">Confirm request</h3>
-    <div class="summary" style="background:#f8fafc;border-color:#e5e7eb;">
-      <div class="line"><span>To</span><strong id="mTo">—</strong></div>
-      <div class="line"><span>Amount</span><strong id="mAmount">—</strong></div>
-      <div class="line"><span>Fees</span><strong id="mFee">$0.00</strong></div>
-      <div class="line"><span>Net</span><strong id="mNet">—</strong></div>
-      <div class="line"><span>Arrival</span><strong id="mArrival">1–2 business days</strong></div>
-      <div class="line"><span>Memo</span><strong id="mMemo">—</strong></div>
     </div>
-    <div class="row" style="margin-top:12px;">
-      <button id="confirmBtn" class="btn primary">Submit request</button>
-      <button id="cancelBtn" class="btn ghost">Cancel</button>
-      <div id="modalMsg" class="muted"></div>
-    </div>
-  </div>
-</div>
+  </footer>
 
-<!-- Add Bank Modal -->
-<div id="addBankModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
-  <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:520px;width:92%;">
-    <h3 style="margin:0 0 10px;">Add bank account</h3>
-
-    <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Bank</label>
-    <select id="abBank" style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
-      <option value="Butterfield">Butterfield (Bank of N.T. Butterfield & Son)</option>
-      <option value="HSBC Bermuda">HSBC Bermuda</option>
-      <option value="Clarien Bank">Clarien Bank</option>
-    </select>
-
-    <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account holder name</label>
-    <input id="abHolder" type="text" placeholder="Full name on account"
-           style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
-
-    <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account number</label>
-    <input id="abAccount" type="text" inputmode="numeric" placeholder="e.g. 0123456789"
-           style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
-
-    <div id="abMsg" class="muted" style="margin-top:8px;"></div>
-
-    <div class="row" style="margin-top:12px;">
-      <button id="abSave" class="btn primary">Save bank</button>
-      <button id="abCancel" class="btn ghost">Cancel</button>
-    </div>
-  </div>
-</div>
-
- <!-- Permissions: cardholder / assistance -->
-<script>
-  (async () => {
-    try {
-      const token = localStorage.getItem("boop_jwt");
-      if (!token) throw new Error("No token");
-      const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-      const me = await res.json();
-      const role = (me.role||"").toLowerCase(), type = (me.type||"").toLowerCase();
-      const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
-      if (!ok) throw new Error("Not a cardholder");
-      localStorage.setItem("boopUser", JSON.stringify(me));
-    } catch {
-      localStorage.clear();
-      window.location.href = "cardholder-login.html";
-    }
-  })();
-</script>
-
-<!-- Page logic -->
-<script>
-  (function(){
-    // Mobile nav
-    const hamburger = document.getElementById('hamburger');
-    const panel = document.getElementById('mobileMenu');
-    const overlay = document.getElementById('navOverlay');
-    function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
-    function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
-    hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
-    overlay?.addEventListener('click', closeMenu);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-
-    // Logout both places
-    function attachLogout(el){
-      if (!el) return;
-      el.addEventListener('click', async (e)=>{ e.preventDefault(); try{ await fetch('/api/logout',{method:'POST'}) }catch{} localStorage.clear(); window.location.href='cardholder-login.html'; });
-    }
-    attachLogout(document.getElementById('logoutBtn'));
-    attachLogout(document.getElementById('logoutBtnMobile'));
-
-    // Elements
+  <script type="module">
     const token = localStorage.getItem("boop_jwt");
-    const flash = document.getElementById('flash');
+    const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
+    if (!me || me.role !== "vendor") { location.href = "../login.html"; }
 
-    const destination = document.getElementById('destination');
-    const addBankBtn = document.getElementById('addBankBtn');
-    const amountEl = document.getElementById('amount');
-    const memoEl = document.getElementById('memo');
+    const els = {
+      balance: document.getElementById("balanceValue"),
+      bankList: document.getElementById("bankList"),
+      bankStatus: document.getElementById("bankStatus"),
+      destBank: document.getElementById("destBank"),
+      amount: document.getElementById("amount"),
+      memo: document.getElementById("memo"),
+      requestBtn: document.getElementById("requestBtn"),
+      requestStatus: document.getElementById("requestStatus"),
+      clearBtn: document.getElementById("clearBtn"),
+      exportBtn: document.getElementById("exportBtn"),
+      prevPage: document.getElementById("prevPage"),
+      nextPage: document.getElementById("nextPage"),
+      paginationInfo: document.getElementById("paginationInfo"),
+      reqTableBody: document.querySelector("#reqTable tbody"),
+      // add bank fields
+      baNickname: document.getElementById("baNickname"),
+      baHolder: document.getElementById("baHolder"),
+      baBankName: document.getElementById("baBankName"),
+      baAcctLast4: document.getElementById("baAcctLast4"),
+      // modal
+      noteModal: document.getElementById("noteModal"),
+      noteContent: document.getElementById("noteContent"),
+    };
+    const modalClose = document.querySelector(".modal .close");
 
-    const previewBox = document.getElementById('previewBox');
-    const pAmount = document.getElementById('pAmount');
-    const pFee = document.getElementById('pFee');
-    const pNet = document.getElementById('pNet');
-    const pArrival = document.getElementById('pArrival');
+    // Pagination state for requests
+    let page = 1, limit = 10, totalCount = 0, requests = [];
 
-    const reviewBtn = document.getElementById('reviewBtn');
-    const formMsg = document.getElementById('formMsg');
-
-    const reviewModal = document.getElementById('reviewModal');
-    const mTo = document.getElementById('mTo');
-    const mAmount = document.getElementById('mAmount');
-    const mFee = document.getElementById('mFee');
-    const mNet = document.getElementById('mNet');
-    const mArrival = document.getElementById('mArrival');
-    const mMemo = document.getElementById('mMemo');
-    const confirmBtn = document.getElementById('confirmBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const modalMsg = document.getElementById('modalMsg');
-
-    const balanceTxt = document.getElementById('balanceTxt');
-    const latestBox = document.getElementById('latestBox');
-
-    let balanceCents = 0;
-    let banks = [];
-    let selectedBank = null;
-
-    function dollars(c){ return `$${(Number(c||0)/100).toFixed(2)}`; }
-    function showFlash(msg, ok=true){
-      flash.textContent = msg;
-      flash.className = "alert " + (ok ? "ok" : "bad");
-      flash.style.display = "block";
-      setTimeout(()=> flash.style.display = "none", 4000);
+    function setStatus(el, msg, ok=false) {
+      if (!el) return;
+      el.textContent = msg || "";
+      el.classList.remove("ok","err");
+      if (!msg) return;
+      el.classList.add(ok ? "ok" : "err");
     }
-    function randomKey(){ return 'ikey_' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+    function money(cents) { return "$" + (Number(cents||0)/100).toFixed(2); }
 
-    async function loadBalance(){
-      try{
-        const r = await fetch('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token}` }});
+    async function loadBalance() {
+      try {
+        let r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
+        if (!r.ok) r = await fetch(`/api/wallets/user/${me.id}`, { headers:{ Authorization:`Bearer ${token}` }});
         const j = await r.json();
-        balanceCents = Number(j?.balance_cents||0);
-        balanceTxt.textContent = dollars(balanceCents);
-      }catch{}
-    }
-
-    async function loadBanks(){
-      destination.innerHTML = `<option disabled selected>Loading…</option>`;
-      try{
-        const r = await fetch('/api/bank-accounts/mine', { headers:{ Authorization:`Bearer ${token}` }});
-        const j = await r.json();
-        banks = Array.isArray(j) ? j : [];
-        if (!banks.length){
-          destination.innerHTML = `<option disabled selected>No bank accounts yet</option>`;
-          return;
-        }
-        destination.innerHTML = banks.map(b => `<option value="${b.id}">${b.bank_name} •••• ${b.last4}</option>`).join('');
-        selectedBank = banks[0]?.id || null;
-      }catch{
-        destination.innerHTML = `<option disabled selected>Failed to load</option>`;
+        els.balance.textContent = money(j.balance_cents || 0);
+      } catch (e) {
+        els.balance.textContent = "—";
       }
     }
 
-    destination.addEventListener('change', (e)=> selectedBank = e.target.value);
+    async function loadBanks() {
+      try {
+        const r = await fetch("/api/bank-accounts/mine", { headers:{ Authorization:`Bearer ${token}` }});
+        const j = await r.json();
+        const list = Array.isArray(j) ? j : (j.bank_accounts || []);
+        els.bankList.innerHTML = list.length ? "" : `<div class="muted">No bank accounts yet. Add one above.</div>`;
+        els.destBank.innerHTML = "";
 
-    // Add Bank modal (no routing needed in Bermuda)
-const addBankModal = document.getElementById('addBankModal');
-const abBank = document.getElementById('abBank');
-const abHolder = document.getElementById('abHolder');
-const abAccount = document.getElementById('abAccount');
-const abMsg = document.getElementById('abMsg');
-const abSave = document.getElementById('abSave');
-const abCancel = document.getElementById('abCancel');
+        list.forEach(b => {
+          // card
+          const div = document.createElement("div");
+          div.className = "bank";
+          div.innerHTML = `
+            <h4>${b.nickname || b.bank_name || "Bank"}</h4>
+            <div class="muted">Acct •••• ${b.account_last4 || "—"}</div>
+            <div class="muted">${b.holder_name || ""}</div>
+          `;
+          els.bankList.appendChild(div);
 
-function openAddBank(){
-  abMsg.textContent = '';
-  abHolder.value = '';
-  abAccount.value = '';
-  addBankModal.style.display = 'flex';
-}
-function closeAddBank(){
-  addBankModal.style.display = 'none';
-}
+          // select option
+          const opt = document.createElement("option");
+          opt.value = b.id;
+          opt.textContent = `${b.nickname || b.bank_name || "Bank"} ••${b.account_last4 || "????"}`;
+          els.destBank.appendChild(opt);
+        });
 
-addBankBtn.addEventListener('click', openAddBank);
-abCancel.addEventListener('click', closeAddBank);
-addBankModal.addEventListener('click', (e)=>{ if (e.target === addBankModal) closeAddBank(); });
+        const hasBank = list.length > 0;
+        els.destBank.disabled = !hasBank;
+        els.amount.disabled = !hasBank;
+        els.memo.disabled = !hasBank;
+        els.requestBtn.disabled = !hasBank;
+      } catch (e) {
+        els.bankList.innerHTML = `<div class="muted">Failed to load bank accounts.</div>`;
+      }
+    }
 
-abSave.addEventListener('click', async ()=>{
-  abMsg.textContent = '';
-  const holder = abHolder.value.trim();
-  const bank = abBank.value;     // Butterfield, HSBC Bermuda, Clarien Bank
-  const account = abAccount.value.trim();
-
-  if (!holder || !bank || !account){
-    abMsg.textContent = 'Please fill in all fields.';
-    return;
-  }
-
-  try{
-    const res = await fetch('/api/bank-accounts', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-      body: JSON.stringify({
-        holder_name: holder,
-        bank_name: bank,
-        account_number: account
-        // routing_number: not used in Bermuda
-      })
-    });
-    const saved = await res.json();
-    if (!res.ok) throw new Error(saved.message || 'Failed to add bank.');
-    showFlash('Bank account saved.', true);
-    closeAddBank();
-    await loadBanks();
-  }catch(e){
-    abMsg.textContent = e.message || 'Could not save bank.';
-  }
-});
-
-    // Preview calc (flat fee = 0 for now; tweak later)
-    function updatePreview(){
-      const amt = Number(amountEl.value);
-      if (!selectedBank || !amt || amt <= 0){ previewBox.style.display='none'; reviewBtn.disabled = true; return; }
-      const fee = 0; // placeholder fee
-      if (amt*100 > balanceCents){
-        formMsg.textContent = "Amount exceeds available balance.";
-        reviewBtn.disabled = true;
-        previewBox.style.display = 'none';
+    async function addBank() {
+      setStatus(els.bankStatus, "");
+      const payload = {
+        nickname: (els.baNickname.value || "").trim(),
+        holder_name: (els.baHolder.value || "").trim(),
+        bank_name: (els.baBankName.value || "").trim(),
+        account_last4: (els.baAcctLast4.value || "").trim(),
+      };
+      if (!payload.nickname || !payload.holder_name || !payload.bank_name || payload.account_last4.length !== 4) {
+        setStatus(els.bankStatus, "Please fill nickname, holder, bank name, and a 4-digit account last4.", false);
         return;
       }
-      formMsg.textContent = "";
-      pAmount.textContent = dollars(amt*100);
-      pFee.textContent = dollars(fee);
-      pNet.textContent = dollars(amt*100 - fee);
-      pArrival.textContent = "1–2 business days";
-      previewBox.style.display = 'block';
-      reviewBtn.disabled = false;
-    }
-    amountEl.addEventListener('input', updatePreview);
-
-    // Review modal
-    reviewBtn.addEventListener('click', ()=>{
-      const bank = banks.find(b => b.id === selectedBank);
-      if (!bank) return;
-      mTo.textContent = `${bank.bank_name} •••• ${bank.last4}`;
-      mAmount.textContent = pAmount.textContent;
-      mFee.textContent = pFee.textContent;
-      mNet.textContent = pNet.textContent;
-      mArrival.textContent = pArrival.textContent;
-      mMemo.textContent = memoEl.value || "—";
-      reviewModal.style.display = 'flex';
-    });
-    cancelBtn.addEventListener('click', ()=> reviewModal.style.display = 'none');
-
-    // Submit request → backend
-    confirmBtn.addEventListener('click', async ()=>{
-      confirmBtn.disabled = true; modalMsg.textContent = "Submitting…";
-      const amtCents = Math.round(Number(amountEl.value) * 100);
-      try{
-        const res = await fetch('/api/transfers', {
-          method:'POST',
-          headers:{
-            'Content-Type':'application/json',
-            'X-Idempotency-Key': randomKey(),
-            Authorization:`Bearer ${token}`
-          },
-          body: JSON.stringify({
-            bank_account_id: selectedBank,
-            amount_cents: amtCents,
-            memo: memoEl.value || ""
-          })
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.message || 'Request failed.');
-        reviewModal.style.display = 'none';
-        showFlash('Transfer request submitted for review.', true);
-        amountEl.value = ""; memoEl.value = ""; updatePreview();
-        loadLatest();
-      }catch(e){
-        modalMsg.textContent = e.message || "Error";
-      }finally{
-        confirmBtn.disabled = false;
-      }
-    });
-
-    // Latest request (optional)
-    async function loadLatest(){
-      try{
-        const r = await fetch('/api/transfers/mine/latest', {
-          headers: { Authorization: `Bearer ${token}` }
+      try {
+        const r = await fetch("/api/bank-accounts", {
+          method: "POST",
+          headers: { "Content-Type":"application/json", Authorization:`Bearer ${token}` },
+          body: JSON.stringify(payload)
         });
         const j = await r.json();
-        if (!j || !j.id){
-          latestBox.textContent = "No requests yet.";
-          return;
-        }
-        latestBox.innerHTML = `
-          <div class="summary">
-            <div class="line"><span>Requested</span><strong>${new Date(j.created_at).toLocaleString()}</strong></div>
-            <div class="line"><span>Amount</span><strong>${dollars(j.amount_cents)}</strong></div>
-            <div class="line"><span>Status</span><strong>${(j.status||'submitted')}</strong></div>
-          </div>
-        `;
-      }catch{ /* ignore */ }
+        if (!r.ok) throw new Error(j.message || "Add bank failed");
+        setStatus(els.bankStatus, "Bank account added.", true);
+        els.baNickname.value = els.baHolder.value = els.baBankName.value = els.baAcctLast4.value = "";
+        await loadBanks();
+      } catch (e) {
+        setStatus(els.bankStatus, e.message || "Add bank failed", false);
+      }
     }
 
-    // Go
-    (async function init(){
-      await Promise.all([loadBalance(), loadBanks()]);
-      updatePreview();
-      loadLatest();
-    })();
-  })();
-</script>
+    async function requestPayout() {
+      setStatus(els.requestStatus, "");
+      const bank_account_id = els.destBank.value;
+      const amt = Number(els.amount.value);
+      if (!bank_account_id) return setStatus(els.requestStatus, "Please select a bank.", false);
+      if (!Number.isFinite(amt) || amt <= 0) return setStatus(els.requestStatus, "Enter a valid amount.", false);
+
+      try {
+        const r = await fetch("/api/transfers/payout", {
+          method: "POST",
+          headers: { "Content-Type":"application/json", Authorization:`Bearer ${token}` },
+          body: JSON.stringify({
+            bank_account_id,
+            amount: amt,                 // dollars
+            memo: els.memo.value || ""
+          })
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.message || "Payout request failed");
+        setStatus(els.requestStatus, "Payout request submitted.", true);
+        els.amount.value = ""; els.memo.value = "";
+        await loadRequests(); await loadBalance();
+      } catch (e) {
+        setStatus(els.requestStatus, e.message || "Request failed", false);
+      }
+    }
+
+    function updatePager() {
+      const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+      els.paginationInfo.textContent = `Page ${page} of ${totalPages}`;
+      els.prevPage.disabled = page <= 1;
+      els.nextPage.disabled = page >= totalPages;
+    }
+
+    function routeText(x) {
+      // Compact “BOOP → Bank••1234”
+      const toBank = (x.bank_nickname || x.bank_name || "Bank") + (x.account_last4 ? `••${x.account_last4}` : "");
+      return `BOOP → ${toBank}`;
+    }
+
+    function renderRequests() {
+      els.reqTableBody.innerHTML = "";
+      if (!requests.length) {
+        els.reqTableBody.innerHTML = `<tr><td colspan="6">No payout requests yet.</td></tr>`;
+        return;
+      }
+      requests.forEach(x => {
+        const tr = document.createElement("tr");
+        const memoText = x.memo || x.note || "";
+        tr.innerHTML = `
+          <td>${x.created_at ? new Date(x.created_at).toLocaleString() : ""}</td>
+          <td>${x.id || x.request_id || "—"}</td>
+          <td>$${(Number(x.amount_cents || x.amount*100 || 0)/100).toFixed(2)}</td>
+          <td>${routeText(x)}</td>
+          <td><span class="pill">${(x.status || "pending").toUpperCase()}</span></td>
+          <td><button class="mini-btn" data-memo="${(memoText+'').replace(/"/g,'&quot;')}">View</button></td>
+        `;
+        els.reqTableBody.appendChild(tr);
+      });
+      // wire memo buttons
+      els.reqTableBody.querySelectorAll(".mini-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const m = btn.getAttribute("data-memo") || "";
+          els.noteContent.textContent = m || "No memo.";
+          els.noteModal.style.display = "block";
+        });
+      });
+    }
+
+    async function loadRequests() {
+      try {
+        const qs = new URLSearchParams({
+          kind: "payout",
+          limit: String(limit),
+          offset: String((page - 1) * limit)
+        }).toString();
+        const r = await fetch(`/api/transfers/mine?${qs}`, { headers:{ Authorization:`Bearer ${token}` }});
+        const j = await r.json();
+
+        // Normalise possible shapes
+        const list = j.requests || j.transactions || [];
+        requests = list.map(x => ({
+          ...x,
+          // Try to hydrate route columns from bank object if backend returns nested
+          bank_nickname: x.bank_nickname || x.bank?.nickname,
+          bank_name: x.bank_name || x.bank?.bank_name,
+          account_last4: x.account_last4 || x.bank?.account_last4
+        }));
+
+        totalCount = j.totalCount || j.total || 0;
+        renderRequests();
+        updatePager();
+      } catch (e) {
+        els.reqTableBody.innerHTML = `<tr><td colspan="6">Failed to load requests.</td></tr>`;
+      }
+    }
+
+    function exportCSV() {
+      if (!requests.length) return;
+      const headers = ["Date","ID","Amount","Route","Status","Memo"];
+      const rows = requests.map(x => [
+        x.created_at ? new Date(x.created_at).toISOString() : "",
+        x.id || x.request_id || "",
+        (Number(x.amount_cents || x.amount*100 || 0)/100).toFixed(2),
+        routeText(x),
+        (x.status || "pending"),
+        (x.memo || x.note || "").replace(/,/g,"")
+      ]);
+      const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+      const blob = new Blob([csv], { type:"text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "vendor-payouts.csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    // Wire up
+    document.getElementById("addBankBtn").addEventListener("click", addBank);
+    els.requestBtn.addEventListener("click", requestPayout);
+    els.clearBtn.addEventListener("click", () => { els.amount.value=""; els.memo.value=""; setStatus(els.requestStatus,""); });
+    els.exportBtn.addEventListener("click", exportCSV);
+    els.prevPage.addEventListener("click", () => { if (page>1){ page--; loadRequests(); }});
+    els.nextPage.addEventListener("click", () => {
+      const tp = Math.ceil(totalCount/limit)||1;
+      if (page<tp){ page++; loadRequests(); }
+    });
+
+    // Memo modal controls
+    modalClose.onclick = () => (els.noteModal.style.display = "none");
+    window.onclick = (e) => { if (e.target === els.noteModal) els.noteModal.style.display = "none"; };
+
+    // Logout
+    document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await fetch("/api/logout", { method:"POST" }); } catch {}
+      localStorage.clear(); location.href = "../login.html";
+    });
+
+    // Init
+    loadBalance();
+    loadBanks();
+    loadRequests();
+  </script>
 </body>
 </html>
