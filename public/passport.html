@@ -13,7 +13,6 @@
       --border:rgba(255,255,255,0.10);
       --stroke:#e5e7eb;
       --nav:#102a43;
-      --white:#ffffff;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -23,26 +22,20 @@
       color:#eef2ff; background:linear-gradient(180deg,#0b1220 0%,#0d1220 35%,#0b1220 100%);
       overflow-x:hidden;
     }
-    /* Fixed decorative glows */
-    body::before,
-    body::after{content:""; position:fixed; z-index:-1; pointer-events:none;}
-    /* Top-right blue */
-    body::before{
-      top:-220px; right:-220px; width:1100px; height:800px;
-      background:radial-gradient(700px 500px at 100% 0%, rgba(47,128,237,.28), transparent 60%);
-    }
-    /* Bottom-left green */
-    body::after{
-      bottom:-260px; left:-260px; width:1200px; height:850px;
-      background:radial-gradient(850px 650px at 0% 100%, rgba(16,185,129,.22), transparent 60%);
-    }
 
-    /* NAV (same structure as other pages) */
+    /* fixed glows */
+    body::before, body::after{content:""; position:fixed; z-index:-1; pointer-events:none;}
+    body::before{ top:-220px; right:-220px; width:1100px; height:800px;
+      background:radial-gradient(700px 500px at 100% 0%, rgba(47,128,237,.28), transparent 60%);}
+    body::after{ bottom:-260px; left:-260px; width:1200px; height:850px;
+      background:radial-gradient(850px 650px at 0% 100%, rgba(16,185,129,.22), transparent 60%);}
+
+    /* NAV */
     nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .nav-container{ max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img{ height:34px; display:block; }
     .nav-right{ display:flex; align-items:center; gap:18px; }
-    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; font-weight:600; }
+    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; font-weight:400; }
     .nav-right a:hover{ opacity:1; }
 
     .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
@@ -102,14 +95,6 @@
     .tile .row+.row{ margin-top:8px; }
     .divider{ height:1px; background:rgba(255,255,255,.10); margin:10px 0; }
 
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:700;
-      border:1px solid transparent; cursor:pointer;
-    }
-    .btn.primary{ background:var(--brand); color:#fff; border-color:var(--brand); }
-    .btn.primary:hover{ background:var(--brand-dark); border-color:var(--brand-dark); }
-
     /* FOOTER */
     footer{ border-top:1px solid var(--stroke); background:#0f172a; color:#9ca3af; }
     .footer-inner{
@@ -123,7 +108,7 @@
 <body>
 
   <!-- NAV -->
-  <nav>
+  <nav id="siteNav">
     <div class="nav-container">
       <div class="nav-left">
         <a href="cardholder.html" aria-label="BOOP home">
@@ -133,7 +118,7 @@
 
       <div class="nav-right" aria-label="Primary">
         <a href="cardholder.html">Home</a>
-        <a href="send-request.html" id="sendRequestLink">Send / Request</a>
+        <a href="send-request.html">Send / Request</a>
         <a href="transfer.html">Transfer</a>
         <a href="passport.html" aria-current="page">Passport</a>
         <a href="activity.html">Activity</a>
@@ -147,7 +132,7 @@
       </button>
     </div>
 
-    <!-- Mobile panel + overlay -->
+    <!-- Mobile panel + overlay (hidden on desktop) -->
     <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
     <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
       <a href="cardholder.html">Home</a>
@@ -158,7 +143,7 @@
       <a href="help.html">Help</a>
       <a href="#" id="logoutBtnMobile">Log Out</a>
     </div>
-  </nav>
+  </nav> <!-- ✅ nav is fully closed here -->
 
   <!-- HERO -->
   <section class="hero-band">
@@ -174,7 +159,6 @@
   <!-- MAIN -->
   <main class="container">
     <div class="grid">
-      <!-- Passport summary -->
       <section class="card" aria-labelledby="passportTitle">
         <h2 id="passportTitle">Passport summary</h2>
         <div class="list">
@@ -203,18 +187,14 @@
         </div>
       </section>
 
-      <!-- Cards in this Passport -->
       <section class="card" aria-labelledby="cardsTitle">
         <h2 id="cardsTitle">Cards in this Passport</h2>
         <div class="list" id="cardsList">
-          <div class="tile">
-            <div class="row"><div class="muted">Loading cards…</div></div>
-          </div>
+          <div class="tile"><div class="row"><div class="muted">Loading cards…</div></div></div>
         </div>
       </section>
     </div>
 
-    <!-- Transit actions -->
     <section class="card" style="margin-top:16px;">
       <div class="row">
         <div class="muted">Need more rides or a different pass?</div>
@@ -234,7 +214,7 @@
     </div>
   </footer>
 
-  <!-- Permissions: cardholder (or assistance) -->
+  <!-- Auth gate -->
   <script>
     (async () => {
       try {
@@ -244,7 +224,7 @@
         const me = await res.json();
         const role = (me.role||"").toLowerCase();
         const type = (me.type||"").toLowerCase();
-        const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
+        const ok = role==="cardholder" || type==="cardholder" || role==="cardholder_assistance" || type==="cardholder_assistance";
         if (!ok) throw new Error("Not a cardholder");
         localStorage.setItem("boopUser", JSON.stringify(me));
       } catch {
@@ -404,8 +384,7 @@
         } catch { renderCards([]); }
       }
 
-      document.getElementById('buyTransitBtn').href = 'https://shorelink.example/'; // TODO: real URL
-
+      document.getElementById('buyTransitBtn').href = 'https://shorelink.example/'; // TODO replace
       loadPassport();
     })();
   </script>
