@@ -200,12 +200,25 @@
   </footer>
 
   <script>
-    // Set hero to: "{Business Name} Vendor Portal"
-    document.addEventListener("DOMContentLoaded", () => {
-      const title = document.getElementById("welcomeTitle");
-      const name = window.__vendorDisplay || "Vendor";
-      if (title) title.textContent = `${name} Vendor Portal`;
-    });
+    (async () => {
+    try {
+      const token = localStorage.getItem("boop_jwt");
+      if (!token) throw new Error("No token");
+      const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+      if (!res.ok) throw new Error("Unauthorized");
+      const me = await res.json();
+      if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
+
+      localStorage.setItem("boopUser", JSON.stringify(me));
+
+      // ✅ fixed: pull vendor.business_name
+      window.__vendorDisplay =
+        (me.business_name && me.business_name.trim()) ||
+        ((me.first_name && me.last_name) ? `${me.first_name} ${me.last_name}` : (me.email || "Vendor"));
+    } catch {
+      localStorage.clear(); location.href = "vendor-login.html";
+    }
+  })();
 
     (async function init(){
       const token = localStorage.getItem("boop_jwt");
