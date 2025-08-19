@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
     :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
-
     body { font-family:'Poppins',sans-serif; background:#f5f7fa; margin:0; color:var(--ink); }
 
     /* Top Nav */
@@ -16,50 +15,42 @@
     .nav-container { max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img { height:32px; display:block; }
     .nav-right { display:flex; gap:16px; align-items:center; }
-    .nav-right a { color:#fff; text-decoration:none; font-size:0.95rem; }
-    .nav-right a:hover { text-decoration:underline; }
+    .nav-right a { color:#fff; text-decoration:none; font-size:.95rem; }
+    .nav-right a[aria-current="page"] { text-decoration:underline; }
 
     .container { max-width:1100px; margin:28px auto 40px; background:#fff; padding:24px 20px; border:1px solid var(--stroke); border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,.06); }
 
-    h2 { margin:0 0 16px; font-size:1.4rem; }
+    h2 { margin:0 0 14px; font-size:1.4rem; }
 
-    .filters { display:flex; flex-wrap:wrap; gap:14px; margin-bottom:14px; }
-    .filters > div { min-width:180px; flex:1; }
-    label { display:block; font-size:.9rem; color:#1a2b4a; margin-bottom:6px; }
-    input, select, button {
-      width:100%; padding:10px; font-size:.95rem; border-radius:6px; border:1px solid #d1d9e6; box-sizing:border-box;
+    .notice {
+      margin: 0 0 12px 0; padding: 10px 12px; background:#f7fafd; border:1px solid #e6ebf1;
+      border-radius:8px; font-size:.95rem; color:#1a2b4a; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
     }
-    button { background:#2f80ed; color:#fff; border:none; font-weight:600; cursor:pointer; transition:background .18s; }
-    button:hover { background:#1c6fd8; }
+    .chips { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .chip { border:1px solid #d1d9e6; background:#fff; border-radius:14px; padding:4px 10px; font-size:.85rem; color:#1a2b4a; }
+    .chip-btn { border:1px solid #2f80ed; color:#2f80ed; background:#fff; border-radius:14px; padding:5px 12px; font-size:.85rem; cursor:pointer; }
+    .chip-btn:hover { background:#2f80ed; color:#fff; }
 
-    .export-btn { margin:10px 0 0 auto; width:auto; }
+    table { width:100%; border-collapse:collapse; margin-top:10px; background:#fff; border-radius:8px; overflow:hidden; font-size:.95rem; }
+    th, td { padding:12px 16px; text-align:left; border-bottom:1px solid #eef2f7; white-space:nowrap; }
+    th { background:#f7fafd; font-weight:600; color:#1a2b4a; }
+    tr:hover { background:#f5f8fb; }
+    .status { color:#c0392b; text-align:center; padding:16px; font-weight:500; }
 
-    table { width:100%; border-collapse:collapse; margin-top:14px; background:#fff; border-radius:8px; overflow:hidden; font-size:.95rem; }
-    th, td { padding:12px 13px; border-bottom:1px solid #eef2f7; text-align:left; white-space:nowrap; }
-    th { background:#f7fafd; color:#1a2b4a; font-weight:600; }
-
-    .pagination { display:flex; justify-content:center; align-items:center; gap:10px; margin:18px 0 6px; }
-    .pagination button { width:auto; min-width:90px; padding:8px 16px; background:#6b7280; }
-    .pagination button:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; }
-    #paginationInfo { font-size:.95rem; color:#4b5563; font-weight:500; }
-
-    .status { text-align:center; margin-top:16px; font-weight:500; color:#e74c3c; }
+    /* Modal */
+    .modal { display:none; position:fixed; z-index:1000; inset:0; background:rgba(0,0,0,.4); }
+    .modal-content { background:#fff; margin:10% auto; padding:20px; border:1px solid #888; width:90%; max-width:520px; border-radius:10px; position:relative; }
+    .close { position:absolute; top:10px; right:15px; font-size:28px; font-weight:bold; cursor:pointer; }
 
     /* Footer */
-    footer { border-top:1px solid var(--stroke); margin-top:28px; }
+    footer { border-top:1px solid var(--stroke); }
     .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
     .footer-links a { color:#6b7280; text-decoration:none; margin-left:12px; }
     .footer-links a:hover { text-decoration:underline; }
-
-    @media (max-width: 768px) {
-      .nav-right { gap:12px; }
-      .filters { flex-direction:column; }
-      .footer-inner { flex-direction:column; gap:8px; }
-    }
   </style>
 </head>
 <body>
-  <!-- Auth guard (vendors only) -->
+  <!-- Vendor auth guard -->
   <script>
     (async () => {
       try {
@@ -72,15 +63,15 @@
           me = await r.json();
           localStorage.setItem("boopUser", JSON.stringify(me));
         }
-        if (!me || me.role !== "vendor") throw new Error("Not a vendor");
-      } catch (err) {
+        if (me.role !== "vendor") throw new Error("Not a vendor");
+      } catch {
         localStorage.clear();
         location.href = "../login.html";
       }
     })();
   </script>
 
-  <!-- Top Nav -->
+  <!-- Top Nav (vendor) -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -88,67 +79,49 @@
       </div>
       <div class="nav-right">
         <a href="index.html">Home</a>
-        <!-- no Passport Pay link here by design -->
         <a href="transfer.html">Transfer</a>
-        <a href="transactions.html">Transactions</a>
-        <a href="reports.html" aria-current="page" style="text-decoration:underline;">Reports</a>
+        <a href="transactions.html" aria-current="page">Transactions</a>
+        <a href="reports.html">Reports</a>
         <a href="#" id="logoutLink">Log Out</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h2>Transaction Reports</h2>
+    <h2>Recent Transactions</h2>
 
-    <div class="filters">
-      <div>
-        <label for="startDate">Start Date</label>
-        <input type="date" id="startDate" />
+    <div class="notice">
+      Showing the latest <span id="limitLabel" class="chip">100</span> transactions (your vendor account).
+      <div class="chips">
+        <span id="lastUpdated" class="chip">Last updated: —</span>
+        <button id="toggleLive" class="chip-btn">Pause Live</button>
       </div>
-      <div>
-        <label for="endDate">End Date</label>
-        <input type="date" id="endDate" />
-      </div>
-      <div>
-        <label for="typeFilter">Type</label>
-        <select id="typeFilter">
-          <option value="">All</option>
-          <option value="sale">Sale</option>
-          <option value="passport_pay">Passport Pay</option>
-          <option value="payout">Payout to Bank</option>
-          <option value="refund">Refund</option>
-        </select>
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="filterBtn">Apply Filters</button>
-      </div>
-      <button id="exportBtn" class="export-btn">Export CSV</button>
     </div>
 
-    <table id="reportTable">
+    <table id="transactionsTable">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Transaction ID</th>
           <th>Type</th>
           <th>Amount</th>
-          <th>Counterparty</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Time</th>
           <th>Note</th>
         </tr>
       </thead>
-      <tbody id="reportBody">
-        <tr><td colspan="6" style="text-align:center;">Loading…</td></tr>
+      <tbody id="transactionsBody">
+        <tr><td colspan="6" class="status">Loading…</td></tr>
       </tbody>
     </table>
+  </div>
 
-    <div class="pagination">
-      <button id="prevPageBtn">Previous</button>
-      <span id="paginationInfo">Page 1 of 1</span>
-      <button id="nextPageBtn">Next</button>
+  <!-- Note Modal -->
+  <div id="noteModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h3 style="margin:0 0 10px;">Transaction Note</h3>
+      <p id="noteContent" style="white-space: pre-wrap; color:#333; margin:0;"></p>
     </div>
-
-    <div class="status" id="status"></div>
   </div>
 
   <footer>
@@ -162,152 +135,145 @@
   </footer>
 
   <script type="module">
+    const LIMIT = 100;
+    const REFRESH_MS = 15000;
+
     const token = localStorage.getItem("boop_jwt");
     const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
 
-    const startDate = document.getElementById("startDate");
-    const endDate = document.getElementById("endDate");
-    const typeFilter = document.getElementById("typeFilter");
-    const filterBtn = document.getElementById("filterBtn");
-    const exportBtn = document.getElementById("exportBtn");
-    const tbody = document.getElementById("reportBody");
-    const statusEl = document.getElementById("status");
-    const paginationInfo = document.getElementById("paginationInfo");
-    const prevPageBtn = document.getElementById("prevPageBtn");
-    const nextPageBtn = document.getElementById("nextPageBtn");
+    const tbody = document.getElementById("transactionsBody");
+    const limitLabel = document.getElementById("limitLabel");
+    const lastUpdated = document.getElementById("lastUpdated");
+    const toggleLive = document.getElementById("toggleLive");
 
-    // Pagination state
-    let page = 1;
-    const limit = 25;
-    let totalCount = 0;
-    let currentRows = [];
+    const modal = document.getElementById("noteModal");
+    const noteContent = document.getElementById("noteContent");
+    const modalClose = modal.querySelector(".close");
+
+    limitLabel.textContent = String(LIMIT);
+
+    let live = true;
+    let intervalId = null;
+
+    function setLastUpdated() {
+      lastUpdated.textContent = "Last updated: " + new Date().toLocaleTimeString();
+    }
+
+    function startLive() {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        if (live && document.visibilityState === "visible") {
+          loadTransactions();
+        }
+      }, REFRESH_MS);
+    }
 
     function money(cents) {
       const n = Number(cents || 0) / 100;
       return "$" + n.toFixed(2);
     }
 
-    function updatePagination() {
-      const totalPages = Math.max(1, Math.ceil(totalCount / limit));
-      paginationInfo.textContent = `Page ${page} of ${totalPages}`;
-      prevPageBtn.disabled = page <= 1;
-      nextPageBtn.disabled = page >= totalPages;
+    function resolveParties(tx) {
+      const from = tx.sender_name || tx.from_name || tx.counterparty_from || null;
+      const to   = tx.recipient_name || tx.to_name || tx.counterparty_to || null;
+      const userSide = tx.customer_name || tx.user_name || tx.userEmail || tx.user_email || null;
+      return {
+        from: from || (tx.type === 'debit' ? (userSide || '—') : (tx.counterparty_name || '—')),
+        to:   to   || (tx.type === 'credit' ? (userSide || '—') : '—')
+      };
     }
 
-    prevPageBtn.addEventListener("click", () => { if (page > 1) { page--; load(); } });
-    nextPageBtn.addEventListener("click", () => {
-      const totalPages = Math.max(1, Math.ceil(totalCount / limit));
-      if (page < totalPages) { page++; load(); }
-    });
-
-    filterBtn.addEventListener("click", () => { page = 1; load(); });
-
-    exportBtn.addEventListener("click", () => {
-      if (!currentRows.length) return;
-      const headers = ["Date","Transaction ID","Type","Amount","Counterparty","Note"];
-      const rows = currentRows.map(tx => [
-        tx.created_at ? new Date(tx.created_at).toISOString() : "",
-        tx.id || "",
-        tx.type || "",
-        (Number(tx.amount_cents || 0) / 100).toFixed(2),
-        tx.counterparty || "",
-        (tx.note || "").replace(/,/g, " ")
-      ]);
-      const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
-      const blob = new Blob([csv], { type:"text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "boop-vendor-transactions.csv";
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-    });
-
-    async function fetchWithFallbacks(params) {
-      // 1) Preferred vendor endpoint
-      let url = `/api/vendor/transactions/report${params}`;
-      let r = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
+    async function fetchWithFallbacks() {
+      // Prefer a vendor-scoped endpoint
+      let r = await fetch(`/api/vendor/transactions/recent?limit=${LIMIT}`, {
+        headers: { Authorization:`Bearer ${token}` }
+      });
       if (r.ok) return r.json();
 
-      // 2) Generic report with vendor_id
+      // Fallback: generic recent with vendor_id
       if (me?.id) {
-        url = `/api/transactions/report${params}${params ? "&" : "?"}vendor_id=${encodeURIComponent(me.id)}`;
-        r = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
+        r = await fetch(`/api/transactions/recent?limit=${LIMIT}&vendor_id=${encodeURIComponent(me.id)}`, {
+          headers:{ Authorization:`Bearer ${token}` }
+        });
         if (r.ok) return r.json();
       }
 
-      // 3) Wallet-scoped fallback (/api/wallets/mine then query /api/transactions/by-wallet)
+      // Fallback: by wallet
       try {
-        const w = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
-        const j = await w.json();
-        if (w.ok && j.wallet_id) {
-          url = `/api/transactions/by-wallet/${j.wallet_id}${params ? params.replace("?", "?") : ""}`;
-          r = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
+        const w = await fetch(`/api/wallets/mine`, { headers:{ Authorization:`Bearer ${token}` }});
+        const jw = await w.json();
+        if (w.ok && jw.wallet_id) {
+          r = await fetch(`/api/transactions/by-wallet/${jw.wallet_id}?limit=${LIMIT}`, {
+            headers:{ Authorization:`Bearer ${token}` }
+          });
           if (r.ok) return r.json();
         }
       } catch {}
 
-      // If nothing worked, throw last error payload
       const payload = await r.json().catch(()=>({ message:"Failed to load" }));
-      const err = new Error(payload.message || "Failed to fetch vendor report");
+      const err = new Error(payload.message || "Failed to fetch transactions");
       err.payload = payload;
       throw err;
     }
 
-    async function load() {
-      statusEl.textContent = "";
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Loading…</td></tr>`;
-
-      const qs = new URLSearchParams();
-      if (startDate.value) qs.set("start", startDate.value);
-      if (endDate.value) qs.set("end", endDate.value);
-      if (typeFilter.value) qs.set("type", typeFilter.value);
-      qs.set("limit", String(limit));
-      qs.set("offset", String((page - 1) * limit));
-
+    async function loadTransactions() {
       try {
-        const data = await fetchWithFallbacks(`?${qs.toString()}`);
+        const payload = await fetchWithFallbacks();
+        const data = Array.isArray(payload) ? payload : (payload.transactions || []);
 
-        // Normalize: accept {transactions, totalCount} or a plain array
-        const items = Array.isArray(data) ? data : (data.transactions || []);
-        totalCount = Number((Array.isArray(data) ? items.length : data.totalCount) || 0);
-
-        if (!items.length) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No records found.</td></tr>`;
-          currentRows = [];
-          updatePagination();
+        if (!Array.isArray(data) || data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="status">No transactions found.</td></tr>`;
+          setLastUpdated();
           return;
         }
 
-        currentRows = items.map(tx => ({
-          id: tx.id,
-          created_at: tx.created_at,
-          type: tx.type || tx.kind || "",
-          amount_cents: tx.amount_cents,
-          counterparty: tx.counterparty || tx.customer_name || tx.sender_name || tx.recipient_name || "—",
-          note: tx.note || ""
-        }));
+        const rows = data.map(tx => {
+          const parties = resolveParties(tx);
+          const noteText = tx.note || 'No note';
+          const created = tx.created_at ? new Date(tx.created_at).toLocaleString() : "—";
+          return `
+            <tr>
+              <td>${tx.type || '—'}</td>
+              <td>${money(tx.amount_cents)}</td>
+              <td>${parties.from || '—'}</td>
+              <td>${parties.to || '—'}</td>
+              <td>${created}</td>
+              <td><button class="chip-btn" onclick="showNoteModal(\`${(String(noteText)).replace(/`/g,'\\`')}\`)">View</button></td>
+            </tr>
+          `;
+        }).join("");
 
-        tbody.innerHTML = currentRows.map(tx => `
-          <tr>
-            <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
-            <td>${tx.id || ""}</td>
-            <td>${tx.type || ""}</td>
-            <td>${money(tx.amount_cents)}</td>
-            <td>${tx.counterparty}</td>
-            <td>${(tx.note || "")}</td>
-          </tr>
-        `).join("");
-
-        updatePagination();
+        tbody.innerHTML = rows;
+        setLastUpdated();
       } catch (err) {
-        console.error("Vendor report load error:", err);
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">❌ ${err.message || "Failed to load"}</td></tr>`;
-        statusEl.textContent = "Failed to load transactions.";
+        console.error("❌ Vendor transactions error:", err);
+        tbody.innerHTML = `<tr><td colspan="6" class="status">❌ ${err.message}</td></tr>`;
       }
     }
 
+    // Expose for inline onclick
+    window.showNoteModal = function(note) {
+      noteContent.textContent = note || "No note";
+      modal.style.display = "block";
+    };
+
+    // Modal handlers
+    modalClose.onclick = () => (modal.style.display = "none");
+    window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+
+    // Live toggle
+    toggleLive.addEventListener("click", () => {
+      live = !live;
+      toggleLive.textContent = live ? "Pause Live" : "Resume Live";
+      if (live) loadTransactions();
+    });
+
     // Init
-    load();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && live) loadTransactions();
+    });
+    loadTransactions();
+    startLive();
 
     // Logout
     document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
