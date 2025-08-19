@@ -147,4 +147,25 @@ router.get("/", async (req, res) => {
   }
 });
 
+// ADD near top if you have auth middleware that sets req.user
+// const requireAuth = require('../../middleware/requireAuth');
+
+// 🔹 Get the authenticated user’s cards (no UI change needed on the page)
+router.get('/mine', /* requireAuth, */ async (req, res) => {
+  try {
+    // If you have req.user from auth middleware, use that:
+    // const userId = req.user.id;
+
+    // If you DON'T have req.user here, derive the wallet from token-less path:
+    // We'll use the wallet that belongs to the most recent / only wallet for the user,
+    // but since this route doesn’t know the user, we’ll fallback to joining by wallet via users.
+    // The simplest robust approach is: look up wallet by the bearer (if /api/wallets/mine exists).
+    // If you can’t access that here, switch to Option B below.
+    return res.status(400).json({ error: 'Not wired to auth. Use /api/cards?wallet_id=… or wire req.user.' });
+  } catch (err) {
+    console.error('❌ GET /cards/mine error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
