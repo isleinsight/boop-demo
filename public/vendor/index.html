@@ -84,31 +84,42 @@
   </style>
 </head>
 <body>
-  <!-- Auth (vendors only) + set display name from business_name -->
-  <script>
-    (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
-        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-        if (!res.ok) throw new Error("Unauthorized");
-        const me = await res.json();
-        if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
-        localStorage.setItem("boopUser", JSON.stringify(me));
+  <!-- Auth (vendors only) + set display name from vendors.business_name -->
+<script>
+  (async () => {
+    try {
+      const token = localStorage.getItem("boop_jwt");
+      if (!token) throw new Error("No token");
 
-        // Force vendors.business_name to be the display name
-        const biz = (me.business_name && String(me.business_name).trim()) || "Vendor";
-        window.__vendorDisplay = biz;
+      // This endpoint returns { business_name, first_name, last_name, email, ... }
+      const res = await fetch("/api/vendor/profile", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Unauthorized");
 
-        // Update hero + page title immediately
-        const titleEl = document.getElementById("welcomeTitle");
-        if (titleEl) titleEl.textContent = `${biz} Vendor Portal`;
-        document.title = `${biz} Vendor Portal – BOOP`;
-      } catch {
-        localStorage.clear(); location.href = "../login.html";
-      }
-    })();
-  </script>
+      const profile = await res.json();
+      // optional: keep a copy
+      localStorage.setItem("boopUser", JSON.stringify(profile));
+
+      // ✅ Prefer vendors.business_name
+      const biz =
+        (profile.business_name && String(profile.business_name).trim()) ||
+        ((profile.first_name && profile.last_name)
+          ? `${profile.first_name} ${profile.last_name}`
+          : (profile.email || "Vendor"));
+
+      // expose + paint
+      window.__vendorDisplay = biz;
+      const titleEl = document.getElementById("welcomeTitle");
+      if (titleEl) titleEl.textContent = `${biz} Vendor Portal`;
+      document.title = `${biz} Vendor Portal – BOOP`;
+    } catch {
+      localStorage.clear();
+      // correct file name + same folder
+      location.href = "vendor-login.html";
+    }
+  })();
+</script>
 
   <!-- Minimal header (logo + logout only) -->
   <header class="minihead">
