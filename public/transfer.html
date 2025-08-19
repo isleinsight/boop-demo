@@ -2,50 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Request Transfer – BOOP</title>
+  <title>Transfer to Bank – Vendor | BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
       --ink:#102a43; --muted:#6b7c93; --blue:#2f80ed; --blue-dark:#1a5fcc;
       --bg:#ffffff; --panel:#ffffff; --stroke:#e5e7eb; --soft:#f8fafc;
-      --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444;
+      --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444; --nav:#0b1220;
     }
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* NAV (keeps your cardholder dark nav) */
-    nav{ background:#102a43; color:#fff; position:sticky; top:0; z-index:50; }
+    /* NAV (vendor) */
+    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img{ height:36px; display:block; }
     .nav-right{ display:flex; align-items:center; gap:18px; }
     .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95;}
+    .nav-right a[aria-current="page"]{ text-decoration:underline; opacity:1; }
     .nav-right a:hover{ opacity:1; }
-    .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
-    .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
-    .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
-    .hamburger.active span:nth-child(2){ opacity:0; }
-    .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
-    .nav-panel{ display:none; }
-    @media (max-width: 768px){
-      .nav-right{ display:none; }
-      .hamburger{ display:flex; }
-      .nav-panel{
-        display:block; position:fixed; top:0; right:-100%; height:100vh; width:260px;
-        background:#ffffff; color:#111827; box-shadow:-4px 0 14px rgba(0,0,0,.18);
-        transition:right .3s ease; z-index:60; padding:80px 20px 20px;
-      }
-      .nav-panel.active{ right:0; }
-      .nav-panel a{ display:block; color:#111827; text-decoration:none; padding:12px 8px; border-radius:8px; margin-bottom:6px; font-weight:600; }
-      .nav-panel a:hover{ background:#f3f4f6; }
-      .nav-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55; }
-      .nav-overlay.active{ display:block; }
-    }
 
     /* HEADER */
-    .header{
-      max-width:1100px; margin:18px auto 0; padding:0 20px;
-    }
+    .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
@@ -92,436 +71,470 @@
 
     .help{ font-size:.9rem; color:var(--muted); margin-top:8px; }
 
-    .row {
-  display: flex;
-  gap: 12px;
-  align-items: center; /* change from flex-end to center */
-}
+    /* Recent payouts list — compact & responsive (PayPal-ish) */
+    .payouts{ display:grid; gap:10px; margin-top:8px; }
+    .payout{
+      display:grid; grid-template-columns:1.2fr .8fr .8fr .9fr auto;
+      gap:10px; align-items:center; padding:12px; border:1px solid var(--stroke); border-radius:12px; background:#fff;
+    }
+    .payout .id{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.9rem; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pill{ font-size:.8rem; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#1e3a8a; display:inline-block; text-transform:capitalize; white-space:nowrap; }
+    .pill.pending{ background:#fff7ed; color:#9a3412; }
+    .pill.completed{ background:#ecfdf5; color:#065f46; }
+    .pill.failed{ background:#fef2f2; color:#991b1b; }
+    .payout .amount{ font-weight:700; white-space:nowrap; }
+    .payout .dest{ color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .payout .when{ color:#6b7280; white-space:nowrap; }
 
-#addBankBtn {
-  height: 44px; /* match the select/input height */
-  padding: 0 12px; /* make sure padding is balanced */
-}
+    @media (max-width: 720px){
+      .payout{ grid-template-columns: 1fr 1fr; grid-template-areas:
+        "amount status"
+        "dest dest"
+        "when id"; }
+      .payout .amount{ grid-area: amount; }
+      .payout .status{ grid-area: status; text-align:right; }
+      .payout .dest{ grid-area: dest; }
+      .payout .when{ grid-area: when; }
+      .payout .id{ grid-area: id; }
+    }
 
-    /* Stick a little breathing room at bottom */
+    /* Footer */
+    footer{ border-top:1px solid var(--stroke); background:#fff; }
+    .footer-inner{ max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
+    .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
+
     .page-bottom-spacer{ height:40px; }
   </style>
 </head>
 <body>
+  <!-- Vendor auth gate -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        let me = JSON.parse(localStorage.getItem("boopUser") || "null");
+        if (!me) {
+          const r = await fetch("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
+          if (!r.ok) throw new Error("Unauthorized");
+          me = await r.json(); localStorage.setItem("boopUser", JSON.stringify(me));
+        }
+        if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
+      } catch {
+        localStorage.clear(); location.href = "vendor-login.html";
+      }
+    })();
+  </script>
 
-  <!-- Top Nav -->
-<nav>
-  <div class="nav-container">
-    <div class="nav-left">
-      <a href="cardholder.html" aria-label="BOOP home">
-        <img src="assets/Boop-Logo.png" alt="BOOP Logo" />
-      </a>
-    </div>
-
-    <!-- Desktop links -->
-    <div class="nav-right" aria-label="Primary">
-      <a href="cardholder.html">Home</a>
-      <a href="send-request.html" id="sendRequestLink">Send / Request</a>
-      <a href="transfer.html">Transfer</a>
-      <a href="passport.html">Passport</a>
-      <a href="activity.html">Activity</a>
-      <a href="help.html">Help</a>
-      <a href="#" id="logoutBtn">Log Out</a>
-    </div>
-
-    <!-- Mobile toggle -->
-    <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
-
-  <!-- Mobile panel + overlay -->
-  <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
-  <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
-    <a href="cardholder.html">Home</a>
-    <a href="send-request.html">Send / Request</a>
-    <a href="transfer.html">Transfer</a>
-    <a href="passport.html">Passport</a>
-    <a href="activity.html">Activity</a>
-    <a href="help.html">Help</a>
-    <a href="#" id="logoutBtnMobile">Log Out</a>
-  </div>
-</nav>
-
-<!-- HEADER -->
-<header class="header">
-  <h1>Request a bank transfer</h1>
-  <p class="sub">Submit a request to move money from BOOP to your bank. Our Accounts team will review and process it.</p>
-</header>
-
-<!-- MAIN -->
-<main class="container">
-  <div id="flash" class="alert" style="display:none;"></div>
-
-  <div class="grid">
-    <!-- Left: Request form -->
-    <section class="card">
-      <h2>Create request</h2>
-
-      <div>
-  <label for="destination">Destination account</label>
-  <select id="destination"></select>
-  <div class="help">Saved accounts are masked for your security.</div>
-
-  <!-- Button now sits right under the dropdown -->
-  <button id="addBankBtn" class="btn ghost" type="button" style="margin-top:8px;">
-    Add bank
-  </button>
-</div>
-
-      <label for="amount">Amount (BMD)</label>
-      <input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
-
-      <label for="memo">Memo (optional)</label>
-      <input id="memo" type="text" maxlength="80" placeholder="e.g., Transfer to checking" />
-
-      <div class="summary" id="previewBox" style="display:none;">
-        <div class="line"><span>Amount</span><strong id="pAmount">—</strong></div>
-        <div class="line"><span>Fees</span><strong id="pFee">$0.00</strong></div>
-        <div class="line"><span>Net to bank</span><strong id="pNet">—</strong></div>
-        <div class="line"><span>Arrival estimate</span><strong id="pArrival">1–2 business days</strong></div>
+  <!-- NAV -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="index.html" aria-label="BOOP home">
+          <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+        </a>
       </div>
+      <div class="nav-right" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="transfer.html" aria-current="page">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <header class="header">
+    <h1>Request a bank transfer</h1>
+    <p class="sub">Submit a request to move money from BOOP to your bank. Our Accounts team will review and process it.</p>
+  </header>
+
+  <!-- MAIN -->
+  <main class="container">
+    <div id="flash" class="alert" style="display:none;"></div>
+
+    <div class="grid">
+      <!-- Left: Request form -->
+      <section class="card">
+        <h2>Create request</h2>
+
+        <div>
+          <label for="destination">Destination account</label>
+          <select id="destination"></select>
+          <div class="help">Saved accounts are masked for your security.</div>
+          <button id="addBankBtn" class="btn ghost" type="button" style="margin-top:8px;">Add bank</button>
+        </div>
+
+        <label for="amount">Amount (BMD)</label>
+        <input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
+
+        <label for="memo">Memo (optional)</label>
+        <input id="memo" type="text" maxlength="80" placeholder="e.g., Transfer to operating account" />
+
+        <div class="summary" id="previewBox" style="display:none;">
+          <div class="line"><span>Amount</span><strong id="pAmount">—</strong></div>
+          <div class="line"><span>Fees</span><strong id="pFee">$0.00</strong></div>
+          <div class="line"><span>Net to bank</span><strong id="pNet">—</strong></div>
+          <div class="line"><span>Arrival estimate</span><strong id="pArrival">1–2 business days</strong></div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button id="reviewBtn" class="btn primary" disabled>Review request</button>
+          <div id="formMsg" class="muted"></div>
+        </div>
+      </section>
+
+      <!-- Right: Balance + latest + recent -->
+      <section class="card">
+        <h2>Your balance</h2>
+        <div class="summary">
+          <div class="line"><span>Available</span><strong id="balanceTxt">—</strong></div>
+        </div>
+
+        <h2 style="margin-top:16px;">Latest request</h2>
+        <p class="help" style="margin-top:-4px; margin-bottom:8px;">
+          Pending amounts are not deducted until the transfer is completed.
+        </p>
+        <div id="latestBox" class="muted">No requests yet.</div>
+
+        <h2 style="margin-top:18px;">Recent payouts</h2>
+        <div id="payouts" class="payouts">
+          <div class="muted">Loading…</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="page-bottom-spacer"></div>
+
+  <!-- Review Modal -->
+  <div id="reviewModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
+    <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:520px;width:92%;">
+      <h3 style="margin:0 0 10px;">Confirm request</h3>
+      <div class="summary" style="background:#f8fafc;border-color:#e5e7eb;">
+        <div class="line"><span>To</span><strong id="mTo">—</strong></div>
+        <div class="line"><span>Amount</span><strong id="mAmount">—</strong></div>
+        <div class="line"><span>Fees</span><strong id="mFee">$0.00</strong></div>
+        <div class="line"><span>Net</span><strong id="mNet">—</strong></div>
+        <div class="line"><span>Arrival</span><strong id="mArrival">1–2 business days</strong></div>
+        <div class="line"><span>Memo</span><strong id="mMemo">—</strong></div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button id="confirmBtn" class="btn primary">Submit request</button>
+        <button id="cancelBtn" class="btn ghost">Cancel</button>
+        <div id="modalMsg" class="muted"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Bank Modal -->
+  <div id="addBankModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
+    <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:520px;width:92%;">
+      <h3 style="margin:0 0 10px;">Add bank account</h3>
+
+      <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Bank</label>
+      <select id="abBank" style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+        <option value="Butterfield">Butterfield (Bank of N.T. Butterfield & Son)</option>
+        <option value="HSBC Bermuda">HSBC Bermuda</option>
+        <option value="Clarien Bank">Clarien Bank</option>
+      </select>
+
+      <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account holder name</label>
+      <input id="abHolder" type="text" placeholder="Full name on account"
+             style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+
+      <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account number</label>
+      <input id="abAccount" type="text" inputmode="numeric" placeholder="e.g. 0123456789"
+             style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+
+      <div id="abMsg" class="muted" style="margin-top:8px;"></div>
 
       <div class="row" style="margin-top:12px;">
-        <button id="reviewBtn" class="btn primary" disabled>Review request</button>
-        <div id="formMsg" class="muted"></div>
+        <button id="abSave" class="btn primary">Save bank</button>
+        <button id="abCancel" class="btn ghost">Cancel</button>
       </div>
-    </section>
+    </div>
+  </div>
 
-    <!-- Right: Balance + latest -->
-    <section class="card">
-      <h2>Your balance</h2>
-      <div class="summary">
-        <div class="line"><span>Available</span><strong id="balanceTxt">—</strong></div>
+  <footer>
+    <div class="footer-inner">
+      <div>© 2025 BOOP</div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
       </div>
-
-      <h2 style="margin-top:16px;">Latest request</h2>
-<p class="help" style="margin-top:-4px; margin-bottom:8px;">
-  Pending amounts are not deducted from your available balance until the transfer is completed.
-</p>
-<div id="latestBox" class="muted">No requests yet.</div>
-    </section>
-  </div>
-</main>
-
-<div class="page-bottom-spacer"></div>
-
-<!-- Review Modal -->
-<div id="reviewModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
-  <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:480px;width:92%;">
-    <h3 style="margin:0 0 10px;">Confirm request</h3>
-    <div class="summary" style="background:#f8fafc;border-color:#e5e7eb;">
-      <div class="line"><span>To</span><strong id="mTo">—</strong></div>
-      <div class="line"><span>Amount</span><strong id="mAmount">—</strong></div>
-      <div class="line"><span>Fees</span><strong id="mFee">$0.00</strong></div>
-      <div class="line"><span>Net</span><strong id="mNet">—</strong></div>
-      <div class="line"><span>Arrival</span><strong id="mArrival">1–2 business days</strong></div>
-      <div class="line"><span>Memo</span><strong id="mMemo">—</strong></div>
     </div>
-    <div class="row" style="margin-top:12px;">
-      <button id="confirmBtn" class="btn primary">Submit request</button>
-      <button id="cancelBtn" class="btn ghost">Cancel</button>
-      <div id="modalMsg" class="muted"></div>
-    </div>
-  </div>
-</div>
+  </footer>
 
-<!-- Add Bank Modal -->
-<div id="addBankModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
-  <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:520px;width:92%;">
-    <h3 style="margin:0 0 10px;">Add bank account</h3>
-
-    <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Bank</label>
-    <select id="abBank" style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
-      <option value="Butterfield">Butterfield (Bank of N.T. Butterfield & Son)</option>
-      <option value="HSBC Bermuda">HSBC Bermuda</option>
-      <option value="Clarien Bank">Clarien Bank</option>
-    </select>
-
-    <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account holder name</label>
-    <input id="abHolder" type="text" placeholder="Full name on account"
-           style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
-
-    <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account number</label>
-    <input id="abAccount" type="text" inputmode="numeric" placeholder="e.g. 0123456789"
-           style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
-
-    <div id="abMsg" class="muted" style="margin-top:8px;"></div>
-
-    <div class="row" style="margin-top:12px;">
-      <button id="abSave" class="btn primary">Save bank</button>
-      <button id="abCancel" class="btn ghost">Cancel</button>
-    </div>
-  </div>
-</div>
-
- <!-- Permissions: cardholder / assistance -->
-<script>
-  (async () => {
-    try {
+  <!-- Page logic -->
+  <script>
+    (function(){
       const token = localStorage.getItem("boop_jwt");
-      if (!token) throw new Error("No token");
-      const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-      const me = await res.json();
-      const role = (me.role||"").toLowerCase(), type = (me.type||"").toLowerCase();
-      const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
-      if (!ok) throw new Error("Not a cardholder");
-      localStorage.setItem("boopUser", JSON.stringify(me));
-    } catch {
-      localStorage.clear();
-      window.location.href = "cardholder-login.html";
-    }
-  })();
-</script>
 
-<!-- Page logic -->
-<script>
-  (function(){
-    // Mobile nav
-    const hamburger = document.getElementById('hamburger');
-    const panel = document.getElementById('mobileMenu');
-    const overlay = document.getElementById('navOverlay');
-    function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
-    function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
-    hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
-    overlay?.addEventListener('click', closeMenu);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+      // Logout
+      document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        location.href = '../login.html';
+      });
 
-    // Logout both places
-    function attachLogout(el){
-      if (!el) return;
-      el.addEventListener('click', async (e)=>{ e.preventDefault(); try{ await fetch('/api/logout',{method:'POST'}) }catch{} localStorage.clear(); window.location.href='cardholder-login.html'; });
-    }
-    attachLogout(document.getElementById('logoutBtn'));
-    attachLogout(document.getElementById('logoutBtnMobile'));
+      // Elements
+      const flash = document.getElementById('flash');
 
-    // Elements
-    const token = localStorage.getItem("boop_jwt");
-    const flash = document.getElementById('flash');
+      const destination = document.getElementById('destination');
+      const addBankBtn = document.getElementById('addBankBtn');
+      const amountEl = document.getElementById('amount');
+      const memoEl = document.getElementById('memo');
 
-    const destination = document.getElementById('destination');
-    const addBankBtn = document.getElementById('addBankBtn');
-    const amountEl = document.getElementById('amount');
-    const memoEl = document.getElementById('memo');
+      const previewBox = document.getElementById('previewBox');
+      const pAmount = document.getElementById('pAmount');
+      const pFee = document.getElementById('pFee');
+      const pNet = document.getElementById('pNet');
+      const pArrival = document.getElementById('pArrival');
 
-    const previewBox = document.getElementById('previewBox');
-    const pAmount = document.getElementById('pAmount');
-    const pFee = document.getElementById('pFee');
-    const pNet = document.getElementById('pNet');
-    const pArrival = document.getElementById('pArrival');
+      const reviewBtn = document.getElementById('reviewBtn');
+      const formMsg = document.getElementById('formMsg');
 
-    const reviewBtn = document.getElementById('reviewBtn');
-    const formMsg = document.getElementById('formMsg');
+      const reviewModal = document.getElementById('reviewModal');
+      const mTo = document.getElementById('mTo');
+      const mAmount = document.getElementById('mAmount');
+      const mFee = document.getElementById('mFee');
+      const mNet = document.getElementById('mNet');
+      const mArrival = document.getElementById('mArrival');
+      const mMemo = document.getElementById('mMemo');
+      const confirmBtn = document.getElementById('confirmBtn');
+      const cancelBtn = document.getElementById('cancelBtn');
+      const modalMsg = document.getElementById('modalMsg');
 
-    const reviewModal = document.getElementById('reviewModal');
-    const mTo = document.getElementById('mTo');
-    const mAmount = document.getElementById('mAmount');
-    const mFee = document.getElementById('mFee');
-    const mNet = document.getElementById('mNet');
-    const mArrival = document.getElementById('mArrival');
-    const mMemo = document.getElementById('mMemo');
-    const confirmBtn = document.getElementById('confirmBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const modalMsg = document.getElementById('modalMsg');
+      const balanceTxt = document.getElementById('balanceTxt');
+      const latestBox = document.getElementById('latestBox');
 
-    const balanceTxt = document.getElementById('balanceTxt');
-    const latestBox = document.getElementById('latestBox');
+      const payoutsEl = document.getElementById('payouts');
 
-    let balanceCents = 0;
-    let banks = [];
-    let selectedBank = null;
+      // Add Bank Modal
+      const addBankModal = document.getElementById('addBankModal');
+      const abBank = document.getElementById('abBank');
+      const abHolder = document.getElementById('abHolder');
+      const abAccount = document.getElementById('abAccount');
+      const abMsg = document.getElementById('abMsg');
+      const abSave = document.getElementById('abSave');
+      const abCancel = document.getElementById('abCancel');
 
-    function dollars(c){ return `$${(Number(c||0)/100).toFixed(2)}`; }
-    function showFlash(msg, ok=true){
-      flash.textContent = msg;
-      flash.className = "alert " + (ok ? "ok" : "bad");
-      flash.style.display = "block";
-      setTimeout(()=> flash.style.display = "none", 4000);
-    }
-    function randomKey(){ return 'ikey_' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+      let balanceCents = 0;
+      let banks = [];
+      let selectedBank = null;
 
-    async function loadBalance(){
-      try{
-        const r = await fetch('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token}` }});
-        const j = await r.json();
-        balanceCents = Number(j?.balance_cents||0);
-        balanceTxt.textContent = dollars(balanceCents);
-      }catch{}
-    }
+      function dollars(c){ return `$${(Number(c||0)/100).toFixed(2)}`; }
+      function showFlash(msg, ok=true){
+        flash.textContent = msg;
+        flash.className = "alert " + (ok ? "ok" : "bad");
+        flash.style.display = "block";
+        setTimeout(()=> flash.style.display = "none", 4000);
+      }
+      function randomKey(){ return 'ikey_' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
-    async function loadBanks(){
-      destination.innerHTML = `<option disabled selected>Loading…</option>`;
-      try{
-        const r = await fetch('/api/bank-accounts/mine', { headers:{ Authorization:`Bearer ${token}` }});
-        const j = await r.json();
-        banks = Array.isArray(j) ? j : [];
-        if (!banks.length){
-          destination.innerHTML = `<option disabled selected>No bank accounts yet</option>`;
+      async function loadBalance(){
+        try{
+          const r = await fetch('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token}` }});
+          const j = await r.json();
+          balanceCents = Number(j?.balance_cents||0);
+          balanceTxt.textContent = dollars(balanceCents);
+        }catch{}
+      }
+
+      async function loadBanks(){
+        destination.innerHTML = `<option disabled selected>Loading…</option>`;
+        try{
+          const r = await fetch('/api/bank-accounts/mine', { headers:{ Authorization:`Bearer ${token}` }});
+          const j = await r.json();
+          banks = Array.isArray(j) ? j : [];
+          if (!banks.length){
+            destination.innerHTML = `<option disabled selected>No bank accounts yet</option>`;
+            selectedBank = null;
+            return;
+          }
+          destination.innerHTML = banks.map(b => `<option value="${b.id}">${b.bank_name} •••• ${b.last4}</option>`).join('');
+          selectedBank = banks[0]?.id || null;
+        }catch{
+          destination.innerHTML = `<option disabled selected>Failed to load</option>`;
+        }
+      }
+      destination.addEventListener('change', (e)=> selectedBank = e.target.value);
+
+      function openAddBank(){
+        abMsg.textContent = '';
+        abHolder.value = '';
+        abAccount.value = '';
+        addBankModal.style.display = 'flex';
+      }
+      function closeAddBank(){
+        addBankModal.style.display = 'none';
+      }
+      addBankBtn.addEventListener('click', openAddBank);
+      abCancel.addEventListener('click', closeAddBank);
+      addBankModal.addEventListener('click', (e)=>{ if (e.target === addBankModal) closeAddBank(); });
+
+      abSave.addEventListener('click', async ()=>{
+        abMsg.textContent = '';
+        const holder = abHolder.value.trim();
+        const bank = abBank.value;     // Butterfield, HSBC Bermuda, Clarien Bank
+        const account = abAccount.value.trim();
+
+        if (!holder || !bank || !account){
+          abMsg.textContent = 'Please fill in all fields.';
           return;
         }
-        destination.innerHTML = banks.map(b => `<option value="${b.id}">${b.bank_name} •••• ${b.last4}</option>`).join('');
-        selectedBank = banks[0]?.id || null;
-      }catch{
-        destination.innerHTML = `<option disabled selected>Failed to load</option>`;
-      }
-    }
 
-    destination.addEventListener('change', (e)=> selectedBank = e.target.value);
+        try{
+          const res = await fetch('/api/bank-accounts', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+            body: JSON.stringify({
+              holder_name: holder,
+              bank_name: bank,
+              account_number: account
+              // no routing number in Bermuda
+            })
+          });
+          const saved = await res.json();
+          if (!res.ok) throw new Error(saved.message || 'Failed to add bank.');
+          showFlash('Bank account saved.', true);
+          closeAddBank();
+          await loadBanks();
+        }catch(e){
+          abMsg.textContent = e.message || 'Could not save bank.';
+        }
+      });
 
-    // Add Bank modal (no routing needed in Bermuda)
-const addBankModal = document.getElementById('addBankModal');
-const abBank = document.getElementById('abBank');
-const abHolder = document.getElementById('abHolder');
-const abAccount = document.getElementById('abAccount');
-const abMsg = document.getElementById('abMsg');
-const abSave = document.getElementById('abSave');
-const abCancel = document.getElementById('abCancel');
-
-function openAddBank(){
-  abMsg.textContent = '';
-  abHolder.value = '';
-  abAccount.value = '';
-  addBankModal.style.display = 'flex';
-}
-function closeAddBank(){
-  addBankModal.style.display = 'none';
-}
-
-addBankBtn.addEventListener('click', openAddBank);
-abCancel.addEventListener('click', closeAddBank);
-addBankModal.addEventListener('click', (e)=>{ if (e.target === addBankModal) closeAddBank(); });
-
-abSave.addEventListener('click', async ()=>{
-  abMsg.textContent = '';
-  const holder = abHolder.value.trim();
-  const bank = abBank.value;     // Butterfield, HSBC Bermuda, Clarien Bank
-  const account = abAccount.value.trim();
-
-  if (!holder || !bank || !account){
-    abMsg.textContent = 'Please fill in all fields.';
-    return;
-  }
-
-  try{
-    const res = await fetch('/api/bank-accounts', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-      body: JSON.stringify({
-        holder_name: holder,
-        bank_name: bank,
-        account_number: account
-        // routing_number: not used in Bermuda
-      })
-    });
-    const saved = await res.json();
-    if (!res.ok) throw new Error(saved.message || 'Failed to add bank.');
-    showFlash('Bank account saved.', true);
-    closeAddBank();
-    await loadBanks();
-  }catch(e){
-    abMsg.textContent = e.message || 'Could not save bank.';
-  }
-});
-
-    // Preview calc (flat fee = 0 for now; tweak later)
-    function updatePreview(){
-      const amt = Number(amountEl.value);
-      if (!selectedBank || !amt || amt <= 0){ previewBox.style.display='none'; reviewBtn.disabled = true; return; }
-      const fee = 0; // placeholder fee
-      if (amt*100 > balanceCents){
-        formMsg.textContent = "Amount exceeds available balance.";
-        reviewBtn.disabled = true;
-        previewBox.style.display = 'none';
-        return;
-      }
-      formMsg.textContent = "";
-      pAmount.textContent = dollars(amt*100);
-      pFee.textContent = dollars(fee);
-      pNet.textContent = dollars(amt*100 - fee);
-      pArrival.textContent = "1–2 business days";
-      previewBox.style.display = 'block';
-      reviewBtn.disabled = false;
-    }
-    amountEl.addEventListener('input', updatePreview);
-
-    // Review modal
-    reviewBtn.addEventListener('click', ()=>{
-      const bank = banks.find(b => b.id === selectedBank);
-      if (!bank) return;
-      mTo.textContent = `${bank.bank_name} •••• ${bank.last4}`;
-      mAmount.textContent = pAmount.textContent;
-      mFee.textContent = pFee.textContent;
-      mNet.textContent = pNet.textContent;
-      mArrival.textContent = pArrival.textContent;
-      mMemo.textContent = memoEl.value || "—";
-      reviewModal.style.display = 'flex';
-    });
-    cancelBtn.addEventListener('click', ()=> reviewModal.style.display = 'none');
-
-    // Submit request → backend
-    confirmBtn.addEventListener('click', async ()=>{
-      confirmBtn.disabled = true; modalMsg.textContent = "Submitting…";
-      const amtCents = Math.round(Number(amountEl.value) * 100);
-      try{
-        const res = await fetch('/api/transfers', {
-          method:'POST',
-          headers:{
-            'Content-Type':'application/json',
-            'X-Idempotency-Key': randomKey(),
-            Authorization:`Bearer ${token}`
-          },
-          body: JSON.stringify({
-            bank_account_id: selectedBank,
-            amount_cents: amtCents,
-            memo: memoEl.value || ""
-          })
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.message || 'Request failed.');
-        reviewModal.style.display = 'none';
-        showFlash('Transfer request submitted for review.', true);
-        amountEl.value = ""; memoEl.value = ""; updatePreview();
-        loadLatest();
-      }catch(e){
-        modalMsg.textContent = e.message || "Error";
-      }finally{
-        confirmBtn.disabled = false;
-      }
-    });
-
-    // Latest request (optional)
-    async function loadLatest(){
-      try{
-        const r = await fetch('/api/transfers/mine/latest', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const j = await r.json();
-        if (!j || !j.id){
-          latestBox.textContent = "No requests yet.";
+      // Preview + enable review
+      function updatePreview(){
+        const amt = Number(amountEl.value);
+        if (!selectedBank || !amt || amt <= 0){ previewBox.style.display='none'; reviewBtn.disabled = true; return; }
+        const fee = 0; // placeholder
+        if (amt*100 > balanceCents){
+          formMsg.textContent = "Amount exceeds available balance.";
+          reviewBtn.disabled = true;
+          previewBox.style.display = 'none';
           return;
         }
-        latestBox.innerHTML = `
-          <div class="summary">
-            <div class="line"><span>Requested</span><strong>${new Date(j.created_at).toLocaleString()}</strong></div>
-            <div class="line"><span>Amount</span><strong>${dollars(j.amount_cents)}</strong></div>
-            <div class="line"><span>Status</span><strong>${(j.status||'submitted')}</strong></div>
-          </div>
-        `;
-      }catch{ /* ignore */ }
-    }
+        formMsg.textContent = "";
+        pAmount.textContent = dollars(amt*100);
+        pFee.textContent = dollars(fee);
+        pNet.textContent = dollars(amt*100 - fee);
+        pArrival.textContent = "1–2 business days";
+        previewBox.style.display = 'block';
+        reviewBtn.disabled = false;
+      }
+      amountEl.addEventListener('input', updatePreview);
 
-    // Go
-    (async function init(){
-      await Promise.all([loadBalance(), loadBanks()]);
-      updatePreview();
-      loadLatest();
+      // Review modal
+      reviewBtn.addEventListener('click', ()=>{
+        const bank = banks.find(b => b.id === selectedBank);
+        if (!bank) return;
+        mTo.textContent = `${bank.bank_name} •••• ${bank.last4}`;
+        mAmount.textContent = pAmount.textContent;
+        mFee.textContent = pFee.textContent;
+        mNet.textContent = pNet.textContent;
+        mArrival.textContent = pArrival.textContent;
+        mMemo.textContent = memoEl.value || "—";
+        reviewModal.style.display = 'flex';
+      });
+      cancelBtn.addEventListener('click', ()=> reviewModal.style.display = 'none');
+
+      // Submit transfer request
+      confirmBtn.addEventListener('click', async ()=>{
+        confirmBtn.disabled = true; modalMsg.textContent = "Submitting…";
+        const amtCents = Math.round(Number(amountEl.value) * 100);
+        try{
+          const res = await fetch('/api/transfers', {
+            method:'POST',
+            headers:{
+              'Content-Type':'application/json',
+              'X-Idempotency-Key': randomKey(),
+              Authorization:`Bearer ${token}`
+            },
+            body: JSON.stringify({
+              bank_account_id: selectedBank,
+              amount_cents: amtCents,
+              memo: memoEl.value || ""
+            })
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.message || 'Request failed.');
+          reviewModal.style.display = 'none';
+          showFlash('Transfer request submitted for review.', true);
+          amountEl.value = ""; memoEl.value = ""; updatePreview();
+          await Promise.all([loadLatest(), loadPayouts()]);
+        }catch(e){
+          modalMsg.textContent = e.message || "Error";
+        }finally{
+          confirmBtn.disabled = false;
+        }
+      });
+
+      // Latest request
+      async function loadLatest(){
+        try{
+          const r = await fetch('/api/transfers/mine/latest', { headers: { Authorization: `Bearer ${token}` }});
+          const j = await r.json();
+          if (!j || !j.id){
+            latestBox.textContent = "No requests yet.";
+            return;
+          }
+          latestBox.innerHTML = `
+            <div class="summary">
+              <div class="line"><span>Requested</span><strong>${new Date(j.created_at).toLocaleString()}</strong></div>
+              <div class="line"><span>Amount</span><strong>${dollars(j.amount_cents)}</strong></div>
+              <div class="line"><span>Status</span><strong>${(j.status||'submitted')}</strong></div>
+              <div class="line"><span>To</span><strong>${(j.bank_name||'Bank')} •••• ${(j.last4||'')}</strong></div>
+            </div>
+          `;
+        }catch{ latestBox.textContent = "—"; }
+      }
+
+      // Recent payouts list
+      async function loadPayouts(){
+        payoutsEl.innerHTML = `<div class="muted">Loading…</div>`;
+        try{
+          const qs = new URLSearchParams({ limit: "25", offset: "0" }).toString();
+          const r = await fetch(`/api/transfers/mine?${qs}`, { headers:{ Authorization:`Bearer ${token}` }});
+          const j = await r.json();
+          const rows = Array.isArray(j?.transfers) ? j.transfers : (Array.isArray(j) ? j : []);
+          if (!rows.length){
+            payoutsEl.innerHTML = `<div class="muted">No recent payouts.</div>`;
+            return;
+          }
+          payoutsEl.innerHTML = rows.map(t=>{
+            const when = t.created_at ? new Date(t.created_at).toLocaleString() : '';
+            const dest = (t.bank_name || 'Bank') + (t.last4 ? ` •••• ${t.last4}` : '');
+            const amt = dollars(t.amount_cents);
+            const status = (t.status||'submitted').toLowerCase();
+            const pillCls = status.includes('complete') ? 'completed' : status.includes('fail') ? 'failed' : 'pending';
+            const idshort = (t.id||'').toString();
+            return `
+              <div class="payout">
+                <div class="amount">${amt}</div>
+                <div class="status"><span class="pill ${pillCls}">${status}</span></div>
+                <div class="dest">${dest}</div>
+                <div class="when">${when}</div>
+                <div class="id">${idshort}</div>
+              </div>
+            `;
+          }).join('');
+        }catch{
+          payoutsEl.innerHTML = `<div class="muted">Couldn’t load payouts.</div>`;
+        }
+      }
+
+      // Init
+      (async function init(){
+        await Promise.all([loadBalance(), loadBanks()]);
+        updatePreview();
+        await Promise.all([loadLatest(), loadPayouts()]);
+      })();
     })();
-  })();
-</script>
+  </script>
 </body>
 </html>
