@@ -11,57 +11,57 @@
 
     body { font-family:'Poppins',sans-serif; background:#f5f7fa; margin:0; color:var(--ink); }
 
-    /* ── Compact Top Nav (match Transfer/Transactions) ───────────────────── */
-    nav { background:#0b1220; color:#fff; }
-    .nav-container {
-      max-width:1100px;
-      margin:0 auto;
-      /* ↓ tighter vertical padding */
-      padding:8px 18px;
+    /* ──────────────────────────────────────────────
+       LOCKED VENDOR NAV — matches Transfer/Transactions
+       Add class="vendor-nav" to the <nav> on ALL vendor pages
+    ────────────────────────────────────────────── */
+    .vendor-nav { background:#0b1220; color:#fff; position:sticky; top:0; z-index:50; }
+    .vendor-nav .nav-container{
+      max-width:1100px; margin:0 auto;
+      padding:10px 18px !important;                /* lock bar height */
       display:flex; align-items:center; justify-content:space-between;
     }
-    .nav-left img {
-      /* ↓ smaller logo height */
-      height:28px; display:block;
+    .vendor-nav .nav-left img{
+      height:30px !important; display:block;       /* lock logo size */
     }
-    .nav-right { display:flex; gap:12px; align-items:center; }
-    .nav-right a {
+    .vendor-nav .nav-right{
+      display:flex; align-items:center;
+      gap:16px !important;                         /* lock spacing between links */
+    }
+    .vendor-nav .nav-right a{
       color:#fff; text-decoration:none;
-      /* ↓ slightly smaller text + compact hit area */
-      font-size:.92rem; line-height:1;
-      padding:6px 8px; border-radius:6px;
+      font-size:.95rem !important;
+      line-height:1 !important;
+      padding:6px 8px !important;                  /* lock link padding */
+      border-radius:6px; opacity:.95;
     }
-    .nav-right a:hover { background:rgba(255,255,255,.08); text-decoration:none; }
+    .vendor-nav .nav-right a:hover{
+      opacity:1; text-decoration:none; background:rgba(255,255,255,.08);
+    }
 
-    /* Hero */
+    /* Hero + content (unchanged) */
     .hero { background:linear-gradient(180deg,#f7fafc,#fff); border-bottom:1px solid var(--stroke); }
-    .hero-inner { max-width:1100px; margin:0 auto; padding:20px 18px; }
-    .hero h1 { margin:0 0 6px; font-size:1.6rem; font-weight:600; }
+    .hero-inner { max-width:1100px; margin:0 auto; padding:24px 18px; }
+    .hero h1 { margin:0 0 6px; font-size:1.75rem; font-weight:600; }
     .hero-sub { margin:0; color:#4b5563; }
 
-    /* Quick stats */
     .stats { max-width:1100px; margin:18px auto 0; padding:0 18px 8px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
     .stat { background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:14px; }
     .stat .label { color:var(--muted); font-size:0.9rem; margin:0 0 6px; }
     .stat .value { font-size:1.25rem; font-weight:600; }
 
-    /* Tiles */
     .tiles { max-width:1100px; margin:10px auto 40px; padding:0 18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
     .tile { display:flex; gap:12px; align-items:center; padding:14px; border:1px solid var(--stroke); background:#fff; border-radius:12px; text-decoration:none; color:var(--ink); box-shadow:0 6px 16px rgba(0,0,0,.06); transition:transform .15s ease, border-color .15s ease; }
     .tile:hover { border-color:#d7deea; transform:translateY(-1px); }
     .tile .icon { width:28px; height:28px; flex:0 0 28px; }
     .tile .title { font-weight:600; font-size:0.98rem; }
-    .tile .sub { color:var(--muted); font-size:.9rem; }
+    .tile .sub { color:#6b7280; font-size:.9rem; }
 
-    /* Footer — light like the other vendor pages */
-    footer { border-top:1px solid var(--stroke); background:#fff; color:#6b7280; }
-    .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; font-size:.9rem; }
+    /* Footer (same style as other vendor pages) */
+    footer { border-top:1px solid var(--stroke); background:#fff; }
+    .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
     .footer-links a { color:#6b7280; text-decoration:none; margin-left:12px; }
     .footer-links a:hover { text-decoration:underline; }
-
-    @media (max-width: 768px) {
-      .nav-right { gap:10px; }
-    }
   </style>
 </head>
 <body>
@@ -84,8 +84,8 @@
     })();
   </script>
 
-  <!-- Top Nav -->
-  <nav>
+  <!-- Top Nav (LOCKED) -->
+  <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
         <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
@@ -127,45 +127,38 @@
   <section class="tiles">
     <a class="tile" href="index.html">
       <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3 12l2-2m0 0l7-7 7 7m-9 2v6m-4 4h10m-6-10h6" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
-      <span>
-        <span class="title">Overview</span><br/>
-        <span class="sub">See your balance and stats</span>
-      </span>
+      <span><span class="title">Overview</span><br/><span class="sub">See your balance and stats</span></span>
     </a>
     <a class="tile" href="transfer.html">
       <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
-      <span>
-        <span class="title">Transfer to Bank</span><br/>
-        <span class="sub">Move funds from BOOP to your bank</span>
-      </span>
+      <span><span class="title">Transfer to Bank</span><br/><span class="sub">Move funds from BOOP to your bank</span></span>
     </a>
     <a class="tile" href="transactions.html">
       <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h12M3 18h9" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
-      <span>
-        <span class="title">Transactions</span><br/>
-        <span class="sub">View your recent activity</span>
-      </span>
+      <span><span class="title">Transactions</span><br/><span class="sub">View your recent activity</span></span>
     </a>
   </section>
 
-  <!-- Footer (light) -->
+  <!-- Footer -->
   <footer>
     <div class="footer-inner">
       <div>© 2025 BOOP</div>
       <div class="footer-links">
-        <a href="../terms.html" target="_blank" rel="noopener">Terms</a>
-        <a href="../privacy.html" target="_blank" rel="noopener">Privacy</a>
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script>
+    // Welcome line
     document.addEventListener("DOMContentLoaded", () => {
       const name = window.__vendorName || "Vendor";
       const title = document.getElementById("welcomeTitle");
       if (title) title.textContent = `Welcome, ${name}`;
     });
 
+    // Simple stats hydration (same as before)
     (async function loadStats(){
       const token = localStorage.getItem("boop_jwt");
       const setText = (id,v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
@@ -184,6 +177,7 @@
       setText("pendingPayouts", "—");
     })();
 
+    // Logout
     document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
       e.preventDefault();
       try { await fetch("/api/logout", { method:"POST" }); } catch {}
