@@ -4,6 +4,21 @@ const router = express.Router();
 const db = require("../../db");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
+/* -------------------------------------------------------------------------
+   ⚠️ NOTE ON MOUNTS ⚠️
+   This single router file is mounted twice in server.js:
+
+     - /api/vendors   → Admin-only endpoints (requireAdmin)
+     - /api/vendor    → Vendor self-service endpoints (requireVendor)
+
+   Keeping them in one file avoids duplication. Route-level guards 
+   (requireAdmin vs requireVendor) enforce who can use which endpoints.
+
+   Example:
+     - GET /api/vendors          → Admin: list all vendors
+     - GET /api/vendor/transactions/report → Vendor: fetch only their own txns
+---------------------------------------------------------------------------*/
+
 // --- helpers ---------------------------------------------------------------
 function requireAdmin(req, res, next) {
   const role = (req.user?.role || "").toLowerCase();
@@ -136,7 +151,7 @@ router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
 });
 
 /* -------------------------------------------------------------------------
-   VENDOR REPORTS (new)
+   VENDOR REPORTS (self-service)
    GET /api/vendor/transactions/report
    - Only for signed-in vendors
    - Filters: ?start=YYYY-MM-DD&end=YYYY-MM-DD&type=...&limit=25&offset=0
