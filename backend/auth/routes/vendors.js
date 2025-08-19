@@ -1,4 +1,4 @@
-// backend/auth/routes/vendor.js
+// backend/auth/routes/vendors.js
 const express = require("express");
 const router = express.Router();
 const db = require("../../db");
