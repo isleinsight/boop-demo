@@ -45,6 +45,7 @@ mount('/api/cards', './auth/routes/cards');
 mount('/api/wallets', './auth/routes/wallets');
 mount('/api/vendors', './auth/routes/vendors'); // admin vendors list/update/delete
 
+
 // ✅ ADD THIS: singular vendor API used by the vendor portal (e.g. /api/vendor/transactions/report)
 mount('/api/vendor', './auth/routes/vendors', 'vendor'); 
 
@@ -52,6 +53,8 @@ mount('/api/students', './auth/routes/students');
 mount('/api/user-students', './auth/routes/userStudents');
 mount('/api/sessions', './auth/routes/sessions');
 mount('/api/transactions', './auth/routes/transactions');
+mount('/api/payouts', './auth/routes/payouts');
+mount('/api/sales', './auth/routes/sales');
 
 // NEW routes you asked for
 mount('/api/transfers', './auth/routes/transfers');
