@@ -7,29 +7,32 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root{
-      --ink:#102a43;
-      --muted:#6b7c93;
-      --blue:#2f80ed;
-      --blue-dark:#1a5fcc;
-      --stroke:#e5e7eb;
-      --bg:#ffffff;
-      --nav:#0b1220;
-      --grad1: rgba(47,128,237,.18);
-      --grad2: rgba(16,185,129,.15);
-      --green:#16a34a;
-      --red:#dc2626;
+      --ink:#102a43; --muted:#6b7c93; --blue:#2f80ed; --blue-dark:#1a5fcc;
+      --stroke:#e5e7eb; --bg:#ffffff; --nav:#0b1220;
+      --grad1: rgba(47,128,237,.18); --grad2: rgba(16,185,129,.15);
+      --green:#16a34a; --red:#dc2626;
     }
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* NAV (vendor) */
-    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
-    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
-    .nav-left img{ height:36px; display:block }
-    .nav-right{ display:flex; align-items:center; gap:18px; }
-    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; }
-    .nav-right a[aria-current="page"]{ text-decoration:underline; opacity:1; }
-    .nav-right a:hover{ opacity:1 }
+    /* ──────────────────────────────────────────────
+       LOCKED VENDOR NAV — same spec as homepage
+    ────────────────────────────────────────────── */
+    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    .vendor-nav .nav-container{
+      max-width:1100px; margin:0 auto;
+      padding:10px 18px !important;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .vendor-nav .nav-left img{ height:30px !important; display:block; }
+    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px !important; }
+    .vendor-nav .nav-right a{
+      color:#fff; text-decoration:none;
+      font-size:.95rem !important; line-height:1 !important;
+      padding:6px 8px !important; border-radius:6px; opacity:.95;
+    }
+    .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
+    .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
     /* HERO */
     .hero-band{
@@ -40,24 +43,20 @@
       color:#eef2ff; padding:26px 0 22px;
     }
     .hero-inner{ max-width:1100px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
-    .hero-title{ margin:0; font-size:clamp(20px, 3.2vw, 28px); font-weight:600; }
+    .hero-title{ margin:0; font-size:clamp(20px,3.2vw,28px); font-weight:600; }
     .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
 
     /* MAIN */
     .container{ max-width:1100px; margin:18px auto 40px; padding:0 20px; }
-
     .filters{
       display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-bottom:16px;
-      border:1px solid var(--stroke); border-radius:12px; padding:12px;
-      background:#fff;
+      border:1px solid var(--stroke); border-radius:12px; padding:12px; background:#fff;
     }
     .filters .btn-group{ display:flex; gap:8px; }
     .filters .btn-group button{
       padding:8px 12px; border:1px solid var(--stroke); border-radius:999px; background:#fff; cursor:pointer; font-weight:600;
     }
-    .filters .btn-group button.active{
-      background:var(--blue); color:#fff; border-color:var(--blue);
-    }
+    .filters .btn-group button.active{ background:var(--blue); color:#fff; border-color:var(--blue); }
     .filters input{ padding:10px 12px; border:1px solid var(--stroke); border-radius:8px; font-size:.95rem; background:#fff; }
     .spacer{ flex:1; }
     .export-btn{
@@ -105,14 +104,14 @@
           me = await r.json(); localStorage.setItem("boopUser", JSON.stringify(me));
         }
         if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
-      } catch (e) {
+      } catch {
         localStorage.clear(); location.href = "vendor-login.html";
       }
     })();
   </script>
 
-  <!-- NAV -->
-  <nav>
+  <!-- NAV (locked to homepage spec) -->
+  <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
         <a href="index.html"><img src="../assets/Boop-Logo.png" alt="BOOP Logo" /></a>
@@ -184,7 +183,7 @@
       const token = localStorage.getItem("boop_jwt");
       const listEl = document.getElementById('list');
 
-      let allTx = []; // current fetch results
+      let allTx = [];
       let filtered = [];
 
       const btn7 = document.getElementById('btn7');
@@ -195,12 +194,10 @@
       const applyCustom = document.getElementById('applyCustom');
       const exportBtn = document.getElementById('exportBtn');
 
-      function dollars(cents){ return `$${(Number(cents||0)/100).toFixed(2)}`; }
+      function dollars(c){ return `$${(Number(c||0)/100).toFixed(2)}`; }
       function byDateDesc(a,b){ return new Date(b.created_at) - new Date(a.created_at); }
 
-      function setActive(btn){
-        [btn7, btn30, btn90].forEach(b => b.classList.toggle('active', b===btn));
-      }
+      function setActive(btn){ [btn7, btn30, btn90].forEach(b => b.classList.toggle('active', b===btn)); }
 
       function withinRange(tx, start, end){
         const t = new Date(tx.created_at).getTime();
@@ -215,10 +212,9 @@
           return;
         }
         listEl.innerHTML = filtered.map(tx=>{
-          const type = (tx.type||'').toLowerCase(); // 'credit' | 'debit' | others
-          const isCredit = type === 'credit';
-          // Vendor perspective: credits are money received (from customer/BOOP), debits are money sent (payouts/refunds)
-          const who = isCredit ? (tx.sender_name || tx.from_name || 'Customer') : (tx.recipient_name || tx.to_name || 'Counterparty');
+          const isCredit = (tx.type||'').toLowerCase()==='credit';
+          const who = isCredit ? (tx.sender_name || tx.from_name || 'Customer')
+                               : (tx.recipient_name || tx.to_name || 'Counterparty');
           const verb = isCredit ? 'Received from' : 'Sent to';
           const sign = isCredit ? '+' : '−';
           const cls = isCredit ? 'positive' : 'negative';
@@ -235,8 +231,7 @@
                 </div>
                 <div class="amt ${cls}">${sign}${dollars(tx.amount_cents)}</div>
               </div>
-            </div>
-          `;
+            </div>`;
         }).join('');
       }
 
@@ -268,11 +263,11 @@
         const rows = filtered.map(tx=>{
           const isCredit = (tx.type||'').toLowerCase()==='credit';
           const dir = isCredit ? "Received" : "Sent";
-          const who = isCredit ? (tx.sender_name || tx.from_name || '') : (tx.recipient_name || tx.to_name || '');
+          const who = isCredit ? (tx.sender_name || tx.from_name || '')
+                               : (tx.recipient_name || tx.to_name || '');
           return [
             tx.created_at ? new Date(tx.created_at).toISOString() : "",
-            dir,
-            who,
+            dir, who,
             (Number(tx.amount_cents||0)/100).toFixed(2),
             (tx.note||"").replace(/,/g," "),
             tx.id || ""
@@ -291,45 +286,31 @@
         const qs = new URLSearchParams();
         if (startISO) qs.set("start", startISO.slice(0,10));
         if (endISO)   qs.set("end", endISO.slice(0,10));
-        qs.set("limit", String(limit));
-        qs.set("offset", "0");
-        const res = await fetch(`/api/vendor/transactions/report?${qs.toString()}`, {
+        qs.set("limit", String(limit)); qs.set("offset","0");
+        const res = await fetch(`/api/vendor/transactions/report?${qs}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
         const rows = data.transactions || [];
-        // Normalize
         return rows.map(r => ({
-          id: r.id,
-          created_at: r.created_at,
-          type: r.type,
-          amount_cents: r.amount_cents,
-          note: r.note,
-          sender_name: r.sender_name || r.from_name,
-          recipient_name: r.recipient_name || r.to_name
+          id:r.id, created_at:r.created_at, type:r.type, amount_cents:r.amount_cents,
+          note:r.note, sender_name:r.sender_name||r.from_name, recipient_name:r.recipient_name||r.to_name
         }));
       }
 
       async function loadDefault(){
         try{
-          // Pull last 90 days server-side (limit 500)
           const now = new Date();
           const start = new Date(now.getTime() - 90*24*60*60*1000);
-          const rows = await fetchVendorRange({
-            startISO: start.toISOString(),
-            endISO: now.toISOString(),
-            limit: 500
-          });
-          allTx = rows;
-          applyRange(30); // default selection = 30 days
+          allTx = await fetchVendorRange({ startISO:start.toISOString(), endISO:now.toISOString(), limit:500 });
+          applyRange(30);
         }catch(e){
           console.warn('vendor report error', e);
           listEl.innerHTML = `<div class="empty">Couldn’t load transactions.</div>`;
         }
       }
 
-      // Logout
       document.getElementById('logoutLink')?.addEventListener('click', async (e)=>{
         e.preventDefault();
         try { await fetch('/api/logout', { method:'POST' }); } catch {}
