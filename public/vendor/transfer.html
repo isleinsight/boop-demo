@@ -287,7 +287,7 @@
         e.preventDefault();
         try { await fetch('/api/logout', { method:'POST' }); } catch {}
         localStorage.clear();
-        location.href = '../login.html';
+        location.href = 'vendor-login.html';
       });
 
       const flash = document.getElementById('flash');
