@@ -105,7 +105,7 @@
         if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
         localStorage.setItem("boopUser", JSON.stringify(me));
       } catch {
-        localStorage.clear(); location.href = "../login.html";
+        localStorage.clear(); location.href = "vendor-login.html";
       }
     })();
   </script>
