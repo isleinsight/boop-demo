@@ -84,27 +84,31 @@
   </style>
 </head>
 <body>
-  <!-- Auth (vendors only) + set display name from business_name -->
-  <script>
-    (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
-        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-        if (!res.ok) throw new Error("Unauthorized");
-        const me = await res.json();
-        if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
-        localStorage.setItem("boopUser", JSON.stringify(me));
+<!-- Auth (vendors only) + set display name from business_name -->
+<script>
+  (async () => {
+    try {
+      const token = localStorage.getItem("boop_jwt");
+      if (!token) throw new Error("No token");
+      const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+      if (!res.ok) throw new Error("Unauthorized");
+      const me = await res.json();
+      if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
+      localStorage.setItem("boopUser", JSON.stringify(me));
 
-        // ✅ Prefer vendors.business_name (lowercase underscore), then person name, then email
-        window.__vendorDisplay =
-          (me.business_name && String(me.business_name).trim()) ||
-          ((me.first_name && me.last_name) ? `${me.first_name} ${me.last_name}` : (me.email || "Vendor"));
-      } catch {
-        localStorage.clear(); location.href = "../login.html";
-      }
-    })();
-  </script>
+      // ✅ Force vendors.business_name to be the display name
+      window.__vendorDisplay = (me.business_name && String(me.business_name).trim()) || "Vendor";
+
+      // Update hero + page title immediately
+      const biz = window.__vendorDisplay;
+      const titleEl = document.getElementById("welcomeTitle");
+      if (titleEl) titleEl.textContent = `${biz} Vendor Portal`;
+      document.title = `${biz} Vendor Portal – BOOP`;
+    } catch {
+      localStorage.clear(); location.href = "../login.html";
+    }
+  })();
+</script>
 
   <!-- Minimal header (logo + logout only) -->
   <header class="minihead">
