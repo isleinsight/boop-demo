@@ -7,33 +7,24 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root{
-      --ink:#102a43;
-      --muted:#6b7c93;
-      --blue:#2f80ed;
-      --blue-dark:#1a5fcc;
-      --stroke:#dcdcdc;
-      --bg:#ffffff;
-      --nav:#102a43;
-      --grad1: rgba(47,128,237,.18);
-      --grad2: rgba(16,185,129,.15);
+      --ink:#102a43; --muted:#6b7c93; --blue:#2f80ed; --blue-dark:#1a5fcc;
+      --stroke:#e5e7eb; --bg:#ffffff; --nav:#102a43;
+      --green:#16a34a; --red:#dc2626;
+      --grad1: rgba(47,128,237,.18); --grad2: rgba(16,185,129,.15);
     }
 
-    *{ box-sizing:border-box }
-    html, body{ height:100% }
-    /* Sticky footer: body is a column; main grows; footer sticks to bottom */
+    *{box-sizing:border-box}
+    /* Sticky footer layout */
+    html, body { height:100% }
     body{
-      margin:0;
+      margin:0; display:flex; flex-direction:column; min-height:100vh;
       font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      background:var(--bg);
-      color:var(--ink);
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
+      background:var(--bg); color:var(--ink);
     }
 
     /* NAV */
     nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
-    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-container{ max-width:1280px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img{ height:36px; display:block; }
     .nav-right{ display:flex; align-items:center; gap:18px; }
     .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; }
@@ -69,16 +60,21 @@
         linear-gradient(180deg, #0b1220 0%, #0d1220 40%, #0b1220 100%);
       color:#eef2ff; padding:28px 0 24px;
     }
-    .hero-inner{ max-width:1100px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .hero-inner{ max-width:1280px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
     .hero-title{ margin:0; font-size:clamp(20px, 3.2vw, 28px); font-weight:600; letter-spacing:.2px; }
     .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
 
-    /* MAIN (make it grow to push footer down) */
-    main.container{ max-width:1100px; margin:20px auto 40px; padding:0 20px; flex:1 0 auto; }
+    /* MAIN */
+    main.container{ flex:1; } /* push footer down */
+    .container{ max-width:1280px; margin:20px auto 40px; padding:0 20px; }
 
+    /* 3-up cards */
     .user-details-grid{
-      display:grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
+      display:grid; grid-template-columns: repeat(3, minmax(260px,1fr));
       gap:18px; margin:18px 0 26px;
+    }
+    @media (max-width: 900px){
+      .user-details-grid{ grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); }
     }
     .user-details-grid div{ background:#fff; border:1px solid var(--stroke); border-radius:10px; padding:14px 16px; }
     .label{ display:block; font-size:.86rem; color:var(--muted); margin-bottom:6px; }
@@ -92,18 +88,32 @@
     .action-buttons button:hover{ background:var(--blue-dark); border-color:var(--blue-dark); transform:translateY(-1px); }
     .hidden{ display:none; }
 
-    .section-title{ font-size:1.1rem; font-weight:600; margin:0 0 12px 0; }
+    .section-title-wrap{ display:flex; align-items:center; justify-content:space-between; margin:6px 0 12px; }
+    .section-title{ font-size:1.1rem; font-weight:600; margin:0; }
+    .view-all{ font-size:.9rem; text-decoration:none; color:var(--blue); }
+
+    /* Recent activity compact list */
     .activity-list{ display:grid; gap:10px; }
     .activity-item{
-      background:#fff; border:1px solid var(--stroke); border-radius:10px; padding:12px 14px;
-      display:flex; align-items:center; justify-content:space-between; font-size:.95rem;
+      background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:12px 14px;
+      display:flex; align-items:center; gap:12px;
     }
-    .amount{ font-weight:600; color:var(--blue); }
+    .avatar{
+      width:40px; height:40px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#334155; flex:0 0 40px;
+    }
+    .line{ display:flex; align-items:center; justify-content:space-between; width:100%; }
+    .who{ font-weight:600; }
+    .meta{ font-size:.85rem; color:#94a3b8; margin-top:2px; }
+    .amt{ font-weight:700; }
+    .amt.positive{ color:var(--green); }
+    .amt.negative{ color:var(--red); }
+    .empty{ text-align:center; color:#64748b; padding:20px; border:1px dashed var(--stroke); border-radius:12px; background:#fff; }
 
-    /* Footer (sticks at bottom) */
-    footer{ border-top:1px solid var(--stroke); background:#fff; margin-top:auto; }
+    /* Footer (sticky) */
+    footer{ border-top:1px solid var(--stroke); background:#fff; }
     .footer-inner{
-      max-width:1100px; margin:0 auto; padding:16px 20px;
+      max-width:1280px; margin:0 auto; padding:16px 20px;
       display:flex; gap:14px; align-items:center; justify-content:space-between;
       color:#6b7280; font-size:.9rem;
     }
@@ -184,7 +194,10 @@
       <button id="transferFundsBtn">Transfer</button>
     </div>
 
-    <div class="section-title">Recent Activity</div>
+    <div class="section-title-wrap">
+      <div class="section-title">Recent Activity</div>
+      <a class="view-all" href="activity.html">View all</a>
+    </div>
     <div class="activity-list" id="transactionBody">
       <div class="activity-item"><span>Loading...</span></div>
     </div>
@@ -201,7 +214,7 @@
     </div>
   </footer>
 
-  <!-- AUTH GUARD: allow only cardholder/senior/student; else send to index.html -->
+  <!-- AUTH GUARD -->
   <script>
     (async () => {
       try {
@@ -222,44 +235,14 @@
     })();
   </script>
 
-  <!-- Data paint: name/passport, balance, recent activity -->
+  <!-- First name + balance + passport + recent 5 activity -->
   <script>
     (function () {
-      const RECENT_TX_URLS = [
-        "/api/transactions/mine?limit=5&offset=0",      // primary
-        "/api/transactions/recent?limit=5&offset=0"     // fallback if your API uses a different path
-      ];
-
-      const $ = (id) => document.getElementById(id);
-
-      const capitalizeFirst = (s) =>
-        (!s || typeof s !== "string") ? "" : s.charAt(0).toUpperCase() + s.slice(1);
-
-      function paintHeaderBits() {
-        const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
-        const firstRaw =
-          user.first_name ||
-          (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
-          (user.email ? user.email.split("@")[0] : "") ||
-          "Friend";
-        const first = capitalizeFirst(String(firstRaw).trim());
-
-        const firstEl = $("cardholderFirstName");
-        const emailEl = $("cardholderEmail");
-        if (firstEl) firstEl.textContent = first;
-        if (emailEl && user.email) emailEl.textContent = user.email;
+      function capitalizeFirst(str) {
+        if (!str || typeof str !== "string") return "";
+        return str.charAt(0).toUpperCase() + str.slice(1);
       }
-
-      async function loadPassport() {
-        try {
-          const token = localStorage.getItem("boop_jwt");
-          const r = await fetch("/api/passport/mine", { headers:{ Authorization:`Bearer ${token}` }});
-          if (!r.ok) return;
-          const j = await r.json();
-          const el = $("passportId");
-          if (el) el.textContent = j.passport_id || "—";
-        } catch {}
-      }
+      const dollars = c => `$${(Number(c||0)/100).toFixed(2)}`;
 
       async function loadBalance() {
         try {
@@ -267,60 +250,89 @@
           const r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
           if (!r.ok) return;
           const j = await r.json();
-          const cents = Number(j?.balance_cents || 0);
-          const el = $("walletBalance");
-          if (el) el.textContent = `$${(cents/100).toFixed(2)}`;
+          const el = document.getElementById("walletBalance");
+          if (el) el.textContent = dollars(j?.balance_cents || 0);
         } catch {}
       }
 
-      function formatAmount(cents, type) {
-        const amt = (Number(cents||0)/100).toFixed(2);
-        const sign = (String(type).toLowerCase() === "credit") ? "+" : "−";
-        return `${sign}$${amt}`;
-      }
+      async function renderRecentActivity() {
+        const box = document.getElementById('transactionBody');
+        try{
+          const token = localStorage.getItem("boop_jwt");
+          const r = await fetch('/api/transactions/mine', { headers:{ Authorization:`Bearer ${token}` }});
+          const rows = await r.json();
+          const list = Array.isArray(rows) ? rows : [];
+          const top5 = list
+            .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
+            .slice(0,5);
 
-      function renderRecent(rows) {
-        const box = $("transactionBody");
-        if (!box) return;
-        if (!rows || !rows.length) {
-          box.innerHTML = `<div class="activity-item"><span>No recent activity.</span></div>`;
-          return;
-        }
-        box.innerHTML = rows.map(tx => {
-          const isCredit = String(tx.type||"").toLowerCase() === "credit";
-          const who = isCredit ? (tx.sender_name || "From") : (tx.recipient_name || "To");
-          const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : "";
-          return `
-            <div class="activity-item">
-              <span>${when}${tx.note ? " • " + tx.note : ""}</span>
-              <span class="amount">${formatAmount(tx.amount_cents, tx.type)}</span>
-            </div>`;
-        }).join("");
-      }
-
-      async function loadRecentActivity() {
-        const token = localStorage.getItem("boop_jwt");
-        for (const url of RECENT_TX_URLS) {
-          try {
-            const r = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
-            if (!r.ok) continue;
-            const j = await r.json();
-            // Accept either {items:[...]} or {transactions:[...]} or array
-            const rows = j.items || j.transactions || (Array.isArray(j) ? j : []);
-            renderRecent(rows.slice(0,5));
+          if (!top5.length) {
+            box.innerHTML = `<div class="empty">No recent activity.</div>`;
             return;
-          } catch {}
+          }
+
+          box.innerHTML = top5.map(tx=>{
+            const isCredit = (tx.type||'').toLowerCase()==='credit';
+            const who = isCredit ? (tx.sender_name || tx.from_name || 'Someone')
+                                 : (tx.recipient_name || tx.to_name || 'Someone');
+            const initials = (who?.trim?.()[0] || 'U').toUpperCase();
+            const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : '';
+            const note = tx.note ? ` • ${tx.note}` : '';
+            const sign = isCredit ? '+' : '−';
+            const cls  = isCredit ? 'positive' : 'negative';
+            return `
+              <div class="activity-item">
+                <div class="avatar">${initials}</div>
+                <div class="line">
+                  <div>
+                    <div class="who">${isCredit ? 'Received from' : 'Sent to'} ${who}</div>
+                    <div class="meta">${when}${note}</div>
+                  </div>
+                  <div class="amt ${cls}">${sign}${dollars(tx.amount_cents)}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } catch {
+          box.innerHTML = `<div class="empty">Couldn’t load activity.</div>`;
         }
-        renderRecent([]);
       }
 
-      // init
-      try { paintHeaderBits(); } catch {}
+      async function paintCardholderBits() {
+        const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
+        const firstNameEl = document.getElementById("cardholderFirstName");
+        const emailEl     = document.getElementById("cardholderEmail");
+        const passportEl  = document.getElementById("passportId");
+
+        const rawFirst =
+          user.first_name ||
+          (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
+          (user.email ? user.email.split("@")[0] : "") ||
+          "Friend";
+
+        const first = capitalizeFirst(String(rawFirst).trim());
+
+        if (firstNameEl) firstNameEl.textContent = first;
+        if (emailEl && user.email) emailEl.textContent = user.email;
+
+        // live passport from API
+        try {
+          const token = localStorage.getItem("boop_jwt");
+          const r = await fetch("/api/passport/mine", { headers:{ Authorization:`Bearer ${token}` }});
+          if (r.ok) {
+            const j = await r.json();
+            if (passportEl) passportEl.textContent = j.passport_id || "—";
+          } else { if (passportEl) passportEl.textContent = "—"; }
+        } catch { if (passportEl) passportEl.textContent = "—"; }
+
+        window.__cardholderDisplay = first;
+      }
+
+      // Init
       document.addEventListener("DOMContentLoaded", () => {
-        paintHeaderBits();
-        loadPassport();
+        paintCardholderBits();
         loadBalance();
-        loadRecentActivity();
+        renderRecentActivity();
       });
     })();
   </script>
