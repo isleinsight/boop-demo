@@ -29,20 +29,20 @@
         linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
     }
 
-    /* NAV (match other pages; not bold) */
+    /* NAV */
     nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .nav-container{ max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img{ height:34px; display:block; }
     .nav-right{ display:flex; align-items:center; gap:18px; }
     .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; font-weight:500; }
     .nav-right a:hover{ opacity:1 }
+
     .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
     .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
     .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
     .hamburger.active span:nth-child(2){ opacity:0; }
     .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
 
-    /* Mobile panel + overlay (kept hidden on desktop) */
     .nav-panel{ display:none; }
     @media (max-width: 768px){
       .nav-right{ display:none; }
@@ -59,7 +59,7 @@
       .nav-overlay.active{ display:block; }
     }
 
-    /* HERO (left-aligned) */
+    /* HERO */
     .hero-band{ padding:28px 0 20px; }
     .hero-inner{
       max-width:1100px; margin:0 auto; padding:0 18px;
@@ -232,32 +232,30 @@
     </div>
   </footer>
 
-  <!-- Permissions: cardholder (or assistance) only -->
+  <!-- ALL SCRIPTS -->
   <script>
-    (async () => {
+    (async function(){
+      // ---------- Permissions ----------
       try {
         const token = localStorage.getItem("boop_jwt");
         if (!token) throw new Error("No token");
         const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-        const me = await res.json();
-        const role = (me.role||"").toLowerCase();
-        const type = (me.type||"").toLowerCase();
+        const meData = await res.json();
+        if (!res.ok) throw new Error(meData?.error || "Unauthorized");
+        const role = (meData.role||"").toLowerCase();
+        const type = (meData.type||"").toLowerCase();
         const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
         if (!ok) throw new Error("Not a cardholder");
-        localStorage.setItem("boopUser", JSON.stringify(me));
+        localStorage.setItem("boopUser", JSON.stringify(meData));
       } catch {
         localStorage.clear();
         window.location.href = "cardholder-login.html";
+        return;
       }
-    })();
-  </script>
 
-  <!-- Page logic -->
-  <script>
-    (function(){
+      // ---------- Nav / Footer ----------
       document.getElementById('year').textContent = new Date().getFullYear();
 
-      // Mobile menu
       const hamburger = document.getElementById('hamburger');
       const panel = document.getElementById('mobileMenu');
       const overlay = document.getElementById('navOverlay');
@@ -267,7 +265,6 @@
       overlay?.addEventListener('click', closeMenu);
       document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
 
-      // Logout both places
       function attachLogout(el){
         if (!el) return;
         el.addEventListener('click', async (e)=>{
@@ -280,6 +277,7 @@
       attachLogout(document.getElementById('logoutBtn'));
       attachLogout(document.getElementById('logoutBtnMobile'));
 
+      // ---------- Data + Rendering ----------
       const token = localStorage.getItem("boop_jwt");
       const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
 
@@ -290,7 +288,6 @@
       const ownerEmailEl = document.getElementById('ownerEmail');
       const cardsList = document.getElementById('cardsList');
 
-      // Prefill owner info
       ownerEmailEl.textContent = me?.email || '—';
       const first = me?.first_name || (me?.name?.split?.(' ')[0]) || (me?.email ? me.email.split('@')[0] : '—');
       const last = me?.last_name || '';
@@ -301,80 +298,112 @@
         pillEl.classList.remove('ok','warn','stop');
         if (kind) pillEl.classList.add(kind);
       }
-      function maskNumber(){ return '•••• •••• •••• ••••'; }
 
-      function renderCards(cards){
-        if (!Array.isArray(cards) || cards.length === 0){
-          cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
-          return;
-        }
-        const html = cards.map(card=>{
-          const type = (card.type || '').toLowerCase(); // 'spending' | 'transit'
-          const status = (card.status || 'active').toLowerCase();
-          const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
-          const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+      function pickLast4(c){
+        const direct = c.last4 ?? c.last_four ?? c.pan_last4 ?? c.tail ?? c.lastDigits;
+        if (direct && String(direct).match(/^\d{4}$/)) return String(direct);
+        const masked = c.masked ?? c.mask ?? c.card_mask ?? c.pan_mask;
+        if (masked){ const m = String(masked).match(/(\d{4})\D*$/); if (m) return m[1]; }
+        return null;
+      }
+      function normalizeType(v){
+        const s = (v||'').toLowerCase();
+        if (['transit','bus','metro','rail'].includes(s)) return 'transit';
+        return 'spending';
+      }
+      function normalizeStatus(v){
+        const s = (v||'').toLowerCase();
+        if (['active','ok','enabled'].includes(s)) return 'active';
+        if (['pending','review'].includes(s)) return 'pending';
+        if (['disabled','blocked','inactive','frozen','closed'].includes(s)) return 'disabled';
+        return 'active';
+      }
+      function normalizeCard(c){
+        return {
+          type: normalizeType(c.type ?? c.card_type ?? c.kind ?? c.category),
+          status: normalizeStatus(c.status ?? c.state ?? c.card_status),
+          rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
+          pass_name: c.pass_name ?? c.passName ?? null,
+          last4: pickLast4(c),
+          owner_id: c.user_id ?? c.owner_id ?? c.userId ?? c.ownerId,
+          passport_id: c.passport_id ?? c.passportId ?? null
+        };
+      }
 
-          if (type === 'transit'){
-            const rides = Number(card.rides_remaining ?? card.ridesRemaining ?? 0);
-            const passName = card.pass_name || card.passName || 'Transit';
-            return `
-              <div class="tile">
-                <div class="row">
-                  <h3>Transit Card</h3>
-                  <span class="pill ${pillKind}">${statusLabel}</span>
-                </div>
-                <div class="meta">${passName}</div>
-                <div class="divider"></div>
-                <div class="row">
-                  <div>
-                    <span class="label">Rides remaining</span>
-                    <div class="value">${rides}</div>
-                  </div>
-                  <div>
-                    <span class="label">Card number</span>
-                    <div class="value">${maskNumber()}</div>
-                  </div>
-                </div>
-              </div>`;
-          }
+      function cardTileHTML(card){
+        const status = card.status;
+        const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
+        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+
+        if (card.type === 'transit'){
+          const passName = card.pass_name || 'Transit';
           return `
             <div class="tile">
               <div class="row">
-                <h3>Spending Card</h3>
+                <h3>Transit Card</h3>
                 <span class="pill ${pillKind}">${statusLabel}</span>
               </div>
-              <div class="meta">Use at supported merchants.</div>
+              <div class="meta">${passName}</div>
               <div class="divider"></div>
               <div class="row">
                 <div>
-                  <span class="label">Card number</span>
-                  <div class="value">${maskNumber()}</div>
-                </div>
-                <div>
-                  <span class="label">Funding</span>
-                  <div class="value">BOOP Wallet</div>
+                  <span class="label">Rides remaining</span>
+                  <div class="value">${Number(card.rides_remaining||0)}</div>
                 </div>
               </div>
-            </div>`;
-        }).join('');
-        cardsList.innerHTML = html;
+            </div>
+          `;
+        }
+
+        // Spending
+        const ending = card.last4 ? `Card ending in ${card.last4}` : null;
+        return `
+          <div class="tile">
+            <div class="row">
+              <h3>Spending Card</h3>
+              <span class="pill ${pillKind}">${statusLabel}</span>
+            </div>
+            <div class="meta">Use at supported merchants.</div>
+            <div class="divider"></div>
+            <div class="row">
+              <div>
+                <span class="label">Funding</span>
+                <div class="value">BOOP Wallet</div>
+              </div>
+              ${ending ? `
+              <div>
+                <span class="label">Details</span>
+                <div class="value">${ending}</div>
+              </div>` : ``}
+            </div>
+          </div>
+        `;
       }
 
-      async function loadPassport(){
+      function renderCards(cards){
+        if (!Array.isArray(cards) || !cards.length){
+          cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
+          return;
+        }
+        cardsList.innerHTML = cards.map(cardTileHTML).join('');
+      }
+
+      async function loadPassportAndCards(){
         let passport = null;
-        try {
-          const res = await fetch('/api/passport/mine', { headers: { Authorization: `Bearer ${token}` }});
-          if (res.ok) passport = await res.json();
-        } catch {}
+        try{
+          const r = await fetch('/api/passport/mine', { headers:{ Authorization:`Bearer ${token}` }});
+          if (r.ok){ passport = await r.json(); }
+        }catch{}
 
-        const passport_id = passport?.passport_id || me?.passport_id || '—';
-        passportIdEl.textContent = passport_id;
+        // Passport ID + status
+        const pid = passport?.passport_id || me?.passport_id || '—';
+        passportIdEl.textContent = pid;
 
-        const status = (passport?.status || 'active').toLowerCase();
-        if (status === 'active'){
+        const pstatus = (passport?.status || 'active').toLowerCase();
+        if (pstatus === 'active'){
           setStatus(passportStatus, 'Active', 'ok');
           setStatus(passportStatusInline, 'Active', 'ok');
-        } else if (status === 'pending'){
+        } else if (pstatus === 'pending'){
           setStatus(passportStatus, 'Pending', 'warn');
           setStatus(passportStatusInline, 'Pending', 'warn');
         } else {
@@ -382,88 +411,34 @@
           setStatus(passportStatusInline, 'Disabled', 'stop');
         }
 
-        if (Array.isArray(passport?.cards) && passport.cards.length){
-          renderCards(passport.cards);
-          return;
+        // Prefer cards embedded on passport, else GET /api/cards/mine
+        let rawCards = Array.isArray(passport?.cards) ? passport.cards : null;
+        if (!rawCards){
+          try{
+            const rc = await fetch('/api/cards/mine', { headers:{ Authorization:`Bearer ${token}` }});
+            const list = await rc.json();
+            if (Array.isArray(list)) rawCards = list;
+          }catch{}
         }
-        try {
-          const r = await fetch('/api/cards/mine', { headers: { Authorization: `Bearer ${token}` }});
-          const rows = await r.json();
-          if (Array.isArray(rows)){
-            const normalized = rows.map(c => ({
-              type: (c.type || '').toLowerCase(),
-              status: (c.status || 'active').toLowerCase(),
-              rides_remaining: c.rides_remaining ?? c.ridesRemaining,
-              pass_name: c.pass_name ?? c.passName
-            }));
-            renderCards(normalized);
-          } else {
-            renderCards([]);
-          }
-        } catch { renderCards([]); }
+
+        const normalized = Array.isArray(rawCards) ? rawCards.map(normalizeCard) : [];
+
+        // If backend returns other users’ cards accidentally, filter by owner or passport id
+        const myId = me?.id || me?.user_id;
+        const filtered = normalized.filter(c=>{
+          if (pid && c.passport_id) return String(c.passport_id) === String(pid);
+          if (myId && c.owner_id)   return String(c.owner_id) === String(myId);
+          return true; // fallback if no identifiers provided
+        });
+
+        renderCards(filtered);
       }
 
-      // Transit link (replace when ready)
+      // Transit link (placeholder)
       document.getElementById('buyTransitBtn').href = 'https://shorelink.example/';
 
-      loadPassport();
+      await loadPassportAndCards();
     })();
   </script>
-  function renderCards(cards){
-  if (!Array.isArray(cards) || cards.length === 0){
-    cardsList.innerHTML = `
-      <div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>
-    `;
-    return;
-  }
-
-  const html = cards.map(card=>{
-    const type = (card.type || '').toLowerCase(); // 'spending' | 'transit'
-    const status = (card.status || 'active').toLowerCase();
-    const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
-    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-
-    if (type === 'transit'){
-      const rides = Number(card.rides_remaining ?? card.ridesRemaining ?? 0);
-      const passName = card.pass_name || card.passName || 'Transit';
-      return `
-        <div class="tile">
-          <div class="row">
-            <h3>Transit Card</h3>
-            <span class="pill ${pillKind}">${statusLabel}</span>
-          </div>
-          <div class="meta">${passName}</div>
-          <div class="divider"></div>
-          <div class="row">
-            <div>
-              <span class="label">Rides remaining</span>
-              <div class="value">${rides}</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // default: spending card
-    return `
-      <div class="tile">
-        <div class="row">
-          <h3>Spending Card</h3>
-          <span class="pill ${pillKind}">${statusLabel}</span>
-        </div>
-        <div class="meta">Use at supported merchants.</div>
-        <div class="divider"></div>
-        <div class="row">
-          <div>
-            <span class="label">Funding</span>
-            <div class="value">BOOP Wallet</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  cardsList.innerHTML = html;
-}
 </body>
 </html>
