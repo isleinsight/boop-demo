@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
     :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
-    body { font-family:'Poppins',sans-serif; background:#f5f7fa; margin:0; color:var(--ink); }
+    body { font-family:'Poppins',sans-serif; background:#f4f7fa; margin:0; color:var(--ink); }
 
-    /* Top Nav */
+    /* Top Nav (same as vendor homepage) */
     nav { background:#0b1220; color:#fff; }
     .nav-container { max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img { height:32px; display:block; }
@@ -18,32 +18,92 @@
     .nav-right a { color:#fff; text-decoration:none; font-size:.95rem; }
     .nav-right a[aria-current="page"] { text-decoration:underline; }
 
-    .container { max-width:1100px; margin:28px auto 40px; background:#fff; padding:24px 20px; border:1px solid var(--stroke); border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,.06); }
-
-    h2 { margin:0 0 14px; font-size:1.4rem; }
-
-    .notice {
-      margin: 0 0 12px 0; padding: 10px 12px; background:#f7fafd; border:1px solid #e6ebf1;
-      border-radius:8px; font-size:.95rem; color:#1a2b4a; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    /* Page shell (copied from your Reports look) */
+    .container {
+      max-width: 1050px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 32px 36px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     }
-    .chips { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .chip { border:1px solid #d1d9e6; background:#fff; border-radius:14px; padding:4px 10px; font-size:.85rem; color:#1a2b4a; }
-    .chip-btn { border:1px solid #2f80ed; color:#2f80ed; background:#fff; border-radius:14px; padding:5px 12px; font-size:.85rem; cursor:pointer; }
-    .chip-btn:hover { background:#2f80ed; color:#fff; }
+    h2 { margin:0 0 14px; }
 
-    table { width:100%; border-collapse:collapse; margin-top:10px; background:#fff; border-radius:8px; overflow:hidden; font-size:.95rem; }
-    th, td { padding:12px 16px; text-align:left; border-bottom:1px solid #eef2f7; white-space:nowrap; }
-    th { background:#f7fafd; font-weight:600; color:#1a2b4a; }
-    tr:hover { background:#f5f8fb; }
-    .status { color:#c0392b; text-align:center; padding:16px; font-weight:500; }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .filters > div { flex: 1; min-width: 180px; }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      background:#fff;
+    }
+    button {
+      background-color: #2f80ed;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.18s;
+    }
+    button:hover { background-color: #1c6fd8; }
+    .export-btn { float: right; margin-bottom: 14px; }
 
-    /* Modal */
-    .modal { display:none; position:fixed; z-index:1000; inset:0; background:rgba(0,0,0,.4); }
-    .modal-content { background:#fff; margin:10% auto; padding:20px; border:1px solid #888; width:90%; max-width:520px; border-radius:10px; position:relative; }
-    .close { position:absolute; top:10px; right:15px; font-size:28px; font-weight:bold; cursor:pointer; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 0.97rem;
+    }
+    th, td {
+      padding: 12px 13px;
+      border: 1px solid #e6ebf1;
+      text-align: left;
+      font-size: 0.96em;
+      white-space: nowrap;
+    }
+    th {
+      background-color: #f0f4f8;
+      color: #1a2b4a;
+      font-weight: 500;
+    }
+    tr:hover { background: #f5f8fb; }
+
+    .pagination {
+      display:flex; justify-content:center; align-items:center; gap:10px;
+      margin: 22px 0 10px 0;
+    }
+    .pagination button {
+      width:auto; min-width:80px; padding:7px 16px; background:#6b7280; color:#fff; border:none;
+      border-radius:6px; cursor:pointer; font-size:.95rem; font-weight:500; transition:background .2s;
+    }
+    .pagination button:disabled { background:#e5e7eb; color:#bbb; cursor:not-allowed; }
+    #paginationInfo { font-size:.96rem; color:#4b5563; font-weight:500; padding:0 6px; }
+
+    .status { text-align:center; margin-top:22px; font-weight:500; color:#e74c3c; }
+
+    @media (max-width: 900px) { .container { padding: 16px 2vw; } }
+    @media (max-width: 600px) {
+      .container { padding: 7vw 3vw; }
+      table { font-size: .9rem; }
+      th, td { padding: 7px; }
+      .filters { flex-direction: column; gap: 10px; }
+      .export-btn { float: none; width: 100%; }
+      .pagination { justify-content: center; }
+    }
 
     /* Footer */
-    footer { border-top:1px solid var(--stroke); }
+    footer { border-top:1px solid var(--stroke); background:#fff; }
     .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
     .footer-links a { color:#6b7280; text-decoration:none; margin-left:12px; }
     .footer-links a:hover { text-decoration:underline; }
@@ -60,18 +120,16 @@
         if (!me) {
           const r = await fetch("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
           if (!r.ok) throw new Error("Unauthorized");
-          me = await r.json();
-          localStorage.setItem("boopUser", JSON.stringify(me));
+          me = await r.json(); localStorage.setItem("boopUser", JSON.stringify(me));
         }
         if (me.role !== "vendor") throw new Error("Not a vendor");
-      } catch {
-        localStorage.clear();
-        location.href = "../login.html";
+      } catch (e) {
+        localStorage.clear(); location.href = "../login.html";
       }
     })();
   </script>
 
-  <!-- Top Nav (vendor) -->
+  <!-- Top Nav (same links as vendor homepage) -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -88,40 +146,59 @@
   </nav>
 
   <div class="container">
-    <h2>Recent Transactions</h2>
+    <h2>Transaction Reports</h2>
 
-    <div class="notice">
-      Showing the latest <span id="limitLabel" class="chip">100</span> transactions (your vendor account).
-      <div class="chips">
-        <span id="lastUpdated" class="chip">Last updated: —</span>
-        <button id="toggleLive" class="chip-btn">Pause Live</button>
+    <!-- EXACT reports-style filters -->
+    <div class="filters">
+      <div>
+        <label for="startDate">Start Date</label>
+        <input type="date" id="startDate" />
+      </div>
+      <div>
+        <label for="endDate">End Date</label>
+        <input type="date" id="endDate" />
+      </div>
+      <div>
+        <label for="typeFilter">Transaction Type</label>
+        <select id="typeFilter">
+          <option value="">All</option>
+          <option value="add_funds">Add Funds</option>
+          <option value="transfer">Transfer</option>
+          <option value="credit">Credit</option>
+          <option value="debit">Debit</option>
+        </select>
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="filterBtn">Apply Filters</button>
       </div>
     </div>
 
-    <table id="transactionsTable">
+    <div class="export-btn">
+      <button id="exportBtn">Export CSV</button>
+    </div>
+
+    <table id="reportTable">
       <thead>
         <tr>
+          <th>Date</th>
+          <th>Transaction ID</th>
           <th>Type</th>
           <th>Amount</th>
-          <th>From</th>
-          <th>To</th>
-          <th>Time</th>
+          <th>Sender</th>
+          <th>Recipient</th>
           <th>Note</th>
         </tr>
       </thead>
-      <tbody id="transactionsBody">
-        <tr><td colspan="6" class="status">Loading…</td></tr>
-      </tbody>
+      <tbody></tbody>
     </table>
-  </div>
 
-  <!-- Note Modal -->
-  <div id="noteModal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h3 style="margin:0 0 10px;">Transaction Note</h3>
-      <p id="noteContent" style="white-space: pre-wrap; color:#333; margin:0;"></p>
+    <div class="pagination">
+      <button id="prevPageBtn">Previous</button>
+      <span id="paginationInfo">Page 1 of 1</span>
+      <button id="nextPageBtn">Next</button>
     </div>
+    <div class="status" id="status"></div>
   </div>
 
   <footer>
@@ -135,152 +212,134 @@
   </footer>
 
   <script type="module">
-    const LIMIT = 100;
-    const REFRESH_MS = 15000;
+    document.addEventListener("DOMContentLoaded", () => {
+      const token = localStorage.getItem("boop_jwt");
+      const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
 
-    const token = localStorage.getItem("boop_jwt");
-    const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
+      // Redirect if somehow not a vendor
+      if (!me || me.role !== "vendor") { location.href = "../login.html"; return; }
 
-    const tbody = document.getElementById("transactionsBody");
-    const limitLabel = document.getElementById("limitLabel");
-    const lastUpdated = document.getElementById("lastUpdated");
-    const toggleLive = document.getElementById("toggleLive");
+      const startDate = document.getElementById("startDate");
+      const endDate = document.getElementById("endDate");
+      const typeFilter = document.getElementById("typeFilter");
+      const filterBtn = document.getElementById("filterBtn");
+      const exportBtn = document.getElementById("exportBtn");
+      const tableBody = document.querySelector("#reportTable tbody");
+      const statusEl = document.getElementById("status");
+      const paginationInfo = document.getElementById("paginationInfo");
+      const prevPageBtn = document.getElementById("prevPageBtn");
+      const nextPageBtn = document.getElementById("nextPageBtn");
 
-    const modal = document.getElementById("noteModal");
-    const noteContent = document.getElementById("noteContent");
-    const modalClose = modal.querySelector(".close");
+      // --- PAGINATION STATE ---
+      let transactions = [];
+      let totalCount = 0;
+      let page = 1;
+      let limit = 25;
 
-    limitLabel.textContent = String(LIMIT);
-
-    let live = true;
-    let intervalId = null;
-
-    function setLastUpdated() {
-      lastUpdated.textContent = "Last updated: " + new Date().toLocaleTimeString();
-    }
-
-    function startLive() {
-      if (intervalId) clearInterval(intervalId);
-      intervalId = setInterval(() => {
-        if (live && document.visibilityState === "visible") {
-          loadTransactions();
-        }
-      }, REFRESH_MS);
-    }
-
-    function money(cents) {
-      const n = Number(cents || 0) / 100;
-      return "$" + n.toFixed(2);
-    }
-
-    function resolveParties(tx) {
-      const from = tx.sender_name || tx.from_name || tx.counterparty_from || null;
-      const to   = tx.recipient_name || tx.to_name || tx.counterparty_to || null;
-      const userSide = tx.customer_name || tx.user_name || tx.userEmail || tx.user_email || null;
-      return {
-        from: from || (tx.type === 'debit' ? (userSide || '—') : (tx.counterparty_name || '—')),
-        to:   to   || (tx.type === 'credit' ? (userSide || '—') : '—')
+      function updatePagination() {
+        const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+        paginationInfo.textContent = `Page ${page} of ${totalPages}`;
+        prevPageBtn.disabled = page === 1;
+        nextPageBtn.disabled = page >= totalPages;
+      }
+      prevPageBtn.onclick = () => { if (page > 1) { page--; fetchTransactions(); } };
+      nextPageBtn.onclick = () => {
+        const totalPages = Math.ceil(totalCount / limit);
+        if (page < totalPages) { page++; fetchTransactions(); }
       };
-    }
 
-    async function fetchWithFallbacks() {
-      // Prefer a vendor-scoped endpoint
-      let r = await fetch(`/api/vendor/transactions/recent?limit=${LIMIT}`, {
-        headers: { Authorization:`Bearer ${token}` }
+      async function fetchTransactions() {
+        statusEl.textContent = "";
+        let query = [];
+
+        if (startDate.value) query.push(`start=${startDate.value}`);
+        if (endDate.value) query.push(`end=${endDate.value}`);
+        if (typeFilter.value) query.push(`type=${typeFilter.value}`);
+        query.push(`limit=${limit}`);
+        query.push(`offset=${(page - 1) * limit}`);
+
+        // Always scope to this vendor; the backend can recognize vendor_id or infer from token
+        query.push(`vendor_id=${encodeURIComponent(me.id)}`);
+
+        const queryStr = query.length ? `?${query.join("&")}` : "";
+
+        // Preferred vendor endpoint, then fallbacks to your generic report
+        let url = `/api/vendor/transactions/report${queryStr}`;
+        let res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+
+        if (!res.ok) {
+          url = `/api/transactions/report${queryStr}`;
+          res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        }
+
+        try {
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+
+          transactions = data.transactions || [];
+          totalCount = data.totalCount || 0;
+
+          tableBody.innerHTML = "";
+          if (!transactions.length) {
+            tableBody.innerHTML = `<tr><td colspan="7">No records found.</td></tr>`;
+          } else {
+            transactions.forEach(tx => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
+                <td>${tx.id}</td>
+                <td>${tx.type}</td>
+                <td>$${(Number(tx.amount_cents || 0) / 100).toFixed(2)}</td>
+                <td>${tx.sender_name || "—"}</td>
+                <td>${tx.recipient_name || "—"}</td>
+                <td>${tx.note || ""}</td>
+              `;
+              tableBody.appendChild(row);
+            });
+          }
+
+          updatePagination();
+        } catch (err) {
+          console.error("❌ Fetch failed:", err);
+          statusEl.textContent = "Failed to load transactions.";
+          statusEl.style.color = "red";
+        }
+      }
+
+      function exportCSV() {
+        if (!transactions.length) return;
+        const headers = ["Date", "Transaction ID", "Type", "Amount", "Sender", "Recipient", "Note"];
+        const rows = transactions.map(tx => [
+          tx.created_at ? new Date(tx.created_at).toISOString() : "",
+          tx.id,
+          tx.type,
+          (Number(tx.amount_cents || 0) / 100).toFixed(2),
+          tx.sender_name || "",
+          tx.recipient_name || "",
+          (tx.note || "").replace(/,/g, "")
+        ]);
+        const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "vendor-transactions.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      filterBtn.addEventListener("click", () => { page = 1; fetchTransactions(); });
+      exportBtn.addEventListener("click", exportCSV);
+
+      document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try { await fetch("/api/logout", { method: "POST" }); } catch {}
+        localStorage.clear();
+        location.href = "../login.html";
       });
-      if (r.ok) return r.json();
 
-      // Fallback: generic recent with vendor_id
-      if (me?.id) {
-        r = await fetch(`/api/transactions/recent?limit=${LIMIT}&vendor_id=${encodeURIComponent(me.id)}`, {
-          headers:{ Authorization:`Bearer ${token}` }
-        });
-        if (r.ok) return r.json();
-      }
-
-      // Fallback: by wallet
-      try {
-        const w = await fetch(`/api/wallets/mine`, { headers:{ Authorization:`Bearer ${token}` }});
-        const jw = await w.json();
-        if (w.ok && jw.wallet_id) {
-          r = await fetch(`/api/transactions/by-wallet/${jw.wallet_id}?limit=${LIMIT}`, {
-            headers:{ Authorization:`Bearer ${token}` }
-          });
-          if (r.ok) return r.json();
-        }
-      } catch {}
-
-      const payload = await r.json().catch(()=>({ message:"Failed to load" }));
-      const err = new Error(payload.message || "Failed to fetch transactions");
-      err.payload = payload;
-      throw err;
-    }
-
-    async function loadTransactions() {
-      try {
-        const payload = await fetchWithFallbacks();
-        const data = Array.isArray(payload) ? payload : (payload.transactions || []);
-
-        if (!Array.isArray(data) || data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" class="status">No transactions found.</td></tr>`;
-          setLastUpdated();
-          return;
-        }
-
-        const rows = data.map(tx => {
-          const parties = resolveParties(tx);
-          const noteText = tx.note || 'No note';
-          const created = tx.created_at ? new Date(tx.created_at).toLocaleString() : "—";
-          return `
-            <tr>
-              <td>${tx.type || '—'}</td>
-              <td>${money(tx.amount_cents)}</td>
-              <td>${parties.from || '—'}</td>
-              <td>${parties.to || '—'}</td>
-              <td>${created}</td>
-              <td><button class="chip-btn" onclick="showNoteModal(\`${(String(noteText)).replace(/`/g,'\\`')}\`)">View</button></td>
-            </tr>
-          `;
-        }).join("");
-
-        tbody.innerHTML = rows;
-        setLastUpdated();
-      } catch (err) {
-        console.error("❌ Vendor transactions error:", err);
-        tbody.innerHTML = `<tr><td colspan="6" class="status">❌ ${err.message}</td></tr>`;
-      }
-    }
-
-    // Expose for inline onclick
-    window.showNoteModal = function(note) {
-      noteContent.textContent = note || "No note";
-      modal.style.display = "block";
-    };
-
-    // Modal handlers
-    modalClose.onclick = () => (modal.style.display = "none");
-    window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
-
-    // Live toggle
-    toggleLive.addEventListener("click", () => {
-      live = !live;
-      toggleLive.textContent = live ? "Pause Live" : "Resume Live";
-      if (live) loadTransactions();
-    });
-
-    // Init
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && live) loadTransactions();
-    });
-    loadTransactions();
-    startLive();
-
-    // Logout
-    document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
-      e.preventDefault();
-      try { await fetch("/api/logout", { method:"POST" }); } catch {}
-      localStorage.clear();
-      location.href = "../login.html";
+      fetchTransactions();
     });
   </script>
 </body>
