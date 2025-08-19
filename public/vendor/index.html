@@ -11,14 +11,33 @@
 
     body { font-family:'Poppins',sans-serif; background:#f5f7fa; margin:0; color:var(--ink); }
 
-    /* NAV (vendor) */
-    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
-    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
-    .nav-left img{ height:36px; display:block; }
-    .nav-right{ display:flex; align-items:center; gap:18px; }
-    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95;}
-    .nav-right a[aria-current="page"]{ text-decoration:underline; opacity:1; }
-    .nav-right a:hover{ opacity:1; }
+    /* ──────────────────────────────────────────────
+       LOCKED VENDOR NAV — matches Transfer/Transactions
+       Add class="vendor-nav" to the <nav> on ALL vendor pages
+    ────────────────────────────────────────────── */
+    .vendor-nav { background:#0b1220; color:#fff; position:sticky; top:0; z-index:50; }
+    .vendor-nav .nav-container{
+      max-width:1100px; margin:0 auto;
+      padding:10px 18px !important;                /* lock bar height */
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .vendor-nav .nav-left img{
+      height:30px !important; display:block;       /* lock logo size */
+    }
+    .vendor-nav .nav-right{
+      display:flex; align-items:center;
+      gap:16px !important;                         /* lock spacing between links */
+    }
+    .vendor-nav .nav-right a{
+      color:#fff; text-decoration:none;
+      font-size:.95rem !important;
+      line-height:1 !important;
+      padding:6px 8px !important;                  /* lock link padding */
+      border-radius:6px; opacity:.95;
+    }
+    .vendor-nav .nav-right a:hover{
+      opacity:1; text-decoration:none; background:rgba(255,255,255,.08);
+    }
 
     /* Hero + content (unchanged) */
     .hero { background:linear-gradient(180deg,#f7fafc,#fff); border-bottom:1px solid var(--stroke); }
@@ -65,19 +84,17 @@
     })();
   </script>
 
-  <!-- NAV -->
-  <nav>
+  <!-- Top Nav (LOCKED) -->
+  <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html" aria-label="BOOP home">
-          <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
-        </a>
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
-      <div class="nav-right" aria-label="Primary">
+      <div class="nav-right">
         <a href="index.html">Home</a>
-        <a href="transfer.html" aria-current="page">Transfer</a>
+        <a href="transfer.html">Transfer</a>
         <a href="transactions.html">Transactions</a>
-        <a href="#" id="logoutBtn">Log Out</a>
+        <a href="#" id="logoutLink">Log Out</a>
       </div>
     </div>
   </nav>
