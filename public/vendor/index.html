@@ -84,7 +84,7 @@
   </style>
 </head>
 <body>
-  <!-- Auth (vendors only) -->
+  <!-- Auth (vendors only) + set display name from business_name -->
   <script>
     (async () => {
       try {
@@ -94,12 +94,11 @@
         if (!res.ok) throw new Error("Unauthorized");
         const me = await res.json();
         if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
-
         localStorage.setItem("boopUser", JSON.stringify(me));
 
-        // Prefer business_name, then full name, then email
+        // ✅ Prefer vendors.business_name (lowercase underscore), then person name, then email
         window.__vendorDisplay =
-          (me.business_name && me.business_name.trim()) ||
+          (me.business_name && String(me.business_name).trim()) ||
           ((me.first_name && me.last_name) ? `${me.first_name} ${me.last_name}` : (me.email || "Vendor"));
       } catch {
         localStorage.clear(); location.href = "../login.html";
@@ -118,7 +117,7 @@
   <!-- Hero -->
   <section class="hero">
     <div class="hero-inner">
-      <h1 id="welcomeTitle"></h1>
+      <h1 id="welcomeTitle">Vendor Portal</h1>
       <p class="hero-sub">Quick actions to move money and review activity.</p>
     </div>
   </section>
@@ -200,44 +199,32 @@
   </footer>
 
   <script>
-    (async () => {
-    try {
-      const token = localStorage.getItem("boop_jwt");
-      if (!token) throw new Error("No token");
-      const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-      if (!res.ok) throw new Error("Unauthorized");
-      const me = await res.json();
-      if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
+    // Set hero title once auth script has run
+    document.addEventListener("DOMContentLoaded", () => {
+      const title = document.getElementById("welcomeTitle");
+      const display = (window.__vendorDisplay || "Vendor").trim();
+      // e.g., "Acme Ltd Vendor Portal"
+      title.textContent = `${display} Vendor Portal`;
+    });
 
-      localStorage.setItem("boopUser", JSON.stringify(me));
-
-      // ✅ fixed: pull vendor.business_name
-      window.__vendorDisplay =
-        (me.business_name && me.business_name.trim()) ||
-        ((me.first_name && me.last_name) ? `${me.first_name} ${me.last_name}` : (me.email || "Vendor"));
-    } catch {
-      localStorage.clear(); location.href = "vendor-login.html";
-    }
-  })();
-
+    // Stats + lists
     (async function init(){
       const token = localStorage.getItem("boop_jwt");
       const setText = (id,v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
 
       // Balance
       try {
+        let bal = null;
         let r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
-        if (r.ok) {
-          const j = await r.json();
-          const bal = j?.balance_cents;
-          if (bal != null) setText("balanceValue", "$" + (Number(bal)/100).toFixed(2));
-        }
+        if (r.ok) { const j = await r.json(); bal = j?.balance_cents; }
+        if (bal != null) setText("balanceValue", "$" + (Number(bal)/100).toFixed(2));
       } catch {}
 
+      // Placeholders for now
       setText("todaysSales", "—");
       setText("pendingPayouts", "—");
 
-      // Recent activity
+      // Recent activity (last 30 days)
       try{
         const qs = new URLSearchParams({
           start: new Date(Date.now()-30*864e5).toISOString().slice(0,10),
@@ -246,7 +233,8 @@
         }).toString();
         const r = await fetch(`/api/vendor/transactions/report?${qs}`, { headers:{ Authorization:`Bearer ${token}` }});
         const j = await r.json();
-        renderActivity((j && j.transactions) ? j.transactions.slice(0,10) : []);
+        const rows = (j && j.transactions) || [];
+        renderActivity(rows.slice(0,10));
       }catch{ renderActivity([]); }
 
       // Recent payouts
