@@ -65,17 +65,19 @@
     })();
   </script>
 
-  <!-- Top Nav (LOCKED) -->
-  <nav class="vendor-nav">
+  <!-- NAV -->
+  <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+        <a href="index.html" aria-label="BOOP home">
+          <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+        </a>
       </div>
-      <div class="nav-right">
+      <div class="nav-right" aria-label="Primary">
         <a href="index.html">Home</a>
-        <a href="transfer.html">Transfer</a>
+        <a href="transfer.html" aria-current="page">Transfer</a>
         <a href="transactions.html">Transactions</a>
-        <a href="#" id="logoutLink">Log Out</a>
+        <a href="#" id="logoutBtn">Log Out</a>
       </div>
     </div>
   </nav>
