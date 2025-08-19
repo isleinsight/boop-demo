@@ -8,60 +8,48 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
-      --ink:#e5e7eb;
-      --muted:#cbd5e1;
-      --blue:#2f80ed;
-      --blue-dark:#1c6fd8;
-      --border:rgba(255,255,255,0.08);
-      --glass:rgba(255,255,255,0.08);
-      --bg:#0b1220;
-      --card:#0f172a;
-      --ring:rgba(47,128,237,0.35);
-      --green:#10b981;
-      --amber:#f59e0b;
-      --red:#ef4444;
+      --brand:#2f80ed; --brand-dark:#1c6fd8;
+      --ink:#e5e7eb; --muted:#cbd5e1;
+      --border:rgba(255,255,255,0.10);
+      --stroke:#e5e7eb;
+      --nav:#102a43;
       --white:#ffffff;
     }
-
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
+      margin:0; min-height:100vh; display:flex; flex-direction:column;
       font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      color:#eef2ff;
-      background:
-        radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
-        radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
+      color:#eef2ff; background:linear-gradient(180deg,#0b1220 0%,#0d1220 35%,#0b1220 100%);
+      overflow-x:hidden;
+    }
+    /* Fixed decorative glows */
+    body::before,
+    body::after{content:""; position:fixed; z-index:-1; pointer-events:none;}
+    /* Top-right blue */
+    body::before{
+      top:-220px; right:-220px; width:1100px; height:800px;
+      background:radial-gradient(700px 500px at 100% 0%, rgba(47,128,237,.28), transparent 60%);
+    }
+    /* Bottom-left green */
+    body::after{
+      bottom:-260px; left:-260px; width:1200px; height:850px;
+      background:radial-gradient(850px 650px at 0% 100%, rgba(16,185,129,.22), transparent 60%);
     }
 
-    /* NAV (matches your logged-in look) */
-    nav{
-      position:sticky; top:0; z-index:50;
-      background:rgba(11,18,32,.5);
-      backdrop-filter: blur(6px);
-      border-bottom:1px solid var(--border);
-    }
-    .nav-container{
-      max-width:1100px; margin:0 auto; padding:12px 18px;
-      display:flex; align-items:center; justify-content:space-between;
-    }
+    /* NAV (same structure as other pages) */
+    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img{ height:34px; display:block; }
     .nav-right{ display:flex; align-items:center; gap:18px; }
-    .nav-right a{
-      color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; font-weight:600;
-      padding:6px 2px;
-    }
-    .nav-right a:hover{ opacity:1 }
-    .hamburger{
-      display:none; flex-direction:column; justify-content:space-between;
-      width:26px; height:20px; background:none; border:0; cursor:pointer;
-    }
+    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; font-weight:600; }
+    .nav-right a:hover{ opacity:1; }
+
+    .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
     .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
     .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
     .hamburger.active span:nth-child(2){ opacity:0; }
     .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
-    .nav-panel{ display:none; }
 
     @media (max-width: 768px){
       .nav-right{ display:none; }
@@ -78,75 +66,63 @@
       .nav-overlay.active{ display:block; }
     }
 
-    /* HERO */
-    .hero-band{
-      padding:28px 0 24px; color:#eef2ff;
-    }
-    .hero-inner{
-      max-width:1100px; margin:0 auto; padding:0 18px;
-      display:flex; align-items:center; justify-content:space-between; gap:16px;
-    }
-    .hero-title{ margin:0; font-size:clamp(22px, 3.2vw, 34px); font-weight:700; }
+    /* HERO (left aligned) */
+    .hero-band{ padding:28px 0 20px; }
+    .hero-inner{ max-width:1100px; margin:0 auto; padding:0 18px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .hero-title{ margin:0; font-size:clamp(22px,3.2vw,34px); font-weight:700; }
     .hero-sub{ margin:6px 0 0; color:var(--muted); font-size:.98rem; }
-
-    /* MAIN */
-    .container{ max-width:1100px; margin:18px auto 46px; padding:0 18px; }
-    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    @media (max-width: 900px){ .grid{ grid-template-columns:1fr } }
-
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:18px;
-      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
-    }
-    .card h2{ margin:0 0 10px; font-size:1.1rem; }
-    .row{ display:flex; gap:12px; align-items:center; justify-content:space-between; }
-    .muted{ color:var(--muted); font-size:.95rem; }
     .pill{
       display:inline-flex; align-items:center; gap:6px;
-      border:1px solid var(--border); background:var(--glass); color:#a5b4fc;
-      padding:4px 10px; border-radius:999px; font-size:.8rem; font-weight:700;
+      border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.08);
+      color:#a5b4fc; padding:6px 12px; border-radius:999px; font-size:.82rem; font-weight:700;
     }
     .pill.ok{ color:#86efac; }
     .pill.warn{ color:#fcd34d; }
     .pill.stop{ color:#fca5a5; }
 
+    /* MAIN */
+    main{ flex:1; }
+    .container{ max-width:1100px; margin:18px auto 40px; padding:0 18px; }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.10); border-radius:16px; padding:18px;
+      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .card h2{ margin:0 0 10px; font-size:1.1rem; }
+    .row{ display:flex; gap:12px; align-items:center; justify-content:space-between; }
     .label{ display:block; color:var(--muted); font-size:.9rem; margin-bottom:4px; }
     .value{ font-weight:700; letter-spacing:.3px; }
+    .muted{ color:var(--muted); font-size:.95rem; }
+    .list{ display:grid; gap:12px; }
+    .tile{ border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.02); border-radius:14px; padding:14px; }
+    .tile h3{ margin:0 0 6px; font-size:1.02rem; }
+    .tile .meta{ color:#9ca3af; font-size:.9rem; }
+    .tile .row+.row{ margin-top:8px; }
+    .divider{ height:1px; background:rgba(255,255,255,.10); margin:10px 0; }
 
     .btn{
       display:inline-flex; align-items:center; justify-content:center; gap:8px;
       padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:700;
       border:1px solid transparent; cursor:pointer;
     }
-    .btn.primary{ background:var(--blue); color:#fff; }
-    .btn.primary:hover{ background:var(--blue-dark); }
+    .btn.primary{ background:var(--brand); color:#fff; border-color:var(--brand); }
+    .btn.primary:hover{ background:var(--brand-dark); border-color:var(--brand-dark); }
 
-    .list{ display:grid; gap:12px; }
-    .tile{
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.02);
-      border-radius:14px;
-      padding:14px;
+    /* FOOTER */
+    footer{ border-top:1px solid var(--stroke); background:#0f172a; color:#9ca3af; }
+    .footer-inner{
+      max-width:1100px; margin:0 auto; padding:16px 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:.9rem;
     }
-    .tile h3{ margin:0 0 6px; font-size:1.02rem; }
-    .tile .meta{ color:#9ca3af; font-size:.9rem; }
-    .tile .row+.row{ margin-top:8px; }
-
-    .divider{ height:1px; background:var(--border); margin:10px 0; }
-
-    footer{
-      border-top:1px solid var(--border);
-      color:#9ca3af; text-align:center; padding:18px;
-      margin-top:28px; font-size:.9rem;
-    }
+    .footer-links a{ color:#9ca3af; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
   </style>
 </head>
 <body>
 
-  <!-- Top Nav -->
+  <!-- NAV -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -155,16 +131,34 @@
         </a>
       </div>
 
-      <!-- Desktop links -->
       <div class="nav-right" aria-label="Primary">
         <a href="cardholder.html">Home</a>
         <a href="send-request.html" id="sendRequestLink">Send / Request</a>
         <a href="transfer.html">Transfer</a>
-        <a href="passport.html">Passport</a>
+        <a href="passport.html" aria-current="page">Passport</a>
         <a href="activity.html">Activity</a>
         <a href="help.html">Help</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
+
+      <!-- Mobile toggle -->
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Mobile panel + overlay -->
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+    <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
+      <a href="cardholder.html">Home</a>
+      <a href="send-request.html">Send / Request</a>
+      <a href="transfer.html">Transfer</a>
+      <a href="passport.html" aria-current="page">Passport</a>
+      <a href="activity.html">Activity</a>
+      <a href="help.html">Help</a>
+      <a href="#" id="logoutBtnMobile">Log Out</a>
+    </div>
+  </nav>
 
   <!-- HERO -->
   <section class="hero-band">
@@ -173,7 +167,7 @@
         <h1 class="hero-title">Passport</h1>
         <p class="hero-sub">Your Passport owns your cards. If it’s ever compromised, we can rotate the Passport — no wallet number exposed.</p>
       </div>
-      <div class="pill" id="passportStatus">Loading…</div>
+      <span class="pill" id="passportStatus">Loading…</span>
     </div>
   </section>
 
@@ -229,11 +223,18 @@
     </section>
   </main>
 
+  <!-- FOOTER -->
   <footer>
-    © <span id="year"></span> BOOP. All rights reserved.
+    <div class="footer-inner">
+      <div>© 2025 BOOP</div>
+      <div class="footer-links">
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+    </div>
   </footer>
 
-  <!-- Permissions: cardholder (or assistance) only -->
+  <!-- Permissions: cardholder (or assistance) -->
   <script>
     (async () => {
       try {
@@ -246,7 +247,7 @@
         const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
         if (!ok) throw new Error("Not a cardholder");
         localStorage.setItem("boopUser", JSON.stringify(me));
-      } catch (err) {
+      } catch {
         localStorage.clear();
         window.location.href = "cardholder-login.html";
       }
@@ -256,8 +257,6 @@
   <!-- Page logic -->
   <script>
     (function(){
-      document.getElementById('year').textContent = new Date().getFullYear();
-
       // Mobile menu
       const hamburger = document.getElementById('hamburger');
       const panel = document.getElementById('mobileMenu');
@@ -268,7 +267,7 @@
       overlay?.addEventListener('click', closeMenu);
       document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
 
-      // Logout in both menus
+      // Logout
       function attachLogout(el){
         if (!el) return;
         el.addEventListener('click', async (e)=>{
@@ -297,24 +296,20 @@
       const last = me?.last_name || '';
       ownerNameEl.textContent = `${first}${last ? ' ' + last : ''}`;
 
-      // Helper: render pill status
       function setStatus(pillEl, text, kind){
         pillEl.textContent = text;
         pillEl.classList.remove('ok','warn','stop');
         if (kind) pillEl.classList.add(kind);
       }
-
-      function maskNumber(){ return '•••• •••• •••• ••••'; } // never show PAN
+      function maskNumber(){ return '•••• •••• •••• ••••'; }
 
       function renderCards(cards){
         if (!Array.isArray(cards) || cards.length === 0){
-          cardsList.innerHTML = `
-            <div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>
-          `;
+          cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
           return;
         }
-        const html = cards.map(card=>{
-          const type = (card.type || '').toLowerCase(); // 'spending' | 'transit'
+        cardsList.innerHTML = cards.map(card=>{
+          const type = (card.type || '').toLowerCase();
           const status = (card.status || 'active').toLowerCase();
           const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
           const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -342,44 +337,37 @@
                 </div>
               </div>
             `;
-          } else {
-            // default: spending card
-            return `
-              <div class="tile">
-                <div class="row">
-                  <h3>Spending Card</h3>
-                  <span class="pill ${pillKind}">${statusLabel}</span>
+          }
+          return `
+            <div class="tile">
+              <div class="row">
+                <h3>Spending Card</h3>
+                <span class="pill ${pillKind}">${statusLabel}</span>
+              </div>
+              <div class="meta">Use at supported merchants.</div>
+              <div class="divider"></div>
+              <div class="row">
+                <div>
+                  <span class="label">Card number</span>
+                  <div class="value">${maskNumber()}</div>
                 </div>
-                <div class="meta">Use at supported merchants.</div>
-                <div class="divider"></div>
-                <div class="row">
-                  <div>
-                    <span class="label">Card number</span>
-                    <div class="value">${maskNumber()}</div>
-                  </div>
-                  <div>
-                    <span class="label">Funding</span>
-                    <div class="value">BOOP Wallet</div>
-                  </div>
+                <div>
+                  <span class="label">Funding</span>
+                  <div class="value">BOOP Wallet</div>
                 </div>
               </div>
-            `;
-          }
+            </div>
+          `;
         }).join('');
-        cardsList.innerHTML = html;
       }
 
       async function loadPassport(){
-        // Try a dedicated endpoint; fall back to localStorage + cards endpoint
         let passport = null;
         try {
-          const res = await fetch('/api/passport/mine', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const res = await fetch('/api/passport/mine', { headers: { Authorization: `Bearer ${token}` }});
           if (res.ok) passport = await res.json();
         } catch {}
 
-        // Fallbacks
         const passport_id = passport?.passport_id || me?.passport_id || '—';
         passportIdEl.textContent = passport_id;
 
@@ -395,20 +383,16 @@
           setStatus(passportStatusInline, 'Disabled', 'stop');
         }
 
-        // Cards: use passport.cards if present; else /api/cards/mine
         if (Array.isArray(passport?.cards) && passport.cards.length){
           renderCards(passport.cards);
           return;
         }
         try {
-          const r = await fetch('/api/cards/mine', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const r = await fetch('/api/cards/mine', { headers: { Authorization: `Bearer ${token}` }});
           const rows = await r.json();
           if (Array.isArray(rows)){
-            // Normalize into the two types we care about
             const normalized = rows.map(c => ({
-              type: (c.type || '').toLowerCase(),           // 'spending' | 'transit'
+              type: (c.type || '').toLowerCase(),
               status: (c.status || 'active').toLowerCase(),
               rides_remaining: c.rides_remaining ?? c.ridesRemaining,
               pass_name: c.pass_name ?? c.passName
@@ -417,13 +401,10 @@
           } else {
             renderCards([]);
           }
-        } catch {
-          renderCards([]);
-        }
+        } catch { renderCards([]); }
       }
 
-      // Wire the transit button destination (change to Shorelink when ready)
-      document.getElementById('buyTransitBtn').href = 'https://shorelink.example/'; /* TODO: replace */
+      document.getElementById('buyTransitBtn').href = 'https://shorelink.example/'; // TODO: real URL
 
       loadPassport();
     })();
