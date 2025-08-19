@@ -409,5 +409,61 @@
       loadPassport();
     })();
   </script>
+  function renderCards(cards){
+  if (!Array.isArray(cards) || cards.length === 0){
+    cardsList.innerHTML = `
+      <div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>
+    `;
+    return;
+  }
+
+  const html = cards.map(card=>{
+    const type = (card.type || '').toLowerCase(); // 'spending' | 'transit'
+    const status = (card.status || 'active').toLowerCase();
+    const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+
+    if (type === 'transit'){
+      const rides = Number(card.rides_remaining ?? card.ridesRemaining ?? 0);
+      const passName = card.pass_name || card.passName || 'Transit';
+      return `
+        <div class="tile">
+          <div class="row">
+            <h3>Transit Card</h3>
+            <span class="pill ${pillKind}">${statusLabel}</span>
+          </div>
+          <div class="meta">${passName}</div>
+          <div class="divider"></div>
+          <div class="row">
+            <div>
+              <span class="label">Rides remaining</span>
+              <div class="value">${rides}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // default: spending card
+    return `
+      <div class="tile">
+        <div class="row">
+          <h3>Spending Card</h3>
+          <span class="pill ${pillKind}">${statusLabel}</span>
+        </div>
+        <div class="meta">Use at supported merchants.</div>
+        <div class="divider"></div>
+        <div class="row">
+          <div>
+            <span class="label">Funding</span>
+            <div class="value">BOOP Wallet</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  cardsList.innerHTML = html;
+}
 </body>
 </html>
