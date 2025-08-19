@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Passport Pay – BOOP Vendor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
+    body { font-family:'Poppins',sans-serif; background:#f5f7fa; margin:0; color:var(--ink); }
+
+    /* Top Nav */
+    nav { background:#0b1220; color:#fff; }
+    .nav-container { max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img { height:32px; display:block; }
+    .nav-right { display:flex; gap:16px; align-items:center; }
+    .nav-right a { color:#fff; text-decoration:none; font-size:0.95rem; }
+    .nav-right a:hover { text-decoration:underline; }
+
+    /* Page */
+    .wrap { max-width:1100px; margin:24px auto 40px; padding:0 18px; }
+    h1 { margin:0 0 8px; font-size:1.6rem; font-weight:600; }
+    .sub { margin:0 0 16px; color:#4b5563; }
+
+    .layout { display:grid; grid-template-columns: 1.2fr 1fr; gap:16px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+    .card { background:#fff; border:1px solid var(--stroke); border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,.06); padding:16px; }
+    .card h3 { margin:0 0 12px; font-size:1.05rem; font-weight:600; color:#1f2937; }
+    .row { display:flex; gap:10px; }
+    .row > div { flex:1; }
+    label { display:block; font-size:.9rem; color:#1a2b4a; margin-bottom:6px; }
+    input, textarea, select, button {
+      width:100%; padding:10px 12px; font-size:0.95rem; border:1px solid #d1d9e6;
+      border-radius:8px; background:#fff; box-sizing:border-box;
+    }
+    textarea { resize:vertical; }
+    button { background:#2f80ed; color:#fff; font-weight:600; border:none; cursor:pointer; }
+    button:hover { background:#1c6fd8; }
+
+    .muted { color:#6b7280; font-size:.92rem; }
+    .pill { display:inline-block; border:1px solid #d1d9e6; background:#fff; padding:4px 10px; border-radius:999px; font-size:.85rem; color:#1a2b4a; }
+    .ok { color:#065f46; background:#ecfdf5; border:1px solid #34d399; padding:10px; border-radius:8px; margin-top:12px; }
+    .err { color:#991b1b; background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:8px; margin-top:12px; }
+
+    /* Footer */
+    footer { background:#0b1220; color:#fff; padding:20px 0; margin-top:40px; }
+    .footer-inner { max-width:1100px; margin:0 auto; padding:0 18px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; font-size:0.9rem; }
+    .footer-links { display:flex; gap:16px; }
+    .footer-links a { color:#fff; text-decoration:none; }
+    .footer-links a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <!-- Auth guard (vendors only) -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+        if (!res.ok) throw new Error("Unauthorized");
+        const me = await res.json();
+        if (!me || me.role !== "vendor") throw new Error("Not a vendor");
+        localStorage.setItem("boopUser", JSON.stringify(me));
+        window.__vendorName = (me.first_name && me.last_name) ? (me.first_name + " " + me.last_name) : (me.email || "Vendor");
+      } catch (err) {
+        localStorage.clear();
+        location.href = "../login.html";
+      }
+    })();
+  </script>
+
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Home</a>
+        <a href="passport-pay.html" aria-current="page">Passport&nbsp;Pay</a>
+        <a href="transfer.html">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="#" id="logoutLink">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <h1>Passport Pay</h1>
+    <p class="sub">Scan a customer’s **passport URL** (or enter it), then charge the total from your POS.</p>
+
+    <div class="layout">
+      <!-- Left: Charge form -->
+      <div class="card">
+        <h3>Charge Customer</h3>
+
+        <div class="row">
+          <div>
+            <label for="passportId">Passport ID</label>
+            <input id="passportId" placeholder="e.g. BMU-123456" autocomplete="off" />
+            <div class="muted" id="pidHint">Tip: This may auto-fill when launched from an NFC tag.</div>
+          </div>
+          <div>
+            <label for="amount">Amount (BMD)</label>
+            <input id="amount" type="number" min="0.01" step="0.01" placeholder="0.00" />
+          </div>
+        </div>
+
+        <label for="note">Note (optional)</label>
+        <textarea id="note" rows="3" placeholder="Describe the purchase (e.g., Order #, cashier initials)…"></textarea>
+
+        <button id="chargeBtn">Charge</button>
+        <div id="status"></div>
+      </div>
+
+      <!-- Right: Scan/How it works -->
+      <div class="card">
+        <h3>How it Works</h3>
+        <ol class="muted" style="margin:0; padding-left:18px;">
+          <li>Have the customer present their **passport card / bracelet / phone**.</li>
+          <li>Your NFC reader opens this page with `?pid=…` auto-filled.</li>
+          <li>Enter the **final total** from your POS and click **Charge**.</li>
+        </ol>
+        <p class="muted" style="margin-top:10px;">
+          Best practice: this page can open in a **new tab** per customer; close it after each charge.
+        </p>
+        <div style="margin-top:12px;">
+          <span class="pill" id="whoami">Signed in as: —</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+    const passportIdEl = $("passportId");
+    const amountEl = $("amount");
+    const noteEl = $("note");
+    const chargeBtn = $("chargeBtn");
+
+    // Fill vendor name pill
+    document.addEventListener("DOMContentLoaded", () => {
+      const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
+      const who = (me.first_name && me.last_name) ? (me.first_name + " " + me.last_name) : (me.email || "Vendor");
+      const pill = $("whoami"); if (pill) pill.textContent = "Signed in as: " + who;
+    });
+
+    // Autofill passport ID from URL (?pid=...)
+    (function presetPidFromQuery(){
+      const url = new URL(location.href);
+      const pid = url.searchParams.get("pid");
+      if (pid) {
+        passportIdEl.value = pid;
+        $("pidHint").textContent = "Loaded from URL parameter.";
+      }
+    })();
+
+    function showMsg(text, kind="ok") {
+      statusEl.className = kind === "err" ? "err" : "ok";
+      statusEl.textContent = text;
+      statusEl.style.display = text ? "block" : "none";
+    }
+
+    async function postJSON(url, body) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("boop_jwt") || ""}`
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(()=> ({}));
+      if (!res.ok) {
+        const msg = data.message || data.error || `HTTP ${res.status}`;
+        const e = new Error(msg);
+        e.status = res.status;
+        throw e;
+      }
+      return data;
+    }
+
+    async function charge() {
+      const passport_id = passportIdEl.value.trim();
+      const amt = parseFloat(amountEl.value);
+      if (!passport_id) return showMsg("Please enter a passport ID.", "err");
+      if (!amt || isNaN(amt) || amt <= 0) return showMsg("Please enter a valid amount.", "err");
+
+      chargeBtn.disabled = true;
+      showMsg("Processing charge…");
+
+      // Primary endpoint: /api/vendor/charge
+      // Expected body: { passport_id, amount: number, note?: string }
+      // Response: { success:true, receipt_id, message? }
+      try {
+        const payload = { passport_id, amount: amt, note: (noteEl.value || "").trim() };
+        let data;
+        try {
+          data = await postJSON("/api/vendor/charge", payload);
+        } catch (e1) {
+          // Optional fallback if your backend uses a different path/name:
+          if (e1.status === 404) {
+            data = await postJSON("/api/transactions/vendor-charge", payload);
+          } else {
+            throw e1;
+          }
+        }
+        showMsg(data.message || "✅ Charge successful.");
+        amountEl.value = "";
+        noteEl.value = "";
+      } catch (err) {
+        console.error(err);
+        showMsg(`❌ ${err.message}`, "err");
+      } finally {
+        chargeBtn.disabled = false;
+      }
+    }
+
+    chargeBtn.addEventListener("click", charge);
+
+    // Logout
+    document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await fetch("/api/logout", { method:"POST" }); } catch {}
+      localStorage.clear();
+      location.href = "../login.html";
+    });
+  </script>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div>© 2025 BOOP. All rights reserved.</div>
+      <div class="footer-links">
+        <a href="../terms.html">Terms of Service</a>
+        <a href="../privacy.html">Privacy Policy</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
