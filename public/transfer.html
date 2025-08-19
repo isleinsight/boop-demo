@@ -10,6 +10,7 @@
       --ink:#102a43; --muted:#6b7c93; --blue:#2f80ed; --blue-dark:#1a5fcc;
       --bg:#ffffff; --panel:#ffffff; --stroke:#e5e7eb; --soft:#f8fafc;
       --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444; --nav:#0b1220;
+      --green:#16a34a; --red:#dc2626;
     }
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
@@ -23,12 +24,12 @@
     .nav-right a[aria-current="page"]{ text-decoration:underline; opacity:1; }
     .nav-right a:hover{ opacity:1; }
 
-    /* HEADER */
+    /* HEADER (same vibe as cardholder transfer) */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
-    /* MAIN */
+    /* MAIN grid (matches cardholder transfer proportions) */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
     .grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:16px; }
     @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
@@ -71,32 +72,32 @@
 
     .help{ font-size:.9rem; color:var(--muted); margin-top:8px; }
 
-    /* Recent payouts list — compact & responsive (PayPal-ish) */
-    .payouts{ display:grid; gap:10px; margin-top:8px; }
-    .payout{
-      display:grid; grid-template-columns:1.2fr .8fr .8fr .9fr auto;
-      gap:10px; align-items:center; padding:12px; border:1px solid var(--stroke); border-radius:12px; background:#fff;
+    /* RECENT PAYOUTS — cardholder “Activity” style cards */
+    .list{ display:grid; gap:10px; margin-top:8px; }
+    .item{
+      background:#fff; border:1px solid var(--stroke); border-radius:12px;
+      padding:12px 14px; display:flex; align-items:center; gap:12px;
     }
-    .payout .id{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.9rem; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .pill{ font-size:.8rem; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#1e3a8a; display:inline-block; text-transform:capitalize; white-space:nowrap; }
+    .avatar{
+      width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#334155; flex:0 0 42px;
+    }
+    .line{
+      display:flex; align-items:center; justify-content:space-between; width:100%;
+    }
+    .who{ font-weight:600; }
+    .desc{ font-size:.9rem; color:#64748b; }  /* not used but here if needed */
+    .amt{ font-weight:700; }
+    .amt.positive{ color:var(--green); }
+    .amt.negative{ color:var(--red); }
+    .meta{ font-size:.85rem; color:#94a3b8; margin-top:2px; }
+
+    .pill{ font-size:.75rem; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#1e3a8a; display:inline-block; text-transform:capitalize; margin-left:8px; white-space:nowrap; }
     .pill.pending{ background:#fff7ed; color:#9a3412; }
     .pill.completed{ background:#ecfdf5; color:#065f46; }
     .pill.failed{ background:#fef2f2; color:#991b1b; }
-    .payout .amount{ font-weight:700; white-space:nowrap; }
-    .payout .dest{ color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .payout .when{ color:#6b7280; white-space:nowrap; }
 
-    @media (max-width: 720px){
-      .payout{ grid-template-columns: 1fr 1fr; grid-template-areas:
-        "amount status"
-        "dest dest"
-        "when id"; }
-      .payout .amount{ grid-area: amount; }
-      .payout .status{ grid-area: status; text-align:right; }
-      .payout .dest{ grid-area: dest; }
-      .payout .when{ grid-area: when; }
-      .payout .id{ grid-area: id; }
-    }
+    .empty{ text-align:center; color:#64748b; padding:20px; border:1px dashed var(--stroke); border-radius:12px; background:#fff; }
 
     /* Footer */
     footer{ border-top:1px solid var(--stroke); background:#fff; }
@@ -155,7 +156,7 @@
     <div id="flash" class="alert" style="display:none;"></div>
 
     <div class="grid">
-      <!-- Left: Request form -->
+      <!-- Left: Request form (same flow as cardholder transfer) -->
       <section class="card">
         <h2>Create request</h2>
 
@@ -185,7 +186,7 @@
         </div>
       </section>
 
-      <!-- Right: Balance + latest + recent -->
+      <!-- Right: Balance + Latest + Recent payouts (activity cards) -->
       <section class="card">
         <h2>Your balance</h2>
         <div class="summary">
@@ -199,8 +200,8 @@
         <div id="latestBox" class="muted">No requests yet.</div>
 
         <h2 style="margin-top:18px;">Recent payouts</h2>
-        <div id="payouts" class="payouts">
-          <div class="muted">Loading…</div>
+        <div id="payouts" class="list">
+          <div class="empty">Loading…</div>
         </div>
       </section>
     </div>
@@ -228,7 +229,7 @@
     </div>
   </div>
 
-  <!-- Add Bank Modal -->
+  <!-- Add Bank Modal (Bermuda: no routing number) -->
   <div id="addBankModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
     <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:520px;width:92%;">
       <h3 style="margin:0 0 10px;">Add bank account</h3>
@@ -408,7 +409,7 @@
         }
       });
 
-      // Preview + enable review
+      // Preview + enable review (same as cardholder)
       function updatePreview(){
         const amt = Number(amountEl.value);
         if (!selectedBank || !amt || amt <= 0){ previewBox.style.display='none'; reviewBtn.disabled = true; return; }
@@ -474,7 +475,7 @@
         }
       });
 
-      // Latest request
+      // Latest request (small summary box)
       async function loadLatest(){
         try{
           const r = await fetch('/api/transfers/mine/latest', { headers: { Authorization: `Bearer ${token}` }});
@@ -494,37 +495,41 @@
         }catch{ latestBox.textContent = "—"; }
       }
 
-      // Recent payouts list
+      // Recent payouts — render as “Activity” cards
       async function loadPayouts(){
-        payoutsEl.innerHTML = `<div class="muted">Loading…</div>`;
+        payoutsEl.innerHTML = `<div class="empty">Loading…</div>`;
         try{
           const qs = new URLSearchParams({ limit: "25", offset: "0" }).toString();
           const r = await fetch(`/api/transfers/mine?${qs}`, { headers:{ Authorization:`Bearer ${token}` }});
           const j = await r.json();
           const rows = Array.isArray(j?.transfers) ? j.transfers : (Array.isArray(j) ? j : []);
           if (!rows.length){
-            payoutsEl.innerHTML = `<div class="muted">No recent payouts.</div>`;
+            payoutsEl.innerHTML = `<div class="empty">No recent payouts.</div>`;
             return;
           }
           payoutsEl.innerHTML = rows.map(t=>{
             const when = t.created_at ? new Date(t.created_at).toLocaleString() : '';
             const dest = (t.bank_name || 'Bank') + (t.last4 ? ` •••• ${t.last4}` : '');
-            const amt = dollars(t.amount_cents);
+            const amt = `−$${(Number(t.amount_cents||0)/100).toFixed(2)}`; // payout is money OUT
             const status = (t.status||'submitted').toLowerCase();
             const pillCls = status.includes('complete') ? 'completed' : status.includes('fail') ? 'failed' : 'pending';
             const idshort = (t.id||'').toString();
+            const initials = (dest?.trim?.()[0] || 'B').toUpperCase();
             return `
-              <div class="payout">
-                <div class="amount">${amt}</div>
-                <div class="status"><span class="pill ${pillCls}">${status}</span></div>
-                <div class="dest">${dest}</div>
-                <div class="when">${when}</div>
-                <div class="id">${idshort}</div>
+              <div class="item">
+                <div class="avatar">${initials}</div>
+                <div class="line">
+                  <div>
+                    <div class="who">Payout to ${dest} <span class="pill ${pillCls}">${status}</span></div>
+                    <div class="meta">${when} • ${idshort}</div>
+                  </div>
+                  <div class="amt negative">${amt}</div>
+                </div>
               </div>
             `;
           }).join('');
         }catch{
-          payoutsEl.innerHTML = `<div class="muted">Couldn’t load payouts.</div>`;
+          payoutsEl.innerHTML = `<div class="empty">Couldn’t load payouts.</div>`;
         }
       }
 
