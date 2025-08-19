@@ -177,90 +177,42 @@
 
  
 
-  <!-- Enhance: set first name + placeholder passport from localStorage -->
-  <script>
-    (function(){
-      const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
-      const firstNameEl = document.getElementById("cardholderFirstName");
-      const emailEl = document.getElementById("cardholderEmail");
-      const passportEl = document.getElementById("passportId");
+<!-- Enhance: set first name + placeholder passport from localStorage (with capitalization fix) -->
+<script>
+  (function () {
+    function capitalizeFirst(str) {
+      if (!str || typeof str !== "string") return "";
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
 
-      // Try multiple fields for first name, fallback to the email username
-      const first =
+    function paintCardholderBits() {
+      const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
+
+      const firstNameEl = document.getElementById("cardholderFirstName");
+      const emailEl     = document.getElementById("cardholderEmail");
+      const passportEl  = document.getElementById("passportId");
+
+      // Derive a display first name, then normalize casing.
+      const rawFirst =
         user.first_name ||
-        (user.name?.split?.(" ")[0]) ||
+        (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
         (user.email ? user.email.split("@")[0] : "") ||
         "Friend";
 
-      firstNameEl.textContent = first;
-      if (user.email) emailEl.textContent = user.email;
+      const first = capitalizeFirst(String(rawFirst).trim());
 
-      // Placeholder for passport until you add it to user profile
-      passportEl.textContent = user.passport_id || "—";
-    })();
-  </script>
+      if (firstNameEl) firstNameEl.textContent = first;
+      if (emailEl && user.email) emailEl.textContent = user.email;
+      if (passportEl) passportEl.textContent = user.passport_id || "—";
 
-  <!-- Hamburger + mobile menu logic -->
-  <script>
-    (function(){
-      const hamburger = document.getElementById('hamburger');
-      const panel = document.getElementById('mobileMenu');
-      const overlay = document.getElementById('navOverlay');
-      const logoutDesktop = document.getElementById('logoutBtn');
-      const logoutMobile = document.getElementById('logoutBtnMobile');
-
-      function openMenu(){
-        hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active');
-        hamburger.setAttribute('aria-expanded', 'true'); document.body.style.overflow = 'hidden';
-      }
-      function closeMenu(){
-        hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active');
-        hamburger.setAttribute('aria-expanded', 'false'); document.body.style.overflow = '';
-      }
-
-      hamburger.addEventListener('click', () => hamburger.classList.contains('active') ? closeMenu() : openMenu());
-      overlay.addEventListener('click', closeMenu);
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
-
-      function attachLogout(el){
-        if (!el) return;
-        el.addEventListener('click', async (e) => {
-          e.preventDefault();
-          try { await fetch('/api/logout', { method: 'POST' }); } catch {}
-          localStorage.clear();
-          window.location.href = 'cardholder-login.html';
-        });
-      }
-      attachLogout(logoutDesktop);
-      attachLogout(logoutMobile);
-    })();
-  </script>
-
-  <!-- Force Sign-Out Script (unchanged) -->
-  <script>
-  (async () => {
-    const token = localStorage.getItem("boop_jwt");
-    const boopUser = JSON.parse(localStorage.getItem("boopUser") || "{}");
-    const email = boopUser.email;
-    if (!token || !email) return;
-
-    async function checkForceSignOut() {
-      try {
-        const res = await fetch(`/api/sessions/force-check/${email}`);
-        const data = await res.json();
-        if (res.ok && data.force_signed_out) {
-          alert("⚠️ You have been signed out by an administrator.");
-          localStorage.clear();
-          try { await fetch(`/api/sessions/${email}`, { method: "DELETE" }); } catch {}
-          try { await fetch(`/api/sessions/force-clear/${email}`, { method: "PATCH" }); } catch {}
-          window.location.href = "cardholder-login.html";
-        }
-      } catch (err) {
-        console.error("❌ Force sign-out check failed:", err);
-      }
+      // Optional: expose a normalized display name for other scripts
+      window.__cardholderDisplay = first;
     }
-    setInterval(checkForceSignOut, 10000);
+
+    // Try immediately (in case script is at the end) and again on DOM ready.
+    try { paintCardholderBits(); } catch {}
+    document.addEventListener("DOMContentLoaded", paintCardholderBits);
   })();
-  </script>
+</script>
 </body>
 </html>
