@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transfer to Bank – Vendor | BOOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
+    body { font-family:'Poppins',sans-serif; background:#f4f7fa; margin:0; color:var(--ink); }
+
+    /* Top Nav (same as vendor homepage) */
+    nav { background:#0b1220; color:#fff; }
+    .nav-container { max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img { height:32px; display:block; }
+    .nav-right { display:flex; gap:16px; align-items:center; }
+    .nav-right a { color:#fff; text-decoration:none; font-size:.95rem; }
+    .nav-right a[aria-current="page"] { text-decoration:underline; }
+
+    .shell { max-width:1050px; margin: 36px auto 24px; background:#fff; padding: 28px 32px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,.08); }
+    h2 { margin:0 0 10px; }
+    h3 { margin:18px 0 8px; font-size:1.05rem; }
+
+    .grid { display:grid; grid-template-columns: 1.1fr .9fr; gap:18px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    .card { border:1px solid var(--stroke); background:#fff; border-radius:12px; padding:16px; }
+    .row { display:flex; gap:12px; }
+    .row > * { flex:1; }
+
+    label { display:block; font-size:.9rem; color:var(--muted); margin: 6px 0 6px; }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      background:#fff;
+    }
+    textarea { resize: vertical; min-height: 84px; }
+    button { background:#2f80ed; color:#fff; font-weight:600; border:none; cursor:pointer; transition: background .15s; }
+    button:hover { background:#1c6fd8; }
+    .btn-muted { background:#6b7280; }
+    .btn-muted:hover { background:#4b5563; }
+    .btn-row { display:flex; gap:10px; align-items:center; }
+    .muted { color:var(--muted); font-size:.92rem; }
+
+    .pill { display:inline-block; padding:3px 10px; border:1px solid var(--stroke); border-radius:999px; font-size:.85rem; color:#374151; background:#fff; }
+    .balance { font-size:1.3rem; font-weight:600; }
+
+    .bank-list { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:12px; }
+    .bank { border:1px solid var(--stroke); border-radius:12px; padding:12px; }
+    .bank h4 { margin:0 0 6px; font-size:1rem; }
+    .bank .muted { font-size:.85rem; }
+
+    /* Table */
+    table { width:100%; border-collapse: collapse; margin-top: 10px; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 12px 13px; border: 1px solid #e6ebf1; text-align: left; font-size: 0.96em; white-space: nowrap; }
+    th { background:#f0f4f8; color:#1a2b4a; font-weight:500; }
+    tr:hover { background:#f5f8fb; }
+
+    .pagination { display:flex; justify-content:center; align-items:center; gap:10px; margin: 16px 0 4px; }
+    .pagination button { width:auto; min-width:80px; padding:7px 16px; background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.95rem; font-weight:500; }
+    .pagination button:disabled { background:#e5e7eb; color:#bbb; cursor:not-allowed; }
+    #paginationInfo { font-size:.96rem; color:#4b5563; font-weight:500; padding:0 6px; }
+
+    .status { margin-top:8px; font-weight:500; }
+    .status.ok { color:#16a34a; }
+    .status.err { color:#e74c3c; }
+
+    /* Footer */
+    footer { border-top:1px solid var(--stroke); background:#fff; }
+    .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
+    .footer-links a { color:#6b7280; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover { text-decoration:underline; }
+
+    .hint { font-size:.85rem; color:#6b7280; margin-top:4px; }
+  </style>
+</head>
+<body>
+  <!-- Vendor auth guard -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        let me = JSON.parse(localStorage.getItem("boopUser") || "null");
+        if (!me) {
+          const r = await fetch("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
+          if (!r.ok) throw new Error("Unauthorized");
+          me = await r.json(); localStorage.setItem("boopUser", JSON.stringify(me));
+        }
+        if (me.role !== "vendor") throw new Error("Not a vendor");
+      } catch (e) {
+        localStorage.clear(); location.href = "vendor-login.html";
+      }
+    })();
+  </script>
+
+  <!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Home</a>
+        <a href="transfer.html" aria-current="page">Transfer</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="#" id="logoutLink">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="shell">
+    <h2>Transfer to Bank</h2>
+    <p class="muted" id="balanceLine">Balance: <span class="balance" id="balanceValue">—</span></p>
+
+    <div class="grid">
+      <!-- Left: Bank accounts + Add -->
+      <div class="card">
+        <h3>Bank Accounts</h3>
+        <div id="bankList" class="bank-list"></div>
+
+        <h3 style="margin-top:16px;">Add a Bank Account</h3>
+        <div class="row">
+          <div>
+            <label for="baNickname">Nickname</label>
+            <input id="baNickname" placeholder="e.g. HSBC Checking" />
+          </div>
+          <div>
+            <label for="baHolder">Account Holder</label>
+            <input id="baHolder" placeholder="e.g. John Vendor" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="baBankName">Bank Name</label>
+            <input id="baBankName" placeholder="e.g. HSBC" />
+          </div>
+          <div>
+            <label for="baAcctLast4">Account Last 4</label>
+            <input id="baAcctLast4" maxlength="4" placeholder="1234" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="baRouteLast4">Routing Last 4 (optional)</label>
+            <input id="baRouteLast4" maxlength="4" placeholder="5678" />
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button id="addBankBtn">Add Bank</button>
+          </div>
+        </div>
+        <div class="hint">We store only non-sensitive display details here (nickname/last4) and use your secure payout setup server-side.</div>
+        <div id="bankStatus" class="status"></div>
+      </div>
+
+      <!-- Right: New payout request -->
+      <div class="card">
+        <h3>Request Payout</h3>
+        <label for="destBank">Destination Bank</label>
+        <select id="destBank"></select>
+
+        <div class="row">
+          <div>
+            <label for="amount">Amount</label>
+            <input id="amount" type="number" step="0.01" min="0" placeholder="e.g. 120.00" />
+          </div>
+          <div>
+            <label for="memo">Memo (optional)</label>
+            <input id="memo" placeholder="e.g. Friday settlement" />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="requestBtn">Submit Request</button>
+          <button class="btn-muted" id="clearBtn" type="button">Clear</button>
+        </div>
+        <div id="requestStatus" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell" style="margin-top:16px;">
+    <h3 style="margin-top:0;">Recent Payout Requests</h3>
+    <div class="btn-row" style="justify-content:flex-end; margin-bottom:6px;">
+      <button id="exportBtn" class="btn-muted" style="width:auto;">Export CSV</button>
+    </div>
+    <table id="reqTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Request ID</th>
+          <th>Amount</th>
+          <th>Bank</th>
+          <th>Status</th>
+          <th>Memo</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="pagination">
+      <button id="prevPage">Previous</button>
+      <span id="paginationInfo">Page 1 of 1</span>
+      <button id="nextPage">Next</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <div>© 2025 BOOP</div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    const token = localStorage.getItem("boop_jwt");
+    const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
+    if (!me || me.role !== "vendor") { location.href = "../login.html"; }
+
+    const els = {
+      balance: document.getElementById("balanceValue"),
+      bankList: document.getElementById("bankList"),
+      bankStatus: document.getElementById("bankStatus"),
+      destBank: document.getElementById("destBank"),
+      amount: document.getElementById("amount"),
+      memo: document.getElementById("memo"),
+      requestBtn: document.getElementById("requestBtn"),
+      requestStatus: document.getElementById("requestStatus"),
+      clearBtn: document.getElementById("clearBtn"),
+      exportBtn: document.getElementById("exportBtn"),
+      prevPage: document.getElementById("prevPage"),
+      nextPage: document.getElementById("nextPage"),
+      paginationInfo: document.getElementById("paginationInfo"),
+      reqTableBody: document.querySelector("#reqTable tbody"),
+      // add bank fields
+      baNickname: document.getElementById("baNickname"),
+      baHolder: document.getElementById("baHolder"),
+      baBankName: document.getElementById("baBankName"),
+      baAcctLast4: document.getElementById("baAcctLast4"),
+      baRouteLast4: document.getElementById("baRouteLast4"),
+      addBankBtn: document.getElementById("addBankBtn"),
+    };
+
+    // Pagination state for requests
+    let page = 1, limit = 10, totalCount = 0, requests = [];
+
+    function setStatus(el, msg, ok=false) {
+      if (!el) return;
+      el.textContent = msg || "";
+      el.classList.remove("ok","err");
+      if (!msg) return;
+      el.classList.add(ok ? "ok" : "err");
+    }
+    function money(cents) { return "$" + (Number(cents||0)/100).toFixed(2); }
+
+    async function loadBalance() {
+      try {
+        // Try /api/wallets/mine first
+        let r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
+        if (!r.ok) {
+          // Fallback: /api/wallets/user/:id
+          r = await fetch(`/api/wallets/user/${me.id}`, { headers:{ Authorization:`Bearer ${token}` }});
+        }
+        const j = await r.json();
+        els.balance.textContent = money(j.balance_cents || 0);
+      } catch (e) {
+        els.balance.textContent = "—";
+      }
+    }
+
+    async function loadBanks() {
+      try {
+        const r = await fetch("/api/bank-accounts/mine", { headers:{ Authorization:`Bearer ${token}` }});
+        const j = await r.json();
+        const list = Array.isArray(j) ? j : (j.bank_accounts || []);
+        els.bankList.innerHTML = list.length ? "" : `<div class="muted">No bank accounts yet. Add one above.</div>`;
+        els.destBank.innerHTML = "";
+
+        list.forEach(b => {
+          // card
+          const div = document.createElement("div");
+          div.className = "bank";
+          div.innerHTML = `
+            <h4>${b.nickname || b.bank_name || "Bank"}</h4>
+            <div class="muted">Acct •••• ${b.account_last4 || "—"}${b.routing_last4 ? " · RT •••• " + b.routing_last4 : ""}</div>
+            <div class="muted">${b.holder_name || ""}</div>
+          `;
+          els.bankList.appendChild(div);
+
+          // select option
+          const opt = document.createElement("option");
+          opt.value = b.id;
+          opt.textContent = `${b.nickname || b.bank_name || "Bank"} ••${b.account_last4 || "????"}`;
+          els.destBank.appendChild(opt);
+        });
+
+        // Disable payout form if none
+        const hasBank = list.length > 0;
+        els.destBank.disabled = !hasBank;
+        els.amount.disabled = !hasBank;
+        els.memo.disabled = !hasBank;
+        els.requestBtn.disabled = !hasBank;
+      } catch (e) {
+        els.bankList.innerHTML = `<div class="muted">Failed to load bank accounts.</div>`;
+      }
+    }
+
+    async function addBank() {
+      setStatus(els.bankStatus, "");
+      const payload = {
+        nickname: (els.baNickname.value || "").trim(),
+        holder_name: (els.baHolder.value || "").trim(),
+        bank_name: (els.baBankName.value || "").trim(),
+        account_last4: (els.baAcctLast4.value || "").trim(),
+        routing_last4: (els.baRouteLast4.value || "").trim(),
+      };
+      if (!payload.nickname || !payload.holder_name || !payload.bank_name || payload.account_last4.length !== 4) {
+        setStatus(els.bankStatus, "Please fill nickname, holder, bank name, and a 4-digit account last4.", false);
+        return;
+      }
+      try {
+        const r = await fetch("/api/bank-accounts", {
+          method: "POST",
+          headers: { "Content-Type":"application/json", Authorization:`Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.message || "Add bank failed");
+        setStatus(els.bankStatus, "Bank account added.", true);
+        els.baNickname.value = els.baHolder.value = els.baBankName.value = els.baAcctLast4.value = els.baRouteLast4.value = "";
+        await loadBanks();
+      } catch (e) {
+        setStatus(els.bankStatus, e.message || "Add bank failed", false);
+      }
+    }
+
+    async function requestPayout() {
+      setStatus(els.requestStatus, "");
+      const bank_account_id = els.destBank.value;
+      const amt = Number(els.amount.value);
+      if (!bank_account_id) return setStatus(els.requestStatus, "Please select a bank.", false);
+      if (!Number.isFinite(amt) || amt <= 0) return setStatus(els.requestStatus, "Enter a valid amount.", false);
+
+      try {
+        const r = await fetch("/api/transfers/payout", {
+          method: "POST",
+          headers: { "Content-Type":"application/json", Authorization:`Bearer ${token}` },
+          body: JSON.stringify({
+            bank_account_id,
+            amount: amt,            // dollars
+            memo: els.memo.value || ""
+          })
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.message || "Payout request failed");
+        setStatus(els.requestStatus, "Payout request submitted.", true);
+        els.amount.value = ""; els.memo.value = "";
+        await loadRequests(); await loadBalance();
+      } catch (e) {
+        setStatus(els.requestStatus, e.message || "Request failed", false);
+      }
+    }
+
+    function updatePager() {
+      const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+      els.paginationInfo.textContent = `Page ${page} of ${totalPages}`;
+      els.prevPage.disabled = page <= 1;
+      els.nextPage.disabled = page >= totalPages;
+    }
+
+    async function loadRequests() {
+      try {
+        const qs = new URLSearchParams({
+          kind: "payout",
+          limit: String(limit),
+          offset: String((page - 1) * limit)
+        }).toString();
+        const r = await fetch(`/api/transfers/mine?${qs}`, { headers:{ Authorization:`Bearer ${token}` }});
+        const j = await r.json();
+
+        requests = j.requests || j.transactions || [];
+        totalCount = j.totalCount || j.total || 0;
+
+        els.reqTableBody.innerHTML = "";
+        if (!requests.length) {
+          els.reqTableBody.innerHTML = `<tr><td colspan="6">No payout requests yet.</td></tr>`;
+        } else {
+          requests.forEach(x => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${x.created_at ? new Date(x.created_at).toLocaleString() : ""}</td>
+              <td>${x.id || x.request_id || "—"}</td>
+              <td>$${(Number(x.amount_cents || x.amount*100 || 0)/100).toFixed(2)}</td>
+              <td>${x.bank_nickname || x.bank_name || "—"}</td>
+              <td><span class="pill">${(x.status || "pending").toUpperCase()}</span></td>
+              <td>${x.memo || x.note || ""}</td>
+            `;
+            els.reqTableBody.appendChild(tr);
+          });
+        }
+        updatePager();
+      } catch (e) {
+        els.reqTableBody.innerHTML = `<tr><td colspan="6">Failed to load requests.</td></tr>`;
+      }
+    }
+
+    function exportCSV() {
+      if (!requests.length) return;
+      const headers = ["Date","Request ID","Amount","Bank","Status","Memo"];
+      const rows = requests.map(x => [
+        x.created_at ? new Date(x.created_at).toISOString() : "",
+        x.id || x.request_id || "",
+        (Number(x.amount_cents || x.amount*100 || 0)/100).toFixed(2),
+        x.bank_nickname || x.bank_name || "",
+        (x.status || "pending"),
+        (x.memo || x.note || "").replace(/,/g,"")
+      ]);
+      const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+      const blob = new Blob([csv], { type:"text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "vendor-payout-requests.csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    // Wire up
+    els.addBankBtn.addEventListener("click", addBank);
+    els.requestBtn.addEventListener("click", requestPayout);
+    els.clearBtn.addEventListener("click", () => { els.amount.value=""; els.memo.value=""; setStatus(els.requestStatus,""); });
+    els.exportBtn.addEventListener("click", exportCSV);
+    els.prevPage.addEventListener("click", () => { if (page>1){ page--; loadRequests(); }});
+    els.nextPage.addEventListener("click", () => {
+      const tp = Math.ceil(totalCount/limit)||1;
+      if (page<tp){ page++; loadRequests(); }
+    });
+
+    document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await fetch("/api/logout", { method:"POST" }); } catch {}
+      localStorage.clear(); location.href = "../login.html";
+    });
+
+    // Init
+    loadBalance();
+    loadBanks();
+    loadRequests();
+  </script>
+</body>
+</html>
