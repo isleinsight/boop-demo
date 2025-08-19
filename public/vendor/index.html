@@ -11,32 +11,32 @@
 
     body { font-family:'Poppins',sans-serif; background:#f5f7fa; margin:0; color:var(--ink); }
 
-   /* Top Nav (match transfer/transactions tighter look) */
-nav { background:#0b1220; color:#fff; position:sticky; top:0; z-index:50; }
-.nav-container {
-  max-width:1100px;
-  margin:0 auto;
-  padding:8px 16px;   /* reduced top/bottom padding */
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-}
-.nav-left img { height:36px; display:block; } /* make logo same height */
-.nav-right { display:flex; gap:18px; align-items:center; }
-.nav-right a {
-  color:#fff;
-  text-decoration:none;
-  font-size:0.95rem;
-  opacity:.95;
-  line-height:1; /* keeps them vertically compact */
-}
-.nav-right a:hover { opacity:1; }
-.nav-right a[aria-current="page"] { text-decoration:underline; opacity:1; }
+    /* ── Compact Top Nav (match Transfer/Transactions) ───────────────────── */
+    nav { background:#0b1220; color:#fff; }
+    .nav-container {
+      max-width:1100px;
+      margin:0 auto;
+      /* ↓ tighter vertical padding */
+      padding:8px 18px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .nav-left img {
+      /* ↓ smaller logo height */
+      height:28px; display:block;
+    }
+    .nav-right { display:flex; gap:12px; align-items:center; }
+    .nav-right a {
+      color:#fff; text-decoration:none;
+      /* ↓ slightly smaller text + compact hit area */
+      font-size:.92rem; line-height:1;
+      padding:6px 8px; border-radius:6px;
+    }
+    .nav-right a:hover { background:rgba(255,255,255,.08); text-decoration:none; }
 
     /* Hero */
     .hero { background:linear-gradient(180deg,#f7fafc,#fff); border-bottom:1px solid var(--stroke); }
-    .hero-inner { max-width:1100px; margin:0 auto; padding:24px 18px; }
-    .hero h1 { margin:0 0 6px; font-size:1.75rem; font-weight:600; }
+    .hero-inner { max-width:1100px; margin:0 auto; padding:20px 18px; }
+    .hero h1 { margin:0 0 6px; font-size:1.6rem; font-weight:600; }
     .hero-sub { margin:0; color:#4b5563; }
 
     /* Quick stats */
@@ -53,14 +53,14 @@ nav { background:#0b1220; color:#fff; position:sticky; top:0; z-index:50; }
     .tile .title { font-weight:600; font-size:0.98rem; }
     .tile .sub { color:var(--muted); font-size:.9rem; }
 
-    /* Footer (match transfer/transactions = light) */
-    footer { border-top:1px solid var(--stroke); background:#fff; }
-    .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
+    /* Footer — light like the other vendor pages */
+    footer { border-top:1px solid var(--stroke); background:#fff; color:#6b7280; }
+    .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; font-size:.9rem; }
     .footer-links a { color:#6b7280; text-decoration:none; margin-left:12px; }
     .footer-links a:hover { text-decoration:underline; }
 
     @media (max-width: 768px) {
-      .nav-right { gap:12px; }
+      .nav-right { gap:10px; }
     }
   </style>
 </head>
@@ -91,7 +91,7 @@ nav { background:#0b1220; color:#fff; position:sticky; top:0; z-index:50; }
         <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
       </div>
       <div class="nav-right">
-        <a href="index.html" aria-current="page">Home</a>
+        <a href="index.html">Home</a>
         <a href="transfer.html">Transfer</a>
         <a href="transactions.html">Transactions</a>
         <a href="#" id="logoutLink">Log Out</a>
@@ -123,32 +123,24 @@ nav { background:#0b1220; color:#fff; position:sticky; top:0; z-index:50; }
     </div>
   </section>
 
-  <!-- Main tiles (3 across) -->
+  <!-- Main tiles -->
   <section class="tiles">
     <a class="tile" href="index.html">
-      <svg class="icon" viewBox="0 0 24 24" fill="none">
-        <path d="M3 12l2-2m0 0l7-7 7 7m-9 2v6m-4 4h10m-6-10h6" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3 12l2-2m0 0l7-7 7 7m-9 2v6m-4 4h10m-6-10h6" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
       <span>
         <span class="title">Overview</span><br/>
         <span class="sub">See your balance and stats</span>
       </span>
     </a>
-
     <a class="tile" href="transfer.html">
-      <svg class="icon" viewBox="0 0 24 24" fill="none">
-        <path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
       <span>
         <span class="title">Transfer to Bank</span><br/>
         <span class="sub">Move funds from BOOP to your bank</span>
       </span>
     </a>
-
     <a class="tile" href="transactions.html">
-      <svg class="icon" viewBox="0 0 24 24" fill="none">
-        <path d="M3 6h18M3 12h12M3 18h9" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h12M3 18h9" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/></svg>
       <span>
         <span class="title">Transactions</span><br/>
         <span class="sub">View your recent activity</span>
@@ -161,53 +153,42 @@ nav { background:#0b1220; color:#fff; position:sticky; top:0; z-index:50; }
     <div class="footer-inner">
       <div>© 2025 BOOP</div>
       <div class="footer-links">
-        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
-        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+        <a href="../terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="../privacy.html" target="_blank" rel="noopener">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script>
-    // Fill welcome line
     document.addEventListener("DOMContentLoaded", () => {
       const name = window.__vendorName || "Vendor";
       const title = document.getElementById("welcomeTitle");
       if (title) title.textContent = `Welcome, ${name}`;
     });
 
-    // Stats (optional)
     (async function loadStats(){
       const token = localStorage.getItem("boop_jwt");
       const setText = (id,v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
-
       try {
         const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
         let bal = null;
-
         let r = await fetch("/api/wallets/me", { headers:{ Authorization:`Bearer ${token}` }}).catch(()=>null);
-        if (r && r.ok) {
-          const j = await r.json(); bal = j?.balance_cents;
-        }
+        if (r && r.ok) { const j = await r.json(); bal = j?.balance_cents; }
         if (bal == null && me?.id) {
           r = await fetch(`/api/wallets/user/${me.id}`, { headers:{ Authorization:`Bearer ${token}` }}).catch(()=>null);
-          if (r && r.ok) {
-            const j = await r.json(); bal = j?.balance_cents;
-          }
+          if (r && r.ok) { const j = await r.json(); bal = j?.balance_cents; }
         }
-
         if (bal != null) setText("balanceValue", "$" + (Number(bal)/100).toFixed(2));
       } catch {}
-
       setText("todaysSales", "—");
       setText("pendingPayouts", "—");
     })();
 
-    // Logout
     document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
       e.preventDefault();
       try { await fetch("/api/logout", { method:"POST" }); } catch {}
       localStorage.clear();
-      location.href = "../login.html";
+      location.href = "vendor-login.html";
     });
   </script>
 </body>
