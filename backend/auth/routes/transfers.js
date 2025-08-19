@@ -759,4 +759,83 @@ router.get('/student/:id/latest', async (req, res) => {
   }
 });
 
+// auth/routes/transfers.js
+const express = require("express");
+const router = express.Router();
+const db = require("../../db");
+const { authenticateToken } = require("../middleware/authMiddleware");
+
+// small helpers
+function requireVendor(req, res, next) {
+  const role = (req.user?.role || "").toLowerCase();
+  if (role !== "vendor") return res.status(403).json({ message: "Vendor role required." });
+  next();
+}
+const toInt = (v, d) => (Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : d);
+
+// ───────────────────────────────────────────────────────────────
+// GET /api/transfers/mine?limit=25&offset=0
+// Returns recent payout requests for the signed-in vendor
+router.get("/mine", authenticateToken, requireVendor, async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const limit = Math.min(Math.max(toInt(req.query.limit, 25), 1), 200);
+    const offset = Math.max(toInt(req.query.offset, 0), 0);
+
+    // Join to bank accounts so UI can show bank name + last4
+    const q = `
+      SELECT
+        t.id,
+        t.user_id,
+        t.bank_account_id,
+        t.amount_cents,
+        COALESCE(t.status, 'submitted') AS status,
+        t.created_at,
+        ba.bank_name,
+        RIGHT(ba.account_number, 4) AS last4
+      FROM transfers t
+      LEFT JOIN bank_accounts ba ON ba.id = t.bank_account_id
+      WHERE t.user_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT $2 OFFSET $3
+    `;
+    const { rows } = await db.query(q, [userId, limit, offset]);
+    return res.json({ transfers: rows, totalCount: rows.length });
+  } catch (err) {
+    console.error("❌ GET /transfers/mine error:", err);
+    return res.status(500).json({ message: "Failed to load transfers." });
+  }
+});
+
+// ───────────────────────────────────────────────────────────────
+// GET /api/transfers/mine/latest
+router.get("/mine/latest", authenticateToken, requireVendor, async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const q = `
+      SELECT
+        t.id,
+        t.user_id,
+        t.bank_account_id,
+        t.amount_cents,
+        COALESCE(t.status, 'submitted') AS status,
+        t.created_at,
+        ba.bank_name,
+        RIGHT(ba.account_number, 4) AS last4
+      FROM transfers t
+      LEFT JOIN bank_accounts ba ON ba.id = t.bank_account_id
+      WHERE t.user_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT 1
+    `;
+    const { rows } = await db.query(q, [userId]);
+    return res.json(rows[0] || {});
+  } catch (err) {
+    console.error("❌ GET /transfers/mine/latest error:", err);
+    return res.status(500).json({ message: "Failed to load latest transfer." });
+  }
+});
+
+
+
 module.exports = router;
