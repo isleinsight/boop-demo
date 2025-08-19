@@ -14,9 +14,7 @@
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
     /* Tiny header (logo + logout only) */
-    .minihead{
-      background:#0b1220; color:#fff;
-    }
+    .minihead{ background:#0b1220; color:#fff; }
     .minihead-inner{
       max-width:1100px; margin:0 auto; padding:10px 18px;
       display:flex; align-items:center; justify-content:space-between;
@@ -29,13 +27,8 @@
     .logout:hover{ background:rgba(255,255,255,.15); }
 
     /* Hero */
-    .hero{
-      background:linear-gradient(180deg,#f7fafc,#fff);
-      border-bottom:1px solid var(--stroke);
-    }
-    .hero-inner{
-      max-width:1100px; margin:0 auto; padding:22px 18px 18px;
-    }
+    .hero{ background:linear-gradient(180deg,#f7fafc,#fff); border-bottom:1px solid var(--stroke); }
+    .hero-inner{ max-width:1100px; margin:0 auto; padding:22px 18px 18px; }
     .hero h1{ margin:0 0 6px; font-size:clamp(20px,3vw,28px); font-weight:600; }
     .hero-sub{ margin:0; color:#4b5563; }
 
@@ -101,8 +94,13 @@
         if (!res.ok) throw new Error("Unauthorized");
         const me = await res.json();
         if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
+
         localStorage.setItem("boopUser", JSON.stringify(me));
-        window.__vendorName = (me.first_name && me.last_name) ? `${me.first_name} ${me.last_name}` : (me.email || "Vendor");
+
+        // Prefer business_name, then full name, then email
+        window.__vendorDisplay =
+          (me.business_name && me.business_name.trim()) ||
+          ((me.first_name && me.last_name) ? `${me.first_name} ${me.last_name}` : (me.email || "Vendor"));
       } catch {
         localStorage.clear(); location.href = "../login.html";
       }
@@ -120,7 +118,7 @@
   <!-- Hero -->
   <section class="hero">
     <div class="hero-inner">
-      <h1 id="welcomeTitle">Welcome</h1>
+      <h1 id="welcomeTitle"></h1>
       <p class="hero-sub">Quick actions to move money and review activity.</p>
     </div>
   </section>
@@ -143,7 +141,6 @@
 
   <!-- Quick actions (three across) -->
   <section class="tiles">
-    <!-- Keep the icons you liked -->
     <a class="tile" href="transfer.html">
       <svg class="icon" viewBox="0 0 24 24" fill="none">
         <path d="M17 6H7m10 4l-4-4m4 4l-4 4M7 18h10m-10-4l4 4m-4-4l4-4" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
@@ -164,7 +161,6 @@
       </span>
     </a>
 
-    <!-- Third tile as a simple “How-to / Help” that won’t 404 -->
     <a class="tile" href="help.html" target="_blank" rel="noopener">
       <svg class="icon" viewBox="0 0 24 24" fill="none">
         <path d="M12 18h.01M9.09 9a3 3 0 115.83 1c-.41.77-1.09 1.2-1.67 1.7-.58.5-1.25.93-1.25 1.8V14" stroke="#1f2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -204,40 +200,43 @@
   </footer>
 
   <script>
-    // Welcome line
+    // Set hero to: "{Business Name} Vendor Portal"
     document.addEventListener("DOMContentLoaded", () => {
-      const name = window.__vendorName || "Vendor";
       const title = document.getElementById("welcomeTitle");
-      if (title) title.textContent = `Welcome, ${name}`;
+      const name = window.__vendorDisplay || "Vendor";
+      if (title) title.textContent = `${name} Vendor Portal`;
     });
 
-    // Stats + activity
     (async function init(){
       const token = localStorage.getItem("boop_jwt");
       const setText = (id,v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
 
       // Balance
       try {
-        let bal = null;
         let r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
-        if (r.ok) { const j = await r.json(); bal = j?.balance_cents; }
-        if (bal != null) setText("balanceValue", "$" + (Number(bal)/100).toFixed(2));
+        if (r.ok) {
+          const j = await r.json();
+          const bal = j?.balance_cents;
+          if (bal != null) setText("balanceValue", "$" + (Number(bal)/100).toFixed(2));
+        }
       } catch {}
 
-      // Placeholders for now
       setText("todaysSales", "—");
       setText("pendingPayouts", "—");
 
-      // Recent activity (pull last 10 from vendor report)
+      // Recent activity
       try{
-        const qs = new URLSearchParams({ start: new Date(Date.now()-30*864e5).toISOString().slice(0,10), end: new Date().toISOString().slice(0,10), limit:"50", offset:"0" }).toString();
+        const qs = new URLSearchParams({
+          start: new Date(Date.now()-30*864e5).toISOString().slice(0,10),
+          end: new Date().toISOString().slice(0,10),
+          limit:"50", offset:"0"
+        }).toString();
         const r = await fetch(`/api/vendor/transactions/report?${qs}`, { headers:{ Authorization:`Bearer ${token}` }});
         const j = await r.json();
-        const rows = (j && j.transactions) || [];
-        renderActivity(rows.slice(0,10));
+        renderActivity((j && j.transactions) ? j.transactions.slice(0,10) : []);
       }catch{ renderActivity([]); }
 
-      // Recent payouts (from transfers)
+      // Recent payouts
       try{
         const r = await fetch(`/api/transfers/mine?limit=10&offset=0`, { headers:{ Authorization:`Bearer ${token}` }});
         const j = await r.json();
