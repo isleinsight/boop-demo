@@ -321,5 +321,68 @@
       setInterval(checkForceSignOut, 10000);
     })();
   </script>
+    <!-- Enhance: set first name + passport from API (with capitalization fix) -->
+  <script>
+    (function () {
+      function capitalizeFirst(str) {
+        if (!str || typeof str !== "string") return "";
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
+
+      async function loadBalance() {
+        try {
+          const token = localStorage.getItem("boop_jwt");
+          const r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
+          if (!r.ok) return;
+          const j = await r.json();
+          const cents = Number(j?.balance_cents || 0);
+          const el = document.getElementById("walletBalance");
+          if (el) el.textContent = `$${(cents/100).toFixed(2)}`;
+        } catch {}
+      }
+
+      async function paintCardholderBits() {
+        const token = localStorage.getItem("boop_jwt");
+        const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
+
+        const firstNameEl = document.getElementById("cardholderFirstName");
+        const emailEl     = document.getElementById("cardholderEmail");
+        const passportEl  = document.getElementById("passportId");
+
+        const rawFirst =
+          user.first_name ||
+          (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
+          (user.email ? user.email.split("@")[0] : "") ||
+          "Friend";
+
+        const first = capitalizeFirst(String(rawFirst).trim());
+
+        if (firstNameEl) firstNameEl.textContent = first;
+        if (emailEl && user.email) emailEl.textContent = user.email;
+
+        // 👇 Fetch live passport_id from API
+        try {
+          const r = await fetch("/api/passport/mine", { headers:{ Authorization:`Bearer ${token}` }});
+          if (r.ok) {
+            const j = await r.json();
+            if (passportEl) passportEl.textContent = j.passport_id || "—";
+          } else {
+            if (passportEl) passportEl.textContent = "—";
+          }
+        } catch {
+          if (passportEl) passportEl.textContent = "—";
+        }
+
+        window.__cardholderDisplay = first;
+      }
+
+      // Run immediately and again when DOM is ready
+      try { paintCardholderBits(); } catch {}
+      document.addEventListener("DOMContentLoaded", () => {
+        paintCardholderBits();
+        loadBalance();
+      });
+    })();
+  </script>
 </body>
 </html>
