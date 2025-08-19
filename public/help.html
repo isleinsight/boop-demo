@@ -9,38 +9,47 @@
   <style>
     :root{
       --brand:#2f80ed;
-      --brand-dark:#1c6fd8;
+      --brand-dark:#1a5fcc;
       --ink:#e5e7eb;
       --muted:#cbd5e1;
       --bg:#0b1220;
       --card:#0f172a;
-      --glass:rgba(255,255,255,0.08);
-      --ring:rgba(47,128,237,0.35);
-      --border:rgba(255,255,255,0.08);
-      --white:#fff;
-      --nav:#102a43;
+      --border:rgba(255,255,255,.10);
       --stroke:#e5e7eb;
+      --nav:#102a43;
     }
 
+    /* Layout base (sticky footer) */
     *{box-sizing:border-box}
-    html, body { height:100% }
+    html,body{height:100%}
     body{
-      margin:0;
-      display:flex;             /* sticky footer setup */
-      flex-direction:column;    /* sticky footer setup */
-      min-height:100vh;         /* sticky footer setup */
+      margin:0; min-height:100vh; display:flex; flex-direction:column;
       font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       color:#eef2ff;
-      background:
-        radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
-        radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
-        linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
+      background: linear-gradient(180deg, #0b1220 0%, #0d1220 35%, #0b1220 100%);
+      overflow-x:hidden;
+    }
+
+    /* Fixed decorative glows (don’t scroll) */
+    body::before,
+    body::after{
+      content:""; position:fixed; z-index:-1; pointer-events:none; filter:blur(0px);
+    }
+    /* Top-right blue bubble (fixed) */
+    body::before{
+      top:-220px; right:-220px; width:1100px; height:800px;
+      background: radial-gradient(700px 500px at 100% 0%, rgba(47,128,237,.28), transparent 60%);
+    }
+    /* Bottom-left green bubble (fixed to bottom) */
+    body::after{
+      bottom:-260px; left:-260px; width:1200px; height:850px;
+      background: radial-gradient(850px 650px at 0% 100%, rgba(16,185,129,.22), transparent 60%);
     }
 
     /* NAV */
     nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
-    .nav-left img{ height:36px; display:block }
+    .nav-left img{ height:36px; display:block; }
     .nav-right{ display:flex; align-items:center; gap:18px; }
     .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; }
     .nav-right a:hover{ opacity:1 }
@@ -67,46 +76,46 @@
       .nav-overlay.active{ display:block; }
     }
 
-    /* Hero */
+    /* Hero (left-aligned) */
     .hero{
-      max-width:1100px; margin:32px auto 18px; padding:0 18px;
-      text-align:left;   /* ← left align */
+      max-width:1100px; margin:30px auto 16px; padding:0 18px;
+      text-align:left;
     }
     .hero h1{
-      margin:10px 0 6px; font-size:clamp(26px,4.2vw,40px); line-height:1.15; font-weight:700; text-align:left;
+      margin:0 0 6px; font-size:clamp(26px,4.2vw,40px); line-height:1.15; font-weight:700;
     }
-    .hero p.lead{ margin:0; color:var(--muted); font-size:clamp(15px,2.2vw,18px); text-align:left; }
+    .hero .lead{ margin:0; color:var(--muted); font-size:clamp(15px,2.2vw,18px); }
 
-    /* Content */
-    main{ flex:1 }          /* sticky footer: main takes remaining height */
-    .wrap{max-width:1100px; margin:18px auto 32px; padding:0 18px;}
+    /* Main content */
+    main{ flex:1; }
+    .wrap{ max-width:1100px; margin:18px auto 32px; padding:0 18px; }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
+
     .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
       border:1px solid var(--border); border-radius:16px; padding:18px;
-      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+      box-shadow: 0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
     }
-    .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
-    @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
 
-    /* FAQ accordion */
-    .faq{border:1px solid var(--border); border-radius:12px; overflow:hidden; background:rgba(255,255,255,.02);}
-    .faq + .faq{margin-top:10px}
+    /* FAQ */
+    .faq{ border:1px solid var(--border); border-radius:12px; overflow:hidden; background:rgba(255,255,255,.02); }
+    .faq + .faq{ margin-top:10px; }
     .faq summary{
-      list-style:none; cursor:pointer; padding:14px 16px;
-      font-weight:600; color:#e5e7eb; display:flex; align-items:center; justify-content:space-between;
+      list-style:none; cursor:pointer; padding:14px 16px; font-weight:600; color:#e5e7eb;
+      display:flex; align-items:center; justify-content:space-between;
     }
-    .faq summary::-webkit-details-marker{display:none}
-    .faq summary span.icon{opacity:.7}
-    .faq[open] summary{background:rgba(255,255,255,.03)}
-    .faq .content{padding:0 16px 16px 16px; color:#cbd5e1; line-height:1.65; font-size:.98rem}
+    .faq summary::-webkit-details-marker{ display:none; }
+    .faq[open] summary{ background:rgba(255,255,255,.03); }
+    .faq .content{ padding:0 16px 16px; color:#cbd5e1; line-height:1.65; font-size:.98rem; }
 
-    .list{display:grid; gap:10px}
+    .list{ display:grid; gap:10px; }
     .row{
       display:flex; align-items:flex-start; gap:10px;
       padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.02);
     }
-    .row strong{display:block; margin-bottom:4px}
-    .row small{color:#9ca3af}
+    .row strong{ display:block; margin-bottom:4px; }
+    .row small{ color:#9ca3af; }
 
     /* Footer */
     footer{ border-top:1px solid var(--stroke); background:#0f172a; color:#9ca3af; }
@@ -131,7 +140,7 @@
 
       <div class="nav-right" aria-label="Primary">
         <a href="cardholder.html">Home</a>
-        <a href="send-request.html" id="sendRequestLink">Send / Request</a>
+        <a href="send-request.html">Send / Request</a>
         <a href="transfer.html">Transfer</a>
         <a href="passport.html">Passport</a>
         <a href="activity.html">Activity</a>
@@ -155,7 +164,7 @@
     </div>
   </nav>
 
-  <!-- Hero -->
+  <!-- Hero (left-aligned) -->
   <header class="hero" role="banner">
     <h1>Help & FAQs</h1>
     <p class="lead">Quick answers and simple steps to keep you moving.</p>
@@ -169,14 +178,14 @@
         <h2 id="faqTitle" style="margin:0 0 12px; font-size:1.1rem;">Common questions</h2>
 
         <details class="faq" open>
-          <summary>How do I see my balance? <span class="icon">▾</span></summary>
+          <summary>How do I see my balance? <span>▾</span></summary>
           <div class="content">
             Go to <strong>Wallet</strong>. Your current balance is shown at the top. Recent activity is listed below.
           </div>
         </details>
 
         <details class="faq">
-          <summary>How do I send or request money? <span class="icon">▾</span></summary>
+          <summary>How do I send or request money? <span>▾</span></summary>
           <div class="content">
             Open <strong>Send / Request</strong>, search for a person, enter the amount, and choose
             <em>Send</em> or <em>Request</em>. You’ll get a confirmation before anything is submitted.
@@ -184,21 +193,21 @@
         </details>
 
         <details class="faq">
-          <summary>When do funds arrive? <span class="icon">▾</span></summary>
+          <summary>When do funds arrive? <span>▾</span></summary>
           <div class="content">
             Most transfers are instant. If something looks delayed, check <strong>Activity</strong> for timestamps and notes.
           </div>
         </details>
 
         <details class="faq">
-          <summary>Can I download my history? <span class="icon">▾</span></summary>
+          <summary>Can I download my history? <span>▾</span></summary>
           <div class="content">
             Yes. In <strong>Activity</strong>, pick a date range and choose <em>Export CSV</em>.
           </div>
         </details>
 
         <details class="faq">
-          <summary>I lost access to my account. <span class="icon">▾</span></summary>
+          <summary>I lost access to my account. <span>▾</span></summary>
           <div class="content">
             Try resetting your password from the login page. If you still need help, use the contact form here.
           </div>
@@ -239,7 +248,7 @@
     </div>
   </main>
 
-  <!-- Footer (sticky) -->
+  <!-- Footer -->
   <footer>
     <div class="footer-inner">
       <div>© <span id="year"></span> BOOP</div>
@@ -274,14 +283,9 @@
         status.style.color = '#fca5a5';
         return;
       }
-      try{
-        status.textContent = 'Thanks! Your message has been sent.';
-        status.style.color = '#a5b4fc';
-        document.getElementById('helpMsg').value = '';
-      }catch{
-        status.textContent = 'Something went wrong. Please try again.';
-        status.style.color = '#fca5a5';
-      }
+      status.textContent = 'Thanks! Your message has been sent.';
+      status.style.color = '#a5b4fc';
+      document.getElementById('helpMsg').value = '';
     });
 
     // Mobile menu + logout
