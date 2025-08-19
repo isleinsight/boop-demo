@@ -44,6 +44,7 @@ mount('/api/users', './auth/routes/users');
 mount('/api/cards', './auth/routes/cards');
 mount('/api/wallets', './auth/routes/wallets');
 mount('/api/vendors', './auth/routes/vendors'); // admin vendors list/update/delete
+mount('/api/passport', './auth/routes/passport', 'passport');
 
 
 // ✅ ADD THIS: singular vendor API used by the vendor portal (e.g. /api/vendor/transactions/report)
