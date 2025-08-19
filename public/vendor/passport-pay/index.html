@@ -1,49 +1,96 @@
+<!-- /public/vendor/passport-pay/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Passport Pay – Vendor | BOOP</title>
+  <title>Passport Pay – BOOP Vendor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../../assets/styles.css" />
   <style>
-    :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
-    body { font-family:'Poppins',sans-serif; background:#f5f7fa; color:var(--ink); margin:0; }
+    :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; --ok:#065f46; --err:#991b1b; }
 
-    /* Minimal header (logo only, no nav) */
-    .nav { background:#0b1220; color:#fff; }
-    .nav-inner { max-width:900px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; }
-    .nav img { height:32px; display:block; }
+    body { font-family:'Poppins',sans-serif; background:#f5f7fa; margin:0; color:var(--ink); }
 
-    .wrap { max-width:660px; margin:26px auto 34px; background:#fff; padding:22px 18px; border:1px solid var(--stroke); border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,.06); }
-    h1 { margin:6px 0 18px; font-size:1.4rem; font-weight:600; }
-    .muted { color:var(--muted); font-size:0.95rem; }
-
-    .grid { display:grid; grid-template-columns:1fr; gap:12px; margin-top:10px; }
-    label { font-size:0.9rem; font-weight:600; color:#1f2a44; }
-    input, textarea, select, button {
-      width:100%; padding:10px 12px; border:1px solid #d1d9e6; border-radius:8px; font-size:1rem; box-sizing:border-box; background:#fff;
+    /* Minimal header (no nav links) */
+    .topbar {
+      background:#0b1220; color:#fff; border-bottom:1px solid #0f172a;
     }
-    textarea { resize:vertical; min-height:80px; }
-    .actions { display:flex; gap:10px; margin-top:14px; }
-    .btn { background:#2f80ed; color:#fff; border:none; cursor:pointer; font-weight:600; }
+    .topbar__inner {
+      max-width: 980px; margin: 0 auto; padding: 12px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .brand { display:flex; gap:10px; align-items:center; }
+    .brand img { height:28px; display:block; }
+    .brand span { font-size:0.95rem; opacity:.85; }
+
+    .logout {
+      color:#cfe0ff; text-decoration:none; font-size:0.9rem;
+    }
+    .logout:hover { text-decoration:underline; }
+
+    /* Card */
+    .wrap { max-width: 640px; margin: 26px auto 40px; padding: 0 16px; }
+    .card {
+      background:#fff; border:1px solid var(--stroke); border-radius:12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.07); padding: 20px;
+    }
+    h1 { font-size:1.25rem; margin: 0 0 8px; }
+    .sub { color:#4b5563; margin:0 0 18px; font-size:0.95rem; }
+
+    label { display:block; font-size:0.9rem; color:#1f2a44; margin:12px 0 6px; }
+    input, textarea, button {
+      width:100%; box-sizing:border-box; border:1px solid #d1d9e6; border-radius:8px;
+      padding:10px 12px; font-size:1rem; font-family:inherit; background:#fff;
+    }
+    input:disabled, textarea:disabled { background:#f3f4f6; color:#6b7280; }
+    input:focus, textarea:focus { outline:none; border-color:#2f80ed; }
+
+    .row { display:flex; gap:12px; }
+    .row > div { flex:1; }
+
+    .btn {
+      margin-top:16px; background:#2f80ed; color:#fff; border:none; cursor:pointer; font-weight:600;
+    }
     .btn:hover { background:#1c6fd8; }
-    .btn.secondary { background:#6b7280; }
-    .btn.secondary:hover { background:#4b5563; }
-    .status { margin-top:12px; font-weight:600; }
-    .status.ok { color:#065f46; background:#ecfdf5; border:1px solid #34d399; padding:10px; border-radius:8px; }
-    .status.err { color:#991b1b; background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:8px; }
-    .dim { opacity:.5; pointer-events:none; }
+    .btn:disabled { background:#9cbcf4; cursor:not-allowed; }
+
+    .status {
+      margin-top:12px; padding:10px 12px; border-radius:8px; border:1px solid #e6ebf1;
+      font-size:0.95rem; color:#374151; background:#f8fafc;
+    }
+    .status.ok { background:#ecfdf5; border-color:#a7f3d0; color:var(--ok); }
+    .status.err { background:#fef2f2; border-color:#fecaca; color:var(--err); }
+
+    /* Receipt (shown after success) */
+    .receipt {
+      margin-top:14px; padding:14px; border:1px dashed #d1d9e6; border-radius:10px; background:#fcfdfd;
+      font-size:0.95rem; color:#1f2937;
+    }
+    .receipt .rowline { display:flex; justify-content:space-between; margin:6px 0; }
+    .muted { color:var(--muted); }
 
     /* Footer */
-    footer { border-top:1px solid var(--stroke); padding:16px 18px; color:var(--muted); font-size:0.9rem; }
-    .footer-inner { max-width:900px; margin:0 auto; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-    .footer-links a { color:#2f80ed; text-decoration:none; margin-right:12px; }
-    .footer-links a:hover { text-decoration:underline; }
+    footer {
+      border-top:1px solid var(--stroke); background:#fff; margin-top:30px;
+    }
+    .footer__inner {
+      max-width:980px; margin:0 auto; padding:14px 16px; font-size:0.9rem; color:#4b5563;
+      display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+    }
+    .footer__links a { color:#2f80ed; text-decoration:none; margin-right:12px; }
+    .footer__links a:hover { text-decoration:underline; }
+
+    /* Greyscale lock overlay when one-shot done */
+    .locked {
+      filter: grayscale(0.9);
+      pointer-events: none;
+      opacity: 0.85;
+    }
   </style>
 </head>
 <body>
-  <!-- Auth guard: vendor only -->
+  <!-- Vendor-only auth guard -->
   <script>
     (async () => {
       try {
@@ -54,149 +101,188 @@
         const me = await res.json();
         if (!me || me.role !== "vendor") throw new Error("Not a vendor");
         localStorage.setItem("boopUser", JSON.stringify(me));
+        window.__vendorName = (me.first_name && me.last_name) ? (me.first_name + " " + me.last_name) : (me.email || "Vendor");
       } catch (err) {
         localStorage.clear();
-        location.href = "../../login.html";
+        location.href = "../login.html";
       }
     })();
   </script>
 
-  <!-- Header (logo only) -->
-  <div class="nav">
-    <div class="nav-inner">
-      <img src="../../assets/Boop-Logo.png" alt="BOOP Logo" />
+  <!-- Header (no nav) -->
+  <div class="topbar">
+    <div class="topbar__inner">
+      <div class="brand">
+        <img src="../../assets/Boop-Logo.png" alt="BOOP" />
+        <span>Vendor • Passport Pay</span>
+      </div>
+      <a class="logout" href="#" id="logoutLink">Log out</a>
     </div>
   </div>
 
-  <!-- Main -->
-  <div class="wrap" id="card">
-    <h1>Passport Pay</h1>
-    <p class="muted">
-      Scan brings you here with a passport ID. Enter the total and submit. This page locks after a successful charge.
-    </p>
+  <div class="wrap">
+    <div class="card" id="card">
+      <h1 id="title">Charge by Passport</h1>
+      <p class="sub" id="subtitle">
+        This is a single-use page. Enter the final amount and confirm. Once completed, this tab locks.
+      </p>
 
-    <div class="grid" id="formFields">
-      <div>
-        <label for="passportId">Passport ID</label>
-        <input id="passportId" type="text" placeholder="e.g. PRT-123456" autocomplete="off" />
+      <div class="row">
+        <div>
+          <label>Passport ID</label>
+          <input id="pid" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 82014567" />
+        </div>
+        <div>
+          <label>Amount (BMD)</label>
+          <input id="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
       </div>
-      <div>
-        <label for="amount">Amount (BMD)</label>
-        <input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
-      </div>
-      <div>
-        <label for="note">Note (optional)</label>
-        <textarea id="note" placeholder="Short description"></textarea>
+
+      <label for="note">Note (optional)</label>
+      <textarea id="note" rows="3" placeholder="Short description visible on receipt/transactions"></textarea>
+
+      <button id="chargeBtn" class="btn">Charge</button>
+
+      <div id="status" class="status" style="display:none;"></div>
+
+      <!-- Receipt shown after success -->
+      <div id="receipt" class="receipt" style="display:none;">
+        <div class="rowline"><span class="muted">Status</span><strong id="r_status">—</strong></div>
+        <div class="rowline"><span class="muted">Amount</span><strong id="r_amount">—</strong></div>
+        <div class="rowline"><span class="muted">Passport ID</span><strong id="r_pid">—</strong></div>
+        <div class="rowline"><span class="muted">Reference</span><strong id="r_ref">—</strong></div>
+        <div class="rowline"><span class="muted">Timestamp</span><strong id="r_time">—</strong></div>
+        <p class="muted" style="margin:10px 0 0;">
+          This page is now complete. To charge the next customer, scan again to open a new tab.
+        </p>
       </div>
     </div>
-
-    <div class="actions">
-      <button id="submitBtn" class="btn">Charge</button>
-      <button id="resetBtn" class="btn secondary" style="display:none;">New Charge</button>
-    </div>
-
-    <div id="status" class="status"></div>
   </div>
 
-  <!-- Footer -->
   <footer>
-    <div class="footer-inner">
-      <div>© 2025 BOOP. All rights reserved.</div>
-      <div class="footer-links">
-        <a href="/legal/terms.html" target="_blank" rel="noopener">Terms of Service</a>
-        <a href="/legal/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+    <div class="footer__inner">
+      <div>© 2025 BOOP</div>
+      <div class="footer__links">
+        <a href="../../terms.html" target="_blank" rel="noopener">Terms of Service</a>
+        <a href="../../privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
       </div>
     </div>
   </footer>
 
   <script>
-    const q = new URLSearchParams(location.search);
-    const preset = q.get("passport") || q.get("pid") || "";
+    // Utilities
+    function qs(id){ return document.getElementById(id); }
+    function fmtMoney(a){ const n = Number(a||0); return "BMD $" + n.toFixed(2); }
+    function show(el){ el.style.display = ""; }
+    function hide(el){ el.style.display = "none"; }
 
-    const passportEl = document.getElementById("passportId");
-    const amountEl   = document.getElementById("amount");
-    const noteEl     = document.getElementById("note");
-    const submitBtn  = document.getElementById("submitBtn");
-    const resetBtn   = document.getElementById("resetBtn");
-    const statusEl   = document.getElementById("status");
-    const card       = document.getElementById("card");
-    const fieldsWrap = document.getElementById("formFields");
-
-    if (preset) {
-      passportEl.value = preset;
-      passportEl.readOnly = true; // came from NFC/URL → lock it
-    }
-
-    function showStatus(msg, kind) {
-      statusEl.textContent = msg;
-      statusEl.className = "status " + (kind === "ok" ? "ok" : kind === "err" ? "err" : "");
-    }
-    function lockUI() {
-      fieldsWrap.classList.add("dim");
-      submitBtn.disabled = true;
-      submitBtn.classList.add("dim");
-      resetBtn.style.display = "inline-block";
-    }
-    function unlockUI() {
-      fieldsWrap.classList.remove("dim");
-      submitBtn.disabled = false;
-      submitBtn.classList.remove("dim");
-      resetBtn.style.display = "none";
-    }
-
-    async function submitCharge() {
-      const token = localStorage.getItem("boop_jwt");
-      const passport_id = passportEl.value.trim();
-      const amt = parseFloat(amountEl.value);
-
-      if (!passport_id) { showStatus("Please provide a passport ID.", "err"); return; }
-      if (!(amt > 0))   { showStatus("Please enter a valid amount.", "err"); return; }
-
-      submitBtn.disabled = true;
-      showStatus("Submitting charge…");
-
+    // Read ?pid= from URL
+    function getPassportFromURL() {
       try {
-        // Adjust this path if your backend differs:
-        const res = await fetch("/api/vendor/passport-pay/charge", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            passport_id,
-            amount: amt,
-            note: noteEl.value.trim()
-          })
-        });
-
-        const payload = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          const msg = payload?.message || payload?.error || `Charge failed (HTTP ${res.status})`;
-          showStatus("❌ " + msg, "err");
-          submitBtn.disabled = false;
-          return;
-        }
-
-        // Success → lock page
-        const disp = (payload.amount_cents != null) ? (payload.amount_cents/100).toFixed(2) : amt.toFixed(2);
-        showStatus(`✅ Charged BMD $${disp} to passport ${passport_id}.`, "ok");
-        lockUI();
-      } catch (err) {
-        showStatus("❌ " + (err.message || "Network error"), "err");
-        submitBtn.disabled = false;
-      }
+        const u = new URL(location.href);
+        const pid = u.searchParams.get("pid");
+        return pid ? String(pid).trim() : "";
+      } catch { return ""; }
     }
 
-    submitBtn.addEventListener("click", submitCharge);
-    amountEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") submitCharge();
-    });
+    // Lock UI after success
+    function lockPage() {
+      const card = qs("card");
+      card.classList.add("locked");
+      // Disable inputs and button
+      ["pid","amount","note","chargeBtn"].forEach(id => {
+        const el = qs(id);
+        if (el) { el.disabled = true; }
+      });
+    }
 
-    resetBtn.addEventListener("click", () => {
-      // Fresh flow — easiest/safest is a full reload (clears any locked readOnly)
-      location.href = location.pathname; // keep on /vendor/passport-pay/
+    // Main flow
+    document.addEventListener("DOMContentLoaded", () => {
+      const pidEl = qs("pid");
+      const amountEl = qs("amount");
+      const noteEl = qs("note");
+      const btn = qs("chargeBtn");
+      const statusEl = qs("status");
+      const receipt = qs("receipt");
+
+      // Prefill PID from URL if present
+      const presetPid = getPassportFromURL();
+      if (presetPid) pidEl.value = presetPid;
+
+      const setStatus = (msg, type="info") => {
+        statusEl.textContent = msg;
+        statusEl.className = "status";
+        if (type === "ok") statusEl.classList.add("ok");
+        if (type === "err") statusEl.classList.add("err");
+        show(statusEl);
+      };
+
+      async function doCharge(){
+        hide(statusEl);
+        hide(receipt);
+
+        const pid = pidEl.value.trim();
+        const amt = parseFloat(amountEl.value);
+        if (!pid) { setStatus("Please provide a Passport ID.", "err"); return; }
+        if (!Number.isFinite(amt) || amt <= 0) { setStatus("Please enter a valid amount.", "err"); return; }
+
+        btn.disabled = true;
+        btn.textContent = "Processing…";
+        try {
+          const token = localStorage.getItem("boop_jwt");
+          const res = await fetch("/api/vendor/passport-charge", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              passport_id: pid,
+              amount: amt,
+              note: noteEl.value || ""
+            })
+          });
+
+          let payload = null;
+          try { payload = await res.json(); } catch { payload = {}; }
+
+          if (!res.ok) {
+            throw new Error(payload?.message || payload?.error || `HTTP ${res.status}`);
+          }
+
+          // Success: show receipt, lock page
+          const ref = payload.reference_code || payload.reference || "—";
+          const now = new Date();
+          qs("r_status").textContent = "Success";
+          qs("r_amount").textContent = fmtMoney(amt);
+          qs("r_pid").textContent = pid;
+          qs("r_ref").textContent = ref;
+          qs("r_time").textContent = now.toLocaleString();
+
+          show(receipt);
+          setStatus("Charge completed.", "ok");
+          lockPage();
+
+        } catch (err) {
+          setStatus(`❌ ${err.message || err}`, "err");
+        } finally {
+          btn.textContent = "Charge";
+          // keep disabled if success locked; otherwise re-enable
+          if (!receipt.style.display || receipt.style.display === "none") {
+            btn.disabled = false;
+          }
+        }
+      }
+
+      btn.addEventListener("click", doCharge);
+
+      // Logout link (optional)
+      qs("logoutLink")?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try { await fetch("/api/logout", { method:"POST" }); } catch {}
+        localStorage.clear();
+        location.href = "../../login.html";
+      });
     });
   </script>
 </body>
