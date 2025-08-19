@@ -5,112 +5,94 @@
   <title>Transactions – Vendor | BOOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/styles.css" />
   <style>
-    :root { --ink:#1a2b4a; --muted:#6b7280; --stroke:#e6ebf1; }
-    body { font-family:'Poppins',sans-serif; background:#f4f7fa; margin:0; color:var(--ink); }
-
-    /* Top Nav (same as vendor homepage) */
-    nav { background:#0b1220; color:#fff; }
-    .nav-container { max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
-    .nav-left img { height:32px; display:block; }
-    .nav-right { display:flex; gap:16px; align-items:center; }
-    .nav-right a { color:#fff; text-decoration:none; font-size:.95rem; }
-    .nav-right a[aria-current="page"] { text-decoration:underline; }
-
-    /* Page shell (reports look) */
-    .container {
-      max-width: 1050px;
-      margin: 50px auto;
-      background: #fff;
-      padding: 32px 36px;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    :root{
+      --ink:#102a43;
+      --muted:#6b7c93;
+      --blue:#2f80ed;
+      --blue-dark:#1a5fcc;
+      --stroke:#e5e7eb;
+      --bg:#ffffff;
+      --nav:#0b1220;
+      --grad1: rgba(47,128,237,.18);
+      --grad2: rgba(16,185,129,.15);
+      --green:#16a34a;
+      --red:#dc2626;
     }
-    h2 { margin:0 0 14px; }
+    *{box-sizing:border-box}
+    body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-      margin-bottom: 28px;
+    /* NAV (vendor) */
+    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img{ height:36px; display:block }
+    .nav-right{ display:flex; align-items:center; gap:18px; }
+    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; }
+    .nav-right a[aria-current="page"]{ text-decoration:underline; opacity:1; }
+    .nav-right a:hover{ opacity:1 }
+
+    /* HERO */
+    .hero-band{
+      background:
+        radial-gradient(1000px 600px at 85% -10%, var(--grad1), transparent 60%),
+        radial-gradient(700px 500px at -10% 110%, var(--grad2), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0d1220 40%, #0b1220 100%);
+      color:#eef2ff; padding:26px 0 22px;
     }
-    .filters > div { flex: 1; min-width: 180px; }
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
+    .hero-inner{ max-width:1100px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .hero-title{ margin:0; font-size:clamp(20px, 3.2vw, 28px); font-weight:600; }
+    .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
+
+    /* MAIN */
+    .container{ max-width:1100px; margin:18px auto 40px; padding:0 20px; }
+
+    .filters{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-bottom:16px;
+      border:1px solid var(--stroke); border-radius:12px; padding:12px;
       background:#fff;
     }
-    button {
-      background-color: #2f80ed;
-      color: white;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.18s;
+    .filters .btn-group{ display:flex; gap:8px; }
+    .filters .btn-group button{
+      padding:8px 12px; border:1px solid var(--stroke); border-radius:999px; background:#fff; cursor:pointer; font-weight:600;
     }
-    button:hover { background-color: #1c6fd8; }
-    .export-btn { float: right; margin-bottom: 14px; }
+    .filters .btn-group button.active{
+      background:var(--blue); color:#fff; border-color:var(--blue);
+    }
+    .filters input{ padding:10px 12px; border:1px solid var(--stroke); border-radius:8px; font-size:.95rem; background:#fff; }
+    .spacer{ flex:1; }
+    .export-btn{
+      background:var(--blue); color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:600;
+      transition:background-color .2s ease-in-out;
+    }
+    .export-btn:hover{ background:var(--blue-dark); }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 14px;
-      background: #fff;
-      border-radius: 8px;
-      overflow: hidden;
-      font-size: 0.97rem;
+    .list{ display:grid; gap:10px; }
+    .item{
+      background:#fff; border:1px solid var(--stroke); border-radius:12px;
+      padding:12px 14px; display:flex; align-items:center; gap:12px;
     }
-    th, td {
-      padding: 12px 13px;
-      border: 1px solid #e6ebf1;
-      text-align: left;
-      font-size: 0.96em;
-      white-space: nowrap;
+    .avatar{
+      width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#334155; flex:0 0 42px;
     }
-    th {
-      background-color: #f0f4f8;
-      color: #1a2b4a;
-      font-weight: 500;
-    }
-    tr:hover { background: #f5f8fb; }
+    .line{ display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px; }
+    .who{ font-weight:600; }
+    .amt{ font-weight:700; white-space:nowrap; }
+    .amt.positive{ color:var(--green); }
+    .amt.negative{ color:var(--red); }
+    .meta{ font-size:.85rem; color:#94a3b8; margin-top:2px; }
 
-    .pagination {
-      display:flex; justify-content:center; align-items:center; gap:10px;
-      margin: 22px 0 10px 0;
-    }
-    .pagination button {
-      width:auto; min-width:80px; padding:7px 16px; background:#6b7280; color:#fff; border:none;
-      border-radius:6px; cursor:pointer; font-size:.95rem; font-weight:500; transition:background .2s;
-    }
-    .pagination button:disabled { background:#e5e7eb; color:#bbb; cursor:not-allowed; }
-    #paginationInfo { font-size:.96rem; color:#4b5563; font-weight:500; padding:0 6px; }
-
-    .status { text-align:center; margin-top:22px; font-weight:500; color:#e74c3c; }
-
-    @media (max-width: 900px) { .container { padding: 16px 2vw; } }
-    @media (max-width: 600px) {
-      .container { padding: 7vw 3vw; }
-      table { font-size: .9rem; }
-      th, td { padding: 7px; }
-      .filters { flex-direction: column; gap: 10px; }
-      .export-btn { float: none; width: 100%; }
-      .pagination { justify-content: center; }
-    }
+    .empty{ text-align:center; color:#64748b; padding:20px; border:1px dashed var(--stroke); border-radius:12px; background:#fff; }
 
     /* Footer */
-    footer { border-top:1px solid var(--stroke); background:#fff; }
-    .footer-inner { max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
-    .footer-links a { color:#6b7280; text-decoration:none; margin-left:12px; }
-    .footer-links a:hover { text-decoration:underline; }
+    footer{ border-top:1px solid var(--stroke); background:#fff; }
+    .footer-inner{ max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
+    .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
   </style>
 </head>
 <body>
-  <!-- Vendor auth guard -->
+  <!-- Vendor auth gate -->
   <script>
     (async () => {
       try {
@@ -122,18 +104,18 @@
           if (!r.ok) throw new Error("Unauthorized");
           me = await r.json(); localStorage.setItem("boopUser", JSON.stringify(me));
         }
-        if (me.role !== "vendor") throw new Error("Not a vendor");
+        if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
       } catch (e) {
         localStorage.clear(); location.href = "vendor-login.html";
       }
     })();
   </script>
 
-  <!-- Top Nav -->
+  <!-- NAV -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <img src="../assets/Boop-Logo.png" alt="BOOP Logo" />
+        <a href="index.html"><img src="../assets/Boop-Logo.png" alt="BOOP Logo" /></a>
       </div>
       <div class="nav-right">
         <a href="index.html">Home</a>
@@ -144,60 +126,47 @@
     </div>
   </nav>
 
-  <div class="container">
-    <h2>Transaction Reports</h2>
+  <!-- HERO -->
+  <section class="hero-band">
+    <div class="hero-inner">
+      <div>
+        <h1 class="hero-title">Transactions</h1>
+        <p class="hero-sub">Your recent payments, refunds, and payouts.</p>
+      </div>
+    </div>
+  </section>
 
+  <!-- MAIN -->
+  <main class="container">
+    <!-- Filters -->
     <div class="filters">
-      <div>
-        <label for="startDate">Start Date</label>
-        <input type="date" id="startDate" />
+      <div class="btn-group" role="group" aria-label="Quick ranges">
+        <button id="btn7">Last 7 days</button>
+        <button id="btn30" class="active">Last 30 days</button>
+        <button id="btn90">Last 90 days</button>
       </div>
+
+      <div class="spacer"></div>
+
       <div>
-        <label for="endDate">End Date</label>
-        <input type="date" id="endDate" />
+        <label style="display:block;font-size:.85rem;color:#64748b;margin:0 0 6px;">Custom range</label>
+        <div style="display:flex; gap:8px;">
+          <input type="date" id="startDate">
+          <input type="date" id="endDate">
+          <button id="applyCustom">Apply</button>
+        </div>
       </div>
-      <div>
-        <label for="typeFilter">Transaction Type</label>
-        <select id="typeFilter">
-          <option value="">All</option>
-          <option value="add_funds">Add Funds</option>
-          <option value="transfer">Transfer</option>
-          <option value="credit">Credit</option>
-          <option value="debit">Debit</option>
-        </select>
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="filterBtn">Apply Filters</button>
-      </div>
+
+      <div class="spacer"></div>
+
+      <button id="exportBtn" class="export-btn">Export CSV</button>
     </div>
 
-    <div class="export-btn">
-      <button id="exportBtn">Export CSV</button>
+    <!-- List -->
+    <div id="list" class="list">
+      <div class="empty">Loading…</div>
     </div>
-
-    <table id="reportTable">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Transaction ID</th>
-          <th>Type</th>
-          <th>Amount</th>
-          <th>Sender</th>
-          <th>Recipient</th>
-          <th>Note</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <div class="pagination">
-      <button id="prevPageBtn">Previous</button>
-      <span id="paginationInfo">Page 1 of 1</span>
-      <button id="nextPageBtn">Next</button>
-    </div>
-    <div class="status" id="status"></div>
-  </div>
+  </main>
 
   <footer>
     <div class="footer-inner">
@@ -209,133 +178,167 @@
     </div>
   </footer>
 
-  <script type="module">
-    document.addEventListener("DOMContentLoaded", () => {
+  <!-- Page logic -->
+  <script>
+    (function(){
       const token = localStorage.getItem("boop_jwt");
-      const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
-      if (!me || me.role !== "vendor") { location.href = "../login.html"; return; }
+      const listEl = document.getElementById('list');
 
-      const startDate = document.getElementById("startDate");
-      const endDate = document.getElementById("endDate");
-      const typeFilter = document.getElementById("typeFilter");
-      const filterBtn = document.getElementById("filterBtn");
-      const exportBtn = document.getElementById("exportBtn");
-      const tableBody = document.querySelector("#reportTable tbody");
-      const statusEl = document.getElementById("status");
-      const paginationInfo = document.getElementById("paginationInfo");
-      const prevPageBtn = document.getElementById("prevPageBtn");
-      const nextPageBtn = document.getElementById("nextPageBtn");
+      let allTx = []; // current fetch results
+      let filtered = [];
 
-      // --- PAGINATION STATE ---
-      let transactions = [];
-      let totalCount = 0;
-      let page = 1;
-      let limit = 25;
+      const btn7 = document.getElementById('btn7');
+      const btn30 = document.getElementById('btn30');
+      const btn90 = document.getElementById('btn90');
+      const startEl = document.getElementById('startDate');
+      const endEl = document.getElementById('endDate');
+      const applyCustom = document.getElementById('applyCustom');
+      const exportBtn = document.getElementById('exportBtn');
 
-      function updatePagination() {
-        const totalPages = Math.max(1, Math.ceil(totalCount / limit));
-        paginationInfo.textContent = `Page ${page} of ${totalPages}`;
-        prevPageBtn.disabled = page === 1;
-        nextPageBtn.disabled = page >= totalPages;
-      }
-      prevPageBtn.onclick = () => { if (page > 1) { page--; fetchTransactions(); } };
-      nextPageBtn.onclick = () => {
-        const totalPages = Math.ceil(totalCount / limit);
-        if (page < totalPages) { page++; fetchTransactions(); }
-      };
+      function dollars(cents){ return `$${(Number(cents||0)/100).toFixed(2)}`; }
+      function byDateDesc(a,b){ return new Date(b.created_at) - new Date(a.created_at); }
 
-      async function fetchTransactions() {
-        statusEl.textContent = "";
-        const qs = new URLSearchParams();
-        if (startDate.value) qs.append("start", startDate.value);
-        if (endDate.value) qs.append("end", endDate.value);
-        if (typeFilter.value) qs.append("type", typeFilter.value);
-        qs.append("limit", String(limit));
-        qs.append("offset", String((page - 1) * limit));
-
-        const url = `/api/vendor/transactions/report?${qs.toString()}`;
-        let res, data;
-
-        try {
-          res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-          data = await res.json();
-        } catch (e) {
-          console.error("❌ Network error:", e);
-          statusEl.textContent = "Network error loading transactions.";
-          statusEl.style.color = "red";
-          return;
-        }
-
-        if (!res.ok) {
-          console.error("❌ Vendor report error:", data);
-          statusEl.textContent = data?.message || `Error: ${res.status} ${res.statusText}`;
-          statusEl.style.color = "red";
-          tableBody.innerHTML = `<tr><td colspan="7">No records.</td></tr>`;
-          totalCount = 0;
-          updatePagination();
-          return;
-        }
-
-        transactions = data.transactions || [];
-        totalCount = data.totalCount || 0;
-
-        tableBody.innerHTML = "";
-        if (!transactions.length) {
-          tableBody.innerHTML = `<tr><td colspan="7">No records found.</td></tr>`;
-        } else {
-          transactions.forEach(tx => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
-              <td>${tx.id}</td>
-              <td>${tx.type}</td>
-              <td>$${(Number(tx.amount_cents || 0) / 100).toFixed(2)}</td>
-              <td>${tx.sender_name || "—"}</td>
-              <td>${tx.recipient_name || "—"}</td>
-              <td>${tx.note || ""}</td>
-            `;
-            tableBody.appendChild(row);
-          });
-        }
-
-        updatePagination();
+      function setActive(btn){
+        [btn7, btn30, btn90].forEach(b => b.classList.toggle('active', b===btn));
       }
 
-      function exportCSV() {
-        if (!transactions.length) return;
-        const headers = ["Date", "Transaction ID", "Type", "Amount", "Sender", "Recipient", "Note"];
-        const rows = transactions.map(tx => [
-          tx.created_at ? new Date(tx.created_at).toISOString() : "",
-          tx.id,
-          tx.type,
-          (Number(tx.amount_cents || 0) / 100).toFixed(2),
-          tx.sender_name || "",
-          tx.recipient_name || "",
-          (tx.note || "").replace(/,/g, "")
-        ]);
-        const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: "text/csv" });
+      function withinRange(tx, start, end){
+        const t = new Date(tx.created_at).getTime();
+        if (start && t < start) return false;
+        if (end && t > end) return false;
+        return true;
+      }
+
+      function render(){
+        if (!filtered.length){
+          listEl.innerHTML = `<div class="empty">No transactions for this range.</div>`;
+          return;
+        }
+        listEl.innerHTML = filtered.map(tx=>{
+          const type = (tx.type||'').toLowerCase(); // 'credit' | 'debit' | others
+          const isCredit = type === 'credit';
+          // Vendor perspective: credits are money received (from customer/BOOP), debits are money sent (payouts/refunds)
+          const who = isCredit ? (tx.sender_name || tx.from_name || 'Customer') : (tx.recipient_name || tx.to_name || 'Counterparty');
+          const verb = isCredit ? 'Received from' : 'Sent to';
+          const sign = isCredit ? '+' : '−';
+          const cls = isCredit ? 'positive' : 'negative';
+          const initials = (who?.trim?.()[0] || 'U').toUpperCase();
+          const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : '';
+          const note = tx.note ? ` • ${tx.note}` : '';
+          return `
+            <div class="item">
+              <div class="avatar">${initials}</div>
+              <div class="line">
+                <div>
+                  <div class="who">${verb} ${who}</div>
+                  <div class="meta">${when}${note}</div>
+                </div>
+                <div class="amt ${cls}">${sign}${dollars(tx.amount_cents)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function applyRange(days){
+        const now = Date.now();
+        const start = now - days*24*60*60*1000;
+        const end = now;
+        setActive(days===7 ? btn7 : days===30 ? btn30 : btn90);
+        filtered = allTx.filter(tx => withinRange(tx, start, end)).sort(byDateDesc);
+        render();
+      }
+
+      function applyCustomRange(){
+        const s = startEl.value ? new Date(startEl.value).setHours(0,0,0,0) : null;
+        const e = endEl.value ? new Date(endEl.value).setHours(23,59,59,999) : null;
+        setActive(null);
+        filtered = allTx.filter(tx => withinRange(tx, s, e)).sort(byDateDesc);
+        render();
+      }
+
+      btn7.addEventListener('click', ()=> applyRange(7));
+      btn30.addEventListener('click', ()=> applyRange(30));
+      btn90.addEventListener('click', ()=> applyRange(90));
+      applyCustom.addEventListener('click', applyCustomRange);
+
+      exportBtn.addEventListener('click', ()=>{
+        if (!filtered.length) return;
+        const headers = ["Date","Direction","Counterparty","Amount","Note","TxID"];
+        const rows = filtered.map(tx=>{
+          const isCredit = (tx.type||'').toLowerCase()==='credit';
+          const dir = isCredit ? "Received" : "Sent";
+          const who = isCredit ? (tx.sender_name || tx.from_name || '') : (tx.recipient_name || tx.to_name || '');
+          return [
+            tx.created_at ? new Date(tx.created_at).toISOString() : "",
+            dir,
+            who,
+            (Number(tx.amount_cents||0)/100).toFixed(2),
+            (tx.note||"").replace(/,/g," "),
+            tx.id || ""
+          ];
+        });
+        const csv = [headers, ...rows].map(r=>r.join(",")).join("\n");
+        const blob = new Blob([csv], { type:"text/csv" });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "vendor-transactions.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-
-      filterBtn.addEventListener("click", () => { page = 1; fetchTransactions(); });
-      exportBtn.addEventListener("click", exportCSV);
-
-      document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try { await fetch("/api/logout", { method: "POST" }); } catch {}
-        localStorage.clear();
-        location.href = "vendor-login.html";
+        const a = document.createElement("a");
+        a.href = url; a.download = "vendor-transactions.csv";
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
       });
 
-      fetchTransactions();
-    });
+      async function fetchVendorRange({ startISO, endISO, limit=500 }){
+        const qs = new URLSearchParams();
+        if (startISO) qs.set("start", startISO.slice(0,10));
+        if (endISO)   qs.set("end", endISO.slice(0,10));
+        qs.set("limit", String(limit));
+        qs.set("offset", "0");
+        const res = await fetch(`/api/vendor/transactions/report?${qs.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+        const rows = data.transactions || [];
+        // Normalize
+        return rows.map(r => ({
+          id: r.id,
+          created_at: r.created_at,
+          type: r.type,
+          amount_cents: r.amount_cents,
+          note: r.note,
+          sender_name: r.sender_name || r.from_name,
+          recipient_name: r.recipient_name || r.to_name
+        }));
+      }
+
+      async function loadDefault(){
+        try{
+          // Pull last 90 days server-side (limit 500)
+          const now = new Date();
+          const start = new Date(now.getTime() - 90*24*60*60*1000);
+          const rows = await fetchVendorRange({
+            startISO: start.toISOString(),
+            endISO: now.toISOString(),
+            limit: 500
+          });
+          allTx = rows;
+          applyRange(30); // default selection = 30 days
+        }catch(e){
+          console.warn('vendor report error', e);
+          listEl.innerHTML = `<div class="empty">Couldn’t load transactions.</div>`;
+        }
+      }
+
+      // Logout
+      document.getElementById('logoutLink')?.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        location.href = '../login.html';
+      });
+
+      loadDefault();
+    })();
   </script>
 </body>
 </html>
