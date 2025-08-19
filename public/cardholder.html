@@ -90,6 +90,16 @@
       display:flex; align-items:center; justify-content:space-between; font-size:.95rem;
     }
     .amount{ font-weight:600; color:var(--blue); }
+
+    /* Footer */
+    footer{ border-top:1px solid var(--stroke); background:#fff; }
+    .footer-inner{
+      max-width:1100px; margin:0 auto; padding:16px 20px;
+      display:flex; gap:14px; align-items:center; justify-content:space-between;
+      color:#6b7280; font-size:.9rem;
+    }
+    .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
   </style>
 </head>
 <body>
@@ -136,7 +146,6 @@
   <section class="hero-band" role="region" aria-label="Account summary">
     <div class="hero-inner">
       <div>
-        <!-- 👇 First name goes here -->
         <h1 class="hero-title">Welcome, <span id="cardholderFirstName">Friend</span></h1>
         <p class="hero-sub">Your balance and recent activity are below.</p>
       </div>
@@ -152,7 +161,6 @@
       </div>
       <div>
         <span class="label">Passport ID</span>
-        <!-- 👇 Placeholder until you wire Passport IDs -->
         <span class="value" id="passportId">—</span>
       </div>
       <div>
@@ -161,58 +169,157 @@
       </div>
     </div>
 
-    <!-- Action Buttons (shown if enabled) -->
     <div class="action-buttons hidden" id="sendReceiveButtons">
       <button id="sendMoneyBtn">Send Money</button>
       <button id="receiveMoneyBtn">Request Money</button>
       <button id="transferFundsBtn">Transfer</button>
     </div>
 
-    <!-- Recent Activity -->
     <div class="section-title">Recent Activity</div>
     <div class="activity-list" id="transactionBody">
       <div class="activity-item"><span>Loading...</span></div>
     </div>
   </main>
 
- 
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div>© 2025 BOOP</div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      </div>
+    </div>
+  </footer>
 
-<!-- Enhance: set first name + placeholder passport from localStorage (with capitalization fix) -->
-<script>
-  (function () {
-    function capitalizeFirst(str) {
-      if (!str || typeof str !== "string") return "";
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    }
+  <!-- AUTH GUARD: allow only cardholder/senior/student; else send to index.html -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+        if (!res.ok) throw new Error("Unauthorized");
+        const me = await res.json();
+        const role = String(me.role || me.type || "").toLowerCase();
+        const allowed = new Set(["cardholder","senior","student"]);
+        if (!allowed.has(role)) throw new Error("Forbidden");
+        localStorage.setItem("boopUser", JSON.stringify(me));
+      } catch (e) {
+        try { await fetch("/api/logout", { method: "POST" }); } catch {}
+        localStorage.clear();
+        location.href = "index.html";
+      }
+    })();
+  </script>
 
-    function paintCardholderBits() {
-      const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
+  <!-- Enhance: set first name + placeholder passport from localStorage (with capitalization fix) -->
+  <script>
+    (function () {
+      function capitalizeFirst(str) {
+        if (!str || typeof str !== "string") return "";
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
 
-      const firstNameEl = document.getElementById("cardholderFirstName");
-      const emailEl     = document.getElementById("cardholderEmail");
-      const passportEl  = document.getElementById("passportId");
+      async function loadBalance() {
+        try {
+          const token = localStorage.getItem("boop_jwt");
+          const r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
+          if (!r.ok) return;
+          const j = await r.json();
+          const cents = Number(j?.balance_cents || 0);
+          const el = document.getElementById("walletBalance");
+          if (el) el.textContent = `$${(cents/100).toFixed(2)}`;
+        } catch {}
+      }
 
-      // Derive a display first name, then normalize casing.
-      const rawFirst =
-        user.first_name ||
-        (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
-        (user.email ? user.email.split("@")[0] : "") ||
-        "Friend";
+      function paintCardholderBits() {
+        const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
+        const firstNameEl = document.getElementById("cardholderFirstName");
+        const emailEl     = document.getElementById("cardholderEmail");
+        const passportEl  = document.getElementById("passportId");
 
-      const first = capitalizeFirst(String(rawFirst).trim());
+        const rawFirst =
+          user.first_name ||
+          (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
+          (user.email ? user.email.split("@")[0] : "") ||
+          "Friend";
 
-      if (firstNameEl) firstNameEl.textContent = first;
-      if (emailEl && user.email) emailEl.textContent = user.email;
-      if (passportEl) passportEl.textContent = user.passport_id || "—";
+        const first = capitalizeFirst(String(rawFirst).trim());
 
-      // Optional: expose a normalized display name for other scripts
-      window.__cardholderDisplay = first;
-    }
+        if (firstNameEl) firstNameEl.textContent = first;
+        if (emailEl && user.email) emailEl.textContent = user.email;
+        if (passportEl) passportEl.textContent = user.passport_id || "—";
 
-    // Try immediately (in case script is at the end) and again on DOM ready.
-    try { paintCardholderBits(); } catch {}
-    document.addEventListener("DOMContentLoaded", paintCardholderBits);
-  })();
-</script>
+        window.__cardholderDisplay = first;
+      }
+
+      try { paintCardholderBits(); } catch {}
+      document.addEventListener("DOMContentLoaded", () => {
+        paintCardholderBits();
+        loadBalance();
+      });
+    })();
+  </script>
+
+  <!-- Hamburger + mobile menu + Logout -->
+  <script>
+    (function(){
+      const hamburger = document.getElementById('hamburger');
+      const panel = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('navOverlay');
+      const logoutDesktop = document.getElementById('logoutBtn');
+      const logoutMobile = document.getElementById('logoutBtnMobile');
+
+      function openMenu(){
+        hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active');
+        hamburger.setAttribute('aria-expanded', 'true'); document.body.style.overflow = 'hidden';
+      }
+      function closeMenu(){
+        hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active');
+        hamburger.setAttribute('aria-expanded', 'false'); document.body.style.overflow = '';
+      }
+
+      hamburger.addEventListener('click', () => hamburger.classList.contains('active') ? closeMenu() : openMenu());
+      overlay.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+
+      async function doLogout(e){
+        e?.preventDefault?.();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        window.location.href = 'index.html';
+      }
+      logoutDesktop?.addEventListener('click', doLogout);
+      logoutMobile?.addEventListener('click', doLogout);
+    })();
+  </script>
+
+  <!-- Force Sign-Out (admin-triggered) -->
+  <script>
+    (async () => {
+      const token = localStorage.getItem("boop_jwt");
+      const boopUser = JSON.parse(localStorage.getItem("boopUser") || "{}");
+      const email = boopUser.email;
+      if (!token || !email) return;
+
+      async function checkForceSignOut() {
+        try {
+          const res = await fetch(`/api/sessions/force-check/${email}`);
+          const data = await res.json();
+          if (res.ok && data.force_signed_out) {
+            alert("⚠️ You have been signed out by an administrator.");
+            localStorage.clear();
+            try { await fetch(`/api/sessions/${email}`, { method: "DELETE" }); } catch {}
+            try { await fetch(`/api/sessions/force-clear/${email}`, { method: "PATCH" }); } catch {}
+            window.location.href = "index.html";
+          }
+        } catch (err) {
+          console.error("❌ Force sign-out check failed:", err);
+        }
+      }
+      setInterval(checkForceSignOut, 10000);
+    })();
+  </script>
 </body>
 </html>
