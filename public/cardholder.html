@@ -18,9 +18,18 @@
       --grad2: rgba(16,185,129,.15);
     }
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
+    *{ box-sizing:border-box }
+    html, body{ height:100% }
+    /* Sticky footer: body is a column; main grows; footer sticks to bottom */
+    body{
+      margin:0;
+      font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:var(--bg);
+      color:var(--ink);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
 
     /* NAV */
     nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
@@ -64,8 +73,8 @@
     .hero-title{ margin:0; font-size:clamp(20px, 3.2vw, 28px); font-weight:600; letter-spacing:.2px; }
     .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
 
-    /* MAIN */
-    .container{ max-width:1100px; margin:20px auto 40px; padding:0 20px; }
+    /* MAIN (make it grow to push footer down) */
+    main.container{ max-width:1100px; margin:20px auto 40px; padding:0 20px; flex:1 0 auto; }
 
     .user-details-grid{
       display:grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
@@ -91,8 +100,8 @@
     }
     .amount{ font-weight:600; color:var(--blue); }
 
-    /* Footer */
-    footer{ border-top:1px solid var(--stroke); background:#fff; }
+    /* Footer (sticks at bottom) */
+    footer{ border-top:1px solid var(--stroke); background:#fff; margin-top:auto; }
     .footer-inner{
       max-width:1100px; margin:0 auto; padding:16px 20px;
       display:flex; gap:14px; align-items:center; justify-content:space-between;
@@ -205,7 +214,7 @@
         const allowed = new Set(["cardholder","senior","student"]);
         if (!allowed.has(role)) throw new Error("Forbidden");
         localStorage.setItem("boopUser", JSON.stringify(me));
-      } catch (e) {
+      } catch {
         try { await fetch("/api/logout", { method: "POST" }); } catch {}
         localStorage.clear();
         location.href = "index.html";
@@ -213,12 +222,43 @@
     })();
   </script>
 
-  <!-- Enhance: set first name + placeholder passport from localStorage (with capitalization fix) -->
+  <!-- Data paint: name/passport, balance, recent activity -->
   <script>
     (function () {
-      function capitalizeFirst(str) {
-        if (!str || typeof str !== "string") return "";
-        return str.charAt(0).toUpperCase() + str.slice(1);
+      const RECENT_TX_URLS = [
+        "/api/transactions/mine?limit=5&offset=0",      // primary
+        "/api/transactions/recent?limit=5&offset=0"     // fallback if your API uses a different path
+      ];
+
+      const $ = (id) => document.getElementById(id);
+
+      const capitalizeFirst = (s) =>
+        (!s || typeof s !== "string") ? "" : s.charAt(0).toUpperCase() + s.slice(1);
+
+      function paintHeaderBits() {
+        const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
+        const firstRaw =
+          user.first_name ||
+          (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
+          (user.email ? user.email.split("@")[0] : "") ||
+          "Friend";
+        const first = capitalizeFirst(String(firstRaw).trim());
+
+        const firstEl = $("cardholderFirstName");
+        const emailEl = $("cardholderEmail");
+        if (firstEl) firstEl.textContent = first;
+        if (emailEl && user.email) emailEl.textContent = user.email;
+      }
+
+      async function loadPassport() {
+        try {
+          const token = localStorage.getItem("boop_jwt");
+          const r = await fetch("/api/passport/mine", { headers:{ Authorization:`Bearer ${token}` }});
+          if (!r.ok) return;
+          const j = await r.json();
+          const el = $("passportId");
+          if (el) el.textContent = j.passport_id || "—";
+        } catch {}
       }
 
       async function loadBalance() {
@@ -228,36 +268,59 @@
           if (!r.ok) return;
           const j = await r.json();
           const cents = Number(j?.balance_cents || 0);
-          const el = document.getElementById("walletBalance");
+          const el = $("walletBalance");
           if (el) el.textContent = `$${(cents/100).toFixed(2)}`;
         } catch {}
       }
 
-      function paintCardholderBits() {
-        const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
-        const firstNameEl = document.getElementById("cardholderFirstName");
-        const emailEl     = document.getElementById("cardholderEmail");
-        const passportEl  = document.getElementById("passportId");
-
-        const rawFirst =
-          user.first_name ||
-          (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
-          (user.email ? user.email.split("@")[0] : "") ||
-          "Friend";
-
-        const first = capitalizeFirst(String(rawFirst).trim());
-
-        if (firstNameEl) firstNameEl.textContent = first;
-        if (emailEl && user.email) emailEl.textContent = user.email;
-        if (passportEl) passportEl.textContent = user.passport_id || "—";
-
-        window.__cardholderDisplay = first;
+      function formatAmount(cents, type) {
+        const amt = (Number(cents||0)/100).toFixed(2);
+        const sign = (String(type).toLowerCase() === "credit") ? "+" : "−";
+        return `${sign}$${amt}`;
       }
 
-      try { paintCardholderBits(); } catch {}
+      function renderRecent(rows) {
+        const box = $("transactionBody");
+        if (!box) return;
+        if (!rows || !rows.length) {
+          box.innerHTML = `<div class="activity-item"><span>No recent activity.</span></div>`;
+          return;
+        }
+        box.innerHTML = rows.map(tx => {
+          const isCredit = String(tx.type||"").toLowerCase() === "credit";
+          const who = isCredit ? (tx.sender_name || "From") : (tx.recipient_name || "To");
+          const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : "";
+          return `
+            <div class="activity-item">
+              <span>${when}${tx.note ? " • " + tx.note : ""}</span>
+              <span class="amount">${formatAmount(tx.amount_cents, tx.type)}</span>
+            </div>`;
+        }).join("");
+      }
+
+      async function loadRecentActivity() {
+        const token = localStorage.getItem("boop_jwt");
+        for (const url of RECENT_TX_URLS) {
+          try {
+            const r = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
+            if (!r.ok) continue;
+            const j = await r.json();
+            // Accept either {items:[...]} or {transactions:[...]} or array
+            const rows = j.items || j.transactions || (Array.isArray(j) ? j : []);
+            renderRecent(rows.slice(0,5));
+            return;
+          } catch {}
+        }
+        renderRecent([]);
+      }
+
+      // init
+      try { paintHeaderBits(); } catch {}
       document.addEventListener("DOMContentLoaded", () => {
-        paintCardholderBits();
+        paintHeaderBits();
+        loadPassport();
         loadBalance();
+        loadRecentActivity();
       });
     })();
   </script>
@@ -319,69 +382,6 @@
         }
       }
       setInterval(checkForceSignOut, 10000);
-    })();
-  </script>
-    <!-- Enhance: set first name + passport from API (with capitalization fix) -->
-  <script>
-    (function () {
-      function capitalizeFirst(str) {
-        if (!str || typeof str !== "string") return "";
-        return str.charAt(0).toUpperCase() + str.slice(1);
-      }
-
-      async function loadBalance() {
-        try {
-          const token = localStorage.getItem("boop_jwt");
-          const r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
-          if (!r.ok) return;
-          const j = await r.json();
-          const cents = Number(j?.balance_cents || 0);
-          const el = document.getElementById("walletBalance");
-          if (el) el.textContent = `$${(cents/100).toFixed(2)}`;
-        } catch {}
-      }
-
-      async function paintCardholderBits() {
-        const token = localStorage.getItem("boop_jwt");
-        const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
-
-        const firstNameEl = document.getElementById("cardholderFirstName");
-        const emailEl     = document.getElementById("cardholderEmail");
-        const passportEl  = document.getElementById("passportId");
-
-        const rawFirst =
-          user.first_name ||
-          (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
-          (user.email ? user.email.split("@")[0] : "") ||
-          "Friend";
-
-        const first = capitalizeFirst(String(rawFirst).trim());
-
-        if (firstNameEl) firstNameEl.textContent = first;
-        if (emailEl && user.email) emailEl.textContent = user.email;
-
-        // 👇 Fetch live passport_id from API
-        try {
-          const r = await fetch("/api/passport/mine", { headers:{ Authorization:`Bearer ${token}` }});
-          if (r.ok) {
-            const j = await r.json();
-            if (passportEl) passportEl.textContent = j.passport_id || "—";
-          } else {
-            if (passportEl) passportEl.textContent = "—";
-          }
-        } catch {
-          if (passportEl) passportEl.textContent = "—";
-        }
-
-        window.__cardholderDisplay = first;
-      }
-
-      // Run immediately and again when DOM is ready
-      try { paintCardholderBits(); } catch {}
-      document.addEventListener("DOMContentLoaded", () => {
-        paintCardholderBits();
-        loadBalance();
-      });
     })();
   </script>
 </body>
