@@ -18,7 +18,7 @@
     .nav-right a { color:#fff; text-decoration:none; font-size:.95rem; }
     .nav-right a[aria-current="page"] { text-decoration:underline; }
 
-    /* Page shell (copied from your Reports look) */
+    /* Page shell (reports look) */
     .container {
       max-width: 1050px;
       margin: 50px auto;
@@ -124,12 +124,12 @@
         }
         if (me.role !== "vendor") throw new Error("Not a vendor");
       } catch (e) {
-        localStorage.clear(); location.href = "../login.html";
+        localStorage.clear(); location.href = "vendor-login.html";
       }
     })();
   </script>
 
-  <!-- Top Nav (same links as vendor homepage) -->
+  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -147,7 +147,6 @@
   <div class="container">
     <h2>Transaction Reports</h2>
 
-    <!-- EXACT reports-style filters -->
     <div class="filters">
       <div>
         <label for="startDate">Start Date</label>
@@ -214,8 +213,6 @@
     document.addEventListener("DOMContentLoaded", () => {
       const token = localStorage.getItem("boop_jwt");
       const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
-
-      // Redirect if somehow not a vendor
       if (!me || me.role !== "vendor") { location.href = "../login.html"; return; }
 
       const startDate = document.getElementById("startDate");
@@ -249,60 +246,59 @@
 
       async function fetchTransactions() {
         statusEl.textContent = "";
-        let query = [];
+        const qs = new URLSearchParams();
+        if (startDate.value) qs.append("start", startDate.value);
+        if (endDate.value) qs.append("end", endDate.value);
+        if (typeFilter.value) qs.append("type", typeFilter.value);
+        qs.append("limit", String(limit));
+        qs.append("offset", String((page - 1) * limit));
 
-        if (startDate.value) query.push(`start=${startDate.value}`);
-        if (endDate.value) query.push(`end=${endDate.value}`);
-        if (typeFilter.value) query.push(`type=${typeFilter.value}`);
-        query.push(`limit=${limit}`);
-        query.push(`offset=${(page - 1) * limit}`);
-
-        // Always scope to this vendor; the backend can recognize vendor_id or infer from token
-        query.push(`vendor_id=${encodeURIComponent(me.id)}`);
-
-        const queryStr = query.length ? `?${query.join("&")}` : "";
-
-        // Preferred vendor endpoint, then fallbacks to your generic report
-        let url = `/api/vendor/transactions/report${queryStr}`;
-        let res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-
-        if (!res.ok) {
-          url = `/api/transactions/report${queryStr}`;
-          res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        }
+        const url = `/api/vendor/transactions/report?${qs.toString()}`;
+        let res, data;
 
         try {
-          const data = await res.json();
-          if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
-
-          transactions = data.transactions || [];
-          totalCount = data.totalCount || 0;
-
-          tableBody.innerHTML = "";
-          if (!transactions.length) {
-            tableBody.innerHTML = `<tr><td colspan="7">No records found.</td></tr>`;
-          } else {
-            transactions.forEach(tx => {
-              const row = document.createElement("tr");
-              row.innerHTML = `
-                <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
-                <td>${tx.id}</td>
-                <td>${tx.type}</td>
-                <td>$${(Number(tx.amount_cents || 0) / 100).toFixed(2)}</td>
-                <td>${tx.sender_name || "—"}</td>
-                <td>${tx.recipient_name || "—"}</td>
-                <td>${tx.note || ""}</td>
-              `;
-              tableBody.appendChild(row);
-            });
-          }
-
-          updatePagination();
-        } catch (err) {
-          console.error("❌ Fetch failed:", err);
-          statusEl.textContent = "Failed to load transactions.";
+          res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+          data = await res.json();
+        } catch (e) {
+          console.error("❌ Network error:", e);
+          statusEl.textContent = "Network error loading transactions.";
           statusEl.style.color = "red";
+          return;
         }
+
+        if (!res.ok) {
+          console.error("❌ Vendor report error:", data);
+          statusEl.textContent = data?.message || `Error: ${res.status} ${res.statusText}`;
+          statusEl.style.color = "red";
+          tableBody.innerHTML = `<tr><td colspan="7">No records.</td></tr>`;
+          totalCount = 0;
+          updatePagination();
+          return;
+        }
+
+        transactions = data.transactions || [];
+        totalCount = data.totalCount || 0;
+
+        tableBody.innerHTML = "";
+        if (!transactions.length) {
+          tableBody.innerHTML = `<tr><td colspan="7">No records found.</td></tr>`;
+        } else {
+          transactions.forEach(tx => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${tx.created_at ? new Date(tx.created_at).toLocaleString() : ""}</td>
+              <td>${tx.id}</td>
+              <td>${tx.type}</td>
+              <td>$${(Number(tx.amount_cents || 0) / 100).toFixed(2)}</td>
+              <td>${tx.sender_name || "—"}</td>
+              <td>${tx.recipient_name || "—"}</td>
+              <td>${tx.note || ""}</td>
+            `;
+            tableBody.appendChild(row);
+          });
+        }
+
+        updatePagination();
       }
 
       function exportCSV() {
@@ -335,7 +331,7 @@
         e.preventDefault();
         try { await fetch("/api/logout", { method: "POST" }); } catch {}
         localStorage.clear();
-        location.href = "../login.html";
+        location.href = "vendor-login.html";
       });
 
       fetchTransactions();
