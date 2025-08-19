@@ -19,6 +19,7 @@
       --ring:rgba(47,128,237,0.35);
       --border:rgba(255,255,255,0.08);
       --white:#fff;
+      --nav:#102a43; /* added */
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -30,9 +31,10 @@
         radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
         radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
         linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
+      display:flex; flex-direction:column; /* so footer can sit at bottom */
     }
 
-   /* NAV */
+    /* NAV */
     nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img{ height:36px; display:block }
@@ -74,7 +76,7 @@
     .hero p.lead{margin:0; color:var(--muted); font-size:clamp(15px,2.2vw,18px);}
 
     /* ——— Content ——— */
-    .wrap{max-width:1100px; margin:18px auto 40px; padding:0 18px;}
+    .wrap{max-width:1100px; margin:18px auto 40px; padding:0 18px; flex:1;}
     .card{
       background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
       border:1px solid var(--border); border-radius:16px; padding:18px;
@@ -91,7 +93,6 @@
       font-weight:600; color:#e5e7eb; display:flex; align-items:center; justify-content:space-between;
     }
     .faq summary::-webkit-details-marker{display:none}
-    .faq summary span.icon{opacity:.7}
     .faq[open] summary{background:rgba(255,255,255,.03)}
     .faq .content{padding:0 16px 16px 16px; color:#cbd5e1; line-height:1.65; font-size:.98rem}
 
@@ -109,12 +110,12 @@
       margin-top:28px; font-size:.9rem;
     }
 
-    /* bottom breathing room on very short pages */
     .spacer-bottom{height:40px}
   </style>
 </head>
 <body>
- <!-- Top Nav -->
+
+  <!-- Top Nav -->
   <nav>
     <div class="nav-container">
       <div class="nav-left">
@@ -130,9 +131,28 @@
         <a href="transfer.html">Transfer</a>
         <a href="passport.html">Passport</a>
         <a href="activity.html">Activity</a>
-        <a href="help.html">Help</a>
+        <a href="help.html" aria-current="page">Help</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
+
+      <!-- Hamburger for mobile -->
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Mobile slide-out panel + overlay -->
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+    <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
+      <a href="cardholder.html">Home</a>
+      <a href="send-request.html">Send / Request</a>
+      <a href="transfer.html">Transfer</a>
+      <a href="passport.html">Passport</a>
+      <a href="activity.html">Activity</a>
+      <a href="help.html" aria-current="page">Help</a>
+      <a href="#" id="logoutBtnMobile">Log Out</a>
+    </div>
+  </nav>
 
   <header class="hero" role="banner">
     <div>
@@ -148,18 +168,14 @@
         <h2 id="faqTitle" style="margin:0 0 12px; font-size:1.1rem;">Common questions</h2>
 
         <details class="faq" open>
-          <summary>
-            How do I see my balance? <span class="icon">▾</span>
-          </summary>
+          <summary>How do I see my balance? <span class="icon">▾</span></summary>
           <div class="content">
             Go to <strong>Wallet</strong>. Your current balance is shown at the top. Recent activity is listed below.
           </div>
         </details>
 
         <details class="faq">
-          <summary>
-            How do I send or request money? <span class="icon">▾</span>
-          </summary>
+          <summary>How do I send or request money? <span class="icon">▾</span></summary>
           <div class="content">
             Open <strong>Send / Request</strong>, search for a person, enter the amount, and choose
             <em>Send</em> or <em>Request</em>. You’ll get a confirmation before anything is submitted.
@@ -167,27 +183,21 @@
         </details>
 
         <details class="faq">
-          <summary>
-            When do funds arrive? <span class="icon">▾</span>
-          </summary>
+          <summary>When do funds arrive? <span class="icon">▾</span></summary>
           <div class="content">
             Most transfers are instant. If something looks delayed, check <strong>Activity</strong> for timestamps and notes.
           </div>
         </details>
 
         <details class="faq">
-          <summary>
-            Can I download my history? <span class="icon">▾</span>
-          </summary>
+          <summary>Can I download my history? <span class="icon">▾</span></summary>
           <div class="content">
             Yes. In <strong>Activity</strong>, pick a date range and choose <em>Export CSV</em>.
           </div>
         </details>
 
         <details class="faq">
-          <summary>
-            I lost access to my account. <span class="icon">▾</span>
-          </summary>
+          <summary>I lost access to my account. <span class="icon">▾</span></summary>
           <div class="content">
             Try resetting your password from the login page. If you still need help, use the contact form here.
           </div>
@@ -238,6 +248,18 @@
     // Footer year
     document.getElementById('year').textContent = new Date().getFullYear();
 
+    // Mobile menu
+    (function(){
+      const hamburger = document.getElementById('hamburger');
+      const panel = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('navOverlay');
+      function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+      function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
+      overlay?.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+    })();
+
     // Prefill email from localStorage if present
     (function(){
       try{
@@ -246,22 +268,18 @@
       }catch(e){}
     })();
 
-    // Simple contact handler (adjust endpoint later if needed)
+    // Simple contact handler (placeholder)
     document.getElementById('helpForm').addEventListener('submit', async (e)=>{
       e.preventDefault();
       const email = document.getElementById('helpEmail').value.trim();
       const msg   = document.getElementById('helpMsg').value.trim();
       const status = document.getElementById('helpStatus');
-
       if (!email || !msg){
         status.textContent = 'Please enter your email and a short message.';
         status.style.color = '#fca5a5';
         return;
       }
-
       try{
-        // Placeholder: send to your support endpoint if/when available
-        // await fetch('/api/support', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, message: msg }) });
         status.textContent = 'Thanks! Your message has been sent.';
         status.style.color = '#a5b4fc';
         document.getElementById('helpMsg').value = '';
@@ -272,12 +290,17 @@
     });
 
     // Logout
-    document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      try{ await fetch('/api/logout', { method:'POST' }); }catch{}
-      localStorage.clear();
-      window.location.href = 'cardholder-login.html';
-    });
+    function wireLogout(id){
+      const el = document.getElementById(id);
+      el?.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try{ await fetch('/api/logout', { method:'POST' }); }catch{}
+        localStorage.clear();
+        window.location.href = 'cardholder-login.html';
+      });
+    }
+    wireLogout('logoutBtn');
+    wireLogout('logoutBtnMobile');
   </script>
 </body>
 </html>
