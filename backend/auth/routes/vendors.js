@@ -14,8 +14,9 @@ const { authenticateToken } = require("../middleware/authMiddleware");
    Keeping them in one file avoids duplication. Route-level guards 
    (requireAdmin vs requireVendor) enforce who can use which endpoints.
 
-   Example:
-     - GET /api/vendors          → Admin: list all vendors
+   Examples:
+     - GET /api/vendors                    → Admin: list all vendors
+     - GET /api/vendor/profile             → Vendor: fetch own profile (business_name)
      - GET /api/vendor/transactions/report → Vendor: fetch only their own txns
 ---------------------------------------------------------------------------*/
 
@@ -50,6 +51,47 @@ async function audit({ action, status = "completed", adminId, targetUserId }) {
     console.warn("⚠️ admin_actions insert failed:", e.message || e);
   }
 }
+
+// ───────────────────────────────────────────────────────────────
+// VENDOR SELF PROFILE
+// GET /api/vendor/profile  → returns business_name + basic user info
+router.get("/profile", authenticateToken, requireVendor, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?.userId;
+
+    const { rows } = await db.query(
+      `
+      SELECT
+        u.id,
+        u.email,
+        LOWER(u.role)  AS role,
+        u.first_name,
+        u.last_name,
+        v.business_name
+      FROM users u
+      LEFT JOIN vendors v ON v.user_id = u.id
+      WHERE u.id = $1
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (!rows.length) return res.status(404).json({ message: "Vendor not found" });
+
+    const me = rows[0];
+    return res.json({
+      id: me.id,
+      email: me.email,
+      role: me.role,
+      first_name: me.first_name,
+      last_name: me.last_name,
+      business_name: me.business_name || null,
+    });
+  } catch (err) {
+    console.error("❌ GET /api/vendor/profile error:", err);
+    return res.status(500).json({ message: "Failed to load vendor profile." });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // POST: Block direct vendor creation
