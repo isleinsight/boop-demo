@@ -13,13 +13,14 @@ const { authenticateToken } = require('./auth/middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
 console.log('🔧 server.js is initializing...');
 
 // ───────────────── middleware ─────────────────
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
+// serve the static site
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Helper: mount with logging so failures don’t kill the whole server
 function mount(pathPrefix, modPath, label = modPath) {
@@ -42,7 +43,11 @@ mount('/api/logout', './auth/routes/logout', 'logout (api)');
 mount('/api/users', './auth/routes/users');
 mount('/api/cards', './auth/routes/cards');
 mount('/api/wallets', './auth/routes/wallets');
-mount('/api/vendors', './auth/routes/vendors');
+mount('/api/vendors', './auth/routes/vendors'); // admin vendors list/update/delete
+
+// ✅ ADD THIS: singular vendor API used by the vendor portal (e.g. /api/vendor/transactions/report)
+mount('/api/vendor', './auth/routes/vendor', 'vendor'); 
+
 mount('/api/students', './auth/routes/students');
 mount('/api/user-students', './auth/routes/userStudents');
 mount('/api/sessions', './auth/routes/sessions');
@@ -53,10 +58,10 @@ mount('/api/transfers', './auth/routes/transfers');
 mount('/api/bank-accounts', './auth/routes/bank-accounts');
 mount('/api/password', './auth/routes/password');
 
-// Treasury (wrapped)
+// Treasury
 mount('/api/treasury', './auth/routes/treasury', 'treasury');
 
-// Admin actions (leave as-is)
+// Admin actions
 mount('/api/admin-actions', './auth/routes/admin-actions');
 
 // Who am I
@@ -71,7 +76,7 @@ app.get('/health', (_req, res) => res.send('OK'));
 // GitHub webhook
 app.post('/webhook', (req, res) => {
   console.log('🔔 GitHub Webhook triggered');
-  exec('cd ~/boop-demo && git pull && pm2 restart all', (err, stdout, stderr) => {
+  exec('cd ~/boop-demo && git pull && pm2 restart all', (err, stdout) => {
     if (err) return res.status(500).send('Git pull failed');
     console.log('✅ Webhook git pull success:\n', stdout);
     res.status(200).send('Git pull and restart complete');
