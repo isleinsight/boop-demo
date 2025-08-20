@@ -139,50 +139,6 @@
       color:#111;                         /* black INSIDE card */
       letter-spacing:.4px; text-transform:uppercase;
     }
-    .card-visual{
-  position:relative;
-  width:100%;
-  height:180px;
-  border-radius:14px;
-  overflow:hidden;
-  background:#fff; /* fallback */
-}
-
-.card-bg{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.card-chip{
-  position:absolute;
-  left:16px;
-  top:40px;
-  width:40px;
-  height:30px;
-  background:gold;
-  border-radius:6px;
-}
-
-.card-type{
-  position:absolute;
-  top:20px;
-  right:20px;
-  font-size:1.1rem;
-  font-weight:700;
-  color:#000; /* black text */
-}
-
-.card-owner{
-  position:absolute;
-  bottom:20px;
-  left:20px;
-  font-size:1rem;
-  font-weight:700;
-  color:#000; /* black text */
-}
 
     /* FOOTER */
     footer{ border-top:1px solid var(--border); background:rgba(15,23,42,.6); color:#9ca3af; }
@@ -413,57 +369,43 @@
 
       // ---------- Render ----------
       function cardTileHTML(card){
-  const status = card.status;
-  const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
-  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        const status = card.status;
+        const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
+        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
 
-  // Build full name
-  const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
-  const first = me?.first_name || '';
-  const last = me?.last_name || '';
-  const fullName = `${first}${last ? ' ' + last : ''}`;
+        if (card.type === 'transit'){
+          const passName = card.pass_name || 'Transit';
+          return `
+            <div class="tile">
+              <div class="row">
+                <h3>Transit Card</h3>
+                <span class="pill ${pillKind}">${statusLabel}</span>
+              </div>
+              <div class="meta">${passName}</div>
+            </div>
+          `;
+        }
 
-  if (card.type === 'transit'){
-    const passName = card.pass_name || 'Transit';
-    return `
-      <div class="tile">
-        <div class="row">
-          <h3>Transit Card</h3>
-          <span class="pill ${pillKind}">${statusLabel}</span>
-        </div>
-        <div class="meta">${passName}</div>
-        <div class="divider"></div>
-        <div class="row">
-          <div>
-            <span class="label">Rides remaining</span>
-            <div class="value">${Number(card.rides_remaining||0)}</div>
+        const title = card.type === 'assistance' ? 'Assistance Card' : 'Spending Card';
+        const ending = card.last4 ? `Card ending in ${card.last4}` : '';
+
+        return `
+          <div class="tile">
+            <div class="row">
+              <h3>${title}</h3>
+              <span class="pill ${pillKind}">${statusLabel}</span>
+            </div>
+            ${ending ? `<div class="meta">${ending}</div>` : ``}
+            <div class="divider"></div>
+            <div class="card-visual">
+              <img class="card-bg" alt="" data-bg-base="assets/card-bg">
+              <div class="card-tag">Spending</div>
+              <div class="card-chip"></div>
+              <div class="card-name">${fullName.toUpperCase()}</div>
+            </div>
           </div>
-        </div>
-      </div>
-    `;
-  }
-
-  // Spending or Assistance card
-  const title = card.type === 'assistance' ? 'Assistance Card' : 'Spending Card';
-  const ending = card.last4 ? `Card ending in ${card.last4}` : null;
-
-  return `
-    <div class="tile">
-      <div class="row">
-        <h3>${title}</h3>
-        <span class="pill ${pillKind}">${statusLabel}</span>
-      </div>
-      <div class="card-visual">
-        <img src="assets/card-bg.png" alt="Card background" class="payulot-card" />
-        <div class="card-chip"></div>
-        <div class="card-type">Spending</div>
-        <div class="card-owner">${fullName}</div>
-      </div>
-      ${ending ? `<div class="meta">${ending}</div>` : ``}
-      <div class="meta">Use at supported merchants.</div>
-    </div>
-  `;
-}
+        `;
+      }
 
       function renderCards(cards){
         if (!Array.isArray(cards) || !cards.length){
