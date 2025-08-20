@@ -256,19 +256,45 @@
   <!-- SCRIPTS -->
   <script>
     (async function(){
-      // ---------- Permissions ----------
-      try {
-        const token0 = localStorage.getItem("boop_jwt");
-        if (!token0) throw new Error("No token");
-        const res = await fetch("/api/users/me", { headers: { Authorization: `Bearer ${token0}` }});
-        const meData = await res.json();
-        if (!res.ok) throw new Error(meData?.error || "Unauthorized");
-        localStorage.setItem("boopUser", JSON.stringify(meData));
-      } catch {
-        localStorage.clear();
-        window.location.href = "cardholder-login.html";
-        return;
+      // ---------- Permissions + fresh user ----------
+let me; // will hold the fresh user object we just fetched
+try {
+  const token0 = localStorage.getItem("boop_jwt");
+  if (!token0) throw new Error("No token");
+
+  // Always fetch fresh so we have first_name + last_name
+  const res = await fetch("/api/users/me", {
+    headers: { Authorization: `Bearer ${token0}` }
+  });
+  const meData = await res.json();
+  if (!res.ok) throw new Error(meData?.error || "Unauthorized");
+
+  // If last_name is somehow empty, do a second fetch by id as a belt-and-suspenders
+  if (!meData.last_name && meData.id) {
+    try {
+      const res2 = await fetch(`/api/users/${meData.id}`, {
+        headers: { Authorization: `Bearer ${token0}` }
+      });
+      if (res2.ok) {
+        const fullUser = await res2.json();
+        me = { ...meData, ...fullUser };
+      } else {
+        me = meData;
       }
+    } catch {
+      me = meData;
+    }
+  } else {
+    me = meData;
+  }
+
+  // Replace any stale cache so future pages also have last_name
+  localStorage.setItem("boopUser", JSON.stringify(me));
+} catch {
+  localStorage.clear();
+  window.location.href = "cardholder-login.html";
+  return;
+}
 
       // ---------- Nav/Footer ----------
       document.getElementById('year').textContent = new Date().getFullYear();
