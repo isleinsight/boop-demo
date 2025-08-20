@@ -15,25 +15,7 @@
       --border:rgba(255,255,255,0.10);
       --bg:#0b1220;
       --nav:#102a43;
-      --green:#10b981;
     }
-    /* Fixed decorative glows (don’t scroll) */
-  body::before,
-  body::after{
-    content:""; position:fixed; z-index:-1; pointer-events:none;
-  }
-  /* Top-right blue bubble (fixed) */
-  body::before{
-    top:-220px; right:-220px; width:1100px; height:800px;
-    background: radial-gradient(closest-side, rgba(47,128,237,.32), transparent 70%);
-    filter: blur(0px);
-  }
-  /* Bottom-left green bubble (fixed to bottom) */
-  body::after{
-    bottom:-260px; left:-260px; width:1200px; height:900px;
-    background: radial-gradient(closest-side, rgba(16,185,129,.26), transparent 70%);
-    filter: blur(0px);
-  }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -53,11 +35,14 @@
     .nav-right{ display:flex; align-items:center; gap:18px; }
     .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; font-weight:500; }
     .nav-right a:hover{ opacity:1 }
+
     .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
     .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
     .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
     .hamburger.active span:nth-child(2){ opacity:0; }
     .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
+
+    /* Mobile panel + overlay (hidden on desktop) */
     .nav-panel{ display:none; }
     @media (max-width: 768px){
       .nav-right{ display:none; }
@@ -110,7 +95,7 @@
     .value{ font-weight:700; letter-spacing:.3px; }
     .list{ display:grid; gap:12px; }
     .tile{ border:1px solid var(--border); background:rgba(255,255,255,.02); border-radius:14px; padding:14px; }
-    .tile h3{ margin:0 0 6px; font-size:1.02rem; color:#111; } /* make titles black */
+    .tile h3{ margin:0 0 6px; font-size:1.02rem; }
     .tile .meta{ color:#9ca3af; font-size:.9rem; }
     .tile .row+.row{ margin-top:8px; }
     .divider{ height:1px; background:var(--border); margin:10px 0; }
@@ -123,32 +108,50 @@
     .btn.primary{ background:var(--blue); color:#fff; }
     .btn.primary:hover{ background:var(--blue-dark); }
 
-    /* Card visual */
+    /* VISUAL CARD */
     .card-visual{
       position:relative;
-      width:min(320px, 100%);
-      aspect-ratio:85.6 / 54;
-      border-radius:14px;
+      width:100%;
+      aspect-ratio: 86/54;            /* credit card proportion */
+      border-radius:16px;
       overflow:hidden;
-      border:1px solid rgba(0,0,0,.08);
-      box-shadow:0 8px 18px rgba(0,0,0,.25);
-      background:#fff url('assets/card-bg.png') center/cover no-repeat;
+      background:#0f172a url('assets/payulot-card.png') center/cover no-repeat; /* <- your PNG */
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
     }
-    .card-chip{
-      position:absolute; left:16px; top:58%; transform:translateY(-50%);
-      width:44px; height:32px; border-radius:6px;
-      background:linear-gradient(135deg, #d4af37, #f0d26a);
-      box-shadow:inset 0 2px 6px rgba(0,0,0,.25), 0 1px 2px rgba(0,0,0,.25);
+    .card-visual.transit{
+      background:
+        linear-gradient(135deg, rgba(47,128,237,.35), rgba(16,185,129,.35)); /* fallback if no image */
+      backdrop-filter:saturate(1.2);
     }
-    .card-tag{
-      position:absolute; right:14px; top:12px;
-      font-weight:700; font-size:.95rem; color:#111; /* black text on the card */
-      letter-spacing:.2px;
-    }
-    .card-name{
-      position:absolute; left:16px; bottom:14px;
-      font-weight:700; font-size:1rem; color:#111; letter-spacing:.4px;
-      text-transform:uppercase;
+    .card-chip {
+  position: absolute;
+  bottom: 50px;   /* was top:14px */
+  left: 20px;
+  width: 42px;
+  height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #e6d9a6, #bcae72);
+  opacity: .9;
+  border: 1px solid rgba(0,0,0,.25);
+}
+
+.card-name {
+  position: absolute;
+  left: 20px;
+  bottom: 16px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: .95rem;
+  color: #111;       /* make text black */
+  text-shadow: none; /* remove white shadow */
+}
+    .card-badge{
+      position:absolute; right:12px; top:12px;
+      font-size:.72rem; font-weight:800; letter-spacing:.06em;
+      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+      padding:4px 8px; border-radius:999px;
     }
 
     /* FOOTER */
@@ -331,12 +334,11 @@
       const ownerEmailEl = document.getElementById('ownerEmail');
       const cardsList = document.getElementById('cardsList');
 
-      // first + last, always
-      const first = me?.first_name || (me?.name?.split?.(' ')[0]) || '';
-      const last  = me?.last_name  || (me?.name?.split?.(' ')[1]) || '';
-      const fullName = `${first} ${last}`.trim();
-      ownerNameEl.textContent = fullName || '—';
       ownerEmailEl.textContent = me?.email || '—';
+      const first = me?.first_name || (me?.name?.split?.(' ')[0]) || (me?.email ? me.email.split('@')[0] : '—');
+      const last = me?.last_name || '';
+      const fullName = `${first}${last ? ' ' + last : ''}`;
+      ownerNameEl.textContent = fullName;
 
       // ---------- Helpers ----------
       function setStatus(pillEl, text, kind){
@@ -365,52 +367,24 @@
         return null;
       }
 
-      // Card visual HTML (uses fullName)
-      function cardVisualHTML(tag){
-        return `
-          <div class="card-visual" role="img" aria-label="${tag} card">
-            <div class="card-tag">${tag}</div>
-            <div class="card-chip" aria-hidden="true"></div>
-            <div class="card-name">${fullName || ''}</div>
-          </div>
-        `;
-      }
-
-      function cardTileHTML(card){
-        const status = card.status;
+      // Visual card HTML
+      function visualCardHTML({ kind='spending', status='active', name=fullName }={}){
         const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
         const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-
-        if (card.type === 'transit'){
-          const passName = card.pass_name || 'Transit';
-          return `
-            <div class="tile">
-              <div class="row">
-                <h3>Transit Card</h3>
-                <span class="pill ${pillKind}">${statusLabel}</span>
-              </div>
-              ${cardVisualHTML('Transit')}
-              <div class="divider"></div>
-              <div class="row">
-                <div>
-                  <span class="label">Rides remaining</span>
-                  <div class="value">${Number(card.rides_remaining||0)}</div>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-
-        const title = card.type === 'assistance' ? 'Assistance Card' : 'Spending Card';
-        const ending = card.last4 ? `Card ending in ${card.last4}` : ``;
+        const extraClass = kind === 'transit' ? 'transit' : '';
+        const title = kind === 'assistance' ? 'Assistance Card' : kind === 'transit' ? 'Transit Card' : 'Spending Card';
         return `
           <div class="tile">
             <div class="row">
               <h3>${title}</h3>
               <span class="pill ${pillKind}">${statusLabel}</span>
             </div>
-            ${cardVisualHTML('Spending')}
-            ${ending ? `<div class="meta" style="margin-top:8px;">${ending}</div>` : ``}
+            <div class="divider"></div>
+            <div class="card-visual ${extraClass}">
+              <div class="card-chip" aria-hidden="true"></div>
+              <div class="card-badge">${title.replace(' Card','')}</div>
+              <div class="card-name">${(name||' ').toUpperCase()}</div>
+            </div>
           </div>
         `;
       }
@@ -420,12 +394,17 @@
           cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
           return;
         }
-        cardsList.innerHTML = cards.map(cardTileHTML).join('');
+        const html = cards.map(c => visualCardHTML({
+          kind: c.type,
+          status: c.status,
+          name: fullName
+        })).join('');
+        cardsList.innerHTML = html;
       }
 
       // ---------- Load passport + cards ----------
       async function loadPassportAndCards(){
-        // Passport
+        // A) Passport status/id
         let passport = null;
         try{
           const r = await fetch('/api/passport/mine', { headers:{ Authorization:`Bearer ${token}` }});
@@ -439,7 +418,7 @@
         else if (pstatus === 'pending'){ setStatus(passportStatus, 'Pending', 'warn'); setStatus(passportStatusInline, 'Pending', 'warn'); }
         else { setStatus(passportStatus, 'Disabled', 'stop'); setStatus(passportStatusInline, 'Disabled', 'stop'); }
 
-        // Wallet → cards
+        // B) Get wallet_id
         let walletId = null;
         try{
           const w = await fetch('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token}` }});
@@ -450,6 +429,7 @@
         }catch{}
         if (!walletId){ renderCards([]); return; }
 
+        // C) Fetch cards by wallet_id
         try{
           const r = await fetch(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`, {
             headers: { Authorization:`Bearer ${token}` }
@@ -462,7 +442,9 @@
             status: normalizeStatus(c.status ?? c.state),
             rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
             pass_name: c.pass_name ?? c.passName ?? null,
-            last4: pickLast4(c)
+            last4: pickLast4(c),
+            owner_id: c.user_id ?? c.owner_id ?? null,
+            passport_id: c.passport_id ?? null
           }));
 
           renderCards(normalized);
@@ -471,7 +453,7 @@
         }
       }
 
-      document.getElementById('buyTransitBtn').href = 'https://shorelink.example/';
+      document.getElementById('buyTransitBtn').href = 'https://shorelink.example/'; // placeholder
       await loadPassportAndCards();
     })();
   </script>
