@@ -280,95 +280,49 @@
 
   <script>
 (async () => {
-  const LOGIN_PAGE = "cardholder-login.html";
+  // ---------------- AUTH (your exact policy) ----------------
+  try {
+    const token = localStorage.getItem("boop_jwt");
+    if (!token) throw new Error("No token");
+    const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+    if (!res.ok) throw new Error("Unauthorized");
+    const meBase = await res.json();
+    const role = String(meBase.role || meBase.type || "").toLowerCase();
+    const allowed = new Set(["cardholder","senior","student"]);
+    if (!allowed.has(role)) throw new Error("Forbidden");
+    localStorage.setItem("boopUser", JSON.stringify(meBase));
+  } catch {
+    try { await fetch("/api/logout", { method: "POST" }); } catch {}
+    localStorage.clear();
+    location.href = "index.html";  // <-- your desired redirect
+    return;
+  }
+
+  // ---------------- Helpers ----------------
   const token = localStorage.getItem("boop_jwt");
+  const authFetch = (url, opts={}) =>
+    fetch(url, { ...opts, headers: { ...(opts.headers||{}), Authorization: `Bearer ${token}` } });
 
-  // ---------- tiny helpers ----------
-  const authFetch = (url, opts = {}) =>
-    fetch(url, {
-      ...opts,
-      headers: { ...(opts.headers || {}), Authorization: `Bearer ${token}` },
-    });
+  const titleCase = s => (s||"").split(/\s+/).map(w => w? w[0].toUpperCase()+w.slice(1).toLowerCase():"").join(" ").trim();
+  const nameFromEmail = (email="") => titleCase((email.split("@")[0]||"").replace(/[._-]+/g," ")) || "Cardholder";
 
-  const titleCase = (s = "") =>
-    s
-      .split(/\s+/)
-      .map(w => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : ""))
-      .join(" ")
-      .trim();
-
-  const nameFromEmail = (email = "") => {
-    const base = (email.split("@")[0] || "")
-      .replace(/[._-]+/g, " ")
-      .trim();
-    return titleCase(base) || "Cardholder";
-  };
-
-  const fullName = (user, fallbackEmail) => {
-    const f = (user?.first_name || "").trim();
-    const l = (user?.last_name || "").trim();
-    if (f || l) return [f, l].filter(Boolean).join(" ");
-    return nameFromEmail(user?.email || fallbackEmail);
-  };
-
-  const normType = v => {
-    const s = String(v || "").toLowerCase();
-    if (["transit", "bus", "metro", "rail"].includes(s)) return "transit";
-    if (s === "assistance") return "assistance";
-    return "spending";
-  };
-  const normStatus = v => {
-    const s = String(v || "").toLowerCase();
-    if (["pending", "review"].includes(s)) return "pending";
-    if (["disabled", "blocked", "inactive", "frozen", "closed"].includes(s)) return "disabled";
-    return "active";
-  };
-
-  // ---------- find current user (prefer /api/users/me) ----------
-  async function getMe() {
-    // 1) Prefer /api/users/me (returns first_name/last_name)
+  // Prefer first+last from /api/users/:id; fallback to email prefix
+  async function getFullUser() {
+    const meBase = JSON.parse(localStorage.getItem("boopUser")||"{}");
+    const id = meBase.id || meBase.userId;
+    if (!id) return { ...meBase, first_name: "", last_name: "" };
     try {
-      const r = await authFetch("/api/users/me");
-      if (r.ok) return await r.json();
+      const r = await authFetch(`/api/users/${encodeURIComponent(id)}`);
+      if (r.ok) {
+        const u = await r.json();
+        return { ...meBase, ...u };
+      }
     } catch {}
-
-    // 2) Fallback: /api/me -> id only, then /api/users/:id
-    try {
-      const r = await authFetch("/api/me");
-      if (!r.ok) throw new Error("no /api/me");
-      const base = await r.json(); // { id|userId, email, role, type }
-      const uid = base.id || base.userId;
-      if (!uid) throw new Error("no id in /api/me");
-      const r2 = await authFetch(`/api/users/${encodeURIComponent(uid)}`);
-      if (!r2.ok) throw new Error("no /api/users/:id");
-      return await r2.json();
-    } catch (e) {
-      return null;
-    }
+    return { ...meBase, first_name: "", last_name: "" };
   }
 
-  // ---------- guard ----------
-  if (!token) {
-    localStorage.clear();
-    window.location.href = LOGIN_PAGE;
-    return;
-  }
-
-  // ---------- get current user ----------
-  const me = await getMe();
-  if (!me) {
-    localStorage.clear();
-    window.location.href = LOGIN_PAGE;
-    return;
-  }
-  // (optional) role gate — comment these two lines if you don't want to restrict
-  const roleOK = ["cardholder", "cardholder_assistance"].includes(String(me.role || "").toLowerCase());
-  if (!roleOK) { window.location.href = LOGIN_PAGE; return; }
-
-  // ---------- wire basics ----------
+  // ---------------- Elements ----------------
   const yearEl = document.getElementById("year");
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
-
   const ownerNameEl = document.getElementById("ownerName");
   const ownerEmailEl = document.getElementById("ownerEmail");
   const passportIdEl = document.getElementById("passportId");
@@ -376,38 +330,50 @@
   const passportStatusInline = document.getElementById("passportStatusInline");
   const cardsList = document.getElementById("cardsList");
 
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
   const setPill = (el, text, kind) => {
     if (!el) return;
     el.textContent = text;
-    el.classList.remove("ok", "warn", "stop");
+    el.classList.remove("ok","warn","stop");
     if (kind) el.classList.add(kind);
   };
+  const normStatus = v => {
+    const s = String(v||"").toLowerCase();
+    if (["pending","review"].includes(s)) return "pending";
+    if (["disabled","blocked","inactive","frozen","closed"].includes(s)) return "disabled";
+    return "active";
+  };
+  const normType = v => {
+    const s = String(v||"").toLowerCase();
+    if (["transit","bus","metro","rail"].includes(s)) return "transit";
+    if (s==="assistance") return "assistance";
+    return "spending";
+  };
 
-  // fill owner info (first + last)
+  // ---------------- Load me + show name ----------------
+  const me = await getFullUser();
+  const fullName = (me.first_name?.trim() || me.last_name?.trim())
+    ? [me.first_name||"", me.last_name||""].filter(Boolean).join(" ").trim()
+    : nameFromEmail(me.email);
+
+  if (ownerNameEl) ownerNameEl.textContent = fullName || "Cardholder";
   if (ownerEmailEl) ownerEmailEl.textContent = me.email || "—";
-  if (ownerNameEl) ownerNameEl.textContent = fullName(me, me.email);
 
-  // ---------- passport (optional) ----------
+  // ---------------- Passport (optional) ----------------
   try {
     const pr = await authFetch("/api/passport/mine");
     if (pr.ok) {
       const p = await pr.json();
       if (passportIdEl) passportIdEl.textContent = p?.passport_id || me?.passport_id || "—";
       const st = normStatus(p?.status || "active");
-      if (st === "active") {
-        setPill(passportStatus, "Active", "ok");
-        setPill(passportStatusInline, "Active", "ok");
-      } else if (st === "pending") {
-        setPill(passportStatus, "Pending", "warn");
-        setPill(passportStatusInline, "Pending", "warn");
-      } else {
-        setPill(passportStatus, "Disabled", "stop");
-        setPill(passportStatusInline, "Disabled", "stop");
-      }
+      if (st === "active") { setPill(passportStatus,"Active","ok"); setPill(passportStatusInline,"Active","ok"); }
+      else if (st === "pending") { setPill(passportStatus,"Pending","warn"); setPill(passportStatusInline,"Pending","warn"); }
+      else { setPill(passportStatus,"Disabled","stop"); setPill(passportStatusInline,"Disabled","stop"); }
     }
   } catch {}
 
-  // ---------- wallet id ----------
+  // ---------------- Wallet ----------------
   let walletId = null;
   try {
     const wr = await authFetch("/api/wallets/mine");
@@ -421,7 +387,7 @@
     return;
   }
 
-  // ---------- fetch cards ----------
+  // ---------------- Cards ----------------
   let cards = [];
   try {
     const cr = await authFetch(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`);
@@ -432,20 +398,18 @@
           type: normType(c.type ?? c.card_type ?? c.kind),
           status: normStatus(c.status ?? c.state),
           rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
-          pass_name: c.pass_name ?? c.passName ?? null,
+          pass_name: c.pass_name ?? c.passName ?? null
         }));
       }
     }
   } catch {}
 
-  // ---------- render ----------
   function spendingCardHTML(name) {
-    // Pure inline styles so we don't touch global CSS.
-    // Uses your white card background: assets/payulot-card.png
+    // White Payulot card background + black text
     return `
       <div style="
         width:min(440px,100%);
-        aspect-ratio:1.586;         /* ~85.6mm x 54mm */
+        aspect-ratio:1.586;
         position:relative;
         border-radius:16px;
         overflow:hidden;
@@ -456,10 +420,8 @@
         <div style="
           position:absolute; left:16px; top:14px;
           font-weight:700; font-size:14px; letter-spacing:.4px;
-          color:#111; text-transform:uppercase;
-          text-shadow:none;
+          color:#111; text-transform:uppercase; text-shadow:none;
         ">Spending</div>
-
         <div style="
           position:absolute; left:16px; right:16px; bottom:16px;
           font-weight:700; font-size:18px; letter-spacing:.3px;
@@ -471,11 +433,13 @@
   }
 
   function transitTileHTML(card) {
+    const label = card.status[0].toUpperCase() + card.status.slice(1);
+    const pill = card.status === "active" ? "ok" : card.status === "pending" ? "warn" : "stop";
     return `
       <div class="tile">
         <div class="row" style="justify-content:space-between;align-items:center;">
           <h3 style="margin:0;">Transit Card</h3>
-          <span class="pill ${card.status === 'active' ? 'ok' : card.status === 'pending' ? 'warn' : 'stop'}">${card.status[0].toUpperCase() + card.status.slice(1)}</span>
+          <span class="pill ${pill}">${label}</span>
         </div>
         <div class="meta">${card.pass_name || "Transit"}</div>
         <div class="divider"></div>
@@ -491,40 +455,32 @@
 
   function renderCards(list) {
     if (!cardsList) return;
-    if (!Array.isArray(list) || list.length === 0) {
+    if (!Array.isArray(list) || !list.length) {
       cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
       return;
     }
-
-    const name = fullName(me, me.email);
-    const pieces = list.map(card => {
-      if (card.type === "transit") return transitTileHTML(card);
-      // spending or assistance -> show visual card
-      return spendingCardHTML(name);
-    });
-
+    const pieces = list.map(card => (card.type === "transit" ? transitTileHTML(card) : spendingCardHTML(fullName)));
     cardsList.innerHTML = pieces.join("");
   }
 
   renderCards(cards);
 
-  // ---------- misc: transit link + logout wiring ----------
+  // ---------------- Nav / logout (optional wiring) ----------------
   const transitBtn = document.getElementById("buyTransitBtn");
   if (transitBtn) transitBtn.href = "https://shorelink.example/";
 
-  function attachLogout(el) {
+  function attachLogout(el){
     if (!el) return;
-    el.addEventListener("click", async (e) => {
+    el.addEventListener("click", async (e)=>{
       e.preventDefault();
-      try { await fetch("/api/logout", { method: "POST" }); } catch {}
+      try { await fetch("/api/logout", { method:"POST" }); } catch {}
       localStorage.clear();
-      window.location.href = LOGIN_PAGE;
+      location.href = "index.html";
     });
   }
   attachLogout(document.getElementById("logoutBtn"));
   attachLogout(document.getElementById("logoutBtnMobile"));
 
-  // ---------- mobile menu (optional) ----------
   const hamburger = document.getElementById("hamburger");
   const panel = document.getElementById("mobileMenu");
   const overlay = document.getElementById("navOverlay");
