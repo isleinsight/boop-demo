@@ -17,6 +17,23 @@
       --nav:#102a43;
       --green:#10b981;
     }
+    /* Fixed decorative glows (don’t scroll) */
+  body::before,
+  body::after{
+    content:""; position:fixed; z-index:-1; pointer-events:none;
+  }
+  /* Top-right blue bubble (fixed) */
+  body::before{
+    top:-220px; right:-220px; width:1100px; height:800px;
+    background: radial-gradient(closest-side, rgba(47,128,237,.32), transparent 70%);
+    filter: blur(0px);
+  }
+  /* Bottom-left green bubble (fixed to bottom) */
+  body::after{
+    bottom:-260px; left:-260px; width:1200px; height:900px;
+    background: radial-gradient(closest-side, rgba(16,185,129,.26), transparent 70%);
+    filter: blur(0px);
+  }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
