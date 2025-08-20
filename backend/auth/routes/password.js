@@ -246,205 +246,208 @@
   </footer>
 
   <!-- ALL SCRIPTS -->
-  <script>
-    (async function(){
-      // ---------- Permissions ----------
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
-        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-        const meData = await res.json();
-        if (!res.ok) throw new Error(meData?.error || "Unauthorized");
-        const role = (meData.role||"").toLowerCase();
-        const type = (meData.type||"").toLowerCase();
-        const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
-        if (!ok) throw new Error("Not a cardholder");
-        localStorage.setItem("boopUser", JSON.stringify(meData));
-      } catch {
+<script>
+  (async function(){
+    // ---------- Permissions ----------
+    try {
+      const token = localStorage.getItem("boop_jwt");
+      if (!token) throw new Error("No token");
+      const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+      const meData = await res.json();
+      if (!res.ok) throw new Error(meData?.error || "Unauthorized");
+      const role = (meData.role||"").toLowerCase();
+      const type = (meData.type||"").toLowerCase();
+      const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
+      if (!ok) throw new Error("Not a cardholder");
+      localStorage.setItem("boopUser", JSON.stringify(meData));
+    } catch {
+      localStorage.clear();
+      window.location.href = "cardholder-login.html";
+      return;
+    }
+
+    // ---------- Nav / Footer ----------
+    document.getElementById('year').textContent = new Date().getFullYear();
+    const hamburger = document.getElementById('hamburger');
+    const panel = document.getElementById('mobileMenu');
+    const overlay = document.getElementById('navOverlay');
+    function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+    function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+    hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
+    overlay?.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+    function attachLogout(el){
+      if (!el) return;
+      el.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
         localStorage.clear();
-        window.location.href = "cardholder-login.html";
+        window.location.href = 'cardholder-login.html';
+      });
+    }
+    attachLogout(document.getElementById('logoutBtn'));
+    attachLogout(document.getElementById('logoutBtnMobile'));
+
+    // ---------- Data + Rendering ----------
+    const token = localStorage.getItem("boop_jwt");
+    const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
+
+    const passportIdEl = document.getElementById('passportId');
+    const passportStatus = document.getElementById('passportStatus');
+    const passportStatusInline = document.getElementById('passportStatusInline');
+    const ownerNameEl = document.getElementById('ownerName');
+    const ownerEmailEl = document.getElementById('ownerEmail');
+    const cardsList = document.getElementById('cardsList');
+
+    ownerEmailEl.textContent = me?.email || '—';
+    const first = me?.first_name || (me?.name?.split?.(' ')[0]) || (me?.email ? me.email.split('@')[0] : '—');
+    const last = me?.last_name || '';
+    const ownerFullName = `${first}${last ? ' ' + last : ''}`;
+    ownerNameEl.textContent = ownerFullName;
+
+    function setStatus(pillEl, text, kind){
+      pillEl.textContent = text;
+      pillEl.classList.remove('ok','warn','stop');
+      if (kind) pillEl.classList.add(kind);
+    }
+
+    // Normalizers
+    function pickLast4(c){
+      const direct = c.last4 ?? c.last_four ?? c.pan_last4 ?? c.tail ?? c.lastDigits;
+      if (direct && String(direct).match(/^\d{4}$/)) return String(direct);
+      const masked = c.masked ?? c.mask ?? c.card_mask ?? c.pan_mask;
+      if (masked){ const m = String(masked).match(/(\d{4})\D*$/); if (m) return m[1]; }
+      return null;
+    }
+    const normalizeType = v => (['transit','bus','metro','rail'].includes((v||'').toLowerCase()) ? 'transit' : 'spending');
+    function normalizeStatus(v){
+      const s = (v||'').toLowerCase();
+      if (['active','ok','enabled'].includes(s)) return 'active';
+      if (['pending','review'].includes(s)) return 'pending';
+      if (['disabled','blocked','inactive','frozen','closed'].includes(s)) return 'disabled';
+      return 'active';
+    }
+    function normalizeCard(c){
+      return {
+        type: normalizeType(c.type ?? c.card_type ?? c.kind ?? c.category),
+        status: normalizeStatus(c.status ?? c.state ?? c.card_status),
+        rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
+        pass_name: c.pass_name ?? c.passName ?? null,
+        last4: pickLast4(c),
+        owner_id: c.user_id ?? c.owner_id ?? c.userId ?? c.ownerId ?? null,
+        passport_id: c.passport_id ?? c.passportId ?? null,
+        wallet_id: c.wallet_id ?? c.walletId ?? null
+      };
+    }
+
+    // Tiles
+    function spendingCardHTML(card){
+      const status = card.status;
+      const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
+      const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+      const ending = card.last4 ? `Card ending in ${card.last4}` : '';
+      return `
+        <div class="tile">
+          <div class="row">
+            <h3>Spending Card</h3>
+            <span class="pill ${pillKind}">${statusLabel}</span>
+          </div>
+          <div class="card-art"><div class="card-name">${ownerFullName}</div></div>
+          ${ending ? `<div class="card-detail">${ending}</div>` : ``}
+        </div>`;
+    }
+
+    function transitCardHTML(card){
+      const status = card.status;
+      const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
+      const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+      const passName = card.pass_name || 'Transit';
+      return `
+        <div class="tile">
+          <div class="row">
+            <h3>Transit Card</h3>
+            <span class="pill ${pillKind}">${statusLabel}</span>
+          </div>
+          <div class="meta">${passName}</div>
+          <div class="divider"></div>
+          <div class="row">
+            <div>
+              <span class="label">Rides remaining</span>
+              <div class="value">${Number(card.rides_remaining||0)}</div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderCards(cards){
+      if (!Array.isArray(cards) || !cards.length){
+        cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
         return;
       }
+      cardsList.innerHTML = cards.map(c => c.type === 'transit' ? transitCardHTML(c) : spendingCardHTML(c)).join('');
+    }
 
-      // ---------- Nav / Footer ----------
-      document.getElementById('year').textContent = new Date().getFullYear();
+    async function loadPassportAndCards(){
+      // 1) Passport (for status/ID only)
+      let passport = null;
+      try{
+        const r = await fetch('/api/passport/mine', { headers:{ Authorization:`Bearer ${token}` }});
+        if (r.ok){ passport = await r.json(); }
+      }catch{}
 
-      const hamburger = document.getElementById('hamburger');
-      const panel = document.getElementById('mobileMenu');
-      const overlay = document.getElementById('navOverlay');
-      function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
-      function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
-      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
-      overlay?.addEventListener('click', closeMenu);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+      const pid = passport?.passport_id || me?.passport_id || '—';
+      passportIdEl.textContent = pid;
+      const pstatus = (passport?.status || 'active').toLowerCase();
+      if (pstatus === 'active'){ setStatus(passportStatus, 'Active', 'ok'); setStatus(passportStatusInline, 'Active', 'ok'); }
+      else if (pstatus === 'pending'){ setStatus(passportStatus, 'Pending', 'warn'); setStatus(passportStatusInline, 'Pending', 'warn'); }
+      else { setStatus(passportStatus, 'Disabled', 'stop'); setStatus(passportStatusInline, 'Disabled', 'stop'); }
 
-      function attachLogout(el){
-        if (!el) return;
-        el.addEventListener('click', async (e)=>{
-          e.preventDefault();
-          try { await fetch('/api/logout', { method:'POST' }); } catch {}
-          localStorage.clear();
-          window.location.href = 'cardholder-login.html';
-        });
-      }
-      attachLogout(document.getElementById('logoutBtn'));
-      attachLogout(document.getElementById('logoutBtnMobile'));
+      // 2) CARDS
+      // Prefer embedded on passport; else try /api/cards/mine; else fall back to /api/cards?wallet_id=...
+      let rawCards = Array.isArray(passport?.cards) ? passport.cards : null;
 
-      // ---------- Data + Rendering ----------
-      const token = localStorage.getItem("boop_jwt");
-      const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
-
-      const passportIdEl = document.getElementById('passportId');
-      const passportStatus = document.getElementById('passportStatus');
-      const passportStatusInline = document.getElementById('passportStatusInline');
-      const ownerNameEl = document.getElementById('ownerName');
-      const ownerEmailEl = document.getElementById('ownerEmail');
-      const cardsList = document.getElementById('cardsList');
-
-      ownerEmailEl.textContent = me?.email || '—';
-      const first = me?.first_name || (me?.name?.split?.(' ')[0]) || (me?.email ? me.email.split('@')[0] : '—');
-      const last = me?.last_name || '';
-      const ownerFullName = `${first}${last ? ' ' + last : ''}`;
-      ownerNameEl.textContent = ownerFullName;
-
-      function setStatus(pillEl, text, kind){
-        pillEl.textContent = text;
-        pillEl.classList.remove('ok','warn','stop');
-        if (kind) pillEl.classList.add(kind);
-      }
-
-      // Helpers to normalize cards + optional last4
-      function pickLast4(c){
-        const direct = c.last4 ?? c.last_four ?? c.pan_last4 ?? c.tail ?? c.lastDigits;
-        if (direct && String(direct).match(/^\d{4}$/)) return String(direct);
-        const masked = c.masked ?? c.mask ?? c.card_mask ?? c.pan_mask;
-        if (masked){ const m = String(masked).match(/(\d{4})\D*$/); if (m) return m[1]; }
-        return null;
-      }
-      const normalizeType = v => (['transit','bus','metro','rail'].includes((v||'').toLowerCase()) ? 'transit' : 'spending');
-      function normalizeStatus(v){
-        const s = (v||'').toLowerCase();
-        if (['active','ok','enabled'].includes(s)) return 'active';
-        if (['pending','review'].includes(s)) return 'pending';
-        if (['disabled','blocked','inactive','frozen','closed'].includes(s)) return 'disabled';
-        return 'active';
-      }
-      function normalizeCard(c){
-        return {
-          type: normalizeType(c.type ?? c.card_type ?? c.kind ?? c.category),
-          status: normalizeStatus(c.status ?? c.state ?? c.card_status),
-          rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
-          pass_name: c.pass_name ?? c.passName ?? null,
-          last4: pickLast4(c),
-          owner_id: c.user_id ?? c.owner_id ?? c.userId ?? c.ownerId,
-          passport_id: c.passport_id ?? c.passportId ?? null
-        };
-      }
-
-      // Spending card tile with PNG + name overlay
-      function spendingCardHTML(card){
-        const status = card.status;
-        const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
-        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-        const ending = card.last4 ? `Card ending in ${card.last4}` : '';
-
-        return `
-          <div class="tile">
-            <div class="row">
-              <h3>Spending Card</h3>
-              <span class="pill ${pillKind}">${statusLabel}</span>
-            </div>
-
-            <div class="card-art">
-              <div class="card-name">${ownerFullName}</div>
-            </div>
-
-            ${ending ? `<div class="card-detail">${ending}</div>` : ``}
-          </div>
-        `;
-      }
-
-      function transitCardHTML(card){
-        const status = card.status;
-        const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
-        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-        const passName = card.pass_name || 'Transit';
-
-        return `
-          <div class="tile">
-            <div class="row">
-              <h3>Transit Card</h3>
-              <span class="pill ${pillKind}">${statusLabel}</span>
-            </div>
-            <div class="meta">${passName}</div>
-            <div class="divider"></div>
-            <div class="row">
-              <div>
-                <span class="label">Rides remaining</span>
-                <div class="value">${Number(card.rides_remaining||0)}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
-      function renderCards(cards){
-        if (!Array.isArray(cards) || !cards.length){
-          cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
-          return;
-        }
-        cardsList.innerHTML = cards.map(c => c.type === 'transit' ? transitCardHTML(c) : spendingCardHTML(c)).join('');
-      }
-
-      async function loadPassportAndCards(){
-        let passport = null;
+      if (!rawCards){
+        // try /api/cards/mine
         try{
-          const r = await fetch('/api/passport/mine', { headers:{ Authorization:`Bearer ${token}` }});
-          if (r.ok){ passport = await r.json(); }
+          const r1 = await fetch('/api/cards/mine', { headers:{ Authorization:`Bearer ${token}` }});
+          if (r1.ok){
+            const list = await r1.json();
+            if (Array.isArray(list)) rawCards = list;
+          }
         }catch{}
+      }
 
-        const pid = passport?.passport_id || me?.passport_id || '—';
-        passportIdEl.textContent = pid;
-
-        const pstatus = (passport?.status || 'active').toLowerCase();
-        if (pstatus === 'active'){
-          setStatus(passportStatus, 'Active', 'ok');
-          setStatus(passportStatusInline, 'Active', 'ok');
-        } else if (pstatus === 'pending'){
-          setStatus(passportStatus, 'Pending', 'warn');
-          setStatus(passportStatusInline, 'Pending', 'warn');
-        } else {
-          setStatus(passportStatus, 'Disabled', 'stop');
-          setStatus(passportStatusInline, 'Disabled', 'stop');
-        }
-
-        // Prefer cards embedded on passport, else GET /api/cards/mine
-        let rawCards = Array.isArray(passport?.cards) ? passport.cards : null;
-        if (!rawCards){
+      if (!rawCards){
+        // final fallback: use wallet_id route your backend exposes
+        const wid = me?.wallet_id || me?.walletId;
+        if (wid){
           try{
-            const rc = await fetch('/api/cards/mine', { headers:{ Authorization:`Bearer ${token}` }});
-            const list = await rc.json();
+            const r2 = await fetch(`/api/cards?wallet_id=${encodeURIComponent(wid)}`, { headers:{ Authorization:`Bearer ${token}` }});
+            const list = await r2.json();
             if (Array.isArray(list)) rawCards = list;
           }catch{}
         }
-
-        const normalized = Array.isArray(rawCards) ? rawCards.map(normalizeCard) : [];
-
-        // If backend sends more than the user's cards, filter by owner/passport
-        const myId = me?.id || me?.user_id;
-        const filtered = normalized.filter(c=>{
-          if (pid && c.passport_id) return String(c.passport_id) === String(pid);
-          if (myId && c.owner_id)   return String(c.owner_id) === String(myId);
-          return true;
-        });
-
-        renderCards(filtered);
       }
 
-      document.getElementById('buyTransitBtn').href = 'https://shorelink.example/';
+      const normalized = Array.isArray(rawCards) ? rawCards.map(normalizeCard) : [];
 
-      await loadPassportAndCards();
-    })();
-  </script>
+      // Don’t filter out valid rows by passport_id if your cards table doesn’t store it.
+      // Filter by wallet_id first, else by owner_id (if present).
+      const myWallet = me?.wallet_id || me?.walletId;
+      const myId = me?.id || me?.user_id;
+      const filtered = normalized.filter(c=>{
+        if (myWallet && c.wallet_id) return String(c.wallet_id) === String(myWallet);
+        if (myId && c.owner_id)     return String(c.owner_id) === String(myId);
+        return true;
+      });
+
+      renderCards(filtered);
+    }
+
+    document.getElementById('buyTransitBtn').href = 'https://shorelink.example/';
+    await loadPassportAndCards();
+  })();
+</script>
 </body>
 </html>
