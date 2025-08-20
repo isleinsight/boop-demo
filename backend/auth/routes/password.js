@@ -38,7 +38,7 @@ function normalizeEmail(e) {
 
 // Use a dark header so your white logo is visible
 function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
-  const logoUrl = `${APP_URL}/assets/Boop-Logo.png`;
+  const logoUrl = `${APP_URL}/assets/logo-white.png`;
   const safeIntro = intro || '';
   const safeFooter = footerNote || '';
 
