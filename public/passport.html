@@ -124,17 +124,29 @@
         linear-gradient(135deg, rgba(47,128,237,.35), rgba(16,185,129,.35)); /* fallback if no image */
       backdrop-filter:saturate(1.2);
     }
-    .card-chip{
-      position:absolute; top:14px; left:14px;
-      width:38px; height:28px; border-radius:6px;
-      background:linear-gradient(180deg,#e6d9a6,#bcae72); opacity:.85;
-      border:1px solid rgba(0,0,0,.25);
-    }
-    .card-name{
-      position:absolute; left:16px; bottom:14px;
-      font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-      font-size:.95rem; text-shadow:0 1px 0 rgba(0,0,0,.35);
-    }
+    .card-chip {
+  position: absolute;
+  bottom: 50px;   /* was top:14px */
+  left: 20px;
+  width: 42px;
+  height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #e6d9a6, #bcae72);
+  opacity: .9;
+  border: 1px solid rgba(0,0,0,.25);
+}
+
+.card-name {
+  position: absolute;
+  left: 20px;
+  bottom: 16px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: .95rem;
+  color: #111;       /* make text black */
+  text-shadow: none; /* remove white shadow */
+}
     .card-badge{
       position:absolute; right:12px; top:12px;
       font-size:.72rem; font-weight:800; letter-spacing:.06em;
