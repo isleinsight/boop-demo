@@ -284,7 +284,7 @@
   try {
     const token = localStorage.getItem("boop_jwt");
     if (!token) throw new Error("No token");
-    const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+    const res = await fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` }});
     if (!res.ok) throw new Error("Unauthorized");
     const meBase = await res.json();
     const role = String(meBase.role || meBase.type || "").toLowerCase();
