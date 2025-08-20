@@ -11,6 +11,9 @@ const path = require('path');
 const { exec } = require('child_process');
 const { authenticateToken } = require('./auth/middleware/authMiddleware');
 
+// ⬇️ NEW: import your DB pool so we can fetch names for /api/me
+const pool = require('./db'); // if your db file is elsewhere, adjust the path
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -46,8 +49,7 @@ mount('/api/wallets', './auth/routes/wallets');
 mount('/api/vendors', './auth/routes/vendors'); // admin vendors list/update/delete
 mount('/api/passport', './auth/routes/passport', 'passport');
 
-
-// ✅ ADD THIS: singular vendor API used by the vendor portal (e.g. /api/vendor/transactions/report)
+// ✅ singular vendor API used by the vendor portal (e.g. /api/vendor/transactions/report)
 mount('/api/vendor', './auth/routes/vendors', 'vendor'); 
 
 mount('/api/students', './auth/routes/students');
@@ -68,10 +70,34 @@ mount('/api/treasury', './auth/routes/treasury', 'treasury');
 // Admin actions
 mount('/api/admin-actions', './auth/routes/admin-actions');
 
-// Who am I
-app.get('/api/me', authenticateToken, (req, res) => {
-  const { id, userId, email, role, type } = req.user;
-  res.json({ id: userId || id, email, role, type });
+// ───────────────── Who am I (returns names) ─────────────────
+// ⬇️ REPLACED: now queries DB so you get first_name + last_name (and more)
+app.get('/api/me', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    if (!userId) return res.status(401).json({ message: 'Not authenticated' });
+
+    const { rows } = await pool.query(
+      `SELECT id, email, role, type, first_name, last_name, wallet_id, force_signed_out
+       FROM users
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (!rows.length) return res.status(404).json({ message: 'User not found' });
+
+    const me = rows[0];
+
+    // If you use this to force logouts, respect it
+    if (me.force_signed_out) {
+      return res.status(401).json({ message: 'Signed out' });
+    }
+
+    res.json(me); // includes first_name + last_name ✅
+  } catch (e) {
+    console.error('Error in /api/me:', e.message);
+    res.status(500).json({ message: 'Failed to load user' });
+  }
 });
 
 // Health
