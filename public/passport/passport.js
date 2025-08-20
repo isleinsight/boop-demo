@@ -1,17 +1,28 @@
 // /public/passport/passport.js
-(function(){
+(function () {
+  // ---------- config ----------
+  // If your backend expects cents (integers), flip this to true.
+  const BACKEND_EXPECTS_CENTS = false;
+
   // ---------- helpers ----------
-  const $ = (id)=>document.getElementById(id);
-  const show = (el)=>{ el && (el.style.display = ""); };
-  const hide = (el)=>{ el && (el.style.display = "none"); };
+  const $ = (id) => document.getElementById(id);
+  const show = (el) => { el && (el.style.display = ""); };
+  const hide = (el) => { el && (el.style.display = "none"); };
+
   const setStatus = (el, msg, kind) => {
     if (!el) return;
     el.textContent = msg;
     el.className = "status" + (kind ? " " + kind : "");
     show(el);
   };
+
   const fromQS = (k) => {
     try { return new URL(location.href).searchParams.get(k) || ""; } catch { return ""; }
+  };
+
+  const fmtMoney = (a) => {
+    const n = Number(a || 0);
+    return "BMD $" + n.toFixed(2);
   };
 
   // Accepted roles/types for this page
@@ -22,7 +33,7 @@
   ]);
 
   // Normalize role/type into a key we use for the UI
-  function roleKey(me){
+  function roleKey(me) {
     const r = String(me?.role || "").toLowerCase().trim();
     const t = String(me?.type || "").toLowerCase().trim();
     const v = r || t;
@@ -33,7 +44,7 @@
     return "unknown";
   }
 
-  function fullName(me){
+  function fullName(me) {
     const first = (me?.first_name || "").trim();
     const last  = (me?.last_name  || "").trim();
     const emailFallback = (me?.email || "").split("@")[0] || "User";
@@ -42,164 +53,188 @@
   }
 
   // Fetch identity:
-  //   1) /api/me  → validates token and gets id/email/role/type
-  //   2) /api/users/me → enrich with first_name/last_name if available
-  async function fetchMe(){
+  //   1) /api/me            → validates token and gets id/email/role/type
+  //   2) /api/users/me      → enrich with first_name/last_name if available
+  async function fetchMe() {
     const token = localStorage.getItem("boop_jwt");
     if (!token) throw new Error("No token");
 
-    // 1) Validate / get base fields
-    const meRes = await fetch("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
+    // 1) base
+    const meRes = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
     if (!meRes.ok) {
-      const errPayload = await meRes.json().catch(()=>({}));
+      const errPayload = await meRes.json().catch(() => ({}));
       throw new Error(errPayload?.message || "Unauthorized");
     }
     const basic = await meRes.json();
-    console.debug("[passport] /api/me →", basic);
 
-    // 2) Try to enrich with names
+    // 2) enrich names
     try {
-      const fullRes = await fetch("/api/users/me", { headers:{ Authorization:`Bearer ${token}` }});
+      const fullRes = await fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` } });
       if (fullRes.ok) {
         const more = await fullRes.json();
-        console.debug("[passport] /api/users/me →", more);
         return { ...basic, ...more };
       }
-    } catch (_) {
-      // ignore; we’ll just use basic
-    }
+    } catch (_) {}
     return basic;
   }
 
-  function setRoleView(active){
-    // hide all
-    ["view-vendor","view-health","view-transit"].forEach(id => {
+  function setRoleView(active) {
+    ["view-vendor", "view-health", "view-transit"].forEach((id) => {
       const el = $(id);
       if (el) el.classList.remove("active");
     });
-    if (active === "vendor")   $("view-vendor")?.classList.add("active");
-    if (active === "health")   $("view-health")?.classList.add("active");
-    if (active === "transit")  $("view-transit")?.classList.add("active");
+    if (active === "vendor") $("view-vendor")?.classList.add("active");
+    if (active === "health") $("view-health")?.classList.add("active");
+    if (active === "transit") $("view-transit")?.classList.add("active");
   }
 
   // ---------- boot ----------
-  document.addEventListener("DOMContentLoaded", async ()=>{
+  document.addEventListener("DOMContentLoaded", async () => {
     $("year") && ($("year").textContent = new Date().getFullYear());
 
     // auth + identity
     try {
       const me = await fetchMe();
 
-      // Normalize and gate by role/type
       const rawRole = String(me.role || me.type || "").toLowerCase().trim();
-      console.debug("[passport] raw role/type:", me.role, me.type, "→ normalized:", rawRole);
-
       if (!ALLOWED.has(rawRole)) {
-        console.warn("[passport] role not allowed on this page:", rawRole);
-        // If you want to *show* the shell instead of redirect, comment the next 3 lines:
-        try { await fetch("/api/logout", { method:"POST" }); } catch {}
+        try { await fetch("/api/logout", { method: "POST" }); } catch {}
         localStorage.clear();
         location.href = "/index.html";
         return;
       }
 
-      // Enrich and store
-      const enriched = me;
-      localStorage.setItem("boopUser", JSON.stringify(enriched));
+      localStorage.setItem("boopUser", JSON.stringify(me));
 
-      const who  = fullName(enriched);
-      const role = roleKey(enriched);
+      const who = fullName(me);
+      const role = roleKey(me);
 
-      $("signedInAs")  && ($("signedInAs").textContent  = `Signed in as ${who}`);
-      $("roleBadge")   && ($("roleBadge").textContent   = role);
-      $("whoBadge")    && ($("whoBadge").textContent    = who);
+      $("signedInAs") && ($("signedInAs").textContent = `Signed in as ${who}`);
+      $("roleBadge") && ($("roleBadge").textContent = role);
+      $("whoBadge") && ($("whoBadge").textContent = who);
 
       // Prefill PID from URL if present
-      const pidEl = $("pid");
       const pidQS = fromQS("pid");
-      if (pidQS && pidEl) pidEl.value = pidQS;
+      if (pidQS && $("pid")) $("pid").value = pidQS;
 
-      // show the right view
       setRoleView(role);
-
-    } catch (err){
-      console.error("[passport] auth error:", err?.message || err);
-      // ONLY on true auth failure do we bounce home
-      try { await fetch("/api/logout", { method:"POST" }); } catch {}
+    } catch (err) {
+      try { await fetch("/api/logout", { method: "POST" }); } catch {}
       localStorage.clear();
       location.href = "/index.html";
       return;
     }
 
     // ----- Common controls -----
-    $("btnPaste")?.addEventListener("click", async ()=>{
+    $("btnPaste")?.addEventListener("click", async () => {
       const st = $("commonStatus");
-      try{
+      try {
         const text = await navigator.clipboard.readText();
-        if (text) $("pid").value = text.trim();
-      }catch{
+        if (text && $("pid")) $("pid").value = text.trim();
+      } catch {
         setStatus(st, "Clipboard read failed. Paste manually.", "warn");
       }
     });
 
-    $("btnLoad")?.addEventListener("click", ()=>{
+    $("btnLoad")?.addEventListener("click", () => {
       const pid = $("pid")?.value.trim();
-      if (!pid){
-        return setStatus($("commonStatus"), "Please enter a Passport ID.", "err");
-      }
+      if (!pid) return setStatus($("commonStatus"), "Please enter a Passport ID.", "err");
       hide($("commonStatus"));
-      // (optional) fetch passport meta here later
+      // (optional) fetch passport meta here
     });
 
-    $("logoutLink")?.addEventListener("click", async (e)=>{
+    $("logoutLink")?.addEventListener("click", async (e) => {
       e.preventDefault();
-      try { await fetch("/api/logout", { method:"POST" }); } catch {}
+      try { await fetch("/api/logout", { method: "POST" }); } catch {}
       localStorage.clear();
       location.href = "/index.html";
     });
 
-    // ----- Vendor actions (wire to your endpoint when ready) -----
-    $("v_chargeBtn")?.addEventListener("click", async ()=>{
-      const pid  = $("pid")?.value.trim();
-      const amt  = parseFloat($("v_amount")?.value);
-      const note = $("v_note")?.value || "";
-      const st   = $("v_status");
+    // ----- Vendor actions → REAL CALL -----
+    $("v_chargeBtn")?.addEventListener("click", async () => {
+      const pidInput = $("pid");
+      const amtInput = $("v_amount");
+      const noteInput = $("v_note");
+      const st = $("v_status");
+      const receipt = $("v_receipt"); // optional container if you have it
 
-      if (!pid)  return setStatus(st, "Passport ID required.", "err");
+      const pid = (pidInput?.value || "").trim();
+      const amt = parseFloat(amtInput?.value || "");
+      const note = noteInput?.value || "";
+
+      if (!pid) return setStatus(st, "Passport ID required.", "err");
       if (!Number.isFinite(amt) || amt <= 0) return setStatus(st, "Enter a valid amount.", "err");
 
-      // Example wiring (uncomment when your endpoint is ready):
-      /*
-      try{
-        hide(st);
+      hide(st);
+      if (receipt) hide(receipt);
+
+      // disable while processing
+      if ($("v_chargeBtn")) $("v_chargeBtn").disabled = true;
+      if (amtInput) amtInput.disabled = true;
+      if (noteInput) noteInput.disabled = true;
+      if (pidInput) pidInput.disabled = true;
+
+      try {
         const token = localStorage.getItem("boop_jwt");
+        const payload = BACKEND_EXPECTS_CENTS
+          ? { passport_id: pid, amount_cents: Math.round(amt * 100), note }
+          : { passport_id: pid, amount: amt, note };
+
         const res = await fetch("/api/vendor/passport-charge", {
-          method:"POST",
-          headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` },
-          body: JSON.stringify({ passport_id: pid, amount: amt, note })
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
         });
-        const payload = await res.json().catch(()=>({}));
-        if (!res.ok) throw new Error(payload?.message || payload?.error || res.status);
+
+        // Try to parse JSON
+        let body = {};
+        try { body = await res.json(); } catch {}
+
+        if (!res.ok) {
+          // Re-enable for retry on error
+          if ($("v_chargeBtn")) $("v_chargeBtn").disabled = false;
+          if (amtInput) amtInput.disabled = false;
+          if (noteInput) noteInput.disabled = false;
+          if (pidInput) pidInput.disabled = false;
+
+          throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
+        }
+
+        // Success → show receipt info if you have fields for it
+        const ref = body.reference_code || body.reference || "—";
+        const when = new Date();
         setStatus(st, "Charge completed.", "ok");
-      }catch(err){
+
+        // Example: populate a receipt block (add these elements in HTML if you want)
+        if ($("r_status")) $("r_status").textContent = "Success";
+        if ($("r_amount")) $("r_amount").textContent = fmtMoney(amt);
+        if ($("r_pid")) $("r_pid").textContent = pid;
+        if ($("r_ref")) $("r_ref").textContent = ref;
+        if ($("r_time")) $("r_time").textContent = when.toLocaleString();
+        if (receipt) show(receipt);
+
+        // Lock page after success so it’s one-shot
+        $("v_chargeBtn") && ($("v_chargeBtn").disabled = true);
+
+      } catch (err) {
         setStatus(st, `❌ ${err.message || err}`, "err");
       }
-      */
-      // demo only:
-      setStatus(st, "(demo) Charge completed.", "ok");
     });
 
-    // ----- Transit actions -----
-    $("t_validateBtn")?.addEventListener("click", async ()=>{
-      const pid  = $("pid")?.value.trim();
+    // ----- Transit actions (still demo until you wire backend) -----
+    $("t_validateBtn")?.addEventListener("click", async () => {
+      const pid = $("pid")?.value.trim();
       const fare = parseFloat($("t_fare")?.value);
       const mode = $("t_mode")?.value;
-      const st   = $("t_status");
+      const st = $("t_status");
 
       if (!pid)  return setStatus(st, "Passport ID required.", "err");
       if (!Number.isFinite(fare) || fare < 0) return setStatus(st, "Enter a valid fare.", "err");
 
-      // Example wiring when transit endpoint exists
+      // TODO: POST to your transit endpoint when ready
       setStatus(st, `(demo) ${mode} fare deducted: ${fare.toFixed(2)}`, "ok");
     });
   });
