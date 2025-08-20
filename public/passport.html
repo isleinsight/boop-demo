@@ -384,27 +384,56 @@
         return null;
       }
 
-      // Visual card HTML
-      function visualCardHTML({ kind='spending', status='active', name=fullName }={}){
+      // Card visual HTML (uses fullName)
+      function cardVisualHTML(tag){
+        return `
+          <div class="card-visual" role="img" aria-label="${tag} card">
+            <div class="card-tag">${tag}</div>
+            <div class="card-chip" aria-hidden="true"></div>
+            <div class="card-name">${fullName || ''}</div>
+          </div>
+        `;
+      }
+
+      function cardTileHTML(card){
+        const status = card.status;
         const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
         const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-        const extraClass = kind === 'transit' ? 'transit' : '';
-        const title = kind === 'assistance' ? 'Assistance Card' : kind === 'transit' ? 'Transit Card' : 'Spending Card';
+
+        if (card.type === 'transit'){
+          const passName = card.pass_name || 'Transit';
+          return `
+            <div class="tile">
+              <div class="row">
+                <h3>Transit Card</h3>
+                <span class="pill ${pillKind}">${statusLabel}</span>
+              </div>
+              ${cardVisualHTML('Transit')}
+              <div class="divider"></div>
+              <div class="row">
+                <div>
+                  <span class="label">Rides remaining</span>
+                  <div class="value">${Number(card.rides_remaining||0)}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        const title = card.type === 'assistance' ? 'Assistance Card' : 'Spending Card';
+        const ending = card.last4 ? `Card ending in ${card.last4}` : ``;
         return `
           <div class="tile">
             <div class="row">
               <h3>${title}</h3>
               <span class="pill ${pillKind}">${statusLabel}</span>
             </div>
-            <div class="divider"></div>
-            <div class="card-visual ${extraClass}">
-              <div class="card-chip" aria-hidden="true"></div>
-              <div class="card-badge">${title.replace(' Card','')}</div>
-              <div class="card-name">${(name||' ').toUpperCase()}</div>
-            </div>
+            ${cardVisualHTML('Spending')}
+            ${ending ? `<div class="meta" style="margin-top:8px;">${ending}</div>` : ``}
           </div>
         `;
       }
+
 
       function renderCards(cards){
         if (!Array.isArray(cards) || !cards.length){
