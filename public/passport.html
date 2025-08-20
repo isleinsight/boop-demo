@@ -369,43 +369,57 @@
 
       // ---------- Render ----------
       function cardTileHTML(card){
-        const status = card.status;
-        const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
-        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+  const status = card.status;
+  const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
+  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
 
-        if (card.type === 'transit'){
-          const passName = card.pass_name || 'Transit';
-          return `
-            <div class="tile">
-              <div class="row">
-                <h3>Transit Card</h3>
-                <span class="pill ${pillKind}">${statusLabel}</span>
-              </div>
-              <div class="meta">${passName}</div>
-            </div>
-          `;
-        }
+  // Build full name
+  const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
+  const first = me?.first_name || '';
+  const last = me?.last_name || '';
+  const fullName = `${first}${last ? ' ' + last : ''}`;
 
-        const title = card.type === 'assistance' ? 'Assistance Card' : 'Spending Card';
-        const ending = card.last4 ? `Card ending in ${card.last4}` : '';
-
-        return `
-          <div class="tile">
-            <div class="row">
-              <h3>${title}</h3>
-              <span class="pill ${pillKind}">${statusLabel}</span>
-            </div>
-            ${ending ? `<div class="meta">${ending}</div>` : ``}
-            <div class="divider"></div>
-            <div class="card-visual">
-              <img class="card-bg" alt="" data-bg-base="assets/payulot-card">
-              <div class="card-tag">Spending</div>
-              <div class="card-chip"></div>
-              <div class="card-name">${fullName.toUpperCase()}</div>
-            </div>
+  if (card.type === 'transit'){
+    const passName = card.pass_name || 'Transit';
+    return `
+      <div class="tile">
+        <div class="row">
+          <h3>Transit Card</h3>
+          <span class="pill ${pillKind}">${statusLabel}</span>
+        </div>
+        <div class="meta">${passName}</div>
+        <div class="divider"></div>
+        <div class="row">
+          <div>
+            <span class="label">Rides remaining</span>
+            <div class="value">${Number(card.rides_remaining||0)}</div>
           </div>
-        `;
-      }
+        </div>
+      </div>
+    `;
+  }
+
+  // Spending or Assistance card
+  const title = card.type === 'assistance' ? 'Assistance Card' : 'Spending Card';
+  const ending = card.last4 ? `Card ending in ${card.last4}` : null;
+
+  return `
+    <div class="tile">
+      <div class="row">
+        <h3>${title}</h3>
+        <span class="pill ${pillKind}">${statusLabel}</span>
+      </div>
+      <div class="card-visual">
+        <img src="assets/card-bg.png" alt="Card background" class="card-bg" />
+        <div class="card-chip"></div>
+        <div class="card-type">Spending</div>
+        <div class="card-owner">${fullName}</div>
+      </div>
+      ${ending ? `<div class="meta">${ending}</div>` : ``}
+      <div class="meta">Use at supported merchants.</div>
+    </div>
+  `;
+}
 
       function renderCards(cards){
         if (!Array.isArray(cards) || !cards.length){
