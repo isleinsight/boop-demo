@@ -279,269 +279,260 @@
   </footer>
 
   <script>
-(async function () {
-  // --------------------------- UTILITIES ---------------------------
-  const $ = (id) => document.getElementById(id);
+(async () => {
+  const LOGIN_PAGE = "cardholder-login.html";
   const token = localStorage.getItem("boop_jwt");
 
-  function setStatus(pillEl, text, kind){
-    if (!pillEl) return;
-    pillEl.textContent = text;
-    pillEl.classList.remove('ok','warn','stop');
-    if (kind) pillEl.classList.add(kind);
-  }
-  function normalizeStatus(v){
-    const s = (v||"").toLowerCase();
-    if (["active","ok","enabled"].includes(s)) return "active";
-    if (["pending","review"].includes(s)) return "pending";
-    if (["disabled","blocked","inactive","frozen","closed"].includes(s)) return "disabled";
-    return "active";
-  }
-  function normalizeType(v){
-    const s = (v||"").toLowerCase();
-    if (["transit","bus","metro","rail"].includes(s)) return "transit";
-    if (["assistance"].includes(s)) return "assistance";
+  // ---------- tiny helpers ----------
+  const authFetch = (url, opts = {}) =>
+    fetch(url, {
+      ...opts,
+      headers: { ...(opts.headers || {}), Authorization: `Bearer ${token}` },
+    });
+
+  const titleCase = (s = "") =>
+    s
+      .split(/\s+/)
+      .map(w => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : ""))
+      .join(" ")
+      .trim();
+
+  const nameFromEmail = (email = "") => {
+    const base = (email.split("@")[0] || "")
+      .replace(/[._-]+/g, " ")
+      .trim();
+    return titleCase(base) || "Cardholder";
+  };
+
+  const fullName = (user, fallbackEmail) => {
+    const f = (user?.first_name || "").trim();
+    const l = (user?.last_name || "").trim();
+    if (f || l) return [f, l].filter(Boolean).join(" ");
+    return nameFromEmail(user?.email || fallbackEmail);
+  };
+
+  const normType = v => {
+    const s = String(v || "").toLowerCase();
+    if (["transit", "bus", "metro", "rail"].includes(s)) return "transit";
+    if (s === "assistance") return "assistance";
     return "spending";
-  }
-  function pickLast4(c){
-    const direct = c.last4 ?? c.last_four ?? c.pan_last4 ?? c.tail ?? c.lastDigits;
-    if (direct && String(direct).match(/^\d{4}$/)) return String(direct);
-    const masked = c.masked ?? c.mask ?? c.card_mask ?? c.pan_mask;
-    if (masked){ const m = String(masked).match(/(\d{4})\D*$/); if (m) return m[1]; }
-    return null;
-  }
+  };
+  const normStatus = v => {
+    const s = String(v || "").toLowerCase();
+    if (["pending", "review"].includes(s)) return "pending";
+    if (["disabled", "blocked", "inactive", "frozen", "closed"].includes(s)) return "disabled";
+    return "active";
+  };
 
-  // --------------------------- AUTH + CURRENT USER (FIRST + LAST) ---------------------------
-  let me;
-  try {
-    if (!token) throw new Error("No token");
-
-    // Use Users API that returns first/last
-    const meRes = await fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` }});
-    const meJson = await meRes.json();
-    if (!meRes.ok) throw new Error(meJson?.message || "Unauthorized");
-
-    let merged = { ...meJson };
-
-    // Fallback: if last_name missing, fetch full record by id
-    if ((!merged.last_name || merged.last_name === null || merged.last_name === "") && merged.id) {
-      try {
-        const fullRes = await fetch(`/api/users/${merged.id}`, { headers: { Authorization: `Bearer ${token}` }});
-        if (fullRes.ok) {
-          const fullUser = await fullRes.json();
-          merged = { ...merged, ...fullUser };
-        }
-      } catch {}
-    }
-
-    // Optionally merge cached copy
+  // ---------- find current user (prefer /api/users/me) ----------
+  async function getMe() {
+    // 1) Prefer /api/users/me (returns first_name/last_name)
     try {
-      const cached = JSON.parse(localStorage.getItem("boopUser") || "{}");
-      merged = { ...cached, ...merged };
+      const r = await authFetch("/api/users/me");
+      if (r.ok) return await r.json();
     } catch {}
 
-    me = merged;
-    localStorage.setItem("boopUser", JSON.stringify(me));
-  } catch (e) {
-    console.warn("[passport] users/me failed:", e.message);
+    // 2) Fallback: /api/me -> id only, then /api/users/:id
+    try {
+      const r = await authFetch("/api/me");
+      if (!r.ok) throw new Error("no /api/me");
+      const base = await r.json(); // { id|userId, email, role, type }
+      const uid = base.id || base.userId;
+      if (!uid) throw new Error("no id in /api/me");
+      const r2 = await authFetch(`/api/users/${encodeURIComponent(uid)}`);
+      if (!r2.ok) throw new Error("no /api/users/:id");
+      return await r2.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ---------- guard ----------
+  if (!token) {
     localStorage.clear();
-    window.location.href = "cardholder-login.html";
+    window.location.href = LOGIN_PAGE;
     return;
   }
 
-  // Build full name (no email fallback)
-  function fullName(u){
-    const f = (u.first_name ?? u.firstName ?? "").toString().trim();
-    const l = (u.last_name  ?? u.lastName  ?? "").toString().trim();
-    if (f && l) return `${f} ${l}`;
-    if (f) return f;
-    if (u.name) return String(u.name);
-    return "—";
+  // ---------- get current user ----------
+  const me = await getMe();
+  if (!me) {
+    localStorage.clear();
+    window.location.href = LOGIN_PAGE;
+    return;
   }
-  const FULL_NAME = fullName(me);
-  window.__PAYULOT_FULL_NAME__ = FULL_NAME;
+  // (optional) role gate — comment these two lines if you don't want to restrict
+  const roleOK = ["cardholder", "cardholder_assistance"].includes(String(me.role || "").toLowerCase());
+  if (!roleOK) { window.location.href = LOGIN_PAGE; return; }
 
-  // --------------------------- NAV / FOOTER WIRING ---------------------------
-  try { $("year").textContent = new Date().getFullYear(); } catch {}
+  // ---------- wire basics ----------
+  const yearEl = document.getElementById("year");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-  const hamburger = $("hamburger");
-  const panel = $("mobileMenu");
-  const overlay = $("navOverlay");
-  function openMenu(){ hamburger?.classList.add("active"); panel?.classList.add("active"); overlay?.classList.add("active"); document.body.style.overflow="hidden"; }
-  function closeMenu(){ hamburger?.classList.remove("active"); panel?.classList.remove("active"); overlay?.classList.remove("active"); document.body.style.overflow=""; }
-  hamburger?.addEventListener("click", ()=> hamburger.classList.contains("active") ? closeMenu() : openMenu());
-  overlay?.addEventListener("click", closeMenu);
-  document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+  const ownerNameEl = document.getElementById("ownerName");
+  const ownerEmailEl = document.getElementById("ownerEmail");
+  const passportIdEl = document.getElementById("passportId");
+  const passportStatus = document.getElementById("passportStatus");
+  const passportStatusInline = document.getElementById("passportStatusInline");
+  const cardsList = document.getElementById("cardsList");
 
-  function attachLogout(el){
+  const setPill = (el, text, kind) => {
     if (!el) return;
-    el.addEventListener("click", async (e)=>{
-      e.preventDefault();
-      try { await fetch("/api/logout", { method:"POST" }); } catch {}
-      localStorage.clear();
-      window.location.href = "cardholder-login.html";
-    });
-  }
-  attachLogout($("logoutBtn"));
-  attachLogout($("logoutBtnMobile"));
+    el.textContent = text;
+    el.classList.remove("ok", "warn", "stop");
+    if (kind) el.classList.add(kind);
+  };
 
-  // --------------------------- APPLY OWNER INFO ---------------------------
-  const passportIdEl = $("passportId");
-  const passportStatus = $("passportStatus");
-  const passportStatusInline = $("passportStatusInline");
-  const ownerNameEl = $("ownerName");
-  const ownerEmailEl = $("ownerEmail");
-  const cardsList = $("cardsList");
+  // fill owner info (first + last)
+  if (ownerEmailEl) ownerEmailEl.textContent = me.email || "—";
+  if (ownerNameEl) ownerNameEl.textContent = fullName(me, me.email);
 
-  if (ownerNameEl)  ownerNameEl.textContent  = FULL_NAME;
-  if (ownerEmailEl) ownerEmailEl.textContent = me?.email || "—";
-
-  // --------------------------- CARD TILE RENDERER (with background image + black text) ---------------------------
-  function cardTileHTML(card){
-    const status = card.status;
-    const pillKind = status === "active" ? "ok" : status === "pending" ? "warn" : "stop";
-    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-
-    // Transit card
-    if (card.type === "transit"){
-      const passName = card.pass_name || "Transit";
-      return `
-        <div class="tile">
-          <div class="row">
-            <h3>Transit Card</h3>
-            <span class="pill ${pillKind}">${statusLabel}</span>
-          </div>
-          <div class="meta">${passName}</div>
-          <div class="divider"></div>
-          <div class="row">
-            <div>
-              <span class="label">Rides remaining</span>
-              <div class="value">${Number(card.rides_remaining||0)}</div>
-            </div>
-          </div>
-        </div>
-      `;
+  // ---------- passport (optional) ----------
+  try {
+    const pr = await authFetch("/api/passport/mine");
+    if (pr.ok) {
+      const p = await pr.json();
+      if (passportIdEl) passportIdEl.textContent = p?.passport_id || me?.passport_id || "—";
+      const st = normStatus(p?.status || "active");
+      if (st === "active") {
+        setPill(passportStatus, "Active", "ok");
+        setPill(passportStatusInline, "Active", "ok");
+      } else if (st === "pending") {
+        setPill(passportStatus, "Pending", "warn");
+        setPill(passportStatusInline, "Pending", "warn");
+      } else {
+        setPill(passportStatus, "Disabled", "stop");
+        setPill(passportStatusInline, "Disabled", "stop");
+      }
     }
+  } catch {}
 
-    // Spending / Assistance visual (black text; white background image)
-    const title = card.type === "assistance" ? "Assistance Card" : "Spending Card";
-    const ending = card.last4 ? `Card ending in ${card.last4}` : "";
+  // ---------- wallet id ----------
+  let walletId = null;
+  try {
+    const wr = await authFetch("/api/wallets/mine");
+    if (wr.ok) {
+      const w = await wr.json();
+      walletId = w?.id || w?.wallet_id || null;
+    }
+  } catch {}
+  if (!walletId) {
+    if (cardsList) cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
+    return;
+  }
 
-    // Inline style ensures it works even if CSS was changed elsewhere.
-    const visual = `
-      <div class="card-visual" style="
-        position: relative;
-        width: 100%;
-        aspect-ratio: 1.586; /* 1011x638 ~ CR80 */
-        border-radius: 14px;
-        overflow: hidden;
-        box-shadow: 0 10px 22px rgba(0,0,0,.25);
-        background-image: url('assets/payulot-card.png');
-        background-size: cover;
-        background-position: center;
-        margin-top: 10px;
+  // ---------- fetch cards ----------
+  let cards = [];
+  try {
+    const cr = await authFetch(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`);
+    if (cr.ok) {
+      const rows = await cr.json();
+      if (Array.isArray(rows)) {
+        cards = rows.map(c => ({
+          type: normType(c.type ?? c.card_type ?? c.kind),
+          status: normStatus(c.status ?? c.state),
+          rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
+          pass_name: c.pass_name ?? c.passName ?? null,
+        }));
+      }
+    }
+  } catch {}
+
+  // ---------- render ----------
+  function spendingCardHTML(name) {
+    // Pure inline styles so we don't touch global CSS.
+    // Uses your white card background: assets/payulot-card.png
+    return `
+      <div style="
+        width:min(440px,100%);
+        aspect-ratio:1.586;         /* ~85.6mm x 54mm */
+        position:relative;
+        border-radius:16px;
+        overflow:hidden;
+        box-shadow:0 10px 28px rgba(0,0,0,.25);
+        background:#fff url('assets/payulot-card.png') center/cover no-repeat;
+        border:1px solid rgba(0,0,0,.06);
       ">
-        <div class="card-type" style="
-          position:absolute; top:12px; left:14px;
+        <div style="
+          position:absolute; left:16px; top:14px;
           font-weight:700; font-size:14px; letter-spacing:.4px;
-          color:#111; /* black for readability on white card */
+          color:#111; text-transform:uppercase;
           text-shadow:none;
         ">Spending</div>
 
-        <div class="card-owner" style="
-          position:absolute; left:14px; bottom:16px;
+        <div style="
+          position:absolute; left:16px; right:16px; bottom:16px;
           font-weight:700; font-size:18px; letter-spacing:.3px;
-          color:#111; /* black name text */
+          color:#111; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
           text-shadow:none;
-          white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 88%;
-        ">${window.__PAYULOT_FULL_NAME__ || "—"}</div>
-      </div>
-    `;
-
-    return `
-      <div class="tile">
-        <div class="row">
-          <h3>${title}</h3>
-          <span class="pill ${pillKind}">${statusLabel}</span>
-        </div>
-        ${ending ? `<div class="meta">${ending}</div>` : ``}
-        ${visual}
+        ">${name}</div>
       </div>
     `;
   }
 
-  function renderCards(cards){
-    if (!Array.isArray(cards) || !cards.length){
+  function transitTileHTML(card) {
+    return `
+      <div class="tile">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Transit Card</h3>
+          <span class="pill ${card.status === 'active' ? 'ok' : card.status === 'pending' ? 'warn' : 'stop'}">${card.status[0].toUpperCase() + card.status.slice(1)}</span>
+        </div>
+        <div class="meta">${card.pass_name || "Transit"}</div>
+        <div class="divider"></div>
+        <div class="row" style="justify-content:flex-start;gap:24px;">
+          <div>
+            <span class="label">Rides remaining</span>
+            <div class="value">${Number(card.rides_remaining || 0)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCards(list) {
+    if (!cardsList) return;
+    if (!Array.isArray(list) || list.length === 0) {
       cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
       return;
     }
-    cardsList.innerHTML = cards.map(cardTileHTML).join("");
+
+    const name = fullName(me, me.email);
+    const pieces = list.map(card => {
+      if (card.type === "transit") return transitTileHTML(card);
+      // spending or assistance -> show visual card
+      return spendingCardHTML(name);
+    });
+
+    cardsList.innerHTML = pieces.join("");
   }
 
-  // --------------------------- LOAD PASSPORT + CARDS ---------------------------
-  async function loadPassportAndCards(){
-    // A) Passport (optional)
-    let passport = null;
-    try{
-      const r = await fetch("/api/passport/mine", { headers:{ Authorization:`Bearer ${token}` }});
-      if (r.ok) passport = await r.json();
-    }catch{}
+  renderCards(cards);
 
-    const pid = passport?.passport_id || me?.passport_id || "—";
-    if (passportIdEl) passportIdEl.textContent = pid;
-
-    const pstatus = normalizeStatus(passport?.status || "active");
-    if (pstatus === "active"){
-      setStatus(passportStatus, "Active", "ok");
-      setStatus(passportStatusInline, "Active", "ok");
-    } else if (pstatus === "pending"){
-      setStatus(passportStatus, "Pending", "warn");
-      setStatus(passportStatusInline, "Pending", "warn");
-    } else {
-      setStatus(passportStatus, "Disabled", "stop");
-      setStatus(passportStatusInline, "Disabled", "stop");
-    }
-
-    // B) Wallet id
-    let walletId = null;
-    try{
-      const w = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
-      if (w.ok){
-        const wallet = await w.json();
-        walletId = wallet?.id || wallet?.wallet_id || null;
-      }
-    }catch{}
-    if (!walletId){ renderCards([]); return; }
-
-    // C) Cards by wallet_id
-    try{
-      const r = await fetch(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`, {
-        headers: { Authorization:`Bearer ${token}` }
-      });
-      const rows = await r.json();
-      if (!Array.isArray(rows)){ renderCards([]); return; }
-
-      const normalized = rows.map(c => ({
-        type: normalizeType(c.type ?? c.card_type ?? c.kind),
-        status: normalizeStatus(c.status ?? c.state),
-        rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
-        pass_name: c.pass_name ?? c.passName ?? null,
-        last4: pickLast4(c),
-        owner_id: c.user_id ?? c.owner_id ?? null,
-        passport_id: c.passport_id ?? null
-      }));
-
-      renderCards(normalized);
-    } catch {
-      renderCards([]);
-    }
-  }
-
-  // Transit link (placeholder)
-  const transitBtn = $("buyTransitBtn");
+  // ---------- misc: transit link + logout wiring ----------
+  const transitBtn = document.getElementById("buyTransitBtn");
   if (transitBtn) transitBtn.href = "https://shorelink.example/";
 
-  await loadPassportAndCards();
+  function attachLogout(el) {
+    if (!el) return;
+    el.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await fetch("/api/logout", { method: "POST" }); } catch {}
+      localStorage.clear();
+      window.location.href = LOGIN_PAGE;
+    });
+  }
+  attachLogout(document.getElementById("logoutBtn"));
+  attachLogout(document.getElementById("logoutBtnMobile"));
+
+  // ---------- mobile menu (optional) ----------
+  const hamburger = document.getElementById("hamburger");
+  const panel = document.getElementById("mobileMenu");
+  const overlay = document.getElementById("navOverlay");
+  function openMenu(){ hamburger?.classList.add("active"); panel?.classList.add("active"); overlay?.classList.add("active"); document.body.style.overflow="hidden"; }
+  function closeMenu(){ hamburger?.classList.remove("active"); panel?.classList.remove("active"); overlay?.classList.remove("active"); document.body.style.overflow=""; }
+  hamburger?.addEventListener("click", () => (hamburger.classList.contains("active") ? closeMenu() : openMenu()));
+  overlay?.addEventListener("click", closeMenu);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
 })();
 </script>
 </body>
