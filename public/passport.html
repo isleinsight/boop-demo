@@ -279,217 +279,231 @@
   </footer>
 
   <script>
-(async () => {
-  // ---------------- AUTH (your exact policy) ----------------
-  try {
+  (async function(){
+    // ------- tiny helpers -------
+    const byId = (id)=> document.getElementById(id);
     const token = localStorage.getItem("boop_jwt");
-    if (!token) throw new Error("No token");
-    const res = await fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` }});
-    if (!res.ok) throw new Error("Unauthorized");
-    const meBase = await res.json();
-    const role = String(meBase.role || meBase.type || "").toLowerCase();
-    const allowed = new Set(["cardholder","cardholder_assistance","senior","student"]);
-    if (!allowed.has(role)) throw new Error("Forbidden");
-    localStorage.setItem("boopUser", JSON.stringify(meBase));
-  } catch {
-    try { await fetch("/api/logout", { method: "POST" }); } catch {}
-    localStorage.clear();
-    location.href = "index.html";  // <-- your desired redirect
-    return;
-  }
 
-  // ---------------- Helpers ----------------
-  const token = localStorage.getItem("boop_jwt");
-  const authFetch = (url, opts={}) =>
-    fetch(url, { ...opts, headers: { ...(opts.headers||{}), Authorization: `Bearer ${token}` } });
-
-  const titleCase = s => (s||"").split(/\s+/).map(w => w? w[0].toUpperCase()+w.slice(1).toLowerCase():"").join(" ").trim();
-  const nameFromEmail = (email="") => titleCase((email.split("@")[0]||"").replace(/[._-]+/g," ")) || "Cardholder";
-
-  // Prefer first+last from /api/users/:id; fallback to email prefix
-  async function getFullUser() {
-    const meBase = JSON.parse(localStorage.getItem("boopUser")||"{}");
-    const id = meBase.id || meBase.userId;
-    if (!id) return { ...meBase, first_name: "", last_name: "" };
-    try {
-      const r = await authFetch(`/api/users/${encodeURIComponent(id)}`);
-      if (r.ok) {
-        const u = await r.json();
-        return { ...meBase, ...u };
-      }
-    } catch {}
-    return { ...meBase, first_name: "", last_name: "" };
-  }
-
-  // ---------------- Elements ----------------
-  const yearEl = document.getElementById("year");
-  const ownerNameEl = document.getElementById("ownerName");
-  const ownerEmailEl = document.getElementById("ownerEmail");
-  const passportIdEl = document.getElementById("passportId");
-  const passportStatus = document.getElementById("passportStatus");
-  const passportStatusInline = document.getElementById("passportStatusInline");
-  const cardsList = document.getElementById("cardsList");
-
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
-
-  const setPill = (el, text, kind) => {
-    if (!el) return;
-    el.textContent = text;
-    el.classList.remove("ok","warn","stop");
-    if (kind) el.classList.add(kind);
-  };
-  const normStatus = v => {
-    const s = String(v||"").toLowerCase();
-    if (["pending","review"].includes(s)) return "pending";
-    if (["disabled","blocked","inactive","frozen","closed"].includes(s)) return "disabled";
-    return "active";
-  };
-  const normType = v => {
-    const s = String(v||"").toLowerCase();
-    if (["transit","bus","metro","rail"].includes(s)) return "transit";
-    if (s==="assistance") return "assistance";
-    return "spending";
-  };
-
-  // ---------------- Load me + show name ----------------
-  const me = await getFullUser();
-  const fullName = (me.first_name?.trim() || me.last_name?.trim())
-    ? [me.first_name||"", me.last_name||""].filter(Boolean).join(" ").trim()
-    : nameFromEmail(me.email);
-
-  if (ownerNameEl) ownerNameEl.textContent = fullName || "Cardholder";
-  if (ownerEmailEl) ownerEmailEl.textContent = me.email || "—";
-
-  // ---------------- Passport (optional) ----------------
-  try {
-    const pr = await authFetch("/api/passport/mine");
-    if (pr.ok) {
-      const p = await pr.json();
-      if (passportIdEl) passportIdEl.textContent = p?.passport_id || me?.passport_id || "—";
-      const st = normStatus(p?.status || "active");
-      if (st === "active") { setPill(passportStatus,"Active","ok"); setPill(passportStatusInline,"Active","ok"); }
-      else if (st === "pending") { setPill(passportStatus,"Pending","warn"); setPill(passportStatusInline,"Pending","warn"); }
-      else { setPill(passportStatus,"Disabled","stop"); setPill(passportStatusInline,"Disabled","stop"); }
+    function allowRole(me){
+      const role = String(me.role || me.type || "").toLowerCase();
+      return ["cardholder", "cardholder_assistance", "student", "senior"].includes(role);
     }
-  } catch {}
 
-  // ---------------- Wallet ----------------
-  let walletId = null;
-  try {
-    const wr = await authFetch("/api/wallets/mine");
-    if (wr.ok) {
-      const w = await wr.json();
-      walletId = w?.id || w?.wallet_id || null;
-    }
-  } catch {}
-  if (!walletId) {
-    if (cardsList) cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
-    return;
-  }
-
-  // ---------------- Cards ----------------
-  let cards = [];
-  try {
-    const cr = await authFetch(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`);
-    if (cr.ok) {
-      const rows = await cr.json();
-      if (Array.isArray(rows)) {
-        cards = rows.map(c => ({
-          type: normType(c.type ?? c.card_type ?? c.kind),
-          status: normStatus(c.status ?? c.state),
-          rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
-          pass_name: c.pass_name ?? c.passName ?? null
-        }));
+    async function fetchJSON(url, opts){
+      try{
+        const res = await fetch(url, opts);
+        const data = await res.json().catch(()=> ({}));
+        return { ok: res.ok, status: res.status, data };
+      }catch(e){
+        return { ok: false, status: 0, data: null };
       }
     }
-  } catch {}
 
-  function spendingCardHTML(name) {
-    // White Payulot card background + black text
-    return `
-      <div style="
-        width:min(440px,100%);
-        aspect-ratio:1.586;
-        position:relative;
-        border-radius:16px;
-        overflow:hidden;
-        box-shadow:0 10px 28px rgba(0,0,0,.25);
-        background:#fff url('assets/payulot-card.png') center/cover no-repeat;
-        border:1px solid rgba(0,0,0,.06);
-      ">
-        <div style="
-          position:absolute; left:16px; top:14px;
-          font-weight:700; font-size:14px; letter-spacing:.4px;
-          color:#111; text-transform:uppercase; text-shadow:none;
-        ">Spending</div>
-        <div style="
-          position:absolute; left:16px; right:16px; bottom:16px;
-          font-weight:700; font-size:18px; letter-spacing:.3px;
-          color:#111; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-          text-shadow:none;
-        ">${name}</div>
-      </div>
-    `;
-  }
+    async function getMe(){
+      if (!token) return null;
 
-  function transitTileHTML(card) {
-    const label = card.status[0].toUpperCase() + card.status.slice(1);
-    const pill = card.status === "active" ? "ok" : card.status === "pending" ? "warn" : "stop";
-    return `
-      <div class="tile">
-        <div class="row" style="justify-content:space-between;align-items:center;">
-          <h3 style="margin:0;">Transit Card</h3>
-          <span class="pill ${pill}">${label}</span>
-        </div>
-        <div class="meta">${card.pass_name || "Transit"}</div>
-        <div class="divider"></div>
-        <div class="row" style="justify-content:flex-start;gap:24px;">
-          <div>
-            <span class="label">Rides remaining</span>
-            <div class="value">${Number(card.rides_remaining || 0)}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
+      // Try /api/users/me (from your users.js)
+      let r = await fetchJSON("/api/users/me", { headers:{ Authorization:`Bearer ${token}` }});
+      if (r.ok && r.data) return r.data;
 
-  function renderCards(list) {
-    if (!cardsList) return;
-    if (!Array.isArray(list) || !list.length) {
-      cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
-      return;
+      // Fallback /api/me (server.js also defines this)
+      r = await fetchJSON("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
+      if (r.ok && r.data) return r.data;
+
+      return null;
     }
-    const pieces = list.map(card => (card.type === "transit" ? transitTileHTML(card) : spendingCardHTML(fullName)));
-    cardsList.innerHTML = pieces.join("");
-  }
 
-  renderCards(cards);
+    function fullNameFrom(me){
+      const first = (me.first_name || "").trim();
+      const last  = (me.last_name  || "").trim();
+      const joined = (first + " " + last).trim();
+      if (joined) return joined;
+      // fallback to `name` if present, then email local-part
+      if (me.name && String(me.name).trim()) return String(me.name).trim();
+      if (me.email) return String(me.email).split("@")[0];
+      return "Cardholder";
+    }
 
-  // ---------------- Nav / logout (optional wiring) ----------------
-  const transitBtn = document.getElementById("buyTransitBtn");
-  if (transitBtn) transitBtn.href = "https://shorelink.example/";
+    function setStatus(pillEl, text, kind){
+      if (!pillEl) return;
+      pillEl.textContent = text;
+      pillEl.classList.remove("ok","warn","stop");
+      if (kind) pillEl.classList.add(kind);
+    }
 
-  function attachLogout(el){
-    if (!el) return;
-    el.addEventListener("click", async (e)=>{
-      e.preventDefault();
+    // ---------- AUTH ----------
+    try{
+      if (!token) throw new Error("No token in localStorage");
+      const me = await getMe();
+      if (!me) throw new Error("Could not fetch current user");
+
+      // optional: honor force_signed_out if your DB uses it
+      if (me.force_signed_out === true) throw new Error("Force-signed-out");
+
+      if (!allowRole(me)) throw new Error("Forbidden role");
+
+      // cache minimal shape we need on this page
+      localStorage.setItem("boopUser", JSON.stringify(me));
+    }catch(err){
+      console.warn("Auth gate failed:", err.message || err);
       try { await fetch("/api/logout", { method:"POST" }); } catch {}
       localStorage.clear();
-      location.href = "index.html";
-    });
-  }
-  attachLogout(document.getElementById("logoutBtn"));
-  attachLogout(document.getElementById("logoutBtnMobile"));
+      location.href = "cardholder-login.html";
+      return;
+    }
 
-  const hamburger = document.getElementById("hamburger");
-  const panel = document.getElementById("mobileMenu");
-  const overlay = document.getElementById("navOverlay");
-  function openMenu(){ hamburger?.classList.add("active"); panel?.classList.add("active"); overlay?.classList.add("active"); document.body.style.overflow="hidden"; }
-  function closeMenu(){ hamburger?.classList.remove("active"); panel?.classList.remove("active"); overlay?.classList.remove("active"); document.body.style.overflow=""; }
-  hamburger?.addEventListener("click", () => (hamburger.classList.contains("active") ? closeMenu() : openMenu()));
-  overlay?.addEventListener("click", closeMenu);
-  document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
-})();
+    // ---------- NAV + FOOTER ----------
+    byId("year").textContent = new Date().getFullYear();
+
+    const hamburger = byId("hamburger");
+    const panel = byId("mobileMenu");
+    const overlay = byId("navOverlay");
+    function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+    function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+    hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
+    overlay?.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+    function attachLogout(el){
+      if (!el) return;
+      el.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        window.location.href = 'cardholder-login.html';
+      });
+    }
+    attachLogout(byId('logoutBtn'));
+    attachLogout(byId('logoutBtnMobile'));
+
+    // ---------- ELEMENTS ----------
+    const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
+    const token2 = localStorage.getItem("boop_jwt");
+
+    const passportIdEl = byId('passportId');
+    const passportStatus = byId('passportStatus');
+    const passportStatusInline = byId('passportStatusInline');
+    const ownerNameEl = byId('ownerName');
+    const ownerEmailEl = byId('ownerEmail');
+    const cardsList = byId('cardsList');
+
+    ownerEmailEl.textContent = me?.email || '—';
+    ownerNameEl.textContent = fullNameFrom(me);
+
+    function normalizeStatus(v){
+      const s = (v||'').toLowerCase();
+      if (['active','ok','enabled'].includes(s)) return 'active';
+      if (['pending','review'].includes(s)) return 'pending';
+      if (['disabled','blocked','inactive','frozen','closed'].includes(s)) return 'disabled';
+      return 'active';
+    }
+    function normalizeType(v){
+      const s = (v||'').toLowerCase();
+      if (['transit','bus','metro','rail'].includes(s)) return 'transit';
+      if (['assistance'].includes(s)) return 'assistance';
+      return 'spending';
+    }
+    function pickLast4(c){
+      const direct = c?.last4 ?? c?.last_four ?? c?.pan_last4 ?? c?.tail ?? c?.lastDigits;
+      if (direct && String(direct).match(/^\d{4}$/)) return String(direct);
+      const masked = c?.masked ?? c?.mask ?? c?.card_mask ?? c?.pan_mask;
+      if (masked){ const m = String(masked).match(/(\d{4})\D*$/); if (m) return m[1]; }
+      return null;
+    }
+
+    // ---------- CARD RENDER (with black text + lowered chip) ----------
+    function spendingCardHTML(fullName, last4){
+      // Use your image file; text is dark; chip sits lower
+      return `
+        <div class="tile" style="border:none;padding:0;background:transparent;">
+          <div style="
+            position:relative;width:320px;height:200px;border-radius:18px;
+            background:url('assets/payulot-card.png') center/cover no-repeat;
+            box-shadow:0 8px 20px rgba(0,0,0,.25);
+            color:#000;display:flex;flex-direction:column;justify-content:flex-end;
+            padding:20px;
+          ">
+            <img src="assets/gold-chip.png" alt="Chip" style="position:absolute;left:20px;top:65px;width:50px;height:auto;">
+            <div style="font-size:.9rem;opacity:.9;">Spending</div>
+            <div style="font-weight:700;font-size:1.05rem;">${fullName}</div>
+            ${last4 ? `<div style="font-size:.85rem;opacity:.9;">Card ending in ${last4}</div>` : ``}
+          </div>
+        </div>
+      `;
+    }
+
+    function transitCardHTML(statusLabel, rides, passName){
+      return `
+        <div class="tile">
+          <div class="row">
+            <h3>Transit Card</h3>
+            <span class="pill ok">${statusLabel}</span>
+          </div>
+          <div class="meta">${passName || 'Transit'}</div>
+          <div class="divider"></div>
+          <div class="row">
+            <div>
+              <span class="label">Rides remaining</span>
+              <div class="value">${Number(rides || 0)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCards(cards){
+      if (!Array.isArray(cards) || !cards.length){
+        cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
+        return;
+      }
+      const html = cards.map(c=>{
+        const type = normalizeType(c.type ?? c.card_type ?? c.kind);
+        const status = normalizeStatus(c.status ?? c.state);
+        const statusLabel = status[0].toUpperCase() + status.slice(1);
+        if (type === "transit"){
+          return transitCardHTML(statusLabel, c.rides_remaining ?? c.ridesRemaining, c.pass_name ?? c.passName);
+        }
+        // spending / assistance (use the fancy image block)
+        const name = fullNameFrom(me);
+        const last4 = pickLast4(c);
+        return spendingCardHTML(name, last4);
+      }).join('');
+      cardsList.innerHTML = html;
+    }
+
+    // ---------- LOAD PASSPORT + CARDS ----------
+    async function loadPassportAndCards(){
+      // Passport
+      try{
+        const pr = await fetchJSON('/api/passport/mine', { headers:{ Authorization:`Bearer ${token2}` }});
+        const pid = pr?.data?.passport_id || me?.passport_id || '—';
+        passportIdEl.textContent = pid;
+
+        const pstatus = normalizeStatus(pr?.data?.status || 'active');
+        if (pstatus === 'active'){ setStatus(passportStatus, 'Active', 'ok'); setStatus(passportStatusInline, 'Active', 'ok'); }
+        else if (pstatus === 'pending'){ setStatus(passportStatus, 'Pending', 'warn'); setStatus(passportStatusInline, 'Pending', 'warn'); }
+        else { setStatus(passportStatus, 'Disabled', 'stop'); setStatus(passportStatusInline, 'Disabled', 'stop'); }
+      }catch{}
+
+      // Wallet
+      let walletId = null;
+      try{
+        const w = await fetchJSON('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token2}` }});
+        if (w.ok) walletId = w.data?.id || w.data?.wallet_id || null;
+      }catch{}
+      if (!walletId){ renderCards([]); return; }
+
+      // Cards
+      try{
+        const cr = await fetchJSON(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`, { headers:{ Authorization:`Bearer ${token2}` }});
+        if (!cr.ok || !Array.isArray(cr.data)){ renderCards([]); return; }
+        renderCards(cr.data);
+      }catch{
+        renderCards([]);
+      }
+    }
+
+    byId('buyTransitBtn').href = 'https://shorelink.example/';
+    await loadPassportAndCards();
+  })();
 </script>
-</body>
-</html>
