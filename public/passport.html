@@ -280,14 +280,11 @@
 
   <script>
   (async function(){
-    // ------- tiny helpers -------
-    const byId = (id)=> document.getElementById(id);
+    // ------- helpers -------
+    const $ = (id) => document.getElementById(id);
     const token = localStorage.getItem("boop_jwt");
 
-    function allowRole(me){
-      const role = String(me.role || me.type || "").toLowerCase();
-      return ["cardholder", "cardholder_assistance", "student", "senior"].includes(role);
-    }
+    const allowedRoles = new Set(["cardholder","cardholder_assistance","student","senior"]);
 
     async function fetchJSON(url, opts){
       try{
@@ -295,30 +292,25 @@
         const data = await res.json().catch(()=> ({}));
         return { ok: res.ok, status: res.status, data };
       }catch(e){
-        return { ok: false, status: 0, data: null };
+        return { ok:false, status:0, data:null };
       }
     }
 
     async function getMe(){
       if (!token) return null;
-
-      // Try /api/users/me (from your users.js)
+      // your users.js route
       let r = await fetchJSON("/api/users/me", { headers:{ Authorization:`Bearer ${token}` }});
-      if (r.ok && r.data) return r.data;
-
-      // Fallback /api/me (server.js also defines this)
+      if (r.ok) return r.data;
+      // fallback if present
       r = await fetchJSON("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
-      if (r.ok && r.data) return r.data;
-
+      if (r.ok) return r.data;
       return null;
     }
 
-    function fullNameFrom(me){
+    function fullName(me){
       const first = (me.first_name || "").trim();
       const last  = (me.last_name  || "").trim();
-      const joined = (first + " " + last).trim();
-      if (joined) return joined;
-      // fallback to `name` if present, then email local-part
+      if (first || last) return (first + " " + last).trim();
       if (me.name && String(me.name).trim()) return String(me.name).trim();
       if (me.email) return String(me.email).split("@")[0];
       return "Cardholder";
@@ -330,34 +322,51 @@
       pillEl.classList.remove("ok","warn","stop");
       if (kind) pillEl.classList.add(kind);
     }
+    function normalizeStatus(v){
+      const s = (v||"").toLowerCase();
+      if (["active","ok","enabled"].includes(s)) return "active";
+      if (["pending","review"].includes(s)) return "pending";
+      if (["disabled","blocked","inactive","frozen","closed"].includes(s)) return "disabled";
+      return "active";
+    }
+    function normalizeType(v){
+      const s = (v||"").toLowerCase();
+      if (["transit","bus","metro","rail"].includes(s)) return "transit";
+      if (["assistance"].includes(s)) return "assistance";
+      return "spending";
+    }
+    function pickLast4(c){
+      const direct = c?.last4 ?? c?.last_four ?? c?.pan_last4 ?? c?.tail ?? c?.lastDigits;
+      if (direct && /^\d{4}$/.test(String(direct))) return String(direct);
+      const masked = c?.masked ?? c?.mask ?? c?.card_mask ?? c?.pan_mask;
+      if (masked){ const m = String(masked).match(/(\d{4})\D*$/); if (m) return m[1]; }
+      return null;
+    }
 
     // ---------- AUTH ----------
+    let me = null;
     try{
-      if (!token) throw new Error("No token in localStorage");
-      const me = await getMe();
-      if (!me) throw new Error("Could not fetch current user");
-
-      // optional: honor force_signed_out if your DB uses it
-      if (me.force_signed_out === true) throw new Error("Force-signed-out");
-
-      if (!allowRole(me)) throw new Error("Forbidden role");
-
-      // cache minimal shape we need on this page
+      if (!token) throw new Error("No token");
+      me = await getMe();
+      if (!me) throw new Error("No /me data");
+      const role = String(me.role || me.type || "").toLowerCase();
+      if (!allowedRoles.has(role)) throw new Error("Forbidden role");
+      // cache the richer object so other pages can use it
       localStorage.setItem("boopUser", JSON.stringify(me));
     }catch(err){
-      console.warn("Auth gate failed:", err.message || err);
+      console.warn("Auth failed:", err.message || err);
       try { await fetch("/api/logout", { method:"POST" }); } catch {}
       localStorage.clear();
       location.href = "cardholder-login.html";
       return;
     }
 
-    // ---------- NAV + FOOTER ----------
-    byId("year").textContent = new Date().getFullYear();
+    // ---------- NAV / FOOTER ----------
+    $("year").textContent = new Date().getFullYear();
 
-    const hamburger = byId("hamburger");
-    const panel = byId("mobileMenu");
-    const overlay = byId("navOverlay");
+    const hamburger = $("hamburger");
+    const panel = $("mobileMenu");
+    const overlay = $("navOverlay");
     function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
     function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
     hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
@@ -373,60 +382,27 @@
         window.location.href = 'cardholder-login.html';
       });
     }
-    attachLogout(byId('logoutBtn'));
-    attachLogout(byId('logoutBtnMobile'));
+    attachLogout($('logoutBtn'));
+    attachLogout($('logoutBtnMobile'));
 
-    // ---------- ELEMENTS ----------
-    const me = JSON.parse(localStorage.getItem("boopUser") || "{}");
-    const token2 = localStorage.getItem("boop_jwt");
+    // ---------- Fill owner info using the fresh me ----------
+    $("ownerEmail").textContent = me.email || "—";
+    $("ownerName").textContent  = fullName(me);
 
-    const passportIdEl = byId('passportId');
-    const passportStatus = byId('passportStatus');
-    const passportStatusInline = byId('passportStatusInline');
-    const ownerNameEl = byId('ownerName');
-    const ownerEmailEl = byId('ownerEmail');
-    const cardsList = byId('cardsList');
+    // ---------- Passport + Cards ----------
+    const passportIdEl = $('passportId');
+    const passportStatus = $('passportStatus');
+    const passportStatusInline = $('passportStatusInline');
+    const cardsList = $('cardsList');
 
-    ownerEmailEl.textContent = me?.email || '—';
-    ownerNameEl.textContent = fullNameFrom(me);
-
-    function normalizeStatus(v){
-      const s = (v||'').toLowerCase();
-      if (['active','ok','enabled'].includes(s)) return 'active';
-      if (['pending','review'].includes(s)) return 'pending';
-      if (['disabled','blocked','inactive','frozen','closed'].includes(s)) return 'disabled';
-      return 'active';
-    }
-    function normalizeType(v){
-      const s = (v||'').toLowerCase();
-      if (['transit','bus','metro','rail'].includes(s)) return 'transit';
-      if (['assistance'].includes(s)) return 'assistance';
-      return 'spending';
-    }
-    function pickLast4(c){
-      const direct = c?.last4 ?? c?.last_four ?? c?.pan_last4 ?? c?.tail ?? c?.lastDigits;
-      if (direct && String(direct).match(/^\d{4}$/)) return String(direct);
-      const masked = c?.masked ?? c?.mask ?? c?.card_mask ?? c?.pan_mask;
-      if (masked){ const m = String(masked).match(/(\d{4})\D*$/); if (m) return m[1]; }
-      return null;
-    }
-
-    // ---------- CARD RENDER (with black text + lowered chip) ----------
-    function spendingCardHTML(fullName, last4){
-      // Use your image file; text is dark; chip sits lower
+    function spendingCardHTML(name, last4){
       return `
         <div class="tile" style="border:none;padding:0;background:transparent;">
-          <div style="
-            position:relative;width:320px;height:200px;border-radius:18px;
-            background:url('assets/payulot-card.png') center/cover no-repeat;
-            box-shadow:0 8px 20px rgba(0,0,0,.25);
-            color:#000;display:flex;flex-direction:column;justify-content:flex-end;
-            padding:20px;
-          ">
-            <img src="assets/gold-chip.png" alt="Chip" style="position:absolute;left:20px;top:65px;width:50px;height:auto;">
-            <div style="font-size:.9rem;opacity:.9;">Spending</div>
-            <div style="font-weight:700;font-size:1.05rem;">${fullName}</div>
-            ${last4 ? `<div style="font-size:.85rem;opacity:.9;">Card ending in ${last4}</div>` : ``}
+          <div class="card-visual">
+            <div class="chip" aria-hidden="true"></div>
+            <div class="label">Spending</div>
+            <div class="name">${name}</div>
+            ${last4 ? `<div class="last4">Card ending in ${last4}</div>` : ``}
           </div>
         </div>
       `;
@@ -456,6 +432,7 @@
         cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
         return;
       }
+      const name = fullName(me); // ALWAYS use first + last if present
       const html = cards.map(c=>{
         const type = normalizeType(c.type ?? c.card_type ?? c.kind);
         const status = normalizeStatus(c.status ?? c.state);
@@ -463,19 +440,16 @@
         if (type === "transit"){
           return transitCardHTML(statusLabel, c.rides_remaining ?? c.ridesRemaining, c.pass_name ?? c.passName);
         }
-        // spending / assistance (use the fancy image block)
-        const name = fullNameFrom(me);
         const last4 = pickLast4(c);
         return spendingCardHTML(name, last4);
       }).join('');
       cardsList.innerHTML = html;
     }
 
-    // ---------- LOAD PASSPORT + CARDS ----------
     async function loadPassportAndCards(){
       // Passport
       try{
-        const pr = await fetchJSON('/api/passport/mine', { headers:{ Authorization:`Bearer ${token2}` }});
+        const pr = await fetchJSON('/api/passport/mine', { headers:{ Authorization:`Bearer ${token}` }});
         const pid = pr?.data?.passport_id || me?.passport_id || '—';
         passportIdEl.textContent = pid;
 
@@ -488,14 +462,14 @@
       // Wallet
       let walletId = null;
       try{
-        const w = await fetchJSON('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token2}` }});
+        const w = await fetchJSON('/api/wallets/mine', { headers:{ Authorization:`Bearer ${token}` }});
         if (w.ok) walletId = w.data?.id || w.data?.wallet_id || null;
       }catch{}
       if (!walletId){ renderCards([]); return; }
 
       // Cards
       try{
-        const cr = await fetchJSON(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`, { headers:{ Authorization:`Bearer ${token2}` }});
+        const cr = await fetchJSON(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`, { headers:{ Authorization:`Bearer ${token}` }});
         if (!cr.ok || !Array.isArray(cr.data)){ renderCards([]); return; }
         renderCards(cr.data);
       }catch{
@@ -503,7 +477,9 @@
       }
     }
 
-    byId('buyTransitBtn').href = 'https://shorelink.example/';
+    $('buyTransitBtn').href = 'https://shorelink.example/';
     await loadPassportAndCards();
   })();
 </script>
+</body>
+</html>
