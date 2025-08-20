@@ -288,7 +288,7 @@
     if (!res.ok) throw new Error("Unauthorized");
     const meBase = await res.json();
     const role = String(meBase.role || meBase.type || "").toLowerCase();
-    const allowed = new Set(["cardholder","senior","student"]);
+    const allowed = new Set(["cardholder","cardholder_assistance","senior","student"]);
     if (!allowed.has(role)) throw new Error("Forbidden");
     localStorage.setItem("boopUser", JSON.stringify(meBase));
   } catch {
