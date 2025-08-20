@@ -308,13 +308,16 @@ try {
       overlay?.addEventListener('click', closeMenu);
 
       const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
-      const ownerNameEl = document.getElementById('ownerName');
-      const ownerEmailEl = document.getElementById('ownerEmail');
-      ownerEmailEl.textContent = me?.email || '—';
-      const first = (me.first_name || "").trim();
-      const last = (me.last_name || "").trim();
-      const fullName = (first || last) ? `${first}${last ? " " + last : ""}` : "—";
-      ownerNameEl.textContent = fullName;
+      const ownerNameEl  = document.getElementById('ownerName');
+const ownerEmailEl = document.getElementById('ownerEmail');
+
+ownerEmailEl.textContent = me?.email || '—';
+
+// Build full name strictly from API fields; do NOT fall back to email prefix
+const first = (me?.first_name ?? '').trim();
+const last  = (me?.last_name  ?? '').trim();
+const fullName = [first, last].filter(Boolean).join(' ') || '—';
+ownerNameEl.textContent = fullName;
 
       const passportIdEl = document.getElementById('passportId');
       const passportStatus = document.getElementById('passportStatus');
