@@ -1,427 +1,450 @@
-// backend/auth/routes/password.js
-const express = require('express');
-const crypto = require('crypto');
-const argon2 = require('argon2');
-const db = require('../../db');
-const { authenticateToken } = require('../middleware/authMiddleware');
-
-// ── Postmark setup ────────────────────────────────────────────────────────────
-const { ServerClient } = require('postmark');
-
-const APP_URL = (process.env.APP_URL || 'http://localhost:8080').replace(/\/+$/, '');
-const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || '';
-const FROM_EMAIL =
-  process.env.SENDER_EMAIL ||
-  `no-reply@${new URL(APP_URL).hostname}`;
-const postmark = POSTMARK_TOKEN ? new ServerClient(POSTMARK_TOKEN) : null;
-
-// ── Config ───────────────────────────────────────────────────────────────────
-const TOKEN_TTL_MIN = Number(process.env.PASSWORD_RESET_TTL_MIN || 60);
-const PASSWORD_MIN_LEN = Number(process.env.PASSWORD_MIN_LEN || 8);
-
-// ── Router ───────────────────────────────────────────────────────────────────
-const router = express.Router();
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function generateToken() {
-  return crypto.randomBytes(32).toString('hex');
-}
-function hashToken(raw) {
-  return crypto.createHash('sha256').update(raw).digest('hex');
-}
-function isValidPassword(pw) {
-  return typeof pw === 'string' && pw.length >= PASSWORD_MIN_LEN;
-}
-function normalizeEmail(e) {
-  return String(e || '').trim().toLowerCase();
-}
-
-// Use a dark header so your white logo is visible
-function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
-  const logoUrl = `${APP_URL}/assets/logo-white.png`;
-  const safeIntro = intro || '';
-  const safeFooter = footerNote || '';
-
-  return `
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="color-scheme" content="light only">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${title}</title>
-  </head>
-  <body style="margin:0; padding:0; background:#f6f8fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Poppins, Arial, sans-serif;">
-    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f6f8fb;">
-      <tr>
-        <td align="center" style="padding:24px;">
-          <table width="640" cellpadding="0" cellspacing="0" role="presentation" style="max-width:640px; width:100%; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 8px 28px rgba(16,24,40,.08);">
-            <tr>
-              <td style="background:#1a2b4a; padding:20px 24px;" align="left">
-                <img src="${logoUrl}" width="140" height="auto" alt="BOOP" style="display:block; border:0; outline:none;">
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:28px 28px 8px 28px; color:#111827;">
-                <h1 style="margin:0 0 8px 0; font-size:22px; line-height:1.3; font-weight:600; color:#111827;">
-                  ${title}
-                </h1>
-                <p style="margin:0; color:#4b5563; font-size:15px; line-height:1.6;">
-                  ${safeIntro}
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 28px 4px 28px;">
-                <a href="${ctaUrl}" style="display:inline-block; background:#2f80ed; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:10px; font-weight:600;">
-                  ${ctaText}
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 28px 0 28px;">
-                <p style="margin:0; color:#6b7280; font-size:13px;">
-                  Or paste this link into your browser:<br>
-                  <a href="${ctaUrl}" style="color:#2f80ed; word-break:break-all;">${ctaUrl}</a>
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 28px 24px 28px;">
-                <p style="margin:0; color:#6b7280; font-size:12px; line-height:1.5;">
-                  ${safeFooter}
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 24px; background:#f9fafb; color:#6b7280; font-size:12px;">
-                Sent by BOOP • <a href="${APP_URL}" style="color:#6b7280; text-decoration:none;">${new URL(APP_URL).hostname}</a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
-}
-
-async function postmarkSend({ to, subject, html, text }) {
-  if (!postmark) {
-    console.warn('[email] Postmark token missing; would have sent:', { to, subject });
-    return;
-  }
-  await postmark.sendEmail({
-    From: FROM_EMAIL,
-    To: to,
-    Subject: subject,
-    HtmlBody: html,
-    TextBody: text || '',
-    MessageStream: 'outbound',
-  });
-}
-
-// Pretty wrappers with distinct subjects & copy
-async function sendAccountSetupEmail(to, link) {
-  const subject = 'Finish setting up your BOOP account';
-  const html = buildEmailHTML({
-    title: 'Welcome to BOOP',
-    intro: `Your BOOP account was created. Click the button below to set your password and finish setup.
-            This link expires in ${TOKEN_TTL_MIN} minutes.`,
-    ctaText: 'Set up your password',
-    ctaUrl: link,
-    footerNote: `If you didn’t expect this, you can ignore this email.`,
-  });
-  const text =
-    `Welcome to BOOP.\n\n` +
-    `Set your password here (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
-    `If you didn’t expect this, ignore this email.`;
-  await postmarkSend({ to, subject, html, text });
-}
-
-async function sendAdminResetEmail(to, link) {
-  const subject = 'Admin reset link for your BOOP account';
-  const html = buildEmailHTML({
-    title: 'Reset your BOOP password',
-    intro: `An administrator started a password reset for your BOOP account.
-            Use the button below to choose a new password.
-            This link expires in ${TOKEN_TTL_MIN} minutes.`,
-    ctaText: 'Reset password',
-    ctaUrl: link,
-    footerNote: `Didn’t expect this? Contact support or ignore this email.`,
-  });
-  const text =
-    `An administrator initiated a password reset for your BOOP account.\n\n` +
-    `Reset link (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
-    `If you didn’t expect this, contact support or ignore this email.`;
-  await postmarkSend({ to, subject, html, text });
-}
-
-async function sendForgotEmail(to, link) {
-  const subject = 'Reset your BOOP password';
-  const html = buildEmailHTML({
-    title: 'Reset your BOOP password',
-    intro: `We received a request to reset your password.
-            Click the button below to set a new one.
-            This link expires in ${TOKEN_TTL_MIN} minutes.`,
-    ctaText: 'Reset password',
-    ctaUrl: link,
-    footerNote: `If you didn’t request a reset, you can safely ignore this email.`,
-  });
-  const text =
-    `We received a request to reset your BOOP password.\n\n` +
-    `Reset link (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
-    `If you didn’t request this, ignore this email.`;
-  await postmarkSend({ to, subject, html, text });
-}
-
-// ── Routes ───────────────────────────────────────────────────────────────────
-
-/**
- * Admin-initiated password reset (distinct subject/copy)
- * POST /api/password/admin/initiate-reset
- * Body: { user_id } OR { email }
- * Auth: admin (super_admin, admin, support, accountant, viewer, treasury)
- */
-router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
-  try {
-    const role = (req.user?.role || '').toLowerCase();
-    const type = (req.user?.type || '').toLowerCase();
-    const isAdmin =
-      role === 'admin' &&
-      ['super_admin', 'admin', 'support', 'accountant', 'viewer', 'treasury'].includes(type);
-
-    if (!isAdmin) return res.status(403).json({ error: 'Forbidden' });
-
-    const userIdFromBody = req.body?.user_id || req.body?.userId || null;
-    const emailFromBody = normalizeEmail(req.body?.email);
-
-    // Find target user
-    let userRow = null;
-    if (userIdFromBody) {
-      const { rows } = await db.query('SELECT id, email FROM users WHERE id=$1 LIMIT 1', [userIdFromBody]);
-      userRow = rows[0];
-    } else if (emailFromBody) {
-      const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [emailFromBody]);
-      userRow = rows[0];
-    } else {
-      return res.status(400).json({ error: 'Provide user_id or email' });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Passport – Payulot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Your Payulot Passport: the ID that owns your cards." />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#e5e7eb; --muted:#cbd5e1; --blue:#2f80ed; --blue-dark:#1c6fd8;
+      --border:rgba(255,255,255,0.10); --bg:#0b1220; --nav:#102a43;
     }
-    if (!userRow) return res.status(404).json({ error: 'User not found' });
-
-    // Create token
-    const raw = generateToken();
-    const tokenHash = hashToken(raw);
-    const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
-    await db.query(
-      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-       VALUES ($1,$2,$3)`,
-      [userRow.id, tokenHash, expiresAt]
-    );
-
-    // Email (admin flavor)
-    const link = `${APP_URL}/password.html?token=${raw}`;
-    await sendAdminResetEmail(userRow.email, link);
-
-    return res.json({ ok: true, message: 'Admin reset email sent' });
-  } catch (err) {
-    console.error('admin/initiate-reset error:', err);
-    return res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-/**
- * Public forgot-password (distinct subject/copy)
- * POST /api/password/forgot-password
- * Body: { email }
- * Always 200 to prevent user enumeration.
- */
-router.post('/forgot-password', async (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-  // Always respond 200
-  res.json({ ok: true });
-
-  if (!email) return;
-
-  try {
-    const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [email]);
-    if (!rows.length) return;
-
-    const userId = rows[0].id;
-
-    // Create token
-    const raw = generateToken();
-    const tokenHash = hashToken(raw);
-    const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
-    await db.query(
-      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-       VALUES ($1,$2,$3)`,
-      [userId, tokenHash, expiresAt]
-    );
-
-    // Email (forgot flavor)
-    const link = `${APP_URL}/password.html?token=${raw}`;
-    await sendForgotEmail(email, link);
-  } catch (err) {
-    console.error('forgot-password error:', err);
-    // do nothing else—we already returned 200
-  }
-});
-
-/**
- * (Optional) Admin-initiated ACCOUNT SETUP email (creation flavor)
- * Useful if you want to trigger the “finish setup” email from here too.
- * POST /api/password/admin/initiate-setup
- * Body: { user_id } OR { email }
- */
-router.post('/admin/initiate-setup', authenticateToken, async (req, res) => {
-  try {
-    const role = (req.user?.role || '').toLowerCase();
-    const type = (req.user?.type || '').toLowerCase();
-    const isAdmin =
-      role === 'admin' &&
-      ['super_admin', 'admin', 'support', 'accountant', 'viewer', 'treasury'].includes(type);
-
-    if (!isAdmin) return res.status(403).json({ error: 'Forbidden' });
-
-    const userIdFromBody = req.body?.user_id || req.body?.userId || null;
-    const emailFromBody = normalizeEmail(req.body?.email);
-
-    let userRow = null;
-    if (userIdFromBody) {
-      const { rows } = await db.query('SELECT id, email FROM users WHERE id=$1 LIMIT 1', [userIdFromBody]);
-      userRow = rows[0];
-    } else if (emailFromBody) {
-      const { rows } = await db.query('SELECT id, email FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1', [emailFromBody]);
-      userRow = rows[0];
-    } else {
-      return res.status(400).json({ error: 'Provide user_id or email' });
-    }
-    if (!userRow) return res.status(404).json({ error: 'User not found' });
-
-    // Create token
-    const raw = generateToken();
-    const tokenHash = hashToken(raw);
-    const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
-    await db.query(
-      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-       VALUES ($1,$2,$3)`,
-      [userRow.id, tokenHash, expiresAt]
-    );
-
-    // Email (account setup flavor)
-    const link = `${APP_URL}/password.html?token=${raw}`;
-    await sendAccountSetupEmail(userRow.email, link);
-
-    return res.json({ ok: true, message: 'Account setup email sent' });
-  } catch (err) {
-    console.error('admin/initiate-setup error:', err);
-    return res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-/**
- * Reset password with token
- * POST /api/password/reset
- * Body: { token, newPassword }  (also accepts new_password)
- */
-router.post('/reset', async (req, res) => {
-  const { token, newPassword, new_password } = req.body || {};
-  const pw = newPassword ?? new_password;
-
-  if (!token || !pw) {
-    return res.status(400).json({ error: 'token and newPassword required' });
-  }
-  if (!isValidPassword(pw)) {
-    return res.status(400).json({ error: `Password must be at least ${PASSWORD_MIN_LEN} characters.` });
-  }
-
-  const tokenHash = hashToken(token);
-
-  try {
-    const { rows: trows } = await db.query(
-      `SELECT id, user_id
-         FROM password_reset_tokens
-        WHERE token_hash=$1
-          AND used_at IS NULL
-          AND expires_at > NOW()
-        LIMIT 1`,
-      [tokenHash]
-    );
-    if (!trows.length) {
-      return res.status(400).json({ error: 'Invalid or expired token' });
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; min-height:100vh; display:flex; flex-direction:column;
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:#eef2ff;
+      background:
+        radial-gradient(1200px 800px at 85% -10%, rgba(47,128,237,.25), transparent 60%),
+        radial-gradient(900px 600px at -10% 110%, rgba(16,185,129,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220 0%, #0d1220 30%, #0b1220 100%);
     }
 
-    const prtId = trows[0].id;
-    const userId = trows[0].user_id;
+    /* NAV */
+    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img{ height:34px; display:block; }
+    .nav-right{ display:flex; align-items:center; gap:18px; }
+    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; font-weight:500; }
+    .nav-right a:hover{ opacity:1 }
+    .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
+    .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
+    .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
+    .hamburger.active span:nth-child(2){ opacity:0; }
+    .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
 
-    const newHash = await argon2.hash(pw);
+    .nav-panel{ display:none; }
+    @media (max-width: 768px){
+      .nav-right{ display:none; }
+      .hamburger{ display:flex; }
+      .nav-panel{
+        display:block; position:fixed; top:0; right:-100%; height:100vh; width:260px;
+        background:#0f172a; color:#e5e7eb; box-shadow:-4px 0 14px rgba(0,0,0,.18);
+        transition:right .3s ease; z-index:60; padding:80px 20px 20px;
+      }
+      .nav-panel.active{ right:0; }
+      .nav-panel a{ display:block; color:#e5e7eb; text-decoration:none; padding:12px 8px; border-radius:8px; margin-bottom:6px; font-weight:600; }
+      .nav-panel a:hover{ background:#111827; }
+      .nav-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55; }
+      .nav-overlay.active{ display:block; }
+    }
 
-    await db.query('BEGIN');
-    await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [newHash, userId]);
-    await db.query('UPDATE password_reset_tokens SET used_at=NOW() WHERE id=$1', [prtId]);
+    /* HERO */
+    .hero-band{ padding:28px 0 20px; }
+    .hero-inner{
+      max-width:1100px; margin:0 auto; padding:0 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+    }
+    .hero-title{ margin:0; font-size:clamp(22px, 3.2vw, 34px); font-weight:700; text-align:left; }
+    .hero-sub{ margin:6px 0 0; color:var(--muted); font-size:.98rem; text-align:left; }
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      border:1px solid var(--border); background:rgba(255,255,255,.06); color:#a5b4fc;
+      padding:6px 10px; border-radius:999px; font-size:.8rem; font-weight:700;
+    }
+    .pill.ok{ color:#86efac; }
+    .pill.warn{ color:#fcd34d; }
+    .pill.stop{ color:#fca5a5; }
 
-    // Optional: invalidate all other unused tokens for this user
-    await db.query(
-      `UPDATE password_reset_tokens
-         SET used_at = NOW()
-       WHERE user_id = $1 AND used_at IS NULL AND id <> $2`,
-      [userId, prtId]
-    );
+    /* MAIN */
+    main{ flex:1; }
+    .container{ max-width:1100px; margin:18px auto 46px; padding:0 18px; }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:1fr } }
 
-    // Optional: force sign-out everywhere (if you keep sessions)
-    await db.query('DELETE FROM sessions WHERE user_id=$1', [userId]);
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border:1px solid var(--border); border-radius:16px; padding:18px;
+      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .card h2{ margin:0 0 10px; font-size:1.1rem; }
+    .row{ display:flex; gap:12px; align-items:center; justify-content:space-between; }
+    .label{ display:block; color:var(--muted); font-size:.9rem; margin-bottom:4px; }
+    .value{ font-weight:700; letter-spacing:.3px; }
+    .list{ display:grid; gap:12px; }
+    .tile{ border:1px solid var(--border); background:rgba(255,255,255,.02); border-radius:14px; padding:14px; }
+    .tile h3{ margin:0 0 6px; font-size:1.02rem; }
+    .tile .meta{ color:#9ca3af; font-size:.9rem; }
+    .tile .row+.row{ margin-top:8px; }
+    .divider{ height:1px; background:var(--border); margin:10px 0; }
 
-    await db.query('COMMIT');
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:700;
+      border:1px solid transparent; cursor:pointer; }
+    .btn.primary{ background:var(--blue); color:#fff; }
+    .btn.primary:hover{ background:var(--blue-dark); }
 
-    return res.json({ ok: true, message: 'Password updated successfully' });
-  } catch (err) {
-    await db.query('ROLLBACK').catch(() => {});
-    console.error('reset error:', err);
-    return res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+    /* Card artwork block (PNG background + overlay name) */
+    .card-art{
+      position:relative;
+      width:100%;
+      aspect-ratio: 85.6 / 54;            /* same proportion as a physical card */
+      border-radius:14px;
+      overflow:hidden;
+      background:#0f172a center/cover no-repeat;
+      background-image:url("assets/payulot-card.png"); /* <-- change path/name if needed */
+      box-shadow: 0 10px 28px rgba(0,0,0,.35);
+    }
+    .card-name{
+      position:absolute; left:16px; bottom:14px;
+      font-weight:700; letter-spacing:.4px; font-size:clamp(14px, 2.6vw, 18px);
+      color:#0b1320;                         /* legible on your light PNG */
+      text-shadow: 0 1px 0 rgba(255,255,255,.55); /* subtle emboss for readability */
+      background:rgba(255,255,255,.15);
+      padding:4px 8px; border-radius:8px;
+      backdrop-filter: blur(1px);
+    }
+    .card-detail{
+      margin-top:10px; color:#a5b4fc; font-size:.92rem; font-weight:600;
+    }
 
-/**
- * Change password (logged in)
- * POST /api/password/change-password
- * Body: { current_password, new_password }
- * Auth required
- */
-router.post('/change-password', authenticateToken, async (req, res) => {
-  const { current_password, new_password } = req.body || {};
-  const userId = req.user?.userId ?? req.user?.id;
+    /* FOOTER */
+    footer{ border-top:1px solid var(--border); background:rgba(15,23,42,.6); color:#9ca3af; }
+    .footer-inner{
+      max-width:1100px; margin:0 auto; padding:16px 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:.9rem;
+    }
+    .footer-links a{ color:#9ca3af; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
+  </style>
+</head>
+<body>
 
-  if (!current_password || !new_password) {
-    return res.status(400).json({ error: 'Missing fields' });
-  }
-  if (!isValidPassword(new_password)) {
-    return res.status(400).json({ error: `Password must be at least ${PASSWORD_MIN_LEN} characters.` });
-  }
+  <!-- NAV -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="cardholder.html" aria-label="Payulot home">
+          <img src="assets/logo-white.png" alt="Payulot Logo" />
+        </a>
+      </div>
 
-  try {
-    const { rows } = await db.query('SELECT password_hash FROM users WHERE id=$1 LIMIT 1', [userId]);
-    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+      <div class="nav-right" aria-label="Primary">
+        <a href="cardholder.html">Home</a>
+        <a href="send-request.html" id="sendRequestLink">Send / Request</a>
+        <a href="transfer.html">Transfer</a>
+        <a href="passport.html" aria-current="page">Passport</a>
+        <a href="activity.html">Activity</a>
+        <a href="help.html">Help</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
 
-    const match = await argon2.verify(rows[0].password_hash, current_password);
-    if (!match) return res.status(400).json({ error: 'Current password is incorrect' });
+      <!-- Mobile toggle -->
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
 
-    const hash = await argon2.hash(new_password);
+    <!-- Mobile panel + overlay -->
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+    <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
+      <a href="cardholder.html">Home</a>
+      <a href="send-request.html">Send / Request</a>
+      <a href="transfer.html">Transfer</a>
+      <a href="passport.html" aria-current="page">Passport</a>
+      <a href="activity.html">Activity</a>
+      <a href="help.html">Help</a>
+      <a href="#" id="logoutBtnMobile">Log Out</a>
+    </div>
+  </nav>
 
-    await db.query('BEGIN');
-    await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, userId]);
-    await db.query('DELETE FROM sessions WHERE user_id=$1', [userId]); // force re-login elsewhere
-    await db.query('COMMIT');
+  <!-- HERO -->
+  <section class="hero-band">
+    <div class="hero-inner">
+      <div>
+        <h1 class="hero-title">Passport</h1>
+        <p class="hero-sub">Your Passport owns your cards. If it’s ever compromised, we can rotate the Passport — no wallet number exposed.</p>
+      </div>
+      <div class="pill" id="passportStatus">Loading…</div>
+    </div>
+  </section>
 
-    return res.json({ ok: true });
-  } catch (err) {
-    await db.query('ROLLBACK').catch(() => {});
-    console.error('change-password error:', err);
-    return res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+  <!-- MAIN -->
+  <main class="container">
+    <div class="grid">
+      <!-- Passport summary -->
+      <section class="card" aria-labelledby="passportTitle">
+        <h2 id="passportTitle">Passport summary</h2>
+        <div class="list">
+          <div class="tile">
+            <div class="row">
+              <div>
+                <span class="label">Passport ID</span>
+                <div class="value" id="passportId">—</div>
+              </div>
+              <div>
+                <span class="label">Status</span>
+                <div class="value"><span class="pill ok" id="passportStatusInline">Active</span></div>
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <span class="label">Owner</span>
+                <div class="value" id="ownerName">—</div>
+              </div>
+              <div>
+                <span class="label">Email</span>
+                <div class="value" id="ownerEmail">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-// Simple ping for testing
-router.get('/ping', (_req, res) => res.json({ ok: true, route: '/api/password' }));
+      <!-- Cards in this Passport -->
+      <section class="card" aria-labelledby="cardsTitle">
+        <h2 id="cardsTitle">Cards in this Passport</h2>
+        <div class="list" id="cardsList">
+          <div class="tile">
+            <div class="row"><div class="muted">Loading cards…</div></div>
+          </div>
+        </div>
+      </section>
+    </div>
 
-module.exports = router;
+    <!-- Transit actions -->
+    <section class="card" style="margin-top:16px;">
+      <div class="row">
+        <div class="label" style="margin:0;">Need more rides or a different pass?</div>
+        <a class="btn primary" id="buyTransitBtn" href="https://example.com/transit" target="_blank" rel="noopener">Buy transit tickets</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div>© <span id="year"></span> Payulot</div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ALL SCRIPTS -->
+  <script>
+    (async function(){
+      // ---------- Permissions ----------
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+        const meData = await res.json();
+        if (!res.ok) throw new Error(meData?.error || "Unauthorized");
+        const role = (meData.role||"").toLowerCase();
+        const type = (meData.type||"").toLowerCase();
+        const ok = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
+        if (!ok) throw new Error("Not a cardholder");
+        localStorage.setItem("boopUser", JSON.stringify(meData));
+      } catch {
+        localStorage.clear();
+        window.location.href = "cardholder-login.html";
+        return;
+      }
+
+      // ---------- Nav / Footer ----------
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      const hamburger = document.getElementById('hamburger');
+      const panel = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('navOverlay');
+      function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+      function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
+      overlay?.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+      function attachLogout(el){
+        if (!el) return;
+        el.addEventListener('click', async (e)=>{
+          e.preventDefault();
+          try { await fetch('/api/logout', { method:'POST' }); } catch {}
+          localStorage.clear();
+          window.location.href = 'cardholder-login.html';
+        });
+      }
+      attachLogout(document.getElementById('logoutBtn'));
+      attachLogout(document.getElementById('logoutBtnMobile'));
+
+      // ---------- Data + Rendering ----------
+      const token = localStorage.getItem("boop_jwt");
+      const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
+
+      const passportIdEl = document.getElementById('passportId');
+      const passportStatus = document.getElementById('passportStatus');
+      const passportStatusInline = document.getElementById('passportStatusInline');
+      const ownerNameEl = document.getElementById('ownerName');
+      const ownerEmailEl = document.getElementById('ownerEmail');
+      const cardsList = document.getElementById('cardsList');
+
+      ownerEmailEl.textContent = me?.email || '—';
+      const first = me?.first_name || (me?.name?.split?.(' ')[0]) || (me?.email ? me.email.split('@')[0] : '—');
+      const last = me?.last_name || '';
+      const ownerFullName = `${first}${last ? ' ' + last : ''}`;
+      ownerNameEl.textContent = ownerFullName;
+
+      function setStatus(pillEl, text, kind){
+        pillEl.textContent = text;
+        pillEl.classList.remove('ok','warn','stop');
+        if (kind) pillEl.classList.add(kind);
+      }
+
+      // Helpers to normalize cards + optional last4
+      function pickLast4(c){
+        const direct = c.last4 ?? c.last_four ?? c.pan_last4 ?? c.tail ?? c.lastDigits;
+        if (direct && String(direct).match(/^\d{4}$/)) return String(direct);
+        const masked = c.masked ?? c.mask ?? c.card_mask ?? c.pan_mask;
+        if (masked){ const m = String(masked).match(/(\d{4})\D*$/); if (m) return m[1]; }
+        return null;
+      }
+      const normalizeType = v => (['transit','bus','metro','rail'].includes((v||'').toLowerCase()) ? 'transit' : 'spending');
+      function normalizeStatus(v){
+        const s = (v||'').toLowerCase();
+        if (['active','ok','enabled'].includes(s)) return 'active';
+        if (['pending','review'].includes(s)) return 'pending';
+        if (['disabled','blocked','inactive','frozen','closed'].includes(s)) return 'disabled';
+        return 'active';
+      }
+      function normalizeCard(c){
+        return {
+          type: normalizeType(c.type ?? c.card_type ?? c.kind ?? c.category),
+          status: normalizeStatus(c.status ?? c.state ?? c.card_status),
+          rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
+          pass_name: c.pass_name ?? c.passName ?? null,
+          last4: pickLast4(c),
+          owner_id: c.user_id ?? c.owner_id ?? c.userId ?? c.ownerId,
+          passport_id: c.passport_id ?? c.passportId ?? null
+        };
+      }
+
+      // Spending card tile with PNG + name overlay
+      function spendingCardHTML(card){
+        const status = card.status;
+        const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
+        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        const ending = card.last4 ? `Card ending in ${card.last4}` : '';
+
+        return `
+          <div class="tile">
+            <div class="row">
+              <h3>Spending Card</h3>
+              <span class="pill ${pillKind}">${statusLabel}</span>
+            </div>
+
+            <div class="card-art">
+              <div class="card-name">${ownerFullName}</div>
+            </div>
+
+            ${ending ? `<div class="card-detail">${ending}</div>` : ``}
+          </div>
+        `;
+      }
+
+      function transitCardHTML(card){
+        const status = card.status;
+        const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
+        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        const passName = card.pass_name || 'Transit';
+
+        return `
+          <div class="tile">
+            <div class="row">
+              <h3>Transit Card</h3>
+              <span class="pill ${pillKind}">${statusLabel}</span>
+            </div>
+            <div class="meta">${passName}</div>
+            <div class="divider"></div>
+            <div class="row">
+              <div>
+                <span class="label">Rides remaining</span>
+                <div class="value">${Number(card.rides_remaining||0)}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderCards(cards){
+        if (!Array.isArray(cards) || !cards.length){
+          cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
+          return;
+        }
+        cardsList.innerHTML = cards.map(c => c.type === 'transit' ? transitCardHTML(c) : spendingCardHTML(c)).join('');
+      }
+
+      async function loadPassportAndCards(){
+        let passport = null;
+        try{
+          const r = await fetch('/api/passport/mine', { headers:{ Authorization:`Bearer ${token}` }});
+          if (r.ok){ passport = await r.json(); }
+        }catch{}
+
+        const pid = passport?.passport_id || me?.passport_id || '—';
+        passportIdEl.textContent = pid;
+
+        const pstatus = (passport?.status || 'active').toLowerCase();
+        if (pstatus === 'active'){
+          setStatus(passportStatus, 'Active', 'ok');
+          setStatus(passportStatusInline, 'Active', 'ok');
+        } else if (pstatus === 'pending'){
+          setStatus(passportStatus, 'Pending', 'warn');
+          setStatus(passportStatusInline, 'Pending', 'warn');
+        } else {
+          setStatus(passportStatus, 'Disabled', 'stop');
+          setStatus(passportStatusInline, 'Disabled', 'stop');
+        }
+
+        // Prefer cards embedded on passport, else GET /api/cards/mine
+        let rawCards = Array.isArray(passport?.cards) ? passport.cards : null;
+        if (!rawCards){
+          try{
+            const rc = await fetch('/api/cards/mine', { headers:{ Authorization:`Bearer ${token}` }});
+            const list = await rc.json();
+            if (Array.isArray(list)) rawCards = list;
+          }catch{}
+        }
+
+        const normalized = Array.isArray(rawCards) ? rawCards.map(normalizeCard) : [];
+
+        // If backend sends more than the user's cards, filter by owner/passport
+        const myId = me?.id || me?.user_id;
+        const filtered = normalized.filter(c=>{
+          if (pid && c.passport_id) return String(c.passport_id) === String(pid);
+          if (myId && c.owner_id)   return String(c.owner_id) === String(myId);
+          return true;
+        });
+
+        renderCards(filtered);
+      }
+
+      document.getElementById('buyTransitBtn').href = 'https://shorelink.example/';
+
+      await loadPassportAndCards();
+    })();
+  </script>
+</body>
+</html>
