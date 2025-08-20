@@ -2,88 +2,494 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Passport – BOOP</title>
+  <title>Passport – Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Your BOOP Passport: the ID that owns your cards." />
+  <meta name="description" content="Your Payulot Passport: the ID that owns your cards." />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    /* --- your existing styles trimmed for brevity --- */
+    :root{
+      --ink:#e5e7eb;
+      --muted:#cbd5e1;
+      --blue:#2f80ed;
+      --blue-dark:#1a5fcc;
+      --border:rgba(255,255,255,0.10);
+      --bg:#0b1220;
+      --nav:#102a43;
+    }
+    /* Fixed decorative glows (don’t scroll) */
+  body::before,
+  body::after{
+    content:""; position:fixed; z-index:-1; pointer-events:none;
+  }
+  /* Top-right blue bubble (fixed) */
+  body::before{
+    top:-220px; right:-220px; width:1100px; height:800px;
+    background: radial-gradient(closest-side, rgba(47,128,237,.32), transparent 70%);
+    filter: blur(0px);
+  }
+  /* Bottom-left green bubble (fixed to bottom) */
+  body::after{
+    bottom:-260px; left:-260px; width:1200px; height:900px;
+    background: radial-gradient(closest-side, rgba(16,185,129,.26), transparent 70%);
+    filter: blur(0px);
+  }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; min-height:100vh; display:flex; flex-direction:column;
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:#eef2ff;
+      background: linear-gradient(180deg, #0b1220 0%, #0d1426 40%, #0b1220 100%);
+    }
 
-    /* Card styling overrides */
-    .spending-card {
-      position: relative;
-      background: url("assets/payulot-card.png") no-repeat center/cover;
-      border-radius: 18px;
-      width: 320px;
-      height: 200px;
-      color: #000; /* <-- dark text for white card */
-      padding: 20px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
+    /* NAV */
+    nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    .nav-container{ max-width:1100px; margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-left img{ height:34px; display:block; }
+    .nav-right{ display:flex; align-items:center; gap:18px; }
+    .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; opacity:.95; font-weight:500; }
+    .nav-right a:hover{ opacity:1 }
+    .hamburger{ display:none; flex-direction:column; justify-content:space-between; width:26px; height:20px; background:none; border:0; cursor:pointer; }
+    .hamburger span{ width:100%; height:3px; background:#fff; border-radius:2px; transition:transform .25s, opacity .25s; }
+    .hamburger.active span:nth-child(1){ transform:translateY(8.5px) rotate(45deg); }
+    .hamburger.active span:nth-child(2){ opacity:0; }
+    .hamburger.active span:nth-child(3){ transform:translateY(-8.5px) rotate(-45deg); }
+    .nav-panel{ display:none; }
+    @media (max-width: 768px){
+      .nav-right{ display:none; }
+      .hamburger{ display:flex; }
+      .nav-panel{
+        display:block; position:fixed; top:0; right:-100%; height:100vh; width:260px;
+        background:#0f172a; color:#e5e7eb; box-shadow:-4px 0 14px rgba(0,0,0,.18);
+        transition:right .3s ease; z-index:60; padding:80px 20px 20px;
+      }
+      .nav-panel.active{ right:0; }
+      .nav-panel a{ display:block; color:#e5e7eb; text-decoration:none; padding:12px 8px; border-radius:8px; margin-bottom:6px; font-weight:600; }
+      .nav-panel a:hover{ background:#111827; }
+      .nav-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:55; }
+      .nav-overlay.active{ display:block; }
     }
-    .spending-card .card-owner {
-      font-weight: 600;
-      font-size: 1.05rem;
+
+    /* HERO */
+    .hero-band{ padding:28px 0 20px; }
+    .hero-inner{
+      max-width:1100px; margin:0 auto; padding:0 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
     }
-    .spending-card .card-type {
-      font-size: .9rem;
-      opacity: .85;
+    .hero-title{ margin:0; font-size:clamp(22px, 3.2vw, 34px); font-weight:700; text-align:left; }
+    .hero-sub{ margin:6px 0 0; color:var(--muted); font-size:.98rem; text-align:left; }
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      border:1px solid var(--border); background:rgba(255,255,255,.06); color:#a5b4fc;
+      padding:6px 10px; border-radius:999px; font-size:.8rem; font-weight:700;
     }
-    .card-chip {
-      position: absolute;
-      top: 65px;   /* lowered from default ~40px */
-      left: 20px;
-      width: 50px;
-      height: auto;
+    .pill.ok{ color:#86efac; }
+    .pill.warn{ color:#fcd34d; }
+    .pill.stop{ color:#fca5a5; }
+
+    /* MAIN */
+    main{ flex:1; }
+    .container{ max-width:1100px; margin:18px auto 46px; padding:0 18px; }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:1fr } }
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:18px;
+      box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
     }
+    .card h2{ margin:0 0 10px; font-size:1.1rem; }
+    .row{ display:flex; gap:12px; align-items:center; justify-content:space-between; }
+    .label{ display:block; color:var(--muted); font-size:.9rem; margin-bottom:4px; }
+    .value{ font-weight:700; letter-spacing:.3px; }
+    .list{ display:grid; gap:12px; }
+    .tile{ border:1px solid var(--border); background:rgba(255,255,255,.02); border-radius:14px; padding:14px; }
+    .tile h3{ margin:0 0 6px; font-size:1.02rem; color:#eef2ff; } /* keep title outside card LIGHT */
+    .tile .meta{ color:#9ca3af; font-size:.9rem; }
+    .tile .row+.row{ margin-top:8px; }
+    .divider{ height:1px; background:var(--border); margin:10px 0; }
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:700;
+      border:1px solid transparent; cursor:pointer;
+    }
+    .btn.primary{ background:var(--blue); color:#fff; }
+    .btn.primary:hover{ background:var(--blue-dark); }
+
+    /* ---------- Card visual (inside tile) ---------- */
+    .card-visual{
+      position:relative;
+      width:min(320px, 100%);
+      aspect-ratio:85.6 / 54;             /* ISO ID-1 */
+      border-radius:14px;
+      overflow:hidden;
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow:0 8px 18px rgba(0,0,0,.25);
+      background:#fff;                     /* fallback while image loads */
+    }
+    .card-bg{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:cover;
+    }
+    .card-chip{
+      position:absolute; left:16px; top:58%; transform:translateY(-50%);
+      width:44px; height:32px; border-radius:6px;
+      background:linear-gradient(135deg, #d4af37, #f0d26a);
+      box-shadow:inset 0 2px 6px rgba(0,0,0,.25), 0 1px 2px rgba(0,0,0,.25);
+    }
+    .card-tag{
+      position:absolute; right:14px; top:12px;
+      font-weight:700; font-size:.95rem; 
+      color:#111;                         /* black INSIDE card */
+      letter-spacing:.2px;
+    }
+    .card-name{
+      position:absolute; left:16px; bottom:14px;
+      font-weight:700; font-size:1rem; 
+      color:#111;                         /* black INSIDE card */
+      letter-spacing:.4px; text-transform:uppercase;
+    }
+
+    /* FOOTER */
+    footer{ border-top:1px solid var(--border); background:rgba(15,23,42,.6); color:#9ca3af; }
+    .footer-inner{
+      max-width:1100px; margin:0 auto; padding:16px 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:.9rem;
+    }
+    .footer-links a{ color:#9ca3af; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
   </style>
 </head>
 <body>
-  <!-- NAV ... unchanged ... -->
 
+  <!-- NAV -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <a href="cardholder.html" aria-label="Payulot home">
+          <img src="assets/logo-white.png" alt="Payulot Logo" />
+        </a>
+      </div>
+
+      <div class="nav-right" aria-label="Primary">
+        <a href="cardholder.html">Home</a>
+        <a href="send-request.html" id="sendRequestLink">Send / Request</a>
+        <a href="transfer.html">Transfer</a>
+        <a href="passport.html" aria-current="page">Passport</a>
+        <a href="activity.html">Activity</a>
+        <a href="help.html">Help</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+
+      <!-- Mobile toggle -->
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Mobile panel + overlay -->
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+    <div class="nav-panel" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
+      <a href="cardholder.html">Home</a>
+      <a href="send-request.html">Send / Request</a>
+      <a href="transfer.html">Transfer</a>
+      <a href="passport.html" aria-current="page">Passport</a>
+      <a href="activity.html">Activity</a>
+      <a href="help.html">Help</a>
+      <a href="#" id="logoutBtnMobile">Log Out</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-band">
+    <div class="hero-inner">
+      <div>
+        <h1 class="hero-title">Passport</h1>
+        <p class="hero-sub">Your Passport owns your cards. If it’s ever compromised, we can rotate the Passport — no wallet number exposed.</p>
+      </div>
+      <div class="pill" id="passportStatus">Loading…</div>
+    </div>
+  </section>
+
+  <!-- MAIN -->
   <main class="container">
-    <section class="card">
-      <h2>Cards in this Passport</h2>
-      <div id="cardsList"></div>
+    <div class="grid">
+      <!-- Passport summary -->
+      <section class="card" aria-labelledby="passportTitle">
+        <h2 id="passportTitle">Passport summary</h2>
+        <div class="list">
+          <div class="tile">
+            <div class="row">
+              <div>
+                <span class="label">Passport ID</span>
+                <div class="value" id="passportId">—</div>
+              </div>
+              <div>
+                <span class="label">Status</span>
+                <div class="value"><span class="pill ok" id="passportStatusInline">Active</span></div>
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <span class="label">Owner</span>
+                <div class="value" id="ownerName">—</div>
+              </div>
+              <div>
+                <span class="label">Email</span>
+                <div class="value" id="ownerEmail">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cards in this Passport -->
+      <section class="card" aria-labelledby="cardsTitle">
+        <h2 id="cardsTitle">Cards in this Passport</h2>
+        <div class="list" id="cardsList">
+          <div class="tile">
+            <div class="row"><div class="muted">Loading cards…</div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Transit actions -->
+    <section class="card" style="margin-top:16px;">
+      <div class="row">
+        <div class="label" style="margin:0;">Need more rides or a different pass?</div>
+        <a class="btn primary" id="buyTransitBtn" href="https://example.com/transit" target="_blank" rel="noopener">Buy transit tickets</a>
+      </div>
     </section>
   </main>
 
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div>© <span id="year"></span> Payulot</div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
   <script>
-    (async function(){
-      // ---------- Auth ----------
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
-        const res = await fetch("/api/users/me", { headers: { Authorization:`Bearer ${token}` }});
-        if (!res.ok) throw new Error("Unauthorized");
-        const me = await res.json();
+(async () => {
+  // ---------------- AUTH (your exact policy) ----------------
+  try {
+    const token = localStorage.getItem("boop_jwt");
+    if (!token) throw new Error("No token");
+    const res = await fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` }});
+    if (!res.ok) throw new Error("Unauthorized");
+    const meBase = await res.json();
+    const role = String(meBase.role || meBase.type || "").toLowerCase();
+    const allowed = new Set(["cardholder","cardholder_assistance","senior","student"]);
+    if (!allowed.has(role)) throw new Error("Forbidden");
+    localStorage.setItem("boopUser", JSON.stringify(meBase));
+  } catch {
+    try { await fetch("/api/logout", { method: "POST" }); } catch {}
+    localStorage.clear();
+    location.href = "index.html";  // <-- your desired redirect
+    return;
+  }
 
-        // store current user
-        localStorage.setItem("boopUser", JSON.stringify(me));
+  // ---------------- Helpers ----------------
+  const token = localStorage.getItem("boop_jwt");
+  const authFetch = (url, opts={}) =>
+    fetch(url, { ...opts, headers: { ...(opts.headers||{}), Authorization: `Bearer ${token}` } });
 
-        // show name/email
-        const first = me.first_name || "";
-        const last  = me.last_name || "";
-        const fullName = (first + " " + last).trim();
+  const titleCase = s => (s||"").split(/\s+/).map(w => w? w[0].toUpperCase()+w.slice(1).toLowerCase():"").join(" ").trim();
+  const nameFromEmail = (email="") => titleCase((email.split("@")[0]||"").replace(/[._-]+/g," ")) || "Cardholder";
 
-        // ----- Example card -----
-        const cardsList = document.getElementById("cardsList");
-        cardsList.innerHTML = `
-          <div class="spending-card">
-            <img src="assets/gold-chip.png" class="card-chip" alt="Chip"/>
-            <div class="card-type">Spending</div>
-            <div class="card-owner">${fullName || me.email}</div>
-          </div>
-        `;
-
-      } catch (err) {
-        console.error("Auth failed:", err);
-        localStorage.clear();
-        location.href = "cardholder-login.html";
+  // Prefer first+last from /api/users/:id; fallback to email prefix
+  async function getFullUser() {
+    const meBase = JSON.parse(localStorage.getItem("boopUser")||"{}");
+    const id = meBase.id || meBase.userId;
+    if (!id) return { ...meBase, first_name: "", last_name: "" };
+    try {
+      const r = await authFetch(`/api/users/${encodeURIComponent(id)}`);
+      if (r.ok) {
+        const u = await r.json();
+        return { ...meBase, ...u };
       }
-    })();
-  </script>
+    } catch {}
+    return { ...meBase, first_name: "", last_name: "" };
+  }
+
+  // ---------------- Elements ----------------
+  const yearEl = document.getElementById("year");
+  const ownerNameEl = document.getElementById("ownerName");
+  const ownerEmailEl = document.getElementById("ownerEmail");
+  const passportIdEl = document.getElementById("passportId");
+  const passportStatus = document.getElementById("passportStatus");
+  const passportStatusInline = document.getElementById("passportStatusInline");
+  const cardsList = document.getElementById("cardsList");
+
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  const setPill = (el, text, kind) => {
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove("ok","warn","stop");
+    if (kind) el.classList.add(kind);
+  };
+  const normStatus = v => {
+    const s = String(v||"").toLowerCase();
+    if (["pending","review"].includes(s)) return "pending";
+    if (["disabled","blocked","inactive","frozen","closed"].includes(s)) return "disabled";
+    return "active";
+  };
+  const normType = v => {
+    const s = String(v||"").toLowerCase();
+    if (["transit","bus","metro","rail"].includes(s)) return "transit";
+    if (s==="assistance") return "assistance";
+    return "spending";
+  };
+
+  // ---------------- Load me + show name ----------------
+  const me = await getFullUser();
+  const fullName = (me.first_name?.trim() || me.last_name?.trim())
+    ? [me.first_name||"", me.last_name||""].filter(Boolean).join(" ").trim()
+    : nameFromEmail(me.email);
+
+  if (ownerNameEl) ownerNameEl.textContent = fullName || "Cardholder";
+  if (ownerEmailEl) ownerEmailEl.textContent = me.email || "—";
+
+  // ---------------- Passport (optional) ----------------
+  try {
+    const pr = await authFetch("/api/passport/mine");
+    if (pr.ok) {
+      const p = await pr.json();
+      if (passportIdEl) passportIdEl.textContent = p?.passport_id || me?.passport_id || "—";
+      const st = normStatus(p?.status || "active");
+      if (st === "active") { setPill(passportStatus,"Active","ok"); setPill(passportStatusInline,"Active","ok"); }
+      else if (st === "pending") { setPill(passportStatus,"Pending","warn"); setPill(passportStatusInline,"Pending","warn"); }
+      else { setPill(passportStatus,"Disabled","stop"); setPill(passportStatusInline,"Disabled","stop"); }
+    }
+  } catch {}
+
+  // ---------------- Wallet ----------------
+  let walletId = null;
+  try {
+    const wr = await authFetch("/api/wallets/mine");
+    if (wr.ok) {
+      const w = await wr.json();
+      walletId = w?.id || w?.wallet_id || null;
+    }
+  } catch {}
+  if (!walletId) {
+    if (cardsList) cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
+    return;
+  }
+
+  // ---------------- Cards ----------------
+  let cards = [];
+  try {
+    const cr = await authFetch(`/api/cards?wallet_id=${encodeURIComponent(walletId)}`);
+    if (cr.ok) {
+      const rows = await cr.json();
+      if (Array.isArray(rows)) {
+        cards = rows.map(c => ({
+          type: normType(c.type ?? c.card_type ?? c.kind),
+          status: normStatus(c.status ?? c.state),
+          rides_remaining: c.rides_remaining ?? c.ridesRemaining ?? 0,
+          pass_name: c.pass_name ?? c.passName ?? null
+        }));
+      }
+    }
+  } catch {}
+
+  function spendingCardHTML(name) {
+    // White Payulot card background + black text
+    return `
+      <div style="
+        width:min(440px,100%);
+        aspect-ratio:1.586;
+        position:relative;
+        border-radius:16px;
+        overflow:hidden;
+        box-shadow:0 10px 28px rgba(0,0,0,.25);
+        background:#fff url('assets/payulot-card.png') center/cover no-repeat;
+        border:1px solid rgba(0,0,0,.06);
+      ">
+        <div style="
+          position:absolute; left:16px; top:14px;
+          font-weight:700; font-size:14px; letter-spacing:.4px;
+          color:#111; text-transform:uppercase; text-shadow:none;
+        ">Spending</div>
+        <div style="
+          position:absolute; left:16px; right:16px; bottom:16px;
+          font-weight:700; font-size:18px; letter-spacing:.3px;
+          color:#111; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+          text-shadow:none;
+        ">${name}</div>
+      </div>
+    `;
+  }
+
+  function transitTileHTML(card) {
+    const label = card.status[0].toUpperCase() + card.status.slice(1);
+    const pill = card.status === "active" ? "ok" : card.status === "pending" ? "warn" : "stop";
+    return `
+      <div class="tile">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Transit Card</h3>
+          <span class="pill ${pill}">${label}</span>
+        </div>
+        <div class="meta">${card.pass_name || "Transit"}</div>
+        <div class="divider"></div>
+        <div class="row" style="justify-content:flex-start;gap:24px;">
+          <div>
+            <span class="label">Rides remaining</span>
+            <div class="value">${Number(card.rides_remaining || 0)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCards(list) {
+    if (!cardsList) return;
+    if (!Array.isArray(list) || !list.length) {
+      cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
+      return;
+    }
+    const pieces = list.map(card => (card.type === "transit" ? transitTileHTML(card) : spendingCardHTML(fullName)));
+    cardsList.innerHTML = pieces.join("");
+  }
+
+  renderCards(cards);
+
+  // ---------------- Nav / logout (optional wiring) ----------------
+  const transitBtn = document.getElementById("buyTransitBtn");
+  if (transitBtn) transitBtn.href = "https://shorelink.example/";
+
+  function attachLogout(el){
+    if (!el) return;
+    el.addEventListener("click", async (e)=>{
+      e.preventDefault();
+      try { await fetch("/api/logout", { method:"POST" }); } catch {}
+      localStorage.clear();
+      location.href = "index.html";
+    });
+  }
+  attachLogout(document.getElementById("logoutBtn"));
+  attachLogout(document.getElementById("logoutBtnMobile"));
+
+  const hamburger = document.getElementById("hamburger");
+  const panel = document.getElementById("mobileMenu");
+  const overlay = document.getElementById("navOverlay");
+  function openMenu(){ hamburger?.classList.add("active"); panel?.classList.add("active"); overlay?.classList.add("active"); document.body.style.overflow="hidden"; }
+  function closeMenu(){ hamburger?.classList.remove("active"); panel?.classList.remove("active"); overlay?.classList.remove("active"); document.body.style.overflow=""; }
+  hamburger?.addEventListener("click", () => (hamburger.classList.contains("active") ? closeMenu() : openMenu()));
+  overlay?.addEventListener("click", closeMenu);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+})();
+</script>
 </body>
 </html>
