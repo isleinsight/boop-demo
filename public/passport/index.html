@@ -1,52 +1,3 @@
-<script>
-(async () => {
-  const ALLOWED = new Set([
-    "vendor", "rolevendor",     // tolerate odd/capitalized values
-    "health", "health_professional", "healthprofessional",
-    "transit", "bus", "ferry"
-  ]);
-
-  try {
-    const token = localStorage.getItem("boop_jwt");
-    if (!token) throw new Error("No token");
-
-    // 1) Lightweight identity (id, email, role, type)
-    const meRes = await fetch("/api/me", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!meRes.ok) throw new Error("Unauthorized");
-    const basic = await meRes.json();
-
-    // Normalize role
-    const rawRole = String(basic.role || basic.type || "").trim();
-    const role = rawRole.toLowerCase();
-
-    if (!ALLOWED.has(role)) throw new Error("Forbidden");
-
-    // 2) Enrich with names if available
-    let full = basic;
-    try {
-      const fullRes = await fetch("/api/users/me", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (fullRes.ok) {
-        const more = await fullRes.json();
-        full = { ...basic, ...more };
-      }
-    } catch (_) { /* optional */ }
-
-    // Save for the page to use (first_name/last_name etc.)
-    localStorage.setItem("boopUser", JSON.stringify(full));
-    window.__boopRole = role; // handy if you switch UI by role
-
-  } catch (err) {
-    // On any failure, clear and go home
-    try { await fetch("/api/logout", { method: "POST" }); } catch {}
-    localStorage.clear();
-    location.href = "/index.html";
-  }
-})();
-</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -260,4 +211,53 @@
 
   <script src="./passport.js" defer></script>
 </body>
+  <script>
+(async () => {
+  const ALLOWED = new Set([
+    "vendor", "rolevendor",     // tolerate odd/capitalized values
+    "health", "health_professional", "healthprofessional",
+    "transit", "bus", "ferry"
+  ]);
+
+  try {
+    const token = localStorage.getItem("boop_jwt");
+    if (!token) throw new Error("No token");
+
+    // 1) Lightweight identity (id, email, role, type)
+    const meRes = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!meRes.ok) throw new Error("Unauthorized");
+    const basic = await meRes.json();
+
+    // Normalize role
+    const rawRole = String(basic.role || basic.type || "").trim();
+    const role = rawRole.toLowerCase();
+
+    if (!ALLOWED.has(role)) throw new Error("Forbidden");
+
+    // 2) Enrich with names if available
+    let full = basic;
+    try {
+      const fullRes = await fetch("/api/users/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (fullRes.ok) {
+        const more = await fullRes.json();
+        full = { ...basic, ...more };
+      }
+    } catch (_) { /* optional */ }
+
+    // Save for the page to use (first_name/last_name etc.)
+    localStorage.setItem("boopUser", JSON.stringify(full));
+    window.__boopRole = role; // handy if you switch UI by role
+
+  } catch (err) {
+    // On any failure, clear and go home
+    try { await fetch("/api/logout", { method: "POST" }); } catch {}
+    localStorage.clear();
+    location.href = "/index.html";
+  }
+})();
+</script>
 </html>
