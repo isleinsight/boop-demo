@@ -163,7 +163,7 @@
     <div class="hero-inner">
       <div>
         <h1 class="hero-title">Passport</h1>
-        <p class="hero-sub">Your Passport owns your cards. dugtIf it’s ever compromised, we can rotate the Passport — no wallet number exposed.</p>
+        <p class="hero-sub">Your Passport owns your cards. If it’s ever compromised, we can rotate the Passport — no wallet number exposed.</p>
       </div>
       <div class="pill" id="passportStatus">Loading…</div>
     </div>
