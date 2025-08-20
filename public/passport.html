@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Passport – BOOP</title>
+  <title>Passport – Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Your BOOP Passport: the ID that owns your cards." />
+  <meta name="description" content="Your Payulot Passport: the ID that owns your cards." />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -108,6 +108,40 @@
     .btn.primary{ background:var(--blue); color:#fff; }
     .btn.primary:hover{ background:var(--blue-dark); }
 
+    /* VISUAL CARD */
+    .card-visual{
+      position:relative;
+      width:100%;
+      aspect-ratio: 86/54;            /* credit card proportion */
+      border-radius:16px;
+      overflow:hidden;
+      background:#0f172a url('assets/payulot-card.png') center/cover no-repeat; /* <- your PNG */
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .card-visual.transit{
+      background:
+        linear-gradient(135deg, rgba(47,128,237,.35), rgba(16,185,129,.35)); /* fallback if no image */
+      backdrop-filter:saturate(1.2);
+    }
+    .card-chip{
+      position:absolute; top:14px; left:14px;
+      width:38px; height:28px; border-radius:6px;
+      background:linear-gradient(180deg,#e6d9a6,#bcae72); opacity:.85;
+      border:1px solid rgba(0,0,0,.25);
+    }
+    .card-name{
+      position:absolute; left:16px; bottom:14px;
+      font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      font-size:.95rem; text-shadow:0 1px 0 rgba(0,0,0,.35);
+    }
+    .card-badge{
+      position:absolute; right:12px; top:12px;
+      font-size:.72rem; font-weight:800; letter-spacing:.06em;
+      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+      padding:4px 8px; border-radius:999px;
+    }
+
     /* FOOTER */
     footer{ border-top:1px solid var(--border); background:rgba(15,23,42,.6); color:#9ca3af; }
     .footer-inner{
@@ -124,7 +158,7 @@
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="cardholder.html" aria-label="BOOP home">
+        <a href="cardholder.html" aria-label="Payulot home">
           <img src="assets/logo-white.png" alt="Payulot Logo" />
         </a>
       </div>
@@ -291,7 +325,8 @@
       ownerEmailEl.textContent = me?.email || '—';
       const first = me?.first_name || (me?.name?.split?.(' ')[0]) || (me?.email ? me.email.split('@')[0] : '—');
       const last = me?.last_name || '';
-      ownerNameEl.textContent = `${first}${last ? ' ' + last : ''}`;
+      const fullName = `${first}${last ? ' ' + last : ''}`;
+      ownerNameEl.textContent = fullName;
 
       // ---------- Helpers ----------
       function setStatus(pillEl, text, kind){
@@ -320,41 +355,24 @@
         return null;
       }
 
-      function cardTileHTML(card){
-        const status = card.status;
+      // Visual card HTML
+      function visualCardHTML({ kind='spending', status='active', name=fullName }={}){
         const pillKind = status === 'active' ? 'ok' : status === 'pending' ? 'warn' : 'stop';
         const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-
-        if (card.type === 'transit'){
-          const passName = card.pass_name || 'Transit';
-          return `
-            <div class="tile">
-              <div class="row">
-                <h3>Transit Card</h3>
-                <span class="pill ${pillKind}">${statusLabel}</span>
-              </div>
-              <div class="meta">${passName}</div>
-              <div class="divider"></div>
-              <div class="row">
-                <div>
-                  <span class="label">Rides remaining</span>
-                  <div class="value">${Number(card.rides_remaining||0)}</div>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-
-        const title = card.type === 'assistance' ? 'Assistance Card' : 'Spending Card';
-        const ending = card.last4 ? `Card ending in ${card.last4}` : null;
+        const extraClass = kind === 'transit' ? 'transit' : '';
+        const title = kind === 'assistance' ? 'Assistance Card' : kind === 'transit' ? 'Transit Card' : 'Spending Card';
         return `
           <div class="tile">
             <div class="row">
               <h3>${title}</h3>
               <span class="pill ${pillKind}">${statusLabel}</span>
             </div>
-            ${ending ? `<div class="meta">${ending}</div>` : ``}
-            <div class="meta">Use at supported merchants.</div>
+            <div class="divider"></div>
+            <div class="card-visual ${extraClass}">
+              <div class="card-chip" aria-hidden="true"></div>
+              <div class="card-badge">${title.replace(' Card','')}</div>
+              <div class="card-name">${(name||' ').toUpperCase()}</div>
+            </div>
           </div>
         `;
       }
@@ -364,12 +382,17 @@
           cardsList.innerHTML = `<div class="tile"><div class="row"><div class="muted">No cards yet.</div></div></div>`;
           return;
         }
-        cardsList.innerHTML = cards.map(cardTileHTML).join('');
+        const html = cards.map(c => visualCardHTML({
+          kind: c.type,
+          status: c.status,
+          name: fullName
+        })).join('');
+        cardsList.innerHTML = html;
       }
 
-      // ---------- Load passport + cards (using your existing routes) ----------
+      // ---------- Load passport + cards ----------
       async function loadPassportAndCards(){
-        // A) Passport status/id (optional if you have /api/passport/mine)
+        // A) Passport status/id
         let passport = null;
         try{
           const r = await fetch('/api/passport/mine', { headers:{ Authorization:`Bearer ${token}` }});
