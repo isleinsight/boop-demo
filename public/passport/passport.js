@@ -1,4 +1,5 @@
-// /public/passport/passport.js
+<!-- /public/passport/passport.js -->
+<script>
 (function () {
   // ---------- config ----------
   // If your backend expects cents (integers), flip this to true.
@@ -53,7 +54,7 @@
   }
 
   // Fetch identity:
-  //   1) /api/me            → validates token and gets id/email/role/type
+  //   1) /api/me            → validates token and gets id/email/role/type (+ names if your server returns them)
   //   2) /api/users/me      → enrich with first_name/last_name if available
   async function fetchMe() {
     const token = localStorage.getItem("boop_jwt");
@@ -150,6 +151,11 @@
       location.href = "/index.html";
     });
 
+    // Press Enter in amount to trigger charge quickly
+    $("v_amount")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("v_chargeBtn")?.click();
+    });
+
     // ----- Vendor actions → REAL CALL -----
     $("v_chargeBtn")?.addEventListener("click", async () => {
       const pidInput = $("pid");
@@ -169,10 +175,10 @@
       if (receipt) hide(receipt);
 
       // disable while processing
-      if ($("v_chargeBtn")) $("v_chargeBtn").disabled = true;
-      if (amtInput) amtInput.disabled = true;
-      if (noteInput) noteInput.disabled = true;
-      if (pidInput) pidInput.disabled = true;
+      $("v_chargeBtn") && ($("v_chargeBtn").disabled = true);
+      amtInput && (amtInput.disabled = true);
+      noteInput && (noteInput.disabled = true);
+      pidInput && (pidInput.disabled = true);
 
       try {
         const token = localStorage.getItem("boop_jwt");
@@ -195,10 +201,10 @@
 
         if (!res.ok) {
           // Re-enable for retry on error
-          if ($("v_chargeBtn")) $("v_chargeBtn").disabled = false;
-          if (amtInput) amtInput.disabled = false;
-          if (noteInput) noteInput.disabled = false;
-          if (pidInput) pidInput.disabled = false;
+          $("v_chargeBtn") && ($("v_chargeBtn").disabled = false);
+          amtInput && (amtInput.disabled = false);
+          noteInput && (noteInput.disabled = false);
+          pidInput && (pidInput.disabled = false);
 
           throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
         }
@@ -209,16 +215,14 @@
         setStatus(st, "Charge completed.", "ok");
 
         // Example: populate a receipt block (add these elements in HTML if you want)
-        if ($("r_status")) $("r_status").textContent = "Success";
-        if ($("r_amount")) $("r_amount").textContent = fmtMoney(amt);
-        if ($("r_pid")) $("r_pid").textContent = pid;
-        if ($("r_ref")) $("r_ref").textContent = ref;
-        if ($("r_time")) $("r_time").textContent = when.toLocaleString();
+        $("r_status") && ( $("r_status").textContent = "Success" );
+        $("r_amount") && ( $("r_amount").textContent = fmtMoney(amt) );
+        $("r_pid") && ( $("r_pid").textContent = pid );
+        $("r_ref") && ( $("r_ref").textContent = ref );
+        $("r_time") && ( $("r_time").textContent = when.toLocaleString() );
         if (receipt) show(receipt);
 
-        // Lock page after success so it’s one-shot
-        $("v_chargeBtn") && ($("v_chargeBtn").disabled = true);
-
+        // Keep charge button disabled after success (one-shot)
       } catch (err) {
         setStatus(st, `❌ ${err.message || err}`, "err");
       }
@@ -239,3 +243,4 @@
     });
   });
 })();
+</script>
