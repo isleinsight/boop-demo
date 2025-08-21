@@ -196,6 +196,35 @@ try {
 }
   });
 
+// ✅ GET /api/users/me — Get current user info
+router.get("/me", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user && req.user.id;
+
+    if (!userId) {
+      console.warn("🛑 No user ID found in token payload.");
+      return res.status(401).json({ message: "Not authenticated — missing user ID" });
+    }
+
+    const result = await pool.query(
+      `SELECT id, email, role, type, first_name, last_name, force_signed_out
+       FROM users
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      console.warn("❌ User ID from token not found in DB:", userId);
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error("🔥 Error in /me route:", err.message);
+    res.status(500).json({ message: "Failed to fetch current user info" });
+  }
+});
+
 // ✅ Get users (with autocomplete or pagination, now including deleted filter)
 router.get("/", async (req, res) => {
   const { search, role, status, page, perPage, assistanceOnly, type, canReceiveCard, hasWallet, sortBy = 'first_name', sortDirection = 'asc' } = req.query;
@@ -517,35 +546,6 @@ router.post("/:id/signout", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("❌ Failed to sign out user:", err);
     res.status(500).json({ message: "Failed to force sign-out" });
-  }
-});
-
-// ✅ GET /api/users/me — Get current user info
-router.get("/me", authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user && req.user.id;
-
-    if (!userId) {
-      console.warn("🛑 No user ID found in token payload.");
-      return res.status(401).json({ message: "Not authenticated — missing user ID" });
-    }
-
-    const result = await pool.query(
-      `SELECT id, email, role, type, first_name, last_name, force_signed_out
-       FROM users
-       WHERE id = $1`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      console.warn("❌ User ID from token not found in DB:", userId);
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json(result.rows[0]);
-  } catch (err) {
-    console.error("🔥 Error in /me route:", err.message);
-    res.status(500).json({ message: "Failed to fetch current user info" });
   }
 });
 
