@@ -11,8 +11,8 @@ const path = require('path');
 const { exec } = require('child_process');
 const { authenticateToken } = require('./auth/middleware/authMiddleware');
 
-// ⬇️ NEW: import your DB pool so we can fetch names for /api/me
-const pool = require('./db'); // if your db file is elsewhere, adjust the path
+// DB pool (used by /api/me)
+const pool = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -22,10 +22,11 @@ console.log('🔧 server.js is initializing...');
 // ───────────────── middleware ─────────────────
 app.use(cors());
 app.use(express.json());
-// serve the static site
+
+// Serve the static website from /public
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Helper: mount with logging so failures don’t kill the whole server
+// Small helper to mount routers with logging (so a failure doesn't crash boot)
 function mount(pathPrefix, modPath, label = modPath) {
   try {
     const router = require(modPath);
@@ -37,7 +38,7 @@ function mount(pathPrefix, modPath, label = modPath) {
 }
 
 // ───────────────── routes ─────────────────
-// Auth (legacy + current logout, keep both)
+// Auth (legacy + current logout)
 mount('/auth/login', './auth/routes/login', 'login');
 mount('/logout', './auth/routes/logout', 'logout (legacy)');
 mount('/api/logout', './auth/routes/logout', 'logout (api)');
@@ -46,14 +47,20 @@ mount('/api/logout', './auth/routes/logout', 'logout (api)');
 mount('/api/users', './auth/routes/users');
 mount('/api/cards', './auth/routes/cards');
 mount('/api/wallets', './auth/routes/wallets');
-mount('/api/vendors', './auth/routes/vendors'); // admin vendors list/update/delete
-mount('/api/vendor', './auth/routes/vendor-passport', 'vendor-passport');
+
+// Vendors
+//   • Admin endpoints at /api/vendors (list/update/delete vendors)
+//   • Vendor self-service endpoints at /api/vendor (profile, reports, etc)
+mount('/api/vendors', './auth/routes/vendors', 'vendors (admin)');
+mount('/api/vendor', './auth/routes/vendors', 'vendor');
+
+// ✅ Vendor passport charge (POST /api/vendor/passport-charge)
+mount('/api/vendor', './auth/routes/passport-charge', 'passport-charge');
+
+// Optional: your passport read-only routes (keep if you have this file)
 mount('/api/passport', './auth/routes/passport', 'passport');
-mount('/api/passport-charge', './auth/routes/passport-charge');
 
-// ✅ singular vendor API used by the vendor portal (e.g. /api/vendor/transactions/report)
-mount('/api/vendor', './auth/routes/vendors', 'vendor'); 
-
+// Students / parents / sessions / txns / payouts / sales
 mount('/api/students', './auth/routes/students');
 mount('/api/user-students', './auth/routes/userStudents');
 mount('/api/sessions', './auth/routes/sessions');
@@ -61,51 +68,16 @@ mount('/api/transactions', './auth/routes/transactions');
 mount('/api/payouts', './auth/routes/payouts');
 mount('/api/sales', './auth/routes/sales');
 
-// NEW routes you asked for
+// Money movement + bank accounts + password reset
 mount('/api/transfers', './auth/routes/transfers');
 mount('/api/bank-accounts', './auth/routes/bank-accounts');
 mount('/api/password', './auth/routes/password');
 
-// Treasury
+// Treasury + Admin actions
 mount('/api/treasury', './auth/routes/treasury', 'treasury');
-
-// Admin actions
 mount('/api/admin-actions', './auth/routes/admin-actions');
 
-// ───────────────── Who am I (returns names) ─────────────────
-// ⬇️ REPLACED: now queries DB so you get first_name + last_name (and more)
-app.get('/api/me', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId || req.user.id;
-    if (!userId) return res.status(401).json({ message: 'Not authenticated' });
-
-    const { rows } = await pool.query(
-      `SELECT id, email, role, type, first_name, last_name, wallet_id, force_signed_out
-       FROM users
-       WHERE id = $1`,
-      [userId]
-    );
-
-    if (!rows.length) return res.status(404).json({ message: 'User not found' });
-
-    const me = rows[0];
-
-    // If you use this to force logouts, respect it
-    if (me.force_signed_out) {
-      return res.status(401).json({ message: 'Signed out' });
-    }
-
-    res.json(me); // includes first_name + last_name ✅
-  } catch (e) {
-    console.error('Error in /api/me:', e.message);
-    res.status(500).json({ message: 'Failed to load user' });
-  }
-});
-
-// Health
-app.get('/health', (_req, res) => res.send('OK'));
-
-// GitHub webhook
+// Webhook (GitHub)
 app.post('/webhook', (req, res) => {
   console.log('🔔 GitHub Webhook triggered');
   exec('cd ~/boop-demo && git pull && pm2 restart all', (err, stdout) => {
@@ -115,6 +87,39 @@ app.post('/webhook', (req, res) => {
   });
 });
 mount('/webhook', './webhook-handler', 'webhook-handler');
+
+// ───────────────── Who am I (returns names) ─────────────────
+// Enriches the token with DB fields, including first_name/last_name.
+// Also respects force_signed_out if you’re using that flag.
+app.get('/api/me', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    if (!userId) return res.status(401).json({ message: 'Not authenticated' });
+
+    const { rows } = await pool.query(
+      `SELECT id, email, role, type, first_name, last_name, wallet_id, force_signed_out
+         FROM users
+        WHERE id = $1`,
+      [userId]
+    );
+
+    if (!rows.length) return res.status(404).json({ message: 'User not found' });
+
+    const me = rows[0];
+
+    if (me.force_signed_out) {
+      return res.status(401).json({ message: 'Signed out' });
+    }
+
+    res.json(me);
+  } catch (e) {
+    console.error('Error in /api/me:', e.message);
+    res.status(500).json({ message: 'Failed to load user' });
+  }
+});
+
+// Health
+app.get('/health', (_req, res) => res.send('OK'));
 
 // 404
 app.use((req, res) => {
