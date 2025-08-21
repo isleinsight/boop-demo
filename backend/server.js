@@ -49,7 +49,7 @@ mount('/api/wallets', './auth/routes/wallets');
 mount('/api/vendors', './auth/routes/vendors'); // admin vendors list/update/delete
 mount('/api/vendor', './auth/routes/vendor-passport', 'vendor-passport');
 mount('/api/passport', './auth/routes/passport', 'passport');
-mount('/api/passport', './auth/routes/passport-charge', 'passport-charge');
+mount('/api/passport-charge', './auth/routes/passport-charge');
 
 // ✅ singular vendor API used by the vendor portal (e.g. /api/vendor/transactions/report)
 mount('/api/vendor', './auth/routes/vendors', 'vendor'); 
