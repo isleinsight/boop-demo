@@ -5,41 +5,30 @@ const db = require("../../db");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
 /* -------------------------------------------------------------------------
-   ⚠️ NOTE ON MOUNTS ⚠️
+   ⚠️ MOUNTING NOTE
    This single router file is mounted twice in server.js:
 
-     - /api/vendors   → Admin-only endpoints (requireAdmin)
-     - /api/vendor    → Vendor self-service endpoints (requireVendor)
+     - /api/vendors  → Admin-only endpoints (requireAdmin)
+     - /api/vendor   → Vendor self-service endpoints (requireVendor)
 
-   Keeping them in one file avoids duplication. Route-level guards 
-   (requireAdmin vs requireVendor) enforce who can use which endpoints.
-
-   Examples:
-     - GET /api/vendors                    → Admin: list all vendors
-     - GET /api/vendor/profile             → Vendor: fetch own profile (business_name)
-     - GET /api/vendor/transactions/report → Vendor: fetch only their own txns
+   Route-level guards below enforce who can call which endpoints.
 ---------------------------------------------------------------------------*/
 
-// --- helpers ---------------------------------------------------------------
+// ───────────────────────────────── helpers ─────────────────────────────────
 function requireAdmin(req, res, next) {
   const role = (req.user?.role || "").toLowerCase();
-  if (role !== "admin") {
-    return res.status(403).json({ error: "Admin access required." });
-  }
+  if (role !== "admin") return res.status(403).json({ error: "Admin access required." });
   next();
 }
 function requireVendor(req, res, next) {
   const role = (req.user?.role || "").toLowerCase();
-  if (role !== "vendor") {
-    return res.status(403).json({ message: "Vendor role required." });
-  }
+  if (role !== "vendor") return res.status(403).json({ message: "Vendor role required." });
   next();
 }
 function toInt(v, d) {
   const n = Number.parseInt(v, 10);
   return Number.isFinite(n) ? n : d;
 }
-
 async function audit({ action, status = "completed", adminId, targetUserId }) {
   try {
     await db.query(
@@ -52,8 +41,7 @@ async function audit({ action, status = "completed", adminId, targetUserId }) {
   }
 }
 
-// ───────────────────────────────────────────────────────────────
-// VENDOR SELF PROFILE
+// ─────────────────────────── vendor self profile ───────────────────────────
 // GET /api/vendor/profile  → returns business_name + basic user info
 router.get("/profile", authenticateToken, requireVendor, async (req, res) => {
   try {
@@ -93,14 +81,15 @@ router.get("/profile", authenticateToken, requireVendor, async (req, res) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// POST: Block direct vendor creation
+// ─────────────────────── admin: block direct create ────────────────────────
+// POST /api/vendors  → blocked; create via /api/users
 router.post("/", (req, res) => {
   res.status(405).json({ error: "Use /api/users to create vendors." });
 });
 
-// GET: Only active, non-deleted vendors (ADMIN)
-router.get("/", authenticateToken, requireAdmin, async (req, res) => {
+// ─────────────────────── admin: list active vendors ────────────────────────
+// GET /api/vendors
+router.get("/", authenticateToken, requireAdmin, async (_req, res) => {
   try {
     const result = await db.query(
       `SELECT v.*, u.email, u.first_name, u.last_name
@@ -117,14 +106,21 @@ router.get("/", authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-// PATCH: Update vendor details (ADMIN)
+// ────────────────────────── admin: update vendor ───────────────────────────
+// PATCH /api/vendors/:id   (id = vendor's user_id)
 router.patch("/:id", authenticateToken, requireAdmin, async (req, res) => {
-  const { id } = req.params; // vendor's user_id
+  const { id } = req.params;
   const adminId = req.user?.id;
 
-  const business_name = typeof req.body.business_name === "string" ? req.body.business_name.trim() : null;
-  const category      = typeof req.body.category === "string"      ? req.body.category.trim()      : null;
-  const phone         = typeof req.body.phone === "string"         ? req.body.phone.trim()         : null;
+  const business_name = typeof req.body.business_name === "string"
+    ? req.body.business_name.trim()
+    : null;
+  const category = typeof req.body.category === "string"
+    ? req.body.category.trim()
+    : null;
+  const phone = typeof req.body.phone === "string"
+    ? req.body.phone.trim()
+    : null;
 
   try {
     const result = await db.query(
@@ -137,12 +133,9 @@ router.patch("/:id", authenticateToken, requireAdmin, async (req, res) => {
       [business_name, category, phone, id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Vendor not found" });
-    }
+    if (!result.rows.length) return res.status(404).json({ error: "Vendor not found" });
 
     await audit({ action: "update_vendor", adminId, targetUserId: id });
-
     res.json({ message: "Vendor updated", vendor: result.rows[0] });
   } catch (err) {
     console.error("❌ Vendor update failed:", err);
@@ -150,9 +143,10 @@ router.patch("/:id", authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-// DELETE: Soft-delete vendor (ADMIN)
+// ───────────────────────── admin: soft-delete vendor ───────────────────────
+// DELETE /api/vendors/:id   (id = vendor's user_id)
 router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
-  const { id } = req.params; // vendor's user_id
+  const { id } = req.params;
   const adminId = req.user?.id;
 
   const client = await (db.pool?.connect ? db.pool.connect() : db.connect?.());
@@ -179,7 +173,6 @@ router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
     } catch (_) { /* optional column; ignore if missing */ }
 
     await client.query("COMMIT");
-
     await audit({ action: "delete_vendor", adminId, targetUserId: id });
 
     res.json({ message: "Vendor soft-deleted", vendor_id: userRes.rows[0].id });
@@ -192,23 +185,31 @@ router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// VENDOR REPORTS (self-service)
-// GET /api/vendor/transactions/report
-// - Only credits to this vendor (money received)
-// - Returns { transactions: [...], totalCount }
-//   Each item includes: id, amount_cents, created_at, note,
-//   customer_name, business_name, direction, counterparty_label
+/* ===========================================================================
+   VENDOR REPORTS (self-service)
+   GET /api/vendor/transactions/report
+   - Only for signed-in vendors
+   - Shows ONLY money RECEIVED by the vendor (credits)
+   - Filters: ?start=YYYY-MM-DD&end=YYYY-MM-DD&limit=25&offset=0
+   - Response:
+       {
+         transactions: [{
+           id, type, amount_cents, note, created_at,
+           customer_name, business_name, direction, counterparty_label
+         }],
+         totalCount
+       }
+===========================================================================*/
 router.get("/transactions/report", authenticateToken, requireVendor, async (req, res) => {
   try {
     const userId = req.user?.id || req.user?.userId;
 
-    // Resolve this vendor's vendor_id and business_name
+    // Resolve vendor_id + business_name for this user
     const vendRes = await db.query(
       `SELECT v.id AS vendor_id, COALESCE(v.business_name, '') AS business_name
          FROM vendors v
-         WHERE v.user_id = $1
-         LIMIT 1`,
+        WHERE v.user_id = $1
+        LIMIT 1`,
       [userId]
     );
     if (!vendRes.rowCount) {
@@ -217,13 +218,10 @@ router.get("/transactions/report", authenticateToken, requireVendor, async (req,
     const vendorId = vendRes.rows[0].vendor_id;
     const businessName = vendRes.rows[0].business_name;
 
-    // Filters (dates optional)
+    // Build filters
     const { start, end } = req.query;
+    const where = [`t.vendor_id = $1`, `LOWER(t.type) = 'credit'`]; // vendor sees only credits
     const params = [vendorId];
-    const where = [
-      `t.vendor_id = $1`,
-      `LOWER(COALESCE(t.type, '')) = 'credit'` // ✅ vendor sees ONLY money received
-    ];
 
     if (start) { params.push(start); where.push(`t.created_at >= $${params.length}`); }
     if (end)   { params.push(end + " 23:59:59.999"); where.push(`t.created_at <= $${params.length}`); }
@@ -235,19 +233,28 @@ router.get("/transactions/report", authenticateToken, requireVendor, async (req,
     const countRes = await db.query(countSql, params);
     const totalCount = countRes.rows[0]?.cnt || 0;
 
-    // Data — sender_id is the customer for vendor credits
+    // Paging
+    const limit  = Math.min(Math.max(toInt(req.query.limit || "25", 25), 1), 200);
+    const offset = Math.max(toInt(req.query.offset || "0", 0), 0);
+
+    // Data:
+    // For credits to vendor, sender_id is the customer (buyer).
     const dataSql = `
       SELECT
         t.id,
+        t.type,
         t.amount_cents,
         t.note,
         t.created_at,
         TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')) AS customer_name,
         $${params.length + 1}::text AS business_name,
         'received'::text AS direction,
+        -- UI label vendors should show:
         'Received from ' ||
-          COALESCE(NULLIF(TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')), ''), 'Customer')
-          AS counterparty_label
+          COALESCE(
+            NULLIF(TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')), ''),
+            'Customer'
+          ) AS counterparty_label
       FROM transactions t
       LEFT JOIN users sf ON sf.id = t.sender_id
       ${whereSQL}
@@ -255,9 +262,6 @@ router.get("/transactions/report", authenticateToken, requireVendor, async (req,
       LIMIT $${params.length + 2}
       OFFSET $${params.length + 3}
     `;
-
-    const limit  = Math.min(Math.max(parseInt(req.query.limit || "25", 10), 1), 200);
-    const offset = Math.max(parseInt(req.query.offset || "0", 10), 0);
 
     const dataRes = await db.query(dataSql, [...params, businessName, limit, offset]);
 
