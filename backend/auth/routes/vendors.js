@@ -234,22 +234,19 @@ router.get("/transactions/report", authenticateToken, requireVendor, async (req,
     // Data — sender_id is the customer for vendor credits
     const dataSql = `
       SELECT
-        t.id,
-        t.amount_cents,
-        t.note,
-        t.created_at,
-        -- Build the customer name
-        TRIM(
-          COALESCE(sf.first_name, '') || ' ' || COALESCE(sf.last_name, '')
-        ) AS customer_name,
-        $${params.length + 1}::text AS business_name,
-        -- UI helpers
-        'received'::text AS display_direction,
-        'Received from ' ||
-          COALESCE(NULLIF(TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')), ''), 'Customer')
-          AS display_text
-      FROM transactions t
-      LEFT JOIN users sf ON sf.id = t.sender_id
+  t.id,
+  t.amount_cents,
+  t.note,
+  t.created_at,
+  TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')) AS customer_name,
+  $${params.length + 1}::text AS business_name,
+  'received'::text AS direction,
+  -- what to show in the UI
+  'Received from ' ||
+    COALESCE(NULLIF(TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')), ''), 'Customer')
+    AS counterparty_label
+FROM transactions t
+LEFT JOIN users sf ON sf.id = t.sender_id
       ${whereSQL}
       ORDER BY t.created_at DESC
       LIMIT $${params.length + 2}
