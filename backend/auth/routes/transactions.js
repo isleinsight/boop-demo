@@ -50,13 +50,20 @@ const NAME_FIELDS_SQL = `
   END::text AS counterparty_name
 `;
 
-// Prefer vendor business name when vendor_id is present.
-// Otherwise fall back to recipient name, bank destination mask, or metadata.
+/**
+ * Prefer BUSINESS NAME, always:
+ * 1) vendors v            via t.vendor_id
+ * 2) vendors vu (by user) via t.recipient_id (works if vendor_id wasn’t set)
+ * 3) recipient person name
+ * 4) bank destination mask (for bank method)
+ * 5) metadata.transfer_to_display
+ */
 const TO_DISPLAY_SQL = `
   CASE
-    WHEN t.vendor_id IS NOT NULL
-         AND NULLIF(TRIM(v.business_name), '') IS NOT NULL
+    WHEN NULLIF(TRIM(COALESCE(v.business_name, '')), '') IS NOT NULL
       THEN v.business_name
+    WHEN NULLIF(TRIM(COALESCE(vu.business_name, '')), '') IS NOT NULL
+      THEN vu.business_name
     WHEN t.recipient_id IS NOT NULL
       THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
     WHEN tr.destination_masked IS NOT NULL AND t.method = 'bank'
@@ -68,8 +75,9 @@ const TO_DISPLAY_SQL = `
 `;
 
 // Joins used by our queries
-const TRANSFER_JOIN_SQL = `LEFT JOIN transfers tr ON tr.id = t.transfer_id`;
-const VENDOR_JOIN_SQL   = `LEFT JOIN vendors v   ON v.id = t.vendor_id`;
+const TRANSFER_JOIN_SQL   = `LEFT JOIN transfers tr ON tr.id = t.transfer_id`;
+const VENDOR_JOIN_SQL     = `LEFT JOIN vendors   v  ON v.id      = t.vendor_id`;
+const VENDOR_BYUSER_JOIN  = `LEFT JOIN vendors   vu ON vu.user_id = t.recipient_id`;
 
 // 🔍 GET /api/transactions/recent
 router.get('/recent', authenticateToken, async (req, res) => {
@@ -94,6 +102,7 @@ router.get('/recent', authenticateToken, async (req, res) => {
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
       ${VENDOR_JOIN_SQL}
+      ${VENDOR_BYUSER_JOIN}
       ${TRANSFER_JOIN_SQL}
       ORDER BY t.created_at DESC
       LIMIT 50
@@ -124,6 +133,7 @@ router.get('/mine', authenticateToken, async (req, res) => {
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
       ${VENDOR_JOIN_SQL}
+      ${VENDOR_BYUSER_JOIN}
       ${TRANSFER_JOIN_SQL}
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
@@ -162,6 +172,7 @@ router.get('/report', authenticateToken, async (req, res) => {
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
       ${VENDOR_JOIN_SQL}
+      ${VENDOR_BYUSER_JOIN}
       ${whereClause}
     `, values);
     const totalCount = parseInt(countResult.rows[0].count, 10);
@@ -184,6 +195,7 @@ router.get('/report', authenticateToken, async (req, res) => {
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
       ${VENDOR_JOIN_SQL}
+      ${VENDOR_BYUSER_JOIN}
       ${TRANSFER_JOIN_SQL}
       ${whereClause}
       ORDER BY t.created_at DESC
@@ -239,6 +251,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
       ${VENDOR_JOIN_SQL}
+      ${VENDOR_BYUSER_JOIN}
       ${TRANSFER_JOIN_SQL}
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
