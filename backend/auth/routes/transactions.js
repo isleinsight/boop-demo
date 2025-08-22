@@ -19,14 +19,15 @@ function safeMeta(tx) {
 function computeToDisplay(tx) {
   const m = safeMeta(tx);
   if (m.to_mask) return m.to_mask;               // set by transfers.doComplete()
-  if (tx.to_display) return tx.to_display;       // prefer SQL-calculated label
+  if (tx.to_display) return tx.to_display;       // server-computed smart label
   if (tx.recipient_name) return tx.recipient_name;
   if (tx.counterparty_name) return tx.counterparty_name;
   return '';
 }
 
 function computeFromDisplay(tx) {
-  if (tx.sender_name) return tx.sender_name;
+  if (tx.from_display) return tx.from_display;   // server-computed
+  if (tx.sender_name)  return tx.sender_name;
   return '';
 }
 
@@ -38,6 +39,7 @@ function decorateTx(rows) {
   }));
 }
 
+// Includes raw names for sender/recipient and a generic counterparty_name fallback
 const NAME_FIELDS_SQL = `
   t.sender_id,
   t.recipient_id,
@@ -50,34 +52,39 @@ const NAME_FIELDS_SQL = `
   END::text AS counterparty_name
 `;
 
-/**
- * Prefer BUSINESS NAME, always:
- * 1) vendors v            via t.vendor_id
- * 2) vendors vu (by user) via t.recipient_id (works if vendor_id wasn’t set)
- * 3) recipient person name
- * 4) bank destination mask (for bank method)
- * 5) metadata.transfer_to_display
- */
+// Prefer business_name when a vendor is involved.
+// Rules for to_display:
+//   - If DEBIT (customer sent to vendor): use recipient vendor business_name
+//   - Else if CREDIT (money came from vendor): use sender vendor business_name
+//   - Else if recipient user exists: show recipient full name
+//   - Else bank/metadata fallbacks
 const TO_DISPLAY_SQL = `
   CASE
-    WHEN NULLIF(TRIM(COALESCE(v.business_name, '')), '') IS NOT NULL
-      THEN v.business_name
-    WHEN NULLIF(TRIM(COALESCE(vu.business_name, '')), '') IS NOT NULL
-      THEN vu.business_name
-    WHEN t.recipient_id IS NOT NULL
-      THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
-    WHEN tr.destination_masked IS NOT NULL AND t.method = 'bank'
-      THEN tr.destination_masked
-    WHEN t.metadata ? 'transfer_to_display'
-      THEN t.metadata->>'transfer_to_display'
+    WHEN LOWER(t.type) = 'debit'  AND v_rec.business_name IS NOT NULL AND v_rec.business_name <> '' THEN v_rec.business_name
+    WHEN LOWER(t.type) = 'credit' AND v_send.business_name IS NOT NULL AND v_send.business_name <> '' THEN v_send.business_name
+    WHEN t.recipient_id IS NOT NULL THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
+    WHEN tr.destination_masked IS NOT NULL AND t.method = 'bank' THEN tr.destination_masked
+    WHEN t.metadata ? 'transfer_to_display' THEN t.metadata->>'transfer_to_display'
     ELSE ''
   END::text AS to_display
 `;
 
-// Joins used by our queries
-const TRANSFER_JOIN_SQL   = `LEFT JOIN transfers tr ON tr.id = t.transfer_id`;
-const VENDOR_JOIN_SQL     = `LEFT JOIN vendors   v  ON v.id      = t.vendor_id`;
-const VENDOR_BYUSER_JOIN  = `LEFT JOIN vendors   vu ON vu.user_id = t.recipient_id`;
+// Optional “from_display” for symmetry (used by vendor views, etc.)
+const FROM_DISPLAY_SQL = `
+  CASE
+    WHEN LOWER(t.type) = 'credit' AND v_send.business_name IS NOT NULL AND v_send.business_name <> '' THEN v_send.business_name
+    WHEN t.sender_id IS NOT NULL THEN (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
+    ELSE ''
+  END::text AS from_display
+`;
+
+// We’ll join transfers so we can read destination_masked via transfer_id
+const TRANSFER_JOIN_SQL = `LEFT JOIN transfers tr ON tr.id = t.transfer_id`;
+// NEW: join vendors for sender/recipient so we can read business_name
+const VENDOR_JOINS_SQL = `
+  LEFT JOIN vendors v_send ON v_send.user_id = t.sender_id
+  LEFT JOIN vendors v_rec  ON v_rec.user_id  = t.recipient_id
+`;
 
 // 🔍 GET /api/transactions/recent
 router.get('/recent', authenticateToken, async (req, res) => {
@@ -97,13 +104,13 @@ router.get('/recent', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         ${NAME_FIELDS_SQL},
-        ${TO_DISPLAY_SQL}
+        ${TO_DISPLAY_SQL},
+        ${FROM_DISPLAY_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
-      ${VENDOR_JOIN_SQL}
-      ${VENDOR_BYUSER_JOIN}
       ${TRANSFER_JOIN_SQL}
+      ${VENDOR_JOINS_SQL}
       ORDER BY t.created_at DESC
       LIMIT 50
     `);
@@ -128,13 +135,13 @@ router.get('/mine', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         ${NAME_FIELDS_SQL},
-        ${TO_DISPLAY_SQL}
+        ${TO_DISPLAY_SQL},
+        ${FROM_DISPLAY_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
-      ${VENDOR_JOIN_SQL}
-      ${VENDOR_BYUSER_JOIN}
       ${TRANSFER_JOIN_SQL}
+      ${VENDOR_JOINS_SQL}
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT 50
@@ -166,18 +173,18 @@ router.get('/report', authenticateToken, async (req, res) => {
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
-    // total count
+    // Count
     const countResult = await pool.query(`
       SELECT COUNT(*) FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
-      ${VENDOR_JOIN_SQL}
-      ${VENDOR_BYUSER_JOIN}
+      ${TRANSFER_JOIN_SQL}
+      ${VENDOR_JOINS_SQL}
       ${whereClause}
     `, values);
     const totalCount = parseInt(countResult.rows[0].count, 10);
 
-    // Add limit/offset to values
+    // Add limit/offset
     values.push(parseInt(limit, 10));
     values.push(parseInt(offset, 10));
 
@@ -190,13 +197,13 @@ router.get('/report', authenticateToken, async (req, res) => {
         t.created_at,
         COALESCE(s.first_name || ' ' || s.last_name, 'System') AS sender_name,
         COALESCE(r.first_name || ' ' || r.last_name, 'Unknown') AS recipient_name,
-        ${TO_DISPLAY_SQL}
+        ${TO_DISPLAY_SQL},
+        ${FROM_DISPLAY_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
-      ${VENDOR_JOIN_SQL}
-      ${VENDOR_BYUSER_JOIN}
       ${TRANSFER_JOIN_SQL}
+      ${VENDOR_JOINS_SQL}
       ${whereClause}
       ORDER BY t.created_at DESC
       LIMIT $${values.length - 1} OFFSET $${values.length}
@@ -246,13 +253,13 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.category,
         t.created_at,
         ${NAME_FIELDS_SQL},
-        ${TO_DISPLAY_SQL}
+        ${TO_DISPLAY_SQL},
+        ${FROM_DISPLAY_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
-      ${VENDOR_JOIN_SQL}
-      ${VENDOR_BYUSER_JOIN}
       ${TRANSFER_JOIN_SQL}
+      ${VENDOR_JOINS_SQL}
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
@@ -274,7 +281,6 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 });
 
-// 💰 Add funds (unchanged)
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
@@ -313,6 +319,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     );
     if (!recip.rowCount) throw new Error('Recipient wallet does not belong to user');
 
+    // 1) Debit treasury
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
@@ -322,6 +329,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       [treasury_wallet_id, treasuryUserId, amount_cents, debitNote, adminId, treasuryUserId, user_id]
     );
 
+    // 2) Credit recipient
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
@@ -331,6 +339,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       [wallet_id, user_id, amount_cents, creditNote, adminId, treasuryUserId, user_id]
     );
 
+    // 3) Update balances
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
       [amount_cents, treasury_wallet_id]
