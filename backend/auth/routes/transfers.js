@@ -91,6 +91,27 @@ function requireVendor(req, res, next) {
   next();
 }
 
+// Block system/staff/household roles as P2P recipients
+function isP2PBlockedRole(role, type) {
+  const r = String(role || "").toLowerCase();
+  const t = String(type || "").toLowerCase();
+  const v = r || t;
+  const blocked = new Set(["admin", "accountant", "treasury", "staff", "support", "student", "parent"]);
+  return blocked.has(v);
+}
+
+// Cardholder-like gate (senders)
+function requireCardholderLike(req, res, next) {
+  const r = String(req.user?.role || "").toLowerCase();
+  const t = String(req.user?.type || "").toLowerCase();
+  const ok =
+    r === "cardholder" || t === "cardholder" ||
+    r === "cardholder_assistance" || t === "cardholder_assistance" ||
+    r === "senior" || t === "senior";
+  if (!ok) return res.status(403).json({ message: "Cardholder access required." });
+  next();
+}
+
 // --- health ----------------------------------------------------------------
 router.get('/ping', (_req, res) => res.json({ ok: true, message: 'Transfers route is alive' }));
 
@@ -152,11 +173,10 @@ router.get('/', requireAccountsRole, async (req, res) => {
   }
 });
 
-// claim / release / reject / complete — (unchanged from your version)
-// … keep your doClaim, doRelease, doReject, doComplete handlers here …
-/* (omitted here for brevity — use exactly what you already have) */
+// claim / release / reject / complete — keep your existing handlers here
+// (no changes required to those admin actions)
 
-/* ======================  CARDHOLDER SUBMIT  ======================= */
+/* ======================  CARDHOLDER SUBMIT (to bank) ======================= */
 
 router.get('/mine/latest', async (req, res) => {
   try {
@@ -209,6 +229,7 @@ router.post('/', async (req, res) => {
     const last4 = String(ba.rows[0].last4 || '').slice(-4);
     const destination_masked = `${bank} •••• ${last4}`;
 
+    // optional: anti-overdraw
     try {
       const w = await db.query(`SELECT balance FROM wallets WHERE user_id = $1 LIMIT 1`, [userId]);
       const walletCents = Number(w.rows?.[0]?.balance || 0);
@@ -266,6 +287,7 @@ router.post('/parent', async (req, res) => {
     const last4 = String(ba.rows[0].last4 || '').slice(-4);
     const destination_masked = `${bank} •••• ${last4}`;
 
+    // optional: anti-overdraw (student)
     try {
       const w = await db.query(`SELECT balance FROM wallets WHERE user_id = $1 LIMIT 1`, [student_id]);
       const walletCents = Number(w.rows?.[0]?.balance || 0);
@@ -320,10 +342,130 @@ router.get('/student/:id/latest', async (req, res) => {
   }
 });
 
+/* ======================  P2P (cardholder → cardholder)  ======================= */
+/**
+ * POST /api/transfers/p2p
+ * Body: { to_user_id: uuid, amount?: number, amount_cents?: integer, note?: string }
+ *
+ * - Only cardholders/seniors (and assistance variant) may send
+ * - Disallow sending to admins/staff/treasury/student/parent
+ * - Requires both users have wallets
+ * - Locks both wallets, ensures funds, updates balances
+ * - Inserts double-entry transactions with method/category metadata
+ */
+router.post('/p2p', requireCardholderLike, async (req, res) => {
+  const senderId = req.user?.userId || req.user?.id;
+  const { to_user_id, amount, amount_cents, note } = req.body || {};
+
+  try {
+    if (!to_user_id) return res.status(400).json({ message: "Missing to_user_id" });
+
+    const cents = Number.isFinite(Number(amount_cents))
+      ? Number(amount_cents)
+      : Math.round(Number(amount || 0) * 100);
+
+    if (!Number.isFinite(cents) || cents <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    // Load sender + recipient with wallet + role/type
+    const qUser = `
+      SELECT id, wallet_id, role, type
+      FROM users
+      WHERE id = $1 AND deleted_at IS NULL AND (status IS NULL OR LOWER(status) = 'active')
+      LIMIT 1
+    `;
+    const [sRes, rRes] = await Promise.all([
+      db.query(qUser, [senderId]),
+      db.query(qUser, [to_user_id]),
+    ]);
+
+    if (!sRes.rowCount) return res.status(404).json({ message: "Sender not found" });
+    if (!rRes.rowCount) return res.status(404).json({ message: "Recipient not found" });
+
+    const sender = sRes.rows[0];
+    const recip  = rRes.rows[0];
+
+    if (!sender.wallet_id) return res.status(400).json({ message: "Sender wallet missing" });
+    if (!recip.wallet_id)  return res.status(400).json({ message: "Recipient wallet missing" });
+
+    // Block disallowed recipient roles (admin/treasury/staff/student/parent, etc.)
+    if (isP2PBlockedRole(recip.role, recip.type)) {
+      return res.status(400).json({ message: "That user cannot receive peer-to-peer transfers." });
+    }
+
+    // Do not allow sending to self
+    if (String(sender.id) === String(recip.id)) {
+      return res.status(400).json({ message: "Cannot send to yourself." });
+    }
+
+    const client = await getDbClient();
+    try {
+      await client.query('BEGIN');
+
+      // Lock both wallets (deterministic order prevents deadlocks)
+      const lockIds = [sender.wallet_id, recip.wallet_id].sort();
+      await client.query(`SELECT id FROM wallets WHERE id = ANY($1) FOR UPDATE`, [lockIds]);
+
+      // Check balance
+      const sBalRes = await client.query(`SELECT balance FROM wallets WHERE id = $1`, [sender.wallet_id]);
+      const senderBal = Number(sBalRes.rows?.[0]?.balance || 0);
+      if (senderBal < cents) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ message: "Insufficient funds" });
+      }
+
+      // Update balances
+      await client.query(`UPDATE wallets SET balance = balance - $1 WHERE id = $2`, [cents, sender.wallet_id]);
+      await client.query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [cents, recip.wallet_id]);
+
+      // Insert transactions (double-entry)
+      const metadata = { method: 'p2p' };
+
+      // sender (debit)
+      await client.query(`
+        INSERT INTO transactions
+          (wallet_id, user_id, type, amount_cents, note, method, category,
+           sender_id, recipient_id, metadata, created_at)
+        VALUES
+          ($1, $2, 'debit', $3, $4, 'p2p', 'transfer',
+           $2, $5, $6::jsonb, NOW())
+      `, [sender.wallet_id, sender.id, cents, note || null, recip.id, JSON.stringify(metadata)]);
+
+      // recipient (credit)
+      await client.query(`
+        INSERT INTO transactions
+          (wallet_id, user_id, type, amount_cents, note, method, category,
+           sender_id, recipient_id, metadata, created_at)
+        VALUES
+          ($1, $2, 'credit', $3, $4, 'p2p', 'transfer',
+           $5, $2, $6::jsonb, NOW())
+      `, [recip.wallet_id, recip.id, cents, note || null, sender.id, JSON.stringify(metadata)]);
+
+      await client.query('COMMIT');
+
+      return res.status(201).json({
+        ok: true,
+        message: "Transfer completed",
+        amount_cents: cents,
+        to_user_id: recip.id
+      });
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch {}
+      console.error('❌ P2P transfer error:', e);
+      return res.status(500).json({ message: "Transfer failed" });
+    } finally {
+      if (client?.release) client.release();
+    }
+  } catch (e) {
+    console.error('🔥 /api/transfers/p2p unhandled:', e);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 /* ======================  VENDOR READS (for vendor UI)  ======================= */
 
-// NOTE: your transfers table uses requested_at, not created_at.
-// Also, older rows may not have bank_account_id, so we rely on bank + destination_masked.
+// NOTE: transfers table uses requested_at, not created_at.
 router.get('/mine', requireVendor, async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id;
