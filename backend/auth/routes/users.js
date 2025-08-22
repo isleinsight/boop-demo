@@ -243,7 +243,7 @@ router.get("/", authenticateToken, async (req, res) => {
     sortBy = "first_name",
     sortDirection = "asc",
     exclude_roles = "",
-    include_household = "false", // if you ever want to allow parents/students to appear
+    include_household = "false",
   } = req.query;
 
   const isAutocomplete = !page && !perPage;
@@ -251,20 +251,23 @@ router.get("/", authenticateToken, async (req, res) => {
   try {
     const values = [];
     const where = [];
-    let join = "";
+    let join = ""; // keep if you want later
 
-    // Soft-delete filter
+    // Only show non-deleted by default
     if (status === "deleted") {
       where.push("u.deleted_at IS NOT NULL");
     } else {
       where.push("u.deleted_at IS NULL");
     }
 
+    // Only active users (prevents suspended/etc. from showing in pickers)
+    where.push("(u.status IS NULL OR LOWER(u.status) = 'active')");
+
     if (canReceiveCard && canReceiveCard.toLowerCase() === "true") {
       where.push("u.can_receive_card IS TRUE");
     }
 
-    // Text search across first/last/email (case-insensitive)
+    // Text search
     if (search) {
       values.push(`%${search.toLowerCase()}%`);
       const i = values.length;
@@ -275,7 +278,7 @@ router.get("/", authenticateToken, async (req, res) => {
       )`);
     }
 
-    // Exact role/type filters if provided
+    // Exact role/type if provided
     if (role) {
       values.push(role.toLowerCase());
       where.push(`LOWER(u.role) = $${values.length}`);
@@ -290,13 +293,16 @@ router.get("/", authenticateToken, async (req, res) => {
     }
 
     // ---- Exclusions --------------------------------------------------------
-    // Build exclude list from query
+    // Roles that can NEVER be recipients in P2P
+    const nonP2PRoles = ["admin", "accountant", "treasury", "staff", "support"];
+
+    // Explicit excludes from query
     const explicitExcludes = exclude_roles
       .split(",")
       .map(s => s.trim().toLowerCase())
       .filter(Boolean);
 
-    // Auto-exclude for cardholders unless overridden
+    // If the requester is a cardholder, hide student/parent unless explicitly allowed
     const requesterRole = String(req.user?.role || "").toLowerCase();
     const requesterType = String(req.user?.type || "").toLowerCase();
     const isCardholderRequester =
@@ -306,25 +312,22 @@ router.get("/", authenticateToken, async (req, res) => {
       requesterType === "cardholder_assistance";
 
     const allowHousehold = String(include_household).toLowerCase() === "true";
+    const autoExcludes = isCardholderRequester && !allowHousehold ? ["student", "parent"] : [];
 
-    const autoExcludes = isCardholderRequester && !allowHousehold
-      ? ["student", "parent"]
-      : [];
-
-    const finalExcludes = Array.from(new Set([...explicitExcludes, ...autoExcludes]));
+    const finalExcludes = Array.from(new Set([...nonP2PRoles, ...explicitExcludes, ...autoExcludes]));
 
     if (finalExcludes.length) {
       values.push(finalExcludes, finalExcludes);
-      // Exclude by BOTH role and type (case-insensitive)
+      // Use COALESCE so NULL role/type won't be filtered out unintentionally
       where.push(`
-        LOWER(u.role) NOT IN (SELECT UNNEST($${values.length - 1}::text[]))
-        AND LOWER(u.type) NOT IN (SELECT UNNEST($${values.length}::text[]))
+        COALESCE(LOWER(u.role), '') NOT IN (SELECT UNNEST($${values.length - 1}::text[]))
+        AND COALESCE(LOWER(u.type), '') NOT IN (SELECT UNNEST($${values.length}::text[]))
       `);
     }
 
-    // Wallet requirement
+    // Wallet requirement (safer than INNER JOIN; relies on users.wallet_id being set)
     if (String(hasWallet || "").toLowerCase() === "true") {
-      join += " JOIN wallets w ON w.user_id = u.id ";
+      where.push("u.wallet_id IS NOT NULL");
     }
 
     // WHERE + ORDER
@@ -334,7 +337,6 @@ router.get("/", authenticateToken, async (req, res) => {
     const sortDir = sortDirection === "desc" ? "DESC" : "ASC";
 
     if (isAutocomplete) {
-      // 🔎 Autocomplete → small, fast payload (include role/type so the UI can display/filter if needed)
       const { rows } = await pool.query(
         `
         SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.type, u.wallet_id
@@ -349,7 +351,7 @@ router.get("/", authenticateToken, async (req, res) => {
       return res.json(rows);
     }
 
-    // 📦 Pagination
+    // Pagination mode
     const limit = parseInt(perPage, 10) || 10;
     const offset = ((parseInt(page, 10) || 1) - 1) * limit;
 
