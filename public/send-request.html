@@ -319,7 +319,6 @@
       mode = newMode;
       btnSend.classList.toggle('active-send', mode==='send');
       btnRequest.classList.toggle('active-request', mode==='request');
-      // Requests not enabled yet
       if (mode === 'request') setStatus('Requests are not enabled yet. Switch to “Send”.', true);
       else setStatus('');
     }
@@ -341,7 +340,7 @@
         });
         const list = await res.json();
 
-        // Belt & suspenders: hide blocked roles by role OR type
+        // Hide blocked roles by role OR type
         const blocked = new Set(['student','parent','admin']);
         const results = (Array.isArray(list) ? list : []).filter(u=>{
           const role = (u.role||'').toLowerCase();
@@ -400,13 +399,17 @@
       openModal();
     });
 
-    // Confirm → call P2P endpoint
+    // Confirm → call P2P endpoint, show receipt
     confirmYes.addEventListener('click', async ()=>{
+      if (mode !== 'send') {
+        setStatus('Requests are not enabled yet. Switch to “Send”.', true);
+        return;
+      }
+      const originalText = confirmYes.textContent;
+      confirmYes.textContent = 'Sending…';
+      confirmYes.disabled = true;
+
       try{
-        if (mode !== 'send') {
-          setStatus('Requests are not enabled yet. Switch to “Send”.', true);
-          return;
-        }
         const amt = parseFloat(amountEl.value);
         const payload = {
           to_user_id: selectedUser.id,
@@ -420,12 +423,23 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || data?.error || 'Transfer failed');
+
         setStatus('✅ Sent!', false);
+        showReceipt({
+          toName: selectedUser.name,
+          amount: amt,
+          note: noteEl.value || '',
+          // Try common reference fields your backend might return
+          reference: data?.reference || data?.reference_code || data?.tx_id || data?.transfer_id || data?.id,
+          when: new Date()
+        });
         clearForm();
       }catch(err){
         console.error('submit error', err);
         setStatus(`❌ ${err.message}`, true);
       }finally{
+        confirmYes.textContent = originalText;
+        confirmYes.disabled = false;
         closeModal();
       }
     });
@@ -440,7 +454,7 @@
       amountEl.value='';
       noteEl.value='';
       setMode('send');
-      setStatus('');
+      // leave status so user sees "✅ Sent!"
     }
     function setStatus(msg, isErr=false){
       statusEl.textContent = msg || '';
@@ -448,6 +462,70 @@
     }
     function openModal(){ modal.style.display='flex'; }
     function closeModal(){ modal.style.display='none'; }
+
+    // Receipt overlay (self-contained; no extra HTML needed)
+    function showReceipt({ toName, amount, note, reference, when }){
+      const dollars = (n)=> `$${Number(n||0).toFixed(2)}`;
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.inset = '0';
+      overlay.style.background = 'rgba(0,0,0,.45)';
+      overlay.style.zIndex = '1000';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+
+      const box = document.createElement('div');
+      box.style.width = 'min(480px, 92vw)';
+      box.style.background = '#fff';
+      box.style.border = '1px solid #e5e7eb';
+      box.style.borderRadius = '12px';
+      box.style.padding = '18px';
+      box.style.boxShadow = '0 12px 32px rgba(0,0,0,.18)';
+      box.innerHTML = `
+        <h3 style="margin:0 0 10px; font-size:1.1rem;">Payment Sent</h3>
+        <div style="display:grid; grid-template-columns:140px 1fr; gap:10px; font-size:.95rem;">
+          <div style="padding:6px 0; border-bottom:1px solid #f1f5f9;">To</div>
+          <div style="padding:6px 0; border-bottom:1px solid #f1f5f9; font-weight:600;">${toName || '—'}</div>
+
+          <div style="padding:6px 0; border-bottom:1px solid #f1f5f9;">Amount</div>
+          <div style="padding:6px 0; border-bottom:1px solid #f1f5f9; font-weight:600;">${dollars(amount)}</div>
+
+          <div style="padding:6px 0; border-bottom:1px solid #f1f5f9;">Note</div>
+          <div style="padding:6px 0; border-bottom:1px solid #f1f5f9;">${note ? escapeHtml(note) : '—'}</div>
+
+          <div style="padding:6px 0; border-bottom:1px solid #f1f5f9;">When</div>
+          <div style="padding:6px 0; border-bottom:1px solid #f1f5f9;">${when ? new Date(when).toLocaleString() : ''}</div>
+
+          <div style="padding:6px 0;">Reference</div>
+          <div style="padding:6px 0;">${reference || '—'}</div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px; justify-content:flex-end;">
+          <button id="receiptCloseBtn" style="background:#2f80ed;color:#fff;border:1px solid #2f80ed;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600;">
+            Close
+          </button>
+        </div>
+      `;
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      function close(){
+        overlay.remove();
+      }
+      overlay.addEventListener('click', (e)=>{ if (e.target === overlay) close(); });
+      box.querySelector('#receiptCloseBtn').addEventListener('click', close);
+      setTimeout(close, 6000); // auto-dismiss
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#39;");
+    }
 
     // Logout links
     function attachLogout(el){
