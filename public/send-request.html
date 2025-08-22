@@ -335,40 +335,45 @@
       });
 
       async function searchUsers(q){
-        try{
-          const res = await fetch(`/api/users?search=${encodeURIComponent(q)}&hasWallet=true`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const list = await res.json();
+    try{
+      const res = await fetch(`/api/users?search=${encodeURIComponent(q)}&hasWallet=true&exclude_roles=student,parent,admin`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("boop_jwt")}` }
+      });
+      const list = await res.json();
 
-          // Filter out Admins, Students, Parents (client-side guard)
-          const blocked = new Set(['admin','student','parent']);
-          const results = (Array.isArray(list)? list: []).filter(u=>{
-            const role = (u.role||'').toLowerCase();
-            return !blocked.has(role);
-          });
+      // Extra client-side belt & suspenders: filter by BOTH role and type
+      const blocked = new Set(['student','parent','admin']);
+      const results = (Array.isArray(list)? list: []).filter(u=>{
+        const role = (u.role||'').toLowerCase();
+        const type = (u.type||'').toLowerCase();
+        return !blocked.has(role) && !blocked.has(type);
+      });
 
-          suggestions.innerHTML = results.length
-            ? results.map(u=>{
-                const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email || 'Unknown';
-                const initial = (name[0]||'U').toUpperCase();
-                return `<div class="item" data-id="${u.id}" data-name="${name}">
-                  <div class="avatar">${initial}</div>
-                  <div>
-                    <div style="font-weight:600;">${name}</div>
-                    <div style="font-size:.86rem; color:#64748b;">${u.email || ''}</div>
-                  </div>
-                </div>`;
-              }).join('')
-            : `<div class="item" style="cursor:default;opacity:.7;">No results</div>`;
+      const html = results.length
+        ? results.map(u=>{
+            const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email || 'Unknown';
+            const initial = (name[0]||'U').toUpperCase();
+            return `<div class="item" data-id="${u.id}" data-name="${name}">
+              <div class="avatar">${initial}</div>
+              <div>
+                <div style="font-weight:600;">${name}</div>
+                <div style="font-size:.86rem; color:#64748b;">${u.email || ''}</div>
+              </div>
+            </div>`;
+          }).join('')
+        : `<div class="item" style="cursor:default;opacity:.7;">No results</div>`;
 
-          suggestions.style.display = 'block';
-        }catch(err){
-          console.error('search error', err);
-          suggestions.innerHTML = `<div class="item" style="cursor:default;color:#b91c1c;">Error searching</div>`;
-          suggestions.style.display = 'block';
-        }
-      }
+      const suggestions = document.getElementById('suggestions');
+      suggestions.innerHTML = html;
+      suggestions.style.display = 'block';
+    }catch(err){
+      console.error('search error', err);
+      const suggestions = document.getElementById('suggestions');
+      suggestions.innerHTML = `<div class="item" style="cursor:default;color:#b91c1c;">Error searching</div>`;
+      suggestions.style.display = 'block';
+    }
+  }
+
 
       suggestions.addEventListener('click', (e)=>{
         const item = e.target.closest('.item');
