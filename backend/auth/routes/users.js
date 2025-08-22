@@ -225,98 +225,160 @@ router.get("/me", authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ Get users (with autocomplete or pagination, now including deleted filter)
-router.get("/", async (req, res) => {
-  const { search, role, status, page, perPage, assistanceOnly, type, canReceiveCard, hasWallet, sortBy = 'first_name', sortDirection = 'asc' } = req.query;
+// ✅ Get users (autocomplete or pagination) with role/type exclusion + hasWallet support
+//    - Cardholders automatically cannot see Student/Parent results (unless include_household=true)
+//    - Accepts exclude_roles=student,parent,admin (comma-separated). Applies to BOTH role and type.
+//    - hasWallet=true will only return users that have a wallet.
+router.get("/", authenticateToken, async (req, res) => {
+  const {
+    search,
+    role,
+    status,
+    page,
+    perPage,
+    assistanceOnly,
+    type,
+    canReceiveCard,
+    hasWallet,
+    sortBy = "first_name",
+    sortDirection = "asc",
+    exclude_roles = "",
+    include_household = "false", // if you ever want to allow parents/students to appear
+  } = req.query;
+
   const isAutocomplete = !page && !perPage;
 
   try {
     const values = [];
-    const whereClauses = [];
+    const where = [];
+    let join = "";
 
-    // 🧠 Soft-delete logic
+    // Soft-delete filter
     if (status === "deleted") {
-      whereClauses.push("deleted_at IS NOT NULL");
+      where.push("u.deleted_at IS NOT NULL");
     } else {
-      whereClauses.push("deleted_at IS NULL");
+      where.push("u.deleted_at IS NULL");
     }
 
-    if (canReceiveCard && canReceiveCard.toLowerCase() === 'true') {
-      whereClauses.push("can_receive_card IS TRUE");
+    if (canReceiveCard && canReceiveCard.toLowerCase() === "true") {
+      where.push("u.can_receive_card IS TRUE");
     }
 
+    // Text search across first/last/email (case-insensitive)
     if (search) {
       values.push(`%${search.toLowerCase()}%`);
-      const idx = values.length;
-      whereClauses.push(`(
-        LOWER(first_name) LIKE $${idx} OR
-        LOWER(last_name) LIKE $${idx} OR
-        LOWER(email) LIKE $${idx}
+      const i = values.length;
+      where.push(`(
+        LOWER(u.first_name) LIKE $${i} OR
+        LOWER(u.last_name)  LIKE $${i} OR
+        LOWER(u.email)      LIKE $${i}
       )`);
     }
 
+    // Exact role/type filters if provided
     if (role) {
-      values.push(role);
-      whereClauses.push(`role = $${values.length}`);
+      values.push(role.toLowerCase());
+      where.push(`LOWER(u.role) = $${values.length}`);
     }
-
     if (type) {
-      values.push(type);
-      whereClauses.push(`type = $${values.length}`);
+      values.push(type.toLowerCase());
+      where.push(`LOWER(u.type) = $${values.length}`);
     }
 
-    if (assistanceOnly === 'true') {
-      whereClauses.push("on_assistance = true");
+    if (assistanceOnly === "true") {
+      where.push("u.on_assistance = TRUE");
     }
 
-    const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+    // ---- Exclusions --------------------------------------------------------
+    // Build exclude list from query
+    const explicitExcludes = exclude_roles
+      .split(",")
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
 
-    // Validate sortBy to prevent SQL injection
-    const validSortColumns = ['first_name', 'last_name', 'email'];
-    const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'first_name';
-    const sortDir = sortDirection === 'desc' ? 'DESC' : 'ASC';
+    // Auto-exclude for cardholders unless overridden
+    const requesterRole = String(req.user?.role || "").toLowerCase();
+    const requesterType = String(req.user?.type || "").toLowerCase();
+    const isCardholderRequester =
+      requesterRole === "cardholder" ||
+      requesterType === "cardholder" ||
+      requesterRole === "cardholder_assistance" ||
+      requesterType === "cardholder_assistance";
 
-    // 🔍 Autocomplete mode
+    const allowHousehold = String(include_household).toLowerCase() === "true";
+
+    const autoExcludes = isCardholderRequester && !allowHousehold
+      ? ["student", "parent"]
+      : [];
+
+    const finalExcludes = Array.from(new Set([...explicitExcludes, ...autoExcludes]));
+
+    if (finalExcludes.length) {
+      values.push(finalExcludes, finalExcludes);
+      // Exclude by BOTH role and type (case-insensitive)
+      where.push(`
+        LOWER(u.role) NOT IN (SELECT UNNEST($${values.length - 1}::text[]))
+        AND LOWER(u.type) NOT IN (SELECT UNNEST($${values.length}::text[]))
+      `);
+    }
+
+    // Wallet requirement
+    if (String(hasWallet || "").toLowerCase() === "true") {
+      join += " JOIN wallets w ON w.user_id = u.id ";
+    }
+
+    // WHERE + ORDER
+    const whereSQL = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const validSort = ["first_name", "last_name", "email"];
+    const sortColumn = validSort.includes(sortBy) ? sortBy : "first_name";
+    const sortDir = sortDirection === "desc" ? "DESC" : "ASC";
+
     if (isAutocomplete) {
-      const result = await pool.query(
-        `SELECT id, first_name, last_name, email, wallet_id
-         FROM users
-         ${whereSQL}
-         ORDER BY ${sortColumn} ${sortDir}
-         LIMIT 10`,
+      // 🔎 Autocomplete → small, fast payload (include role/type so the UI can display/filter if needed)
+      const { rows } = await pool.query(
+        `
+        SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.type, u.wallet_id
+        FROM users u
+        ${join}
+        ${whereSQL}
+        ORDER BY ${sortColumn} ${sortDir}, u.email
+        LIMIT 10
+        `,
         values
       );
-      return res.json(result.rows);
+      return res.json(rows);
     }
 
-    // 📦 Pagination mode
-    const limit = parseInt(perPage) || 10;
-    const offset = ((parseInt(page) || 1) - 1) * limit;
+    // 📦 Pagination
+    const limit = parseInt(perPage, 10) || 10;
+    const offset = ((parseInt(page, 10) || 1) - 1) * limit;
 
-    const result = await pool.query(
-      `SELECT *
-       FROM users
-       ${whereSQL}
-       ORDER BY ${sortColumn} ${sortDir}
-       LIMIT $${values.length + 1}
-       OFFSET $${values.length + 2}`,
-      [...values, limit, offset]
-    );
+    const dataSql = `
+      SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.type, u.status, u.wallet_id
+      FROM users u
+      ${join}
+      ${whereSQL}
+      ORDER BY ${sortColumn} ${sortDir}, u.email
+      LIMIT $${values.length + 1}
+      OFFSET $${values.length + 2}
+    `;
+    const countSql = `
+      SELECT COUNT(*)::int AS cnt
+      FROM users u
+      ${join}
+      ${whereSQL}
+    `;
 
-    const countRes = await pool.query(
-      `SELECT COUNT(*) FROM users ${whereSQL}`,
-      values
-    );
+    const [{ rows: countRows }, { rows }] = await Promise.all([
+      pool.query(countSql, values),
+      pool.query(dataSql, [...values, limit, offset]),
+    ]);
 
-    const totalUsers = parseInt(countRes.rows[0].count, 10);
-    const totalPages = Math.ceil(totalUsers / limit);
-
-    res.json({
-      users: result.rows,
-      total: totalUsers,
-      totalPages
+    return res.json({
+      users: rows,
+      total: countRows[0]?.cnt || 0,
+      totalPages: Math.ceil((countRows[0]?.cnt || 0) / limit),
     });
-
   } catch (err) {
     console.error("❌ Error in GET /api/users:", err);
     res.status(500).json({ message: "Failed to fetch users" });
