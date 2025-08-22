@@ -17,21 +17,15 @@ function safeMeta(tx) {
 }
 
 function computeToDisplay(tx) {
-  // Prefer the masked destination saved during transfer completion
   const m = safeMeta(tx);
   if (m.to_mask) return m.to_mask;               // set by transfers.doComplete()
-
-  // Prefer vendor business name when present
-  if (tx.vendor_business_name) return tx.vendor_business_name;
-
-  // Fallbacks you already select via JOINs:
+  if (tx.to_display) return tx.to_display;       // prefer SQL-calculated label
   if (tx.recipient_name) return tx.recipient_name;
   if (tx.counterparty_name) return tx.counterparty_name;
   return '';
 }
 
 function computeFromDisplay(tx) {
-  // You already select sender_name via NAME_FIELDS_SQL
   if (tx.sender_name) return tx.sender_name;
   return '';
 }
@@ -44,39 +38,25 @@ function decorateTx(rows) {
   }));
 }
 
-/**
- * Names from users + a counterparty_name with vendor awareness
- * - If it's a vendor sale (t.vendor_id IS NOT NULL) → use v.business_name
- * - Else fall back to other party's full name (existing behavior)
- */
 const NAME_FIELDS_SQL = `
   t.sender_id,
   t.recipient_id,
   (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))::text AS sender_name,
   (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))::text AS recipient_name,
   CASE
-    WHEN t.vendor_id IS NOT NULL
-      THEN COALESCE(v.business_name, 'Vendor')
-    WHEN t.type = 'debit'
-      THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
-    WHEN t.type = 'credit'
-      THEN (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
+    WHEN t.type = 'debit'  THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
+    WHEN t.type = 'credit' THEN (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
     ELSE (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
   END::text AS counterparty_name
 `;
 
-/**
- * Universal to_display with smart fallbacks:
- * 1) If vendor sale → v.business_name
- * 2) recipient full name (if recipient_id present)
- * 3) transfers.destination_masked (if bank transfer + linked transfer)
- * 4) metadata.transfer_to_display (completion-time override)
- * 5) empty string
- */
+// Prefer vendor business name when vendor_id is present.
+// Otherwise fall back to recipient name, bank destination mask, or metadata.
 const TO_DISPLAY_SQL = `
   CASE
     WHEN t.vendor_id IS NOT NULL
-      THEN COALESCE(v.business_name, 'Vendor')
+         AND NULLIF(TRIM(v.business_name), '') IS NOT NULL
+      THEN v.business_name
     WHEN t.recipient_id IS NOT NULL
       THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
     WHEN tr.destination_masked IS NOT NULL AND t.method = 'bank'
@@ -84,14 +64,12 @@ const TO_DISPLAY_SQL = `
     WHEN t.metadata ? 'transfer_to_display'
       THEN t.metadata->>'transfer_to_display'
     ELSE ''
-  END::text AS to_display,
-  -- expose vendor name separately so the decorator can prefer it
-  COALESCE(v.business_name, NULL)::text AS vendor_business_name
+  END::text AS to_display
 `;
 
-// Joins we reuse
+// Joins used by our queries
 const TRANSFER_JOIN_SQL = `LEFT JOIN transfers tr ON tr.id = t.transfer_id`;
-const VENDOR_JOIN_SQL   = `LEFT JOIN vendors   v ON v.id = t.vendor_id`;
+const VENDOR_JOIN_SQL   = `LEFT JOIN vendors v   ON v.id = t.vendor_id`;
 
 // 🔍 GET /api/transactions/recent
 router.get('/recent', authenticateToken, async (req, res) => {
@@ -178,7 +156,7 @@ router.get('/report', authenticateToken, async (req, res) => {
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
-    // Get total count for pagination
+    // total count
     const countResult = await pool.query(`
       SELECT COUNT(*) FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
@@ -283,6 +261,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 });
 
+// 💰 Add funds (unchanged)
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
@@ -308,7 +287,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
     await client.query('BEGIN');
 
-    // Verify treasury wallet exists
     const treas = await client.query(
       `SELECT id, user_id FROM wallets WHERE id = $1`,
       [treasury_wallet_id]
@@ -316,14 +294,12 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     if (!treas.rowCount) throw new Error('Treasury wallet not found');
     const treasuryUserId = treas.rows[0].user_id;
 
-    // Verify recipient wallet
     const recip = await client.query(
       `SELECT id FROM wallets WHERE id = $1 AND user_id = $2`,
       [wallet_id, user_id]
     );
     if (!recip.rowCount) throw new Error('Recipient wallet does not belong to user');
 
-    // 1) Debit from treasury wallet
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
@@ -333,7 +309,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       [treasury_wallet_id, treasuryUserId, amount_cents, debitNote, adminId, treasuryUserId, user_id]
     );
 
-    // 2) Credit to recipient wallet
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
@@ -343,7 +318,6 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       [wallet_id, user_id, amount_cents, creditNote, adminId, treasuryUserId, user_id]
     );
 
-    // 3) Update wallet balances
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
       [amount_cents, treasury_wallet_id]
