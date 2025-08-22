@@ -1,5 +1,4 @@
-<!-- /public/passport/passport.js -->
-<script>
+// /public/passport/passport.js
 (function () {
   // ---------- config ----------
   // If your backend expects cents (integers), flip this to true.
@@ -53,14 +52,11 @@
     return name || emailFallback;
   }
 
-  // Fetch identity:
-  //   1) /api/me            → validates token and gets id/email/role/type (+ names if your server returns them)
-  //   2) /api/users/me      → enrich with first_name/last_name if available
+  // Fetch identity
   async function fetchMe() {
     const token = localStorage.getItem("boop_jwt");
     if (!token) throw new Error("No token");
 
-    // 1) base
     const meRes = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
     if (!meRes.ok) {
       const errPayload = await meRes.json().catch(() => ({}));
@@ -68,7 +64,6 @@
     }
     const basic = await meRes.json();
 
-    // 2) enrich names
     try {
       const fullRes = await fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` } });
       if (fullRes.ok) {
@@ -96,8 +91,8 @@
     // auth + identity
     try {
       const me = await fetchMe();
-
       const rawRole = String(me.role || me.type || "").toLowerCase().trim();
+
       if (!ALLOWED.has(rawRole)) {
         try { await fetch("/api/logout", { method: "POST" }); } catch {}
         localStorage.clear();
@@ -114,7 +109,6 @@
       $("roleBadge") && ($("roleBadge").textContent = role);
       $("whoBadge") && ($("whoBadge").textContent = who);
 
-      // Prefill PID from URL if present
       const pidQS = fromQS("pid");
       if (pidQS && $("pid")) $("pid").value = pidQS;
 
@@ -141,7 +135,6 @@
       const pid = $("pid")?.value.trim();
       if (!pid) return setStatus($("commonStatus"), "Please enter a Passport ID.", "err");
       hide($("commonStatus"));
-      // (optional) fetch passport meta here
     });
 
     $("logoutLink")?.addEventListener("click", async (e) => {
@@ -151,7 +144,6 @@
       location.href = "/index.html";
     });
 
-    // Press Enter in amount to trigger charge quickly
     $("v_amount")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") $("v_chargeBtn")?.click();
     });
@@ -162,7 +154,7 @@
       const amtInput = $("v_amount");
       const noteInput = $("v_note");
       const st = $("v_status");
-      const receipt = $("v_receipt"); // optional container if you have it
+      const receipt = $("v_receipt");
 
       const pid = (pidInput?.value || "").trim();
       const amt = parseFloat(amtInput?.value || "");
@@ -174,7 +166,6 @@
       hide(st);
       if (receipt) hide(receipt);
 
-      // disable while processing
       $("v_chargeBtn") && ($("v_chargeBtn").disabled = true);
       amtInput && (amtInput.disabled = true);
       noteInput && (noteInput.disabled = true);
@@ -195,26 +186,21 @@
           body: JSON.stringify(payload)
         });
 
-        // Try to parse JSON
         let body = {};
         try { body = await res.json(); } catch {}
 
         if (!res.ok) {
-          // Re-enable for retry on error
           $("v_chargeBtn") && ($("v_chargeBtn").disabled = false);
           amtInput && (amtInput.disabled = false);
           noteInput && (noteInput.disabled = false);
           pidInput && (pidInput.disabled = false);
-
           throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
         }
 
-        // Success → show receipt info if you have fields for it
         const ref = body.reference_code || body.reference || "—";
         const when = new Date();
         setStatus(st, "Charge completed.", "ok");
 
-        // Example: populate a receipt block (add these elements in HTML if you want)
         $("r_status") && ( $("r_status").textContent = "Success" );
         $("r_amount") && ( $("r_amount").textContent = fmtMoney(amt) );
         $("r_pid") && ( $("r_pid").textContent = pid );
@@ -222,13 +208,12 @@
         $("r_time") && ( $("r_time").textContent = when.toLocaleString() );
         if (receipt) show(receipt);
 
-        // Keep charge button disabled after success (one-shot)
       } catch (err) {
         setStatus(st, `❌ ${err.message || err}`, "err");
       }
     });
 
-    // ----- Transit actions (still demo until you wire backend) -----
+    // ----- Transit actions (demo) -----
     $("t_validateBtn")?.addEventListener("click", async () => {
       const pid = $("pid")?.value.trim();
       const fare = parseFloat($("t_fare")?.value);
@@ -238,9 +223,7 @@
       if (!pid)  return setStatus(st, "Passport ID required.", "err");
       if (!Number.isFinite(fare) || fare < 0) return setStatus(st, "Enter a valid fare.", "err");
 
-      // TODO: POST to your transit endpoint when ready
       setStatus(st, `(demo) ${mode} fare deducted: ${fare.toFixed(2)}`, "ok");
     });
   });
 })();
-</script>
