@@ -192,12 +192,13 @@ router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
 // VENDOR REPORTS (self-service)
 // GET /api/vendor/transactions/report
 // - Only credits to this vendor (money received)
 // - Returns { transactions: [...], totalCount }
 //   Each item includes: id, amount_cents, created_at, note,
-//   customer_name, business_name, display_direction, display_text
+//   customer_name, business_name, direction, counterparty_label
 router.get("/transactions/report", authenticateToken, requireVendor, async (req, res) => {
   try {
     const userId = req.user?.id || req.user?.userId;
@@ -219,7 +220,10 @@ router.get("/transactions/report", authenticateToken, requireVendor, async (req,
     // Filters (dates optional)
     const { start, end } = req.query;
     const params = [vendorId];
-    const where = [`t.vendor_id = $1`, `LOWER(t.type) = 'credit'`]; // ✅ vendor sees ONLY money received
+    const where = [
+      `t.vendor_id = $1`,
+      `LOWER(COALESCE(t.type, '')) = 'credit'` // ✅ vendor sees ONLY money received
+    ];
 
     if (start) { params.push(start); where.push(`t.created_at >= $${params.length}`); }
     if (end)   { params.push(end + " 23:59:59.999"); where.push(`t.created_at <= $${params.length}`); }
@@ -234,19 +238,18 @@ router.get("/transactions/report", authenticateToken, requireVendor, async (req,
     // Data — sender_id is the customer for vendor credits
     const dataSql = `
       SELECT
-  t.id,
-  t.amount_cents,
-  t.note,
-  t.created_at,
-  TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')) AS customer_name,
-  $${params.length + 1}::text AS business_name,
-  'received'::text AS direction,
-  -- what to show in the UI
-  'Received from ' ||
-    COALESCE(NULLIF(TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')), ''), 'Customer')
-    AS counterparty_label
-FROM transactions t
-LEFT JOIN users sf ON sf.id = t.sender_id
+        t.id,
+        t.amount_cents,
+        t.note,
+        t.created_at,
+        TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')) AS customer_name,
+        $${params.length + 1}::text AS business_name,
+        'received'::text AS direction,
+        'Received from ' ||
+          COALESCE(NULLIF(TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')), ''), 'Customer')
+          AS counterparty_label
+      FROM transactions t
+      LEFT JOIN users sf ON sf.id = t.sender_id
       ${whereSQL}
       ORDER BY t.created_at DESC
       LIMIT $${params.length + 2}
