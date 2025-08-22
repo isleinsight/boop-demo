@@ -254,219 +254,214 @@
     </div>
   </div>
 
-  <!-- Permissions gate (cardholder only) -->
   <script>
-    (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
-        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-        const me = await res.json();
-        if (!res.ok) throw new Error(me?.error || `HTTP ${res.status}`);
-
-        const role = (me.role||"").toLowerCase();
-        const type = (me.type||"").toLowerCase();
-        const isCardholder = role === "cardholder" || type === "cardholder" || role === "cardholder_assistance" || type === "cardholder_assistance";
-        if (!isCardholder) throw new Error("Not a cardholder");
-
-        localStorage.setItem("boopUser", JSON.stringify(me));
-      } catch (err) {
-        console.warn("🔒 Gate failed:", err);
-        localStorage.clear();
-        window.location.href = "cardholder-login.html";
-      }
-    })();
-  </script>
-
-  <!-- Page logic -->
-  <script>
-    (function(){
-      // Mobile nav
-      const hamburger = document.getElementById('hamburger');
-      const panel = document.getElementById('mobileMenu');
-      const overlay = document.getElementById('navOverlay');
-      function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
-      function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
-      hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
-      overlay?.addEventListener('click', closeMenu);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-
-      // Elements
+  (async () => {
+    // ───────────────── Auth gate (cardholder only) ─────────────────
+    try {
       const token = localStorage.getItem("boop_jwt");
-      const statusEl = document.getElementById('status');
-      const userSearch = document.getElementById('userSearch');
-      const suggestions = document.getElementById('suggestions');
-      const selectedUserEl = document.getElementById('selectedUser');
-      const amountEl = document.getElementById('amount');
-      const noteEl = document.getElementById('note');
-      const btnSend = document.getElementById('btnSend');
-      const btnRequest = document.getElementById('btnRequest');
-      const submitBtn = document.getElementById('submitBtn');
-      const clearBtn = document.getElementById('clearBtn');
-
-      const modal = document.getElementById('confirmModal');
-      const cAction = document.getElementById('cAction');
-      const cTo = document.getElementById('cTo');
-      const cAmount = document.getElementById('cAmount');
-      const cNote = document.getElementById('cNote');
-      const confirmYes = document.getElementById('confirmYes');
-      const confirmNo = document.getElementById('confirmNo');
-
-      // State
-      let mode = 'send'; // 'send' | 'request'
-      let selectedUser = null;
-      let timer;
-
-      // Toggle
-      function setMode(newMode){
-        mode = newMode;
-        btnSend.classList.toggle('active-send', mode==='send');
-        btnRequest.classList.toggle('active-request', mode==='request');
-      }
-      btnSend.addEventListener('click', ()=> setMode('send'));
-      btnRequest.addEventListener('click', ()=> setMode('request'));
-
-      // Search (debounced)
-      userSearch.addEventListener('input', ()=>{
-        const q = userSearch.value.trim();
-        clearTimeout(timer);
-        if (q.length < 2){ suggestions.style.display='none'; return; }
-        timer = setTimeout(()=> searchUsers(q), 220);
-      });
-
-      async function searchUsers(q){
-    try{
-      const res = await fetch(`/api/users?search=${encodeURIComponent(q)}&hasWallet=true&exclude_roles=student,parent,admin`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("boop_jwt")}` }
-      });
-      const list = await res.json();
-
-      // Extra client-side belt & suspenders: filter by BOTH role and type
-      const blocked = new Set(['student','parent','admin']);
-      const results = (Array.isArray(list)? list: []).filter(u=>{
-        const role = (u.role||'').toLowerCase();
-        const type = (u.type||'').toLowerCase();
-        return !blocked.has(role) && !blocked.has(type);
-      });
-
-      const html = results.length
-        ? results.map(u=>{
-            const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email || 'Unknown';
-            const initial = (name[0]||'U').toUpperCase();
-            return `<div class="item" data-id="${u.id}" data-name="${name}">
-              <div class="avatar">${initial}</div>
-              <div>
-                <div style="font-weight:600;">${name}</div>
-                <div style="font-size:.86rem; color:#64748b;">${u.email || ''}</div>
-              </div>
-            </div>`;
-          }).join('')
-        : `<div class="item" style="cursor:default;opacity:.7;">No results</div>`;
-
-      const suggestions = document.getElementById('suggestions');
-      suggestions.innerHTML = html;
-      suggestions.style.display = 'block';
-    }catch(err){
-      console.error('search error', err);
-      const suggestions = document.getElementById('suggestions');
-      suggestions.innerHTML = `<div class="item" style="cursor:default;color:#b91c1c;">Error searching</div>`;
-      suggestions.style.display = 'block';
+      if (!token) throw new Error("No token");
+      const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+      const me = await res.json();
+      if (!res.ok) throw new Error(me?.error || `HTTP ${res.status}`);
+      const role = (me.role||"").toLowerCase();
+      const type = (me.type||"").toLowerCase();
+      const isCardholder =
+        role === "cardholder" || type === "cardholder" ||
+        role === "cardholder_assistance" || type === "cardholder_assistance";
+      if (!isCardholder) throw new Error("Not a cardholder");
+      localStorage.setItem("boopUser", JSON.stringify(me));
+    } catch (err) {
+      console.warn("🔒 Gate failed:", err);
+      localStorage.clear();
+      window.location.href = "cardholder-login.html";
+      return;
     }
-  }
 
+    // ───────────────── Page logic ─────────────────
+    // Mobile nav
+    const hamburger = document.getElementById('hamburger');
+    const panel = document.getElementById('mobileMenu');
+    const overlay = document.getElementById('navOverlay');
+    function openMenu(){ hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+    function closeMenu(){ hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+    hamburger?.addEventListener('click', ()=> hamburger.classList.contains('active')? closeMenu(): openMenu());
+    overlay?.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
 
-      suggestions.addEventListener('click', (e)=>{
-        const item = e.target.closest('.item');
-        if (!item || !item.dataset.id) return;
-        selectedUser = { id: item.dataset.id, name: item.dataset.name };
-        selectedUserEl.innerHTML = `<span class="avatar">${(selectedUser.name[0]||'U').toUpperCase()}</span> ${selectedUser.name}`;
-        suggestions.style.display = 'none';
-        userSearch.value = selectedUser.name;
-      });
+    // Elements
+    const token = localStorage.getItem("boop_jwt");
+    const statusEl = document.getElementById('status');
+    const userSearch = document.getElementById('userSearch');
+    const suggestions = document.getElementById('suggestions');
+    const selectedUserEl = document.getElementById('selectedUser');
+    const amountEl = document.getElementById('amount');
+    const noteEl = document.getElementById('note');
+    const btnSend = document.getElementById('btnSend');
+    const btnRequest = document.getElementById('btnRequest');
+    const submitBtn = document.getElementById('submitBtn');
+    const clearBtn = document.getElementById('clearBtn');
 
-      document.addEventListener('click', (e)=>{
-        if (!suggestions.contains(e.target) && e.target !== userSearch){
-          suggestions.style.display='none';
-        }
-      });
+    const modal = document.getElementById('confirmModal');
+    const cAction = document.getElementById('cAction');
+    const cTo = document.getElementById('cTo');
+    const cAmount = document.getElementById('cAmount');
+    const cNote = document.getElementById('cNote');
+    const confirmYes = document.getElementById('confirmYes');
+    const confirmNo = document.getElementById('confirmNo');
 
-      // Submit flow
-      submitBtn.addEventListener('click', ()=>{
-        const amt = parseFloat(amountEl.value);
-        if (!selectedUser){ return setStatus('Please pick a recipient.', true); }
-        if (!amt || isNaN(amt) || amt <= 0){ return setStatus('Enter a valid amount.', true); }
+    // State
+    let mode = 'send'; // 'send' | 'request'
+    let selectedUser = null;
+    let timer;
 
-        // Fill confirm modal
-        cAction.textContent = mode === 'send' ? 'Send' : 'Request';
-        cTo.textContent = selectedUser.name;
-        cAmount.textContent = `$${amt.toFixed(2)}`;
-        cNote.textContent = noteEl.value || '—';
-        openModal();
-      });
+    // Toggle
+    function setMode(newMode){
+      mode = newMode;
+      btnSend.classList.toggle('active-send', mode==='send');
+      btnRequest.classList.toggle('active-request', mode==='request');
+      // Requests not enabled yet
+      if (mode === 'request') setStatus('Requests are not enabled yet. Switch to “Send”.', true);
+      else setStatus('');
+    }
+    btnSend.addEventListener('click', ()=> setMode('send'));
+    btnRequest.addEventListener('click', ()=> setMode('request'));
 
-      confirmYes.addEventListener('click', async ()=>{
-        try{
-          const payload = {
-            mode,                   // 'send' or 'request'
-            to_user_id: selectedUser.id,
-            amount: parseFloat(amountEl.value),
-            note: noteEl.value
-          };
+    // Typeahead search (debounced)
+    userSearch.addEventListener('input', ()=>{
+      const q = userSearch.value.trim();
+      clearTimeout(timer);
+      if (q.length < 2){ suggestions.style.display='none'; return; }
+      timer = setTimeout(()=> searchUsers(q), 220);
+    });
 
-          // 🔌 Adjust this endpoint/body if your backend differs
-          const res = await fetch('/api/transactions/transfer', {
-            method:'POST',
-            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-            body: JSON.stringify(payload)
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data?.message || data?.error || 'Transfer failed');
-
-          setStatus('✅ Success!', false);
-          clearForm();
-        }catch(err){
-          console.error('submit error', err);
-          setStatus(`❌ ${err.message}`, true);
-        }finally{
-          closeModal();
-        }
-      });
-
-      confirmNo.addEventListener('click', closeModal);
-
-      clearBtn.addEventListener('click', clearForm);
-
-      function clearForm(){
-        selectedUser = null;
-        userSearch.value='';
-        selectedUserEl.textContent='No recipient selected';
-        amountEl.value='';
-        noteEl.value='';
-        setMode('send');
-        setStatus('');
-      }
-
-      function setStatus(msg, isErr=false){
-        statusEl.textContent = msg || '';
-        statusEl.className = 'status' + (isErr ? ' err' : msg ? ' ok' : '');
-      }
-
-      function openModal(){ modal.style.display='flex'; }
-      function closeModal(){ modal.style.display='none'; }
-
-      // Logout links
-      function attachLogout(el){
-        if (!el) return;
-        el.addEventListener('click', async (e)=>{
-          e.preventDefault();
-          try { await fetch('/api/logout', { method:'POST' }); } catch {}
-          localStorage.clear();
-          window.location.href = 'cardholder-login.html';
+    async function searchUsers(q){
+      try{
+        const res = await fetch(`/api/users?search=${encodeURIComponent(q)}&hasWallet=true&exclude_roles=student,parent,admin`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
+        const list = await res.json();
+
+        // Belt & suspenders: hide blocked roles by role OR type
+        const blocked = new Set(['student','parent','admin']);
+        const results = (Array.isArray(list) ? list : []).filter(u=>{
+          const role = (u.role||'').toLowerCase();
+          const type = (u.type||'').toLowerCase();
+          return !blocked.has(role) && !blocked.has(type);
+        });
+
+        suggestions.innerHTML = results.length
+          ? results.map(u=>{
+              const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email || 'Unknown';
+              const initial = (name[0]||'U').toUpperCase();
+              return `<div class="item" data-id="${u.id}" data-name="${name}">
+                <div class="avatar">${initial}</div>
+                <div>
+                  <div style="font-weight:600;">${name}</div>
+                  <div style="font-size:.86rem; color:#64748b;">${u.email || ''}</div>
+                </div>
+              </div>`;
+            }).join('')
+          : `<div class="item" style="cursor:default;opacity:.7;">No results</div>`;
+
+        suggestions.style.display = 'block';
+      }catch(err){
+        console.error('search error', err);
+        suggestions.innerHTML = `<div class="item" style="cursor:default;color:#b91c1c;">Error searching</div>`;
+        suggestions.style.display = 'block';
       }
-      attachLogout(document.getElementById('logoutBtn'));
-      attachLogout(document.getElementById('logoutBtnMobile'));
-    })();
-  </script>
+    }
+
+    // Pick from suggestions
+    suggestions.addEventListener('click', (e)=>{
+      const item = e.target.closest('.item');
+      if (!item || !item.dataset.id) return;
+      selectedUser = { id: item.dataset.id, name: item.dataset.name };
+      selectedUserEl.innerHTML = `<span class="avatar">${(selectedUser.name[0]||'U').toUpperCase()}</span> ${selectedUser.name}`;
+      suggestions.style.display = 'none';
+      userSearch.value = selectedUser.name;
+    });
+
+    // Hide suggestions when clicking away
+    document.addEventListener('click', (e)=>{
+      if (!suggestions.contains(e.target) && e.target !== userSearch){
+        suggestions.style.display='none';
+      }
+    });
+
+    // Submit flow (open confirm)
+    submitBtn.addEventListener('click', ()=>{
+      const amt = parseFloat(amountEl.value);
+      if (!selectedUser){ return setStatus('Please pick a recipient.', true); }
+      if (!amt || isNaN(amt) || amt <= 0){ return setStatus('Enter a valid amount.', true); }
+      cAction.textContent = mode === 'send' ? 'Send' : 'Request';
+      cTo.textContent = selectedUser.name;
+      cAmount.textContent = `$${amt.toFixed(2)}`;
+      cNote.textContent = noteEl.value || '—';
+      openModal();
+    });
+
+    // Confirm → call P2P endpoint
+    confirmYes.addEventListener('click', async ()=>{
+      try{
+        if (mode !== 'send') {
+          setStatus('Requests are not enabled yet. Switch to “Send”.', true);
+          return;
+        }
+        const amt = parseFloat(amountEl.value);
+        const payload = {
+          to_user_id: selectedUser.id,
+          amount: amt,
+          note: noteEl.value || null
+        };
+        const res = await fetch('/api/transfers/p2p', {
+          method:'POST',
+          headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || data?.error || 'Transfer failed');
+        setStatus('✅ Sent!', false);
+        clearForm();
+      }catch(err){
+        console.error('submit error', err);
+        setStatus(`❌ ${err.message}`, true);
+      }finally{
+        closeModal();
+      }
+    });
+
+    confirmNo.addEventListener('click', closeModal);
+
+    // Helpers
+    function clearForm(){
+      selectedUser = null;
+      userSearch.value='';
+      selectedUserEl.textContent='No recipient selected';
+      amountEl.value='';
+      noteEl.value='';
+      setMode('send');
+      setStatus('');
+    }
+    function setStatus(msg, isErr=false){
+      statusEl.textContent = msg || '';
+      statusEl.className = 'status' + (isErr ? ' err' : msg ? ' ok' : '');
+    }
+    function openModal(){ modal.style.display='flex'; }
+    function closeModal(){ modal.style.display='none'; }
+
+    // Logout links
+    function attachLogout(el){
+      if (!el) return;
+      el.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        window.location.href = 'cardholder-login.html';
+      });
+    }
+    attachLogout(document.getElementById('logoutBtn'));
+    attachLogout(document.getElementById('logoutBtnMobile'));
+  })();
+</script>
 </body>
 </html>
