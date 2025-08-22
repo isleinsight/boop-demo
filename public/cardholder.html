@@ -215,186 +215,193 @@
   </footer>
 
   <!-- AUTH GUARD -->
-  <script>
-    (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
-        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
-        if (!res.ok) throw new Error("Unauthorized");
-        const me = await res.json();
-        const role = String(me.role || me.type || "").toLowerCase();
-        const allowed = new Set(["cardholder","senior","student"]);
-        if (!allowed.has(role)) throw new Error("Forbidden");
-        localStorage.setItem("boopUser", JSON.stringify(me));
-      } catch {
-        try { await fetch("/api/logout", { method: "POST" }); } catch {}
-        localStorage.clear();
-        location.href = "index.html";
-      }
-    })();
-  </script>
+<script>
+(async () => {
+  try {
+    const token = localStorage.getItem("boop_jwt");
+    if (!token) throw new Error("No token");
+    const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` }});
+    if (!res.ok) throw new Error("Unauthorized");
+    const me = await res.json();
+    const role = String(me.role || me.type || "").toLowerCase();
+    const allowed = new Set(["cardholder","senior","student"]);
+    if (!allowed.has(role)) throw new Error("Forbidden");
+    localStorage.setItem("boopUser", JSON.stringify(me));
+  } catch {
+    try { await fetch("/api/logout", { method: "POST" }); } catch {}
+    localStorage.clear();
+    location.href = "index.html";
+  }
+})();
+</script>
 
-  <!-- First name + balance + passport + recent 5 activity -->
-  <script>
-    (function () {
-      function capitalizeFirst(str) {
-        if (!str || typeof str !== "string") return "";
-        return str.charAt(0).toUpperCase() + str.slice(1);
-      }
-      const dollars = c => `$${(Number(c||0)/100).toFixed(2)}`;
+<!-- Cardholder balance + passport + recent activity -->
+<script>
+(function () {
+  function capitalizeFirst(str) {
+    if (!str || typeof str !== "string") return "";
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+  const dollars = c => `$${(Number(c||0)/100).toFixed(2)}`;
 
-      async function loadBalance() {
-        try {
-          const token = localStorage.getItem("boop_jwt");
-          const r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
-          if (!r.ok) return;
-          const j = await r.json();
-          const el = document.getElementById("walletBalance");
-          if (el) el.textContent = dollars(j?.balance_cents || 0);
-        } catch {}
-      }
-
-      async function renderRecentActivity() {
-        const box = document.getElementById('transactionBody');
-        try{
-          const token = localStorage.getItem("boop_jwt");
-          const r = await fetch('/api/transactions/mine', { headers:{ Authorization:`Bearer ${token}` }});
-          const rows = await r.json();
-          const list = Array.isArray(rows) ? rows : [];
-          const top5 = list
-            .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
-            .slice(0,5);
-
-          if (!top5.length) {
-            box.innerHTML = `<div class="empty">No recent activity.</div>`;
-            return;
-          }
-
-          box.innerHTML = top5.map(tx=>{
-            const isCredit = (tx.type||'').toLowerCase()==='credit';
-            const who = isCredit ? (tx.sender_name || tx.from_name || 'Someone')
-                                 : (tx.recipient_name || tx.to_name || 'Someone');
-            const initials = (who?.trim?.()[0] || 'U').toUpperCase();
-            const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : '';
-            const note = tx.note ? ` • ${tx.note}` : '';
-            const sign = isCredit ? '+' : '−';
-            const cls  = isCredit ? 'positive' : 'negative';
-            return `
-              <div class="activity-item">
-                <div class="avatar">${initials}</div>
-                <div class="line">
-                  <div>
-                    <div class="who">${isCredit ? 'Received from' : 'Sent to'} ${who}</div>
-                    <div class="meta">${when}${note}</div>
-                  </div>
-                  <div class="amt ${cls}">${sign}${dollars(tx.amount_cents)}</div>
-                </div>
-              </div>
-            `;
-          }).join('');
-        } catch {
-          box.innerHTML = `<div class="empty">Couldn’t load activity.</div>`;
-        }
-      }
-
-      async function paintCardholderBits() {
-        const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
-        const firstNameEl = document.getElementById("cardholderFirstName");
-        const emailEl     = document.getElementById("cardholderEmail");
-        const passportEl  = document.getElementById("passportId");
-
-        const rawFirst =
-          user.first_name ||
-          (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
-          (user.email ? user.email.split("@")[0] : "") ||
-          "Friend";
-
-        const first = capitalizeFirst(String(rawFirst).trim());
-
-        if (firstNameEl) firstNameEl.textContent = first;
-        if (emailEl && user.email) emailEl.textContent = user.email;
-
-        // live passport from API
-        try {
-          const token = localStorage.getItem("boop_jwt");
-          const r = await fetch("/api/passport/mine", { headers:{ Authorization:`Bearer ${token}` }});
-          if (r.ok) {
-            const j = await r.json();
-            if (passportEl) passportEl.textContent = j.passport_id || "—";
-          } else { if (passportEl) passportEl.textContent = "—"; }
-        } catch { if (passportEl) passportEl.textContent = "—"; }
-
-        window.__cardholderDisplay = first;
-      }
-
-      // Init
-      document.addEventListener("DOMContentLoaded", () => {
-        paintCardholderBits();
-        loadBalance();
-        renderRecentActivity();
-      });
-    })();
-  </script>
-
-  <!-- Hamburger + mobile menu + Logout -->
-  <script>
-    (function(){
-      const hamburger = document.getElementById('hamburger');
-      const panel = document.getElementById('mobileMenu');
-      const overlay = document.getElementById('navOverlay');
-      const logoutDesktop = document.getElementById('logoutBtn');
-      const logoutMobile = document.getElementById('logoutBtnMobile');
-
-      function openMenu(){
-        hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active');
-        hamburger.setAttribute('aria-expanded', 'true'); document.body.style.overflow = 'hidden';
-      }
-      function closeMenu(){
-        hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active');
-        hamburger.setAttribute('aria-expanded', 'false'); document.body.style.overflow = '';
-      }
-
-      hamburger.addEventListener('click', () => hamburger.classList.contains('active') ? closeMenu() : openMenu());
-      overlay.addEventListener('click', closeMenu);
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
-
-      async function doLogout(e){
-        e?.preventDefault?.();
-        try { await fetch('/api/logout', { method:'POST' }); } catch {}
-        localStorage.clear();
-        window.location.href = 'index.html';
-      }
-      logoutDesktop?.addEventListener('click', doLogout);
-      logoutMobile?.addEventListener('click', doLogout);
-    })();
-  </script>
-
-  <!-- Force Sign-Out (admin-triggered) -->
-  <script>
-    (async () => {
+  async function loadBalance() {
+    try {
       const token = localStorage.getItem("boop_jwt");
-      const boopUser = JSON.parse(localStorage.getItem("boopUser") || "{}");
-      const email = boopUser.email;
-      if (!token || !email) return;
+      const r = await fetch("/api/wallets/mine", { headers:{ Authorization:`Bearer ${token}` }});
+      if (!r.ok) return;
+      const j = await r.json();
+      const el = document.getElementById("walletBalance");
+      if (el) el.textContent = dollars(j?.balance_cents || 0);
+    } catch {}
+  }
 
-      async function checkForceSignOut() {
-        try {
-          const res = await fetch(`/api/sessions/force-check/${email}`);
-          const data = await res.json();
-          if (res.ok && data.force_signed_out) {
-            alert("⚠️ You have been signed out by an administrator.");
-            localStorage.clear();
-            try { await fetch(`/api/sessions/${email}`, { method: "DELETE" }); } catch {}
-            try { await fetch(`/api/sessions/force-clear/${email}`, { method: "PATCH" }); } catch {}
-            window.location.href = "index.html";
-          }
-        } catch (err) {
-          console.error("❌ Force sign-out check failed:", err);
-        }
+  async function renderRecentActivity() {
+    const box = document.getElementById('transactionBody');
+    try{
+      const token = localStorage.getItem("boop_jwt");
+      const r = await fetch('/api/transactions/mine', { headers:{ Authorization:`Bearer ${token}` }});
+      const data = await r.json();
+
+      const list = Array.isArray(data) ? data
+                  : Array.isArray(data?.transactions) ? data.transactions
+                  : [];
+
+      const top5 = list
+        .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
+        .slice(0,5);
+
+      if (!top5.length) {
+        box.innerHTML = `<div class="empty">No recent activity.</div>`;
+        return;
       }
-      setInterval(checkForceSignOut, 10000);
-    })();
-  </script>
+
+      box.innerHTML = top5.map(tx=>{
+        const isCredit = (tx.type||'').toLowerCase()==='credit';
+
+        // ✅ Use display fields from backend
+        const who = isCredit
+          ? (tx.from_display || tx.sender_name || 'Someone')
+          : (tx.to_display   || tx.recipient_name || 'Someone');
+
+        const initials = (who?.trim?.()[0] || 'U').toUpperCase();
+        const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : '';
+        const note = tx.note ? ` • ${tx.note}` : '';
+        const sign = isCredit ? '+' : '−';
+        const cls  = isCredit ? 'positive' : 'negative';
+
+        return `
+          <div class="activity-item">
+            <div class="avatar">${initials}</div>
+            <div class="line">
+              <div>
+                <div class="who">${isCredit ? 'Received from' : 'Sent to'} ${who}</div>
+                <div class="meta">${when}${note}</div>
+              </div>
+              <div class="amt ${cls}">${sign}${dollars(tx.amount_cents)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch {
+      box.innerHTML = `<div class="empty">Couldn’t load activity.</div>`;
+    }
+  }
+
+  async function paintCardholderBits() {
+    const user = JSON.parse(localStorage.getItem("boopUser") || "{}");
+    const firstNameEl = document.getElementById("cardholderFirstName");
+    const emailEl     = document.getElementById("cardholderEmail");
+    const passportEl  = document.getElementById("passportId");
+
+    const rawFirst =
+      user.first_name ||
+      (user.name && user.name.split ? user.name.split(" ")[0] : "") ||
+      (user.email ? user.email.split("@")[0] : "") ||
+      "Friend";
+
+    const first = capitalizeFirst(String(rawFirst).trim());
+
+    if (firstNameEl) firstNameEl.textContent = first;
+    if (emailEl && user.email) emailEl.textContent = user.email;
+
+    try {
+      const token = localStorage.getItem("boop_jwt");
+      const r = await fetch("/api/passport/mine", { headers:{ Authorization:`Bearer ${token}` }});
+      if (r.ok) {
+        const j = await r.json();
+        if (passportEl) passportEl.textContent = j.passport_id || "—";
+      } else { if (passportEl) passportEl.textContent = "—"; }
+    } catch { if (passportEl) passportEl.textContent = "—"; }
+
+    window.__cardholderDisplay = first;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    paintCardholderBits();
+    loadBalance();
+    renderRecentActivity();
+  });
+})();
+</script>
+
+<!-- Hamburger + mobile menu + Logout -->
+<script>
+(function(){
+  const hamburger = document.getElementById('hamburger');
+  const panel = document.getElementById('mobileMenu');
+  const overlay = document.getElementById('navOverlay');
+  const logoutDesktop = document.getElementById('logoutBtn');
+  const logoutMobile = document.getElementById('logoutBtnMobile');
+
+  function openMenu(){
+    hamburger.classList.add('active'); panel.classList.add('active'); overlay.classList.add('active');
+    hamburger.setAttribute('aria-expanded', 'true'); document.body.style.overflow = 'hidden';
+  }
+  function closeMenu(){
+    hamburger.classList.remove('active'); panel.classList.remove('active'); overlay.classList.remove('active');
+    hamburger.setAttribute('aria-expanded', 'false'); document.body.style.overflow = '';
+  }
+
+  hamburger.addEventListener('click', () => hamburger.classList.contains('active') ? closeMenu() : openMenu());
+  overlay.addEventListener('click', closeMenu);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+
+  async function doLogout(e){
+    e?.preventDefault?.();
+    try { await fetch('/api/logout', { method:'POST' }); } catch {}
+    localStorage.clear();
+    window.location.href = 'index.html';
+  }
+  logoutDesktop?.addEventListener('click', doLogout);
+  logoutMobile?.addEventListener('click', doLogout);
+})();
+</script>
+
+<!-- Force Sign-Out (admin-triggered) -->
+<script>
+(async () => {
+  const token = localStorage.getItem("boop_jwt");
+  const boopUser = JSON.parse(localStorage.getItem("boopUser") || "{}");
+  const email = boopUser.email;
+  if (!token || !email) return;
+
+  async function checkForceSignOut() {
+    try {
+      const res = await fetch(`/api/sessions/force-check/${email}`);
+      const data = await res.json();
+      if (res.ok && data.force_signed_out) {
+        alert("⚠️ You have been signed out by an administrator.");
+        localStorage.clear();
+        try { await fetch(`/api/sessions/${email}`, { method: "DELETE" }); } catch {}
+        try { await fetch(`/api/sessions/force-clear/${email}`, { method: "PATCH" }); } catch {}
+        window.location.href = "index.html";
+      }
+    } catch (err) {
+      console.error("❌ Force sign-out check failed:", err);
+    }
+  }
+  setInterval(checkForceSignOut, 10000);
+})();
+</script>
 </body>
 </html>
