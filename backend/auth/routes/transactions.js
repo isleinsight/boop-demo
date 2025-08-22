@@ -17,17 +17,19 @@ function safeMeta(tx) {
 }
 
 function computeToDisplay(tx) {
+  // ✅ Prefer what SQL already computed (now includes vendor business_name for debits)
+  if (tx.to_display && String(tx.to_display).trim()) return tx.to_display;
+
+  // Legacy fallbacks
   const m = safeMeta(tx);
-  if (m.to_mask) return m.to_mask;               // set by transfers.doComplete()
-  if (tx.to_display) return tx.to_display;       // server-computed smart label
+  if (m.to_mask) return m.to_mask;
   if (tx.recipient_name) return tx.recipient_name;
   if (tx.counterparty_name) return tx.counterparty_name;
   return '';
 }
 
 function computeFromDisplay(tx) {
-  if (tx.from_display) return tx.from_display;   // server-computed
-  if (tx.sender_name)  return tx.sender_name;
+  if (tx.sender_name) return tx.sender_name;
   return '';
 }
 
@@ -39,7 +41,6 @@ function decorateTx(rows) {
   }));
 }
 
-// Includes raw names for sender/recipient and a generic counterparty_name fallback
 const NAME_FIELDS_SQL = `
   t.sender_id,
   t.recipient_id,
@@ -52,39 +53,32 @@ const NAME_FIELDS_SQL = `
   END::text AS counterparty_name
 `;
 
-// Prefer business_name when a vendor is involved.
-// Rules for to_display:
-//   - If DEBIT (customer sent to vendor): use recipient vendor business_name
-//   - Else if CREDIT (money came from vendor): use sender vendor business_name
-//   - Else if recipient user exists: show recipient full name
-//   - Else bank/metadata fallbacks
+/**
+ * Build a universal "to_display" with smart fallbacks:
+ * 1) If this is a customer → vendor sale (t.type='debit' from cardholder POV) and vendor exists,
+ *    prefer vendors.business_name.
+ * 2) Else if recipient user exists, use recipient full name.
+ * 3) Else if a bank transfer has a masked destination, use that.
+ * 4) Else if metadata contains transfer_to_display, use it.
+ * 5) Else empty.
+ */
 const TO_DISPLAY_SQL = `
   CASE
-    WHEN LOWER(t.type) = 'debit'  AND v_rec.business_name IS NOT NULL AND v_rec.business_name <> '' THEN v_rec.business_name
-    WHEN LOWER(t.type) = 'credit' AND v_send.business_name IS NOT NULL AND v_send.business_name <> '' THEN v_send.business_name
-    WHEN t.recipient_id IS NOT NULL THEN (COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,''))
-    WHEN tr.destination_masked IS NOT NULL AND t.method = 'bank' THEN tr.destination_masked
-    WHEN t.metadata ? 'transfer_to_display' THEN t.metadata->>'transfer_to_display'
+    WHEN LOWER(t.type) = 'debit' AND t.vendor_id IS NOT NULL
+      THEN COALESCE(v.business_name,
+                    NULLIF(TRIM(COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,'')), ''))
+    WHEN t.recipient_id IS NOT NULL
+      THEN NULLIF(TRIM(COALESCE(r.first_name,'') || ' ' || COALESCE(r.last_name,'')), '')
+    WHEN tr.destination_masked IS NOT NULL AND t.method = 'bank'
+      THEN tr.destination_masked
+    WHEN t.metadata ? 'transfer_to_display'
+      THEN t.metadata->>'transfer_to_display'
     ELSE ''
   END::text AS to_display
 `;
 
-// Optional “from_display” for symmetry (used by vendor views, etc.)
-const FROM_DISPLAY_SQL = `
-  CASE
-    WHEN LOWER(t.type) = 'credit' AND v_send.business_name IS NOT NULL AND v_send.business_name <> '' THEN v_send.business_name
-    WHEN t.sender_id IS NOT NULL THEN (COALESCE(s.first_name,'') || ' ' || COALESCE(s.last_name,''))
-    ELSE ''
-  END::text AS from_display
-`;
-
-// We’ll join transfers so we can read destination_masked via transfer_id
 const TRANSFER_JOIN_SQL = `LEFT JOIN transfers tr ON tr.id = t.transfer_id`;
-// NEW: join vendors for sender/recipient so we can read business_name
-const VENDOR_JOINS_SQL = `
-  LEFT JOIN vendors v_send ON v_send.user_id = t.sender_id
-  LEFT JOIN vendors v_rec  ON v_rec.user_id  = t.recipient_id
-`;
+const VENDOR_JOIN_SQL   = `LEFT JOIN vendors v ON v.id = t.vendor_id`;
 
 // 🔍 GET /api/transactions/recent
 router.get('/recent', authenticateToken, async (req, res) => {
@@ -104,13 +98,12 @@ router.get('/recent', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         ${NAME_FIELDS_SQL},
-        ${TO_DISPLAY_SQL},
-        ${FROM_DISPLAY_SQL}
+        ${TO_DISPLAY_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
+      ${VENDOR_JOIN_SQL}
       ${TRANSFER_JOIN_SQL}
-      ${VENDOR_JOINS_SQL}
       ORDER BY t.created_at DESC
       LIMIT 50
     `);
@@ -135,13 +128,12 @@ router.get('/mine', authenticateToken, async (req, res) => {
         t.note,
         t.created_at,
         ${NAME_FIELDS_SQL},
-        ${TO_DISPLAY_SQL},
-        ${FROM_DISPLAY_SQL}
+        ${TO_DISPLAY_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
+      ${VENDOR_JOIN_SQL}
       ${TRANSFER_JOIN_SQL}
-      ${VENDOR_JOINS_SQL}
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT 50
@@ -173,20 +165,19 @@ router.get('/report', authenticateToken, async (req, res) => {
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
-    // Count
+    // Get total count for pagination
     const countResult = await pool.query(`
       SELECT COUNT(*) FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
-      ${TRANSFER_JOIN_SQL}
-      ${VENDOR_JOINS_SQL}
+      ${VENDOR_JOIN_SQL}
       ${whereClause}
     `, values);
     const totalCount = parseInt(countResult.rows[0].count, 10);
 
-    // Add limit/offset
-    values.push(parseInt(limit, 10));
-    values.push(parseInt(offset, 10));
+    // Add limit/offset to values
+    values.push(Math.min(Math.max(parseInt(limit, 10) || 25, 1), 200));
+    values.push(Math.max(parseInt(offset, 10) || 0, 0));
 
     const { rows } = await pool.query(`
       SELECT
@@ -197,13 +188,12 @@ router.get('/report', authenticateToken, async (req, res) => {
         t.created_at,
         COALESCE(s.first_name || ' ' || s.last_name, 'System') AS sender_name,
         COALESCE(r.first_name || ' ' || r.last_name, 'Unknown') AS recipient_name,
-        ${TO_DISPLAY_SQL},
-        ${FROM_DISPLAY_SQL}
+        ${TO_DISPLAY_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
+      ${VENDOR_JOIN_SQL}
       ${TRANSFER_JOIN_SQL}
-      ${VENDOR_JOINS_SQL}
       ${whereClause}
       ORDER BY t.created_at DESC
       LIMIT $${values.length - 1} OFFSET $${values.length}
@@ -212,8 +202,8 @@ router.get('/report', authenticateToken, async (req, res) => {
     return res.status(200).json({
       transactions: decorateTx(rows),
       totalCount,
-      limit: parseInt(limit, 10),
-      offset: parseInt(offset, 10)
+      limit: Math.min(Math.max(parseInt(limit, 10) || 25, 1), 200),
+      offset: Math.max(parseInt(offset, 10) || 0, 0)
     });
   } catch (err) {
     console.error('❌ Error loading transaction report:', err);
@@ -226,8 +216,8 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   const callerId = req.user?.userId ?? req.user?.id;
   const role = (req.user?.role || '').toLowerCase();
   const { userId } = req.params;
-  const limit  = parseInt(req.query.limit, 10)  || 50;
-  const offset = parseInt(req.query.offset, 10) || 0;
+  const limit  = Math.min(Math.max(parseInt(req.query.limit, 10)  || 50, 1), 200);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
   // authorize: admin OR (same user) OR (parent linked to that student)
   let allowed = role === 'admin' || String(callerId) === String(userId);
@@ -253,13 +243,12 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         t.category,
         t.created_at,
         ${NAME_FIELDS_SQL},
-        ${TO_DISPLAY_SQL},
-        ${FROM_DISPLAY_SQL}
+        ${TO_DISPLAY_SQL}
       FROM transactions t
       LEFT JOIN users s ON s.id = t.sender_id
       LEFT JOIN users r ON r.id = t.recipient_id
+      ${VENDOR_JOIN_SQL}
       ${TRANSFER_JOIN_SQL}
-      ${VENDOR_JOINS_SQL}
       WHERE t.user_id = $1
       ORDER BY t.created_at DESC
       LIMIT $2 OFFSET $3
@@ -281,6 +270,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 });
 
+// 💰 Admin: add funds
 router.post('/add-funds', authenticateToken, async (req, res) => {
   const { role, type, id: adminId } = req.user;
   if (role !== 'admin' || !['accountant', 'treasury'].includes(type)) {
@@ -306,6 +296,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
 
     await client.query('BEGIN');
 
+    // Verify treasury wallet exists
     const treas = await client.query(
       `SELECT id, user_id FROM wallets WHERE id = $1`,
       [treasury_wallet_id]
@@ -313,13 +304,14 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
     if (!treas.rowCount) throw new Error('Treasury wallet not found');
     const treasuryUserId = treas.rows[0].user_id;
 
+    // Verify recipient wallet
     const recip = await client.query(
       `SELECT id FROM wallets WHERE id = $1 AND user_id = $2`,
       [wallet_id, user_id]
     );
     if (!recip.rowCount) throw new Error('Recipient wallet does not belong to user');
 
-    // 1) Debit treasury
+    // 1) Debit from treasury wallet
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
@@ -329,7 +321,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       [treasury_wallet_id, treasuryUserId, amount_cents, debitNote, adminId, treasuryUserId, user_id]
     );
 
-    // 2) Credit recipient
+    // 2) Credit to recipient wallet
     await client.query(
       `INSERT INTO transactions (
          wallet_id, user_id, type, amount_cents, note, created_at,
@@ -339,7 +331,7 @@ router.post('/add-funds', authenticateToken, async (req, res) => {
       [wallet_id, user_id, amount_cents, creditNote, adminId, treasuryUserId, user_id]
     );
 
-    // 3) Update balances
+    // 3) Update wallet balances
     await client.query(
       `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
       [amount_cents, treasury_wallet_id]
