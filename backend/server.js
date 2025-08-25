@@ -23,9 +23,6 @@ console.log('🔧 server.js is initializing...');
 app.use(cors());
 app.use(express.json());
 
-// Serve the static website from /public
-app.use(express.static(path.join(__dirname, '..', 'public')));
-
 // Small helper to mount routers with logging (so a failure doesn't crash boot)
 function mount(pathPrefix, modPath, label = modPath) {
   try {
@@ -120,6 +117,9 @@ app.get('/api/me', authenticateToken, async (req, res) => {
 
 // Health
 app.get('/health', (_req, res) => res.send('OK'));
+
+// ✅ Serve the static website from /public (AFTER all API routes)
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // 404
 app.use((req, res) => {
