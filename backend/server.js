@@ -10,6 +10,7 @@ const cors = require('cors');
 const path = require('path');
 const { exec } = require('child_process');
 const { authenticateToken } = require('./auth/middleware/authMiddleware');
+const bmdxRoutes = require('./routes/bmdx');
 
 // DB pool (used by /api/me)
 const pool = require('./db');
@@ -44,6 +45,9 @@ mount('/api/logout', './auth/routes/logout', 'logout (api)');
 mount('/api/users', './auth/routes/users');
 mount('/api/cards', './auth/routes/cards');
 mount('/api/wallets', './auth/routes/wallets');
+
+// BMDX (blockchain health/read-only)
+mount('/api', './routes/bmdx', 'bmdx');
 
 // Vendors
 //   • Admin endpoints at /api/vendors (list/update/delete vendors)
