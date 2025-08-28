@@ -10,7 +10,6 @@ const cors = require('cors');
 const path = require('path');
 const { exec } = require('child_process');
 const { authenticateToken } = require('./auth/middleware/authMiddleware');
-const bmdxRoutes = require('./routes/bmdx');
 
 // DB pool (used by /api/me)
 const pool = require('./db');
@@ -46,19 +45,14 @@ mount('/api/users', './auth/routes/users');
 mount('/api/cards', './auth/routes/cards');
 mount('/api/wallets', './auth/routes/wallets');
 
-// BMDX (blockchain health/read-only)
-mount('/api', './routes/bmdx', 'bmdx');
-
 // Vendors
-//   • Admin endpoints at /api/vendors (list/update/delete vendors)
-//   • Vendor self-service endpoints at /api/vendor (profile, reports, etc)
 mount('/api/vendors', './auth/routes/vendors', 'vendors (admin)');
 mount('/api/vendor', './auth/routes/vendors', 'vendor');
 
 // ✅ Vendor passport charge (POST /api/vendor/passport-charge)
 mount('/api/vendor', './auth/routes/passport-charge', 'passport-charge');
 
-// Optional: your passport read-only routes (keep if you have this file)
+// Optional: passport
 mount('/api/passport', './auth/routes/passport', 'passport');
 
 // Students / parents / sessions / txns / payouts / sales
@@ -78,6 +72,9 @@ mount('/api/password', './auth/routes/password');
 mount('/api/treasury', './auth/routes/treasury', 'treasury');
 mount('/api/admin-actions', './auth/routes/admin-actions');
 
+// ✅ BMDX (blockchain health/read-only)
+mount('/api', './routes/bmdx', 'bmdx');
+
 // Webhook (GitHub)
 app.post('/webhook', (req, res) => {
   console.log('🔔 GitHub Webhook triggered');
@@ -90,8 +87,6 @@ app.post('/webhook', (req, res) => {
 mount('/webhook', './webhook-handler', 'webhook-handler');
 
 // ───────────────── Who am I (returns names) ─────────────────
-// Enriches the token with DB fields, including first_name/last_name.
-// Also respects force_signed_out if you’re using that flag.
 app.get('/api/me', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
@@ -107,7 +102,6 @@ app.get('/api/me', authenticateToken, async (req, res) => {
     if (!rows.length) return res.status(404).json({ message: 'User not found' });
 
     const me = rows[0];
-
     if (me.force_signed_out) {
       return res.status(401).json({ message: 'Signed out' });
     }
@@ -126,9 +120,7 @@ app.get('/health', (_req, res) => res.send('OK'));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // 404
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not Found' });
-});
+app.use((req, res) => res.status(404).json({ error: 'Not Found' }));
 
 // Error handler
 app.use((err, _req, res, _next) => {
