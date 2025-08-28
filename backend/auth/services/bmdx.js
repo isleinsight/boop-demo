@@ -1,83 +1,104 @@
-require('dotenv').config({ path: __dirname + '/../../.env' });
+// backend/auth/services/bmdx.js  (or wherever you placed it)
+require('dotenv').config({ path: require('path').join(__dirname, '/../../.env') });
 const { ethers } = require('ethers');
 const fs = require('fs');
 const path = require('path');
 
-const RPC   = (process.env.POLYGON_RPC_URL || '').trim();
-const ADDR  = (process.env.BMDX_CONTRACT_ADDRESS || '').trim(); // <-- REQUIRED (your BMDX address)
+/* -------- env -------- */
+const RPC  = (process.env.POLYGON_RPC_URL || process.env.ALCHEMY_RPC_URL || '').trim();
+const ADDR = (process.env.BMDX_CONTRACT_ADDRESS || '').trim(); // REQUIRED
 
-const jsonPath = path.join(__dirname, '../../contracts/bdmx.json');
+/* -------- load ABI (try a couple locations) -------- */
+const candidateJsonPaths = [
+  path.join(__dirname, '../../contracts/bdmx.json'),
+  path.join(__dirname, '../../bdmx.json'),
+  path.join(process.cwd(), 'bdmx.json'),
+];
 let ABI = [];
-try {
-  const raw = fs.readFileSync(jsonPath, 'utf8');
-  const j = JSON.parse(raw);
-  if (Array.isArray(j.abi)) ABI = j.abi;
-} catch (e) {
-  console.warn('[BMDX] bdmx.json read failed:', e.message);
-}
+let abiPathUsed = null;
 
+for (const p of candidateJsonPaths) {
+  try {
+    if (!fs.existsSync(p)) continue;
+    const raw = fs.readFileSync(p, 'utf8');
+    const j = JSON.parse(raw);
+    if (Array.isArray(j.abi)) {
+      ABI = j.abi;
+      abiPathUsed = p;
+      break;
+    }
+  } catch (_) {}
+}
+if (!ABI.length) console.warn('[BMDX] Could not find ABI; looked at:', candidateJsonPaths.join(', '));
+
+/* -------- ethers v5/v6 compatibility helpers -------- */
+const isV6 = !!ethers?.JsonRpcProvider; // v6 exposes class at root
+const makeProvider = (url) => (isV6 ? new ethers.JsonRpcProvider(url) : new ethers.providers.JsonRpcProvider(url));
+const isAddress = (addr) => (isV6 ? ethers.isAddress(addr) : ethers.utils.isAddress(addr));
+
+/* -------- state -------- */
 let provider = null;
 let contract = null;
 let configured = false;
+let cachedDecimals = undefined;
 
 function initOnce() {
   if (configured) return;
-  if (!RPC) { console.warn('[BMDX] Missing POLYGON_RPC_URL'); return; }
+  if (!RPC)  { console.warn('[BMDX] Missing POLYGON_RPC_URL / ALCHEMY_RPC_URL'); return; }
   if (!ABI.length) { console.warn('[BMDX] Missing ABI in bdmx.json'); return; }
   if (!ADDR) { console.warn('[BMDX] Missing BMDX_CONTRACT_ADDRESS'); return; }
+
   try {
-    provider = new ethers.providers.JsonRpcProvider(RPC, { timeout: 10000 });
+    provider = makeProvider(RPC);
     contract = new ethers.Contract(ADDR, ABI, provider);
     configured = true;
-    console.log('[BMDX] ready:', { address: ADDR });
+    console.log('[BMDX] ready', { address: ADDR, abiPath: abiPathUsed, ethers: isV6 ? 'v6' : 'v5' });
   } catch (e) {
     console.warn('[BMDX] init failed:', e.message);
   }
 }
 initOnce();
 
-function isConfigured(){ return configured; }
+function isConfigured() { return configured; }
 
-async function withTimeout(promise, ms = 8000){
+async function withTimeout(promise, ms = 8000) {
   return Promise.race([
     promise,
     new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms)),
   ]);
 }
 
-// Read-only health probe using your ERC-20-ish ABI + lastDailyHash
+/* -------- health: read-only probes -------- */
 async function health() {
-  if (!configured) return { ok:false, configured:false, message:'not configured' };
-  const out = { ok:false, configured:true, address: ADDR };
+  if (!configured) return { ok: false, configured: false, message: 'not configured' };
+  const out = { ok: false, configured: true, address: ADDR };
 
   try {
     const tasks = [];
 
-    if (contract.name)       tasks.push(contract.name().catch(()=>null));
-    else                     tasks.push(Promise.resolve(null));
+    tasks.push(contract.name ? contract.name().catch(() => null) : Promise.resolve(null));
+    tasks.push(contract.symbol ? contract.symbol().catch(() => null) : Promise.resolve(null));
+    tasks.push(contract.decimals ? contract.decimals().catch(() => null) : Promise.resolve(null));
+    tasks.push(contract.totalSupply ? contract.totalSupply().catch(() => null) : Promise.resolve(null));
+    tasks.push(contract.lastDailyHash ? contract.lastDailyHash().catch(() => null) : Promise.resolve(null));
 
-    if (contract.symbol)     tasks.push(contract.symbol().catch(()=>null));
-    else                     tasks.push(Promise.resolve(null));
+    const [name, symbol, decimals, totalSupply, lastDailyHash] =
+      await withTimeout(Promise.all(tasks));
 
-    if (contract.decimals)   tasks.push(contract.decimals().catch(()=>null));
-    else                     tasks.push(Promise.resolve(null));
+    out.name = name ?? undefined;
+    out.symbol = symbol ?? undefined;
 
-    if (contract.totalSupply)tasks.push(contract.totalSupply().catch(()=>null));
-    else                     tasks.push(Promise.resolve(null));
+    // ethers v6 returns number for decimals; v5 returns BN -> convert
+    const decNum = typeof decimals === 'number' ? decimals :
+                   (decimals != null && decimals.toString ? Number(decimals.toString()) : undefined);
+    out.decimals = decNum;
+    if (Number.isFinite(decNum)) cachedDecimals = decNum;
 
-    if (contract.lastDailyHash) tasks.push(contract.lastDailyHash().catch(()=>null));
-    else                         tasks.push(Promise.resolve(null));
-
-    const [name, symbol, decimals, totalSupply, lastDailyHash] = await withTimeout(Promise.all(tasks));
-
-    out.name = name || undefined;
-    out.symbol = symbol || undefined;
-    out.decimals = typeof decimals === 'number' ? decimals : (decimals ? Number(decimals) : undefined);
-    out.totalSupply = totalSupply ? totalSupply.toString() : undefined;
-    out.lastDailyHash = lastDailyHash || undefined;
+    out.totalSupply = totalSupply != null ? totalSupply.toString() : undefined;
+    out.lastDailyHash = lastDailyHash ?? undefined;
 
     const bn = await withTimeout(provider.getBlockNumber());
-    out.blockNumber = bn;
+    out.blockNumber = Number(bn);
 
     out.ok = true;
     return out;
@@ -87,18 +108,17 @@ async function health() {
   }
 }
 
-// Example read
-async function balanceOf(address){
+/* -------- simple read -------- */
+async function balanceOf(address) {
   if (!configured) throw new Error('BMDX not configured');
-  if (!ethers.utils.isAddress(address)) throw new Error('Invalid address');
+  if (!isAddress(address)) throw new Error('Invalid address');
   if (!contract.balanceOf) throw new Error('balanceOf not in ABI');
-  const bal = await withTimeout(contract.balanceOf(address));
-  return { raw: bal.toString(), decimals: outDecimals() };
-}
 
-function outDecimals(){
-  // Best effort—returns undefined until first health() call runs and you cache it yourself if needed.
-  return undefined;
+  const bal = await withTimeout(contract.balanceOf(address));
+  return {
+    raw: bal.toString(),
+    decimals: cachedDecimals, // will be undefined until health() runs once
+  };
 }
 
 module.exports = { isConfigured, health, balanceOf };
