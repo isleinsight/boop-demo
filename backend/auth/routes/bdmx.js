@@ -1,19 +1,18 @@
-cat >/root/boop-demo/backend/auth/routes/bmdx.js <<'EOF'
+// replace backend/auth/routes/bmdx.js with a minimal router
+// cat >/root/boop-demo/backend/auth/routes/bmdx.js <<'EOF'
 const express = require('express');
 const router = express.Router();
 
-// replies at /api/bmdx/  (exactly this path)
-router.get('/', (_req, res) => {
-  res.json({ ok: true, where: '/api/bmdx/' });
+// prove this exact file loaded
+console.log('[bdmx] router loaded (minimal)');
+
+router.get('/', (_req,res) => {
+  res.json({ ok: true, from: 'bdmx index' });
 });
 
-// replies at /api/bmdx/ping
-router.get('/ping', (_req, res) => {
-  res.json({ ok: true, ping: 'pong' });
+router.get('/ping', (_req,res) => {
+  res.json({ ok: true, from: 'bdmx/ping' });
 });
 
 module.exports = router;
 EOF
-
-# restart
-pm2 restart all
