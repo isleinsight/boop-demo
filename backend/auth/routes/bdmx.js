@@ -1,33 +1,43 @@
+// backend/auth/routes/bmdx.js
 const express = require('express');
 const router = express.Router();
 
-// Debug: prove the router file actually loads
-console.log('[bmdx] router file loaded');
+console.log('[bmdx] routes file loaded'); // should print at server boot
 
-let bmdx;
+let bmdx = null;
 try {
-  // routes/ -> services/
-  bmdx = require('../services/bmdx');
+  bmdx = require('../services/bmdx'); // routes -> services
   console.log('[bmdx] services module loaded');
 } catch (e) {
-  console.error('[bmdx] FAILED to load services/bmdx.js:', e.message);
+  console.error('[bmdx] FAILED to load ../services/bmdx:', e?.message || e);
 }
 
-/** Simple ping so we can confirm the mount works without touching the service */
-router.get('/ping', (_req, res) => {
+/** Log EVERY request that hits this router */
+router.use((req, _res, next) => {
+  console.log('[bmdx] hit', req.method, req.originalUrl);
+  next();
+});
+
+/** prove router is mounted */
+router.get('/', (_req, res) => {
   res.json({ ok: true, router: 'bmdx', serviceLoaded: !!bmdx });
 });
 
-/** Health check that calls the service (if loaded) */
+/** plain ping */
+router.get('/ping', (_req, res) => {
+  res.json({ ok: true, router: 'bmdx/ping', serviceLoaded: !!bmdx });
+});
+
+/** health (calls service if available) */
 router.get('/health', async (_req, res) => {
   try {
-    if (!bmdx || !bmdx.health) {
+    if (!bmdx || typeof bmdx.health !== 'function') {
       return res.status(503).json({ ok: false, error: 'bmdx service not loaded' });
     }
     const info = await bmdx.health();
     res.json(info);
   } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 });
 
