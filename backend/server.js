@@ -73,7 +73,7 @@ mount('/api/treasury', './auth/routes/treasury', 'treasury');
 mount('/api/admin-actions', './auth/routes/admin-actions');
 
 // ✅ BMDX (blockchain health/read-only)
-mount('/api', './routes/bmdx', 'bmdx');
+mount('/api/bmdx', './auth/routes/bmdx', 'bmdx');
 
 // Webhook (GitHub)
 app.post('/webhook', (req, res) => {
