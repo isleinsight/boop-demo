@@ -3,7 +3,7 @@ const router = express.Router();
 const bmdx = require('../services/bmdx');  // note the path: go UP one folder into services
 
 // test route to check BMDX connection
-router.get('/bmdx/health', async (req, res) => {
+router.get('/health', async (req, res) => {
   try {
     const info = await bmdx.health();
     res.json(info);
