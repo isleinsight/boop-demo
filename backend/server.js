@@ -34,6 +34,15 @@ function mount(pathPrefix, modPath, label = modPath) {
   }
 }
 
+// ───────────────── simple pings ─────────────────
+// Prove API is reachable from the browser: https://payulot.com/api/ping
+app.get('/api/ping', (_req, res) => {
+  res.json({ ok: true, from: 'server.js' });
+});
+
+// Health (non-API) at root: https://payulot.com/health
+app.get('/health', (_req, res) => res.send('OK'));
+
 // ───────────────── routes ─────────────────
 // Auth (legacy + current logout)
 mount('/auth/login', './auth/routes/login', 'login');
@@ -112,9 +121,6 @@ app.get('/api/me', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Failed to load user' });
   }
 });
-
-// Health
-app.get('/health', (_req, res) => res.send('OK'));
 
 // ✅ Serve the static website from /public (AFTER all API routes)
 app.use(express.static(path.join(__dirname, '..', 'public')));
