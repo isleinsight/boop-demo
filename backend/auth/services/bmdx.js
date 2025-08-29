@@ -1,4 +1,4 @@
-// backend/auth/services/bmdx.js  (or wherever you placed it)
+// backend/auth/services/bmdx.js
 require('dotenv').config({ path: require('path').join(__dirname, '/../../.env') });
 const { ethers } = require('ethers');
 const fs = require('fs');
@@ -120,5 +120,27 @@ async function balanceOf(address) {
     decimals: cachedDecimals, // will be undefined until health() runs once
   };
 }
+
+// --- signer for writes (only used if you enable them) ---
+const OWNER_PK = (process.env.BMDX_OWNER_PRIVATE_KEY || '').trim();
+let signer = null;
+function getWriteContract() {
+  if (!configured) throw new Error('BMDX not configured');
+  if (!OWNER_PK) throw new Error('No BMDX_OWNER_PRIVATE_KEY in env');
+  if (!signer) signer = (ethers.Wallet ? new ethers.Wallet(OWNER_PK, provider)
+                                       : new ethers.Signer(OWNER_PK, provider));
+  return contract.connect(signer);
+}
+
+/** Write lastDailyHash on-chain (requires OWNER private key + ~a few cents of MATIC) */
+async function setDailyHash(hash) {
+  if (typeof hash !== 'string' || !hash) throw new Error('hash required');
+  const wc = getWriteContract();
+  const tx = await wc.setDailyHash(hash);
+  const receipt = await tx.wait();
+  return { txHash: receipt.transactionHash, blockNumber: receipt.blockNumber };
+}
+
+module.exports = { isConfigured, health, balanceOf, setDailyHash };
 
 module.exports = { isConfigured, health, balanceOf };
