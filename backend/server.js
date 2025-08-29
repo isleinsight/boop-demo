@@ -82,7 +82,22 @@ mount('/api/treasury', './auth/routes/treasury', 'treasury');
 mount('/api/admin-actions', './auth/routes/admin-actions');
 
 // ✅ BMDX (blockchain health/read-only)
-mount('/api/bmdx', './auth/routes/bmdx', 'bmdx');
+// ───────────────── explicit BMDX mount (with resolve logging) ─────────────────
+try {
+  const resolved = require.resolve('./auth/routes/bmdx');
+  console.log('✅ bmdx router resolves to:', resolved);
+
+  const bmdxRouter = require('./auth/routes/bmdx');
+  app.use('/api/bmdx', bmdxRouter);
+  console.log('✅ mounted /api/bmdx (explicit)');
+} catch (e) {
+  console.error('❌ could not mount /api/bmdx:', e?.message || e);
+}
+
+// bypass-router sanity ping
+app.get('/api/bmdx/ping-direct', (_req, res) => {
+  res.json({ ok: true, from: 'server.js' });
+});
 
 // Webhook (GitHub)
 app.post('/webhook', (req, res) => {
