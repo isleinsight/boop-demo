@@ -54,6 +54,32 @@ const rolesWithWallet = ["cardholder", "student", "senior", "vendor", "parent"];
 const isValidUUID = (str) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 
+// Guard: block acting on yourself, system users, or super_admin
+async function guardProtectedUser(targetId, callerId) {
+  if (String(targetId) === String(callerId)) {
+    return { blocked: true, code: 400, message: "You cannot act on your own account." };
+  }
+
+  const { rows } = await pool.query(
+    "SELECT role, type, is_system FROM users WHERE id = $1",
+    [targetId]
+  );
+  if (!rows.length) {
+    return { blocked: true, code: 404, message: "User not found" };
+  }
+
+  const u = rows[0];
+  const isSuperAdmin =
+    String(u.role).toLowerCase() === "admin" &&
+    String(u.type).toLowerCase() === "super_admin";
+
+  if (u.is_system || isSuperAdmin) {
+    return { blocked: true, code: 403, message: "That account is protected." };
+  }
+
+  return { blocked: false };
+}
+
 // ✅ Create user
 router.post("/", authenticateToken, async (req, res) => {
   const {
@@ -260,6 +286,9 @@ router.get("/", authenticateToken, async (req, res) => {
       where.push("u.deleted_at IS NULL");
     }
 
+    // Always hide system/placeholder users from list APIs
+where.push("u.is_system = false");
+
     // Only active users (prevents suspended/etc. from showing in pickers)
     where.push("(u.status IS NULL OR LOWER(u.status) = 'active')");
 
@@ -390,6 +419,12 @@ router.get("/", authenticateToken, async (req, res) => {
 // ✅ Update user (with suspend/unsuspend tracking)
 router.patch("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
+    // --- protection guard ---
+  const callerId = req.user?.id || req.user?.userId;
+  const guard = await guardProtectedUser(id, callerId);
+  if (guard.blocked) {
+    return res.status(guard.code).json({ message: guard.message });
+  }
   if (!isValidUUID(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
   }
@@ -463,6 +498,12 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 // ✅ Delete user (soft-delete)
 router.delete("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
+    // --- protection guard ---
+  const callerId = req.user?.id || req.user?.userId;
+  const guard = await guardProtectedUser(id, callerId);
+  if (guard.blocked) {
+    return res.status(guard.code).json({ message: guard.message });
+  }
   if (!isValidUUID(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
   }
@@ -493,6 +534,12 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 // ✅ Restore user
 router.patch("/:id/restore", authenticateToken, async (req, res) => {
   const { id } = req.params;
+    // --- protection guard ---
+  const callerId = req.user?.id || req.user?.userId;
+  const guard = await guardProtectedUser(id, callerId);
+  if (guard.blocked) {
+    return res.status(guard.code).json({ message: guard.message });
+  }
   if (!isValidUUID(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
   }
@@ -576,7 +623,12 @@ router.get("/:id", async (req, res) => {
 // ✅ POST /api/users/:id/signout
 router.post("/:id/signout", authenticateToken, async (req, res) => {
   const { id } = req.params;
-
+  // --- protection guard ---
+  const callerId = req.user?.id || req.user?.userId;
+  const guard = await guardProtectedUser(id, callerId);
+  if (guard.blocked) {
+    return res.status(guard.code).json({ message: guard.message });
+  }
   try {
     // 1. Fetch the user's email
     const userRes = await pool.query(`SELECT email FROM users WHERE id = $1`, [id]);
