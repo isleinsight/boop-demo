@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("Not authorized or error fetching user:", err);
     localStorage.removeItem("boop_jwt");
     localStorage.removeItem("boopUser");
-    window.location.href = "./government-portal.html";
+    window.location.href = "../government-portal.html";
     return;
   }
 
@@ -311,7 +311,7 @@ logoutBtn?.addEventListener("click", () => {
     .then(() => {
       localStorage.removeItem("boop_jwt");
       localStorage.removeItem("boopUser");
-      window.location.href = "./government-portal.html";
+      window.location.href = "../government-portal.html";
     })
     .catch(() => alert("Logout failed."));
 });
