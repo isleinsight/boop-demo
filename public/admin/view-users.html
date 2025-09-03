@@ -9,35 +9,34 @@
 </head>
   <style>
   * {
-    box-sizing: border-box; /* Ensure consistent box model */
+    box-sizing: border-box;
   }
 
   .search-filter-bar {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    align-items: stretch; /* Ensure all items stretch to match tallest element */
+    align-items: stretch; 
   }
 
   .search-filter-bar input,
   .search-filter-bar select,
   .search-filter-bar button {
-    /* Reset default styles */
     margin: 0;
-    padding: 0 14px; /* Consistent horizontal padding */
-    border: 1px solid #d1d9e6; /* Consistent border */
+    padding: 0 14px; 
+    border: 1px solid #d1d9e6; 
     border-radius: 6px;
     font-size: 0.9rem;
     font-family: 'Poppins', sans-serif;
-    line-height: 1; /* Normalize text alignment */
-    height: 38px; /* Explicit height, adjusted slightly to account for border */
+    line-height: 1; 
+    height: 38px; 
     min-height: 38px;
     max-height: 38px;
-    display: inline-flex; /* Flex for internal content centering */
-    align-items: center; /* Center content vertically */
-    justify-content: center; /* Center content horizontally for buttons */
-    background: #fff; /* Ensure consistent background */
-    outline: none; /* Remove default outlines */
+    display: inline-flex;
+    align-items: center; 
+    justify-content: center;
+    background: #fff; 
+    outline: none; 
   }
 
   .search-filter-bar input {
@@ -51,7 +50,7 @@
     appearance: none;
     background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMi4wMDAwNiA1LjY2NjdMOC4wMDAwNiAxMS42NjY3TDE0LjAwMDEgNS42NjY3IiBzdHJva2U9IiM2Yjc1N2QiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+') no-repeat right 12px center;
     background-size: 16px;
-    padding-right: 32px; /* Space for dropdown arrow */
+    padding-right: 32px;
   }
 
   .search-filter-bar button {
@@ -74,7 +73,7 @@
     font-size: 0.9rem;
     color: #1a2b4a;
     font-weight: 500;
-    line-height: 38px; /* Match input/button height */
+    line-height: 38px; 
     margin: 0;
     padding: 0 8px;
     display: inline-flex;
@@ -117,7 +116,7 @@
 </div>
 <script>
   (function(){
-    const minWidth = 900; // tweak if you want to allow tablets
+    const minWidth = 900; 
     const guard = document.getElementById('screenGuard');
     function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
     window.addEventListener('resize', update, { passive:true });
