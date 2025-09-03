@@ -17,7 +17,7 @@
 </div>
 <script>
   (function(){
-    const minWidth = 900; // tweak if you want to allow tablets
+    const minWidth = 900; 
     const guard = document.getElementById('screenGuard');
     function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
     window.addEventListener('resize', update, { passive:true });
@@ -43,7 +43,7 @@
         console.warn("Not authorized or error fetching user:", err);
         localStorage.removeItem("boop_jwt");
         localStorage.removeItem("boopUser");
-        window.location.href = "login.html";
+        window.location.href = "../government-portal.html";
       }
     })();
   </script>
@@ -52,7 +52,7 @@
 <nav>
   <div class="nav-container">
     <div class="nav-left">
-      <img src="../assets/logo-white.png" alt="BOOP Logo" />
+      <img src="../assets/logo-white.png" alt="Payulot Logo" />
     </div>
     <div class="nav-right">
       <a href="index.html">Dashboard</a>
@@ -201,7 +201,7 @@
         logoutBtn.addEventListener("click", (e) => {
           e.preventDefault();
           localStorage.clear();
-          window.location.href = "login.html";
+          window.location.href = "../government-portal.html";
         });
       }
 
