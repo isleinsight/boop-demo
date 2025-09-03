@@ -241,7 +241,7 @@
 
     if (!isAllowed || !token) {
       localStorage.clear();
-      window.location.href = "login.html";
+      window.location.href = "../government-portal.html";
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -258,7 +258,7 @@
         logoutBtn.addEventListener("click", (e) => {
           e.preventDefault();
           localStorage.clear();
-          window.location.href = "./government-portal.html";
+          window.location.href = "../government-portal.html";
         });
       }
 
