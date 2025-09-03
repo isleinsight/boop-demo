@@ -38,7 +38,7 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   } else if (options.autoRedirect !== false) {
-    window.location.href = "login.html";
+    window.location.href = "../government-portal.html";
     return;
   }
 
@@ -52,7 +52,7 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
   if (res.status === 401 || res.status === 403) {
     console.warn("Token rejected or expired");
     if (options.autoRedirect !== false) {
-      window.location.href = "login.html";
+      window.location.href = "../government-portal.html";
     }
     throw new Error("Unauthorized");
   }
@@ -73,7 +73,7 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
 
     async function loadUserProfile() {
     try {
-      console.log("🔍 Loading user with ID:", currentUserId);
+      console.log("Loading user with ID:", currentUserId);
 let user;
 try {
   user = await fetchJSON(`/api/users/${currentUserId}`);
@@ -148,7 +148,7 @@ let walletBalance = "N/A";
 try {
   const w = await fetchJSON(`/api/wallets/user/${user.id}`);
 
-  // Prefer balance_cents; fall back to balance (which is also cents in your DB)
+  // Prefer balance_cents; fall back to balance 
   const cents = Number(
     w?.balance_cents ??
     w?.balance ??
@@ -717,7 +717,7 @@ isEditMode = false;
         console.warn("Session cleanup failed:", err);
       }
 
-      window.location.href = "login.html";
+      window.location.href = "../government-portal.html";
     }
   } catch (err) {
     console.error("Force sign-out check failed:", err);
