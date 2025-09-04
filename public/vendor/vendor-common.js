@@ -1,9 +1,4 @@
-<script>
-/**
- * Vendor-safe fetch wrapper:
- * - Adds Authorization header from localStorage('boop_jwt')
- * - If server sends a renewed token in `x-renew-jwt`, we save it
- */
+
 async function apiFetch(url, opts = {}) {
   const token = localStorage.getItem('boop_jwt');
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
@@ -28,4 +23,4 @@ function apiGet(url){ return apiJSON(url); }
 function apiPost(url, body){ return apiJSON(url, { method:'POST', body: JSON.stringify(body||{}) }); }
 function apiPatch(url, body){ return apiJSON(url, { method:'PATCH', body: JSON.stringify(body||{}) }); }
 function apiDelete(url, body){ return apiJSON(url, { method:'DELETE', body: JSON.stringify(body||{}) }); }
-</script>
+
