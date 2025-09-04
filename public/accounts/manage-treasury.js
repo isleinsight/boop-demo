@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!user || user.role !== "admin" || user.type !== "treasury") {
     console.warn("[MT] Forbidden for this user", user);
     alert("🚫 You do not have access to this page.");
-    window.location.href = "login.html";
+    window.location.href = "../government-portal.html";
     return;
   }
 
@@ -195,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       showStatus("Submitting…");
       await postAdjust(currentWalletId, { amount_cents: Math.round(amount * 100), type, note });
-      showStatus("✅ Adjustment successful!", "green");
+      showStatus("Adjustment successful!", "green");
       amountInput.value = "";
       noteInput.value = "";
       await refreshBalance();
