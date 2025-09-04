@@ -287,36 +287,52 @@
 
   <!-- Page logic -->
   <script>
-    // Logout
-    document.getElementById('logoutLink')?.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      try { await fetch('/api/logout', { method:'POST' }); } catch {}
-      localStorage.clear();
-      location.href = '../login.html';
+  (async () => {
+    // Try to ensure vendor long-session if the helper is loaded
+    if (typeof window.ensureLongVendorSession === "function") {
+      try { await window.ensureLongVendorSession(); } catch {}
+    }
+  })();
+
+  // Logout
+  document.getElementById('logoutLink')?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    try { await fetch('/api/logout', { method:'POST' }); } catch {}
+    localStorage.clear();
+    location.href = '../login.html';
+  });
+
+  // Simple FAQ search/filter
+  (function(){
+    const input = document.getElementById('faqSearch');
+    const clear = document.getElementById('clearSearch');
+    const items = Array.from(document.querySelectorAll('#faqList > li'));
+
+    function normalize(s){ return (s||'').toLowerCase(); }
+
+    function filter(){
+      const q = normalize(input.value);
+      items.forEach(li => {
+        const text = normalize(li.innerText);
+        const hit = !q || text.includes(q);
+        li.style.display = hit ? '' : 'none';
+        if (!hit) {
+          const det = li.querySelector('details');
+          if (det) det.open = false;
+        }
+      });
+    }
+
+    input.addEventListener('input', filter);
+    clear.addEventListener('click', () => {
+      input.value = '';
+      filter();
+      input.focus();
     });
 
-    // Simple FAQ search/filter
-    (function(){
-      const input = document.getElementById('faqSearch');
-      const clear = document.getElementById('clearSearch');
-      const items = Array.from(document.querySelectorAll('#faqList > li'));
-
-      function normalize(s){ return (s||'').toLowerCase(); }
-
-      function filter(){
-        const q = normalize(input.value);
-        items.forEach(li => {
-          const text = normalize(li.innerText);
-          const hit = !q || text.includes(q);
-          li.style.display = hit ? '' : 'none';
-          if (!hit) { const det = li.querySelector('details'); if (det) det.open = false; }
-        });
-      }
-      input.addEventListener('input', filter);
-      clear.addEventListener('click', () => { input.value=''; filter(); input.focus(); });
-      filter();
-    })();
-  </script>
+    filter();
+  })();
+</script>
   <script src="vendor-common.js"></script>
 </body>
 </html>
