@@ -1,7 +1,7 @@
 // /public/passport/passport.js
 (function () {
   // ---------- config ----------
-  // If your backend expects cents (integers), flip this to true.
+  // If backend expects cents (integers), flip this to true.
   const BACKEND_EXPECTS_CENTS = false;
 
   // ---------- helpers ----------
