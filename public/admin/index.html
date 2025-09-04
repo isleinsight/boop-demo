@@ -109,11 +109,11 @@
   align-items: center;
   justify-content: space-between;
   position: relative;
-  padding: 10px 20px; /* Ensure padding for visibility */
+  padding: 10px 20px; 
 }
 
 .hamburger {
-  display: none; /* Hidden on desktop */
+  display: none; 
   flex-direction: column;
   justify-content: space-between;
   width: 24px;
@@ -122,18 +122,18 @@
   border: none;
   cursor: pointer;
   padding: 0;
-  z-index: 1100; /* Ensure it’s above other elements */
+  z-index: 1100; 
 }
 
 .hamburger span {
   width: 100%;
   height: 3px;
-  background: #ffffff; /* White for closed state, visible against dark nav */
+  background: #ffffff; 
   transition: all 0.3s ease;
 }
 
 .hamburger.active span {
-  background: #1a2b4a; /* Dark color for X when menu is open */
+  background: #1a2b4a; 
 }
 
 .hamburger.active span:nth-child(1) {
@@ -226,12 +226,12 @@ svg {
   display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
   <div style="max-width:540px;">
     <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
-    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+    <p>For security and usability, the Payulot Admin dashboard must be used on a desktop or tablet in landscape.</p>
   </div>
 </div>
 <script>
   (function(){
-    const minWidth = 900; // tweak if you want to allow tablets
+    const minWidth = 900; 
     const guard = document.getElementById('screenGuard');
     function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
     window.addEventListener('resize', update, { passive:true });
@@ -242,7 +242,7 @@ svg {
 <nav>
   <div class="nav-container">
     <div class="nav-left">
-      <img src="../assets/logo-white.png" alt="BOOP Logo" />
+      <img src="../assets/logo-white.png" alt="Payulot Logo" />
     </div>
     <div class="hamburger">
       <span></span>
@@ -268,7 +268,7 @@ svg {
 
   <section class="admin-hero">
     <div class="admin-hero__inner">
-      <h1>BOOP Admin Dashboard</h1>
+      <h1>Payulot Admin Dashboard</h1>
       <p class="admin-hero__sub">
         Welcome to your secure dashboard. From here you can manage users, review system activity, and perform administrative tasks.
       </p>
@@ -291,7 +291,7 @@ svg {
     const user = JSON.parse(localStorage.getItem("boopUser"));
     const allowedTypes = ["super_admin","admin","support"];
     const isAuthorized = user && user.role === "admin" && allowedTypes.includes(user.type);
-    if (!isAuthorized) { window.location.href = "login.html"; return; }
+    if (!isAuthorized) { window.location.href = "../government-portal.html"; return; }
 
     const canManageUsers = user.type === "super_admin" || user.type === "admin";
 
@@ -333,7 +333,7 @@ svg {
       try { await fetch("/logout", { method:"POST" }); } catch {}
       localStorage.removeItem("boop_jwt");
       localStorage.removeItem("boopUser");
-      window.location.href = "login.html";
+      window.location.href = "../government-portal.html";
     });
 });
    
