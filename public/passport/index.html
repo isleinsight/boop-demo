@@ -53,10 +53,10 @@
     .btn.secondary{ background:#fff; color:var(--ink); border-color:#d1d9e6; }
     .btn.secondary:hover{ background:#f3f4f6; }
 
-    .status{ margin-top:12px; padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); }
-    .status.ok{ background:#ecfdf5; border-color:#a7f3d0; color:var(--ok); }
-    .status.warn{ background:#fff7ed; border-color:#fed7aa; color:var(--warn); }
-    .status.err{ background:#fef2f2; border-color:#fecaca; color:var(--err); }
+    .status{ margin-top:12px; padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); display:none; }
+    .status.ok{ background:#ecfdf5; border-color:#a7f3d0; color:var(--ok); display:block; }
+    .status.warn{ background:#fff7ed; border-color:#fed7aa; color:#b45309; display:block; }
+    .status.err{ background:#fef2f2; border-color:#fecaca; color:#991b1b; display:block; }
 
     .view{ display:none; }
     .view.active{ display:block; }
@@ -77,7 +77,7 @@
     footer{ margin-top:auto; border-top:1px solid var(--stroke); background:#fff; }
     .footer__inner{ max-width:1100px; margin:0 auto; padding:14px 16px; font-size:.9rem; color:#4b5563;
       display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-    .footer__links a{ color:var(--blue); text-decoration:none; margin-right:12px; }
+    .footer__links a{ color:#2f80ed; text-decoration:none; margin-right:12px; }
     .footer__links a:hover{ text-decoration:underline; }
   </style>
 </head>
@@ -98,30 +98,23 @@
     <!-- Common passport header -->
     <div class="card" style="margin-bottom:16px;">
       <h1>Passport</h1>
-      <p class="sub">This page adapts to the signed-in role. Use “Scan / Load” to select a Passport. The full ID is never displayed.</p>
+      <p class="sub">This page opens from the scanner (deep link includes a Passport token). The full ID is never displayed.</p>
 
-      <!-- Hidden full PID (set ONLY by scan/deeplink/postMessage) -->
+      <!-- Hidden full PID (set ONLY from deep link) -->
       <input id="pidFull" type="hidden" autocomplete="off" />
 
-      <!-- Masked PID display + buttons -->
+      <!-- Masked PID display -->
       <div class="row">
         <div class="col">
           <label>Selected Passport</label>
           <div class="pid-chip" id="pidChip">
-            <span class="pid" id="pidMasked">No passport selected</span>
+            <span class="pid" id="pidMasked">No passport detected</span>
             <span class="hint" id="pidHint"></span>
-          </div>
-        </div>
-        <div class="col">
-          <label>Actions</label>
-          <div class="row">
-            <button class="btn secondary" id="btnScan" type="button">Scan / Load</button>
-            <button class="btn" id="btnUse" type="button" disabled>Use This Passport</button>
           </div>
         </div>
       </div>
 
-      <div id="commonStatus" class="status" style="display:none;"></div>
+      <div id="commonStatus" class="status"></div>
 
       <div class="kv">
         <div class="item"><span class="muted">Signed-in role:</span> <strong id="roleBadge">—</strong></div>
@@ -146,13 +139,13 @@
       </div>
 
       <button class="btn" id="v_chargeBtn" disabled>Charge</button>
-      <div id="v_status" class="status" style="display:none;"></div>
+      <div id="v_status" class="status"></div>
     </section>
 
     <!-- Health VIEW -->
     <section id="view-health" class="view card">
       <h2 style="margin:0 0 6px;">Health • Emergency Passport</h2>
-      <p class="sub">Read-only info for emergency care (placeholders until your API is ready).</p>
+      <p class="sub">Read-only info for emergency care (placeholder until your health API is live).</p>
       <div class="row">
         <div class="col">
           <label>Flag</label>
@@ -192,7 +185,7 @@
       </div>
 
       <button class="btn" id="t_validateBtn" disabled>Validate & Deduct</button>
-      <div id="t_status" class="status" style="display:none;"></div>
+      <div id="t_status" class="status"></div>
     </section>
 
   </div>
@@ -208,139 +201,158 @@
   </footer>
 
   <script>
-    // Util: mask all but last 4
-    function maskPid(pid){
-      if(!pid || typeof pid !== 'string') return '';
-      const last4 = pid.slice(-4);
-      return '••••-••••-••••-' + last4;
+    // ---------- config ----------
+    const BACKEND_EXPECTS_CENTS = false;
+
+    // ---------- helpers ----------
+    const $ = (id) => document.getElementById(id);
+    const maskPid = (pid) => (pid && typeof pid === 'string') ? ('••••-••••-••••-' + pid.slice(-4)) : '';
+    const showStatus = (el, msg, cls) => { if(!el) return; el.className = 'status ' + (cls||''); el.textContent = msg; el.style.display = 'block'; };
+    const hideStatus = (el) => { if(el){ el.style.display = 'none'; } };
+
+    function roleKey(me) {
+      const r = String(me?.role || '').toLowerCase().trim();
+      const t = String(me?.type || '').toLowerCase().trim();
+      const v = r || t;
+      if (['vendor','rolevendor'].includes(v)) return 'vendor';
+      if (['health','health_professional','healthprofessional','medical','emt','ambulance'].includes(v)) return 'health';
+      if (['transit','bus','ferry','rail','operator'].includes(v)) return 'transit';
+      return 'unknown';
     }
-
-    // Wire up basic UI bits
-    const yearEl = document.getElementById('year'); if(yearEl) yearEl.textContent = new Date().getFullYear();
-    const pidFull = document.getElementById('pidFull');
-    const pidMaskedEl = document.getElementById('pidMasked');
-    const pidHint = document.getElementById('pidHint');
-    const btnScan = document.getElementById('btnScan');
-    const btnUse = document.getElementById('btnUse');
-    const chargeBtn = document.getElementById('v_chargeBtn');
-    const transitBtn = document.getElementById('t_validateBtn');
-
-    // Disable any accidental text entry on the hidden field (belt & suspenders)
-    ['keydown','keypress','beforeinput','paste','drop'].forEach(evt => {
-      pidFull.addEventListener(evt, e => e.preventDefault());
-    });
-
-    function setPid(pid){
-      pidFull.value = pid || '';
-      const ok = !!pid;
-      pidMaskedEl.textContent = ok ? maskPid(pid) : 'No passport selected';
-      pidHint.textContent = ok ? '(masked — last 4 only)' : '';
-      btnUse.disabled = !ok;
-      chargeBtn.disabled = !ok;
-      transitBtn.disabled = !ok;
+    function fullNameOrEmail(me) {
+      const first = (me?.first_name || '').trim();
+      const last  = (me?.last_name  || '').trim();
+      const name = (first + ' ' + last).trim();
+      return name || me?.email || 'User';
     }
-
-    // Accept from ?pid= in URL (deeplink)
-    (function preloadFromQuery(){
-      try{
-        const u = new URL(location.href);
-        const pid = u.searchParams.get('pid');
-        if(pid && /^[A-Za-z0-9_-]{12,}$/.test(pid)) setPid(pid);
-      }catch{}
-    })();
-
-    // Accept from NFC/Scanner via postMessage
-    window.addEventListener('message', (e)=>{
-      // You can tighten origin checks here, e.g.: if(e.origin !== 'https://scanner.payulot.com') return;
-      const data = e.data || {};
-      if(data && typeof data === 'object' && typeof data.pid === 'string'){
-        // Basic allowlist check: looks like a token-ish string
-        if(/^[A-Za-z0-9_-]{12,}$/.test(data.pid)){
-          setPid(data.pid);
-        }
+    async function fetchMe() {
+      const token = localStorage.getItem('boop_jwt');
+      if (!token) throw new Error('No token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const r = await fetch('/api/me', { headers });
+      if (!r.ok) {
+        let m = 'Unauthorized';
+        try { m = (await r.json())?.message || m; } catch {}
+        throw new Error(m);
       }
-    });
+      const basic = await r.json();
+      try {
+        const more = await fetch('/api/users/me', { headers });
+        if (more.ok) return { ...basic, ...(await more.json()) };
+      } catch {}
+      return basic;
+    }
+    function setRoleView(role) {
+      ['view-vendor','view-health','view-transit'].forEach(id => $(id)?.classList.remove('active'));
+      if (role === 'vendor') $('view-vendor')?.classList.add('active');
+      if (role === 'health') $('view-health')?.classList.add('active');
+      if (role === 'transit') $('view-transit')?.classList.add('active');
+    }
 
-    // "Scan / Load" — open your scanner page (adjust URL)
-    btnScan.addEventListener('click', ()=>{
-      // Open a scanner tab/window that will postMessage({pid:"..."}) back to this window
-      window.open('/vendor/scanner.html', '_blank', 'noopener');
-    });
+    // ---------- boot ----------
+    document.addEventListener('DOMContentLoaded', async () => {
+      $('year') && ($('year').textContent = new Date().getFullYear());
 
-    // Use the selected passport (does not reveal PID)
-    btnUse.addEventListener('click', ()=>{
-      if(!pidFull.value) return;
-      const status = document.getElementById('commonStatus');
-      status.className = 'status ok';
-      status.textContent = 'Passport loaded. You can proceed.';
-      status.style.display = 'block';
-      // Here you might also fetch and cache limited profile info server-side (still keep PID hidden in UI)
-    });
+      // 1) Require ?pid= from deep link
+      let PID = '';
+      try {
+        const u = new URL(location.href);
+        const raw = (u.searchParams.get('pid') || '').trim();
+        if (raw && /^[A-Za-z0-9_-]{12,}$/.test(raw)) PID = raw;
+      } catch {}
+      const pidFull = $('pidFull');
+      const pidMaskedEl = $('pidMasked');
+      const pidHint = $('pidHint');
+      const commonStatus = $('commonStatus');
 
-    // Example charge handler (uses hidden PID)
-    document.getElementById('v_chargeBtn')?.addEventListener('click', async ()=>{
-      const amt = Number(document.getElementById('v_amount')?.value || 0);
-      const note = document.getElementById('v_note')?.value || null;
-      const out = document.getElementById('v_status');
-      out.style.display = 'none';
-      if(!pidFull.value || !Number.isFinite(amt) || amt <= 0){
-        out.className = 'status err';
-        out.textContent = 'Missing passport or invalid amount.';
-        out.style.display = 'block';
+      if (!PID) {
+        pidFull.value = '';
+        pidMaskedEl.textContent = 'No passport detected';
+        pidHint.textContent = '';
+        showStatus(commonStatus, 'Open this page from the scanner. Missing or invalid token.', 'warn');
+      } else {
+        pidFull.value = PID;
+        pidMaskedEl.textContent = maskPid(PID);
+        pidHint.textContent = '(masked — last 4 only)';
+        hideStatus(commonStatus);
+      }
+
+      // 2) Auth + identity + role gate
+      try {
+        const me = await fetchMe();
+        const who = fullNameOrEmail(me);
+        const role = roleKey(me);
+
+        $('signedInAs').textContent = `Signed in as ${who}`;
+        $('roleBadge').textContent = role;
+        $('whoBadge').textContent = who;
+
+        setRoleView(role);
+
+        // enable actions only if PID present
+        if (PID) {
+          if (role === 'vendor') $('v_chargeBtn').disabled = false;
+          if (role === 'transit') $('t_validateBtn').disabled = false;
+        } else {
+          $('v_chargeBtn').disabled = true;
+          $('t_validateBtn').disabled = true;
+        }
+      } catch (e) {
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        location.href = '/index.html';
         return;
       }
-      try{
-        const r = await fetch('/api/vendor/passport-charge', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify({ pid_token: pidFull.value, amount: amt, note })
-        });
-        const j = await r.json().catch(()=>({}));
-        if(!r.ok) throw new Error(j.message || 'Charge failed');
-        out.className = 'status ok';
-        out.textContent = 'Charge approved.';
-      }catch(e){
-        out.className = 'status err';
-        out.textContent = e.message || 'Charge failed';
-      }finally{
-        out.style.display = 'block';
-      }
-    });
 
-    // Transit example
-    document.getElementById('t_validateBtn')?.addEventListener('click', async ()=>{
-      const mode = document.getElementById('t_mode')?.value || 'bus';
-      const fare = Number(document.getElementById('t_fare')?.value || 0);
-      const out = document.getElementById('t_status');
-      out.style.display = 'none';
-      if(!pidFull.value){
-        out.className = 'status err'; out.textContent = 'No passport selected.'; out.style.display = 'block'; return;
-      }
-      try{
-        const r = await fetch('/api/transit/validate', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify({ pid_token: pidFull.value, mode, fare })
-        });
-        const j = await r.json().catch(()=>({}));
-        if(!r.ok) throw new Error(j.message || 'Validation failed');
-        out.className = 'status ok'; out.textContent = 'Validated & fare deducted.'; out.style.display = 'block';
-      }catch(e){
-        out.className = 'status err'; out.textContent = e.message || 'Validation failed'; out.style.display = 'block';
-      }
-    });
+      // 3) Vendor: charge
+      $('v_amount')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('v_chargeBtn')?.click(); });
+      $('v_chargeBtn')?.addEventListener('click', async () => {
+        const out = $('v_status');
+        hideStatus(out);
+        const amt = Number($('v_amount')?.value || 0);
+        const note = $('v_note')?.value || null;
+        if (!pidFull.value) return showStatus(out, 'No passport detected.', 'err');
+        if (!Number.isFinite(amt) || amt <= 0) return showStatus(out, 'Enter a valid amount.', 'err');
 
-    // Simple role/name placeholders
-    document.getElementById('signedInAs').textContent = 'Signed in';
-    document.getElementById('roleBadge').textContent = 'Vendor';
-    document.getElementById('whoBadge').textContent = 'you@business.bm';
-    document.getElementById('view-vendor').classList.add('active');
+        const btn = $('v_chargeBtn'); btn.disabled = true;
+        try {
+          const token = localStorage.getItem('boop_jwt') || '';
+          const payload = BACKEND_EXPECTS_CENTS
+            ? { pid_token: pidFull.value, amount_cents: Math.round(amt * 100), note }
+            : { pid_token: pidFull.value, amount: amt, note };
 
-    // Logout
-    document.getElementById('logoutLink')?.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      try { await fetch('/api/logout', { method:'POST' }); } catch {}
-      localStorage.clear(); location.href = '../login.html';
+          const r = await fetch('/api/vendor/passport-charge', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const j = await r.json().catch(()=>({}));
+          if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
+          showStatus(out, 'Charge completed.', 'ok');
+        } catch (err) {
+          showStatus(out, `❌ ${err.message || err}`, 'err');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // 4) Transit (demo)
+      $('t_validateBtn')?.addEventListener('click', async () => {
+        const out = $('t_status');
+        hideStatus(out);
+        if (!pidFull.value) return showStatus(out, 'No passport detected.', 'err');
+        const fare = Number($('t_fare')?.value || 0);
+        const mode = $('t_mode')?.value || 'bus';
+        if (!Number.isFinite(fare) || fare < 0) return showStatus(out, 'Enter a valid fare.', 'err');
+        showStatus(out, `(demo) ${mode} fare deducted: ${fare.toFixed(2)}`, 'ok');
+      });
+
+      // 5) Logout
+      $('logoutLink')?.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear(); location.href = '../login.html';
+      });
     });
   </script>
 </body>
