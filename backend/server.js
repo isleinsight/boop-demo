@@ -61,7 +61,9 @@ mount('/api/vendor', './auth/routes/vendors', 'vendor');
 // ✅ Vendor passport charge (POST /api/vendor/passport-charge)
 mount('/api/vendor', './auth/routes/passport-charge', 'passport-charge');
 
-// Optional: passport
+// Vendor-staff login
+mount('/auth/vendor-staff', './auth/routes/vendor-staff', 'vendor-staff');
+
 mount('/api/passport', './auth/routes/passport', 'passport');
 
 // Students / parents / sessions / txns / payouts / sales
