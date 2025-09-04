@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Parent Portal — BOOP</title>
+  <title>Parent Portal — Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Parents can track spending, add funds, and manage their child's BOOP Card." />
+  <meta name="description" content="Parents can track spending, add funds, and manage their child's Payulot Card." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{
-      --ink:#0b1220;        /* BOOP dark header */
-      --boop:#2f80ed;       /* BOOP blue accent */
-      --ink-2:#1a2b4a;      /* headings/body */
+      --ink:#0b1220;        
+      --boop:#2f80ed;       
+      --ink-2:#1a2b4a;      
       --muted:#6b7280;
       --bg:#f5f8fb;
       --card:#ffffff;
@@ -33,12 +33,12 @@
     }
     .nav__logo{height:28px;display:block}
 
-    /* ===== Page Layout (CSS Grid that stays perfectly aligned) ===== */
+    /* ===== Page Layout  ===== */
     .wrap{max-width:1120px;margin:0 auto;padding:28px 18px}
     .grid{
       display:grid;
-      grid-template-columns: 1.15fr .85fr;   /* login a bit wider */
-      grid-template-rows: 1fr 1fr;           /* two rows of equal height */
+      grid-template-columns: 1.15fr .85fr;   
+      grid-template-rows: 1fr 1fr;           
       gap:18px;
       align-items:stretch;
     }
@@ -105,7 +105,6 @@
   </style>
 </head>
 <body>
-  <!-- Solid dark-blue header with your white logo -->
   <header class="nav">
     <nav style="background-color: #0b1220; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
   <div>
@@ -123,11 +122,11 @@
 
   <main class="wrap">
     <section class="grid" aria-label="Parent Portal">
-      <!-- LEFT: Login (spans both right rows for perfect alignment) -->
+      <!-- LEFT: Login -->
       <div class="loginCell">
         <div class="card loginCard">
           <div class="eyebrow">Parent Portal</div>
-          <h1>Log in to manage your child’s BOOP Card</h1>
+          <h1>Log in to manage your child’s Payulot Card</h1>
           <p>Track spending, add funds, and keep them on budget.</p>
 
           <form id="parentLoginForm" novalidate>
@@ -140,7 +139,7 @@
             </div>
 
             <div id="loginMsg" class="msg" aria-live="polite"></div>
-            <div class="footTip">By signing in you agree to BOOP’s Terms and Privacy Policy.</div>
+            <div class="footTip">By signing in you agree to Payulot’s Terms and Privacy Policy.</div>
           </form>
         </div>
       </div>
@@ -171,7 +170,7 @@
 
   <footer>
     <div class="footer__inner">
-      <span>© BOOP 2025</span>
+      <span>© Payulot 2025</span>
       <nav class="footer__links" aria-label="Legal">
         <a href="/terms.html">Terms</a>
         <a href="/privacy.html">Privacy</a>
