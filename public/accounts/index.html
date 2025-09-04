@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Dashboard - BOOP Accounts</title>
+  <title>Dashboard - Payulot Accounts</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="../assets/styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
@@ -93,12 +93,12 @@ svg {
   display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
   <div style="max-width:540px;">
     <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
-    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+    <p>For security and usability, the Payulot Admin dashboard must be used on a desktop or tablet in landscape.</p>
   </div>
 </div>
 <script>
   (function(){
-    const minWidth = 900; // tweak if you want to allow tablets
+    const minWidth = 900; 
     const guard = document.getElementById('screenGuard');
     function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
     window.addEventListener('resize', update, { passive:true });
@@ -109,7 +109,7 @@ svg {
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <img src="../assets/logo-white.png" alt="BOOP Logo" />
+        <img src="../assets/logo-white.png" alt="Payulot Logo" />
       </div>
       <div class="nav-right">
         <a href="index.html">Dashboard</a>
@@ -132,7 +132,7 @@ svg {
   <!-- Main Content -->
   <section class="accounts-hero">
     <div class="accounts-hero__inner">
-      <h1>BOOP Accounts Dashboard</h1>
+      <h1>Payulot Accounts Dashboard</h1>
       <p class="accounts-hero__sub">
         Welcome to the secure accounts dashboard. From here you can manage funds, view transactions, and run reports.
       </p>
@@ -177,7 +177,7 @@ svg {
     // Restrict access to admin accounts only
     const user = JSON.parse(localStorage.getItem("boopUser"));
     if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
-      window.location.href = "login.html";
+      window.location.href = "../government-portal.html";
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -197,7 +197,7 @@ svg {
           e.preventDefault();
           localStorage.removeItem("boopUser");
           localStorage.removeItem("boop_jwt");
-          window.location.href = "login.html";
+          window.location.href = "../government-portal.html";
         });
       }
 
