@@ -291,7 +291,7 @@
 
   const allowedTypes = ["super_admin", "admin", "support"];
   if (!user || user.role !== "admin" || !allowedTypes.includes(user.type)) {
-    window.location.href = "login.html";
+    window.location.href = "../government-portal.html";
   }
 
   let currentPage = 1;
