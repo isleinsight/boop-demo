@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Parent Portal — BOOP</title>
+  <title>Parent Portal — Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Parents can track spending, add funds, and manage their child's BOOP Card." />
+  <meta name="description" content="Parents can track spending, add funds, and manage their child's Payulot Card." />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -99,8 +99,8 @@
   <!-- Header -->
   <header class="site-head">
     <div class="site-head__inner">
-      <a class="brand" href="../index.html" aria-label="BOOP home">
-        <img src="../assets/logo-white.png" alt="BOOP Logo" />
+      <a class="brand" href="../index.html" aria-label="Payulot home">
+        <img src="../assets/logo-white.png" alt="Payulot Logo" />
       </a>
     </div>
   </header>
@@ -228,7 +228,7 @@
   </div>
 
   <footer style="padding:22px;color:#6b7280;text-align:center;margin-top:20px">
-    © <span id="year"></span> BOOP. All rights reserved.
+    © <span id="year"></span> Payulot. All rights reserved.
     &nbsp;•&nbsp; <a href="../terms.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Terms and Conditions</a>
     &nbsp;•&nbsp; <a href="../privacy.html" style="color:#2f80ed;text-decoration:none;font-weight:600">Privacy Policy</a>
   </footer>
@@ -240,7 +240,7 @@
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
   // --- Auth guard ---
-  const token = localStorage.getItem('boop_jwt');
+  const token = localStorage.getItem('boop_jwt'); // left as-is to avoid breaking existing auth
   if (!token) { window.location.href = '../index.html'; return; }
 
   // --- State ---
@@ -682,7 +682,7 @@
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       try {
-        const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
+        const me = JSON.parse(localStorage.getItem('boopUser') || '{}'); // left as-is
         if (me.id && token) {
           await fetch(`/api/users/${me.id}/signout`, {
             method: 'POST',
@@ -690,8 +690,8 @@
           }).catch(() => {});
         }
       } finally {
-        localStorage.removeItem('boop_jwt');
-        localStorage.removeItem('boopUser');
+        localStorage.removeItem('boop_jwt'); // left as-is
+        localStorage.removeItem('boopUser'); // left as-is
         sessionStorage.clear();
         window.location.href = '../index.html';
       }
