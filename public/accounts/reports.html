@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Reports – BOOP Accounts</title>
+  <title>Reports – Payulot Accounts</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
@@ -138,7 +138,7 @@
   display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
   <div style="max-width:540px;">
     <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
-    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+    <p>For security and usability, the Payulot Admin dashboard must be used on a desktop or tablet in landscape.</p>
   </div>
 </div>
 <script>
@@ -154,7 +154,7 @@
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <img src="../assets/logo-white.png" alt="BOOP Logo" />
+        <img src="../assets/logo-white.png" alt="Payulot Logo" />
       </div>
       <div class="nav-right">
         <a href="index.html">Dashboard</a>
@@ -264,7 +264,7 @@
       if (user?.type === "treasury") { manageLink.style.display = "block"; }
 
       if (!user || user.role !== "admin" || !["accountant", "treasury"].includes(user.type)) {
-        window.location.href = "login.html";
+        window.location.href = "../government-portal.html";
         return;
       }
 
@@ -371,7 +371,7 @@
         e.preventDefault();
         try { await fetch("/api/logout", { method: "POST" }); } catch {}
         localStorage.clear();
-        window.location.href = "login.html";
+        window.location.href = "../government-portal.html";
       });
 
       fetchTransactions();
