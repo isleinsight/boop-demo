@@ -162,7 +162,7 @@
   display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
   <div style="max-width:540px;">
     <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
-    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+    <p>For security and usability, the Payulot Admin dashboard must be used on a desktop or tablet in landscape.</p>
   </div>
 </div>
 <script>
@@ -178,7 +178,7 @@
 <nav>
   <div class="nav-container">
     <div class="nav-left">
-      <img src="../assets/logo-white.png" alt="BOOP Logo" />
+      <img src="../assets/logo-white.png" alt="Payulot Logo" />
     </div>
     <div class="nav-right">
       <a href="index.html">Dashboard</a>
@@ -226,11 +226,11 @@
 
   if (!isAllowed || !token) {
     localStorage.clear();
-    window.location.href = "login.html";
+    window.location.href = "../government-portal.html";
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("✅ assign-student.js loaded!");
+    console.log("assign-student.js loaded!");
 
     // Hide "Add User" and "Assign Card" links for viewer or support users
     if (user?.type === "support" || user?.type === "viewer") {
@@ -245,7 +245,7 @@
       logoutBtn.addEventListener("click", (e) => {
         e.preventDefault();
         localStorage.clear();
-        window.location.href = "login.html";
+        window.location.href = "../government-portal.html";
       });
     }
 
