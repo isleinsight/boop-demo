@@ -18,7 +18,7 @@ if (currentAdmin?.role === "admin" && ["viewer", "accountant"].includes(currentA
 
 let currentUserId = localStorage.getItem("selectedUserId") || new URLSearchParams(window.location.search).get("uid");
 
-// 🚫 Remove any accidental whitespace or malformed characters from UUID
+// Remove any accidental whitespace or malformed characters from UUID
 currentUserId = currentUserId?.replace(/\s+/g, ''); 
   let currentUserData = null;
   let isEditMode = false;
@@ -39,7 +39,7 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   } else if (options.autoRedirect !== false) {
-    window.location.href = "login.html";
+    window.location.href = "../government-portal.html";
     return;
   }
 
@@ -53,7 +53,7 @@ currentUserId = currentUserId?.replace(/\s+/g, '');
   if (res.status === 401 || res.status === 403) {
     console.warn("⚠️ Token rejected or expired");
     if (options.autoRedirect !== false) {
-      window.location.href = "login.html";
+      window.location.href = "../government-portal.html";
     }
     throw new Error("Unauthorized");
   }
@@ -88,7 +88,7 @@ try {
 
       let walletHTML = "";
 
-// ✅ All Cards: Transit & Spending (safely skip for users with no wallet)
+// All Cards: Transit & Spending (safely skip for users with no wallet)
 if (user.wallet_id || user.wallet?.id) {
   try {
 let allCards = [];
@@ -100,7 +100,7 @@ if (user.wallet_id || user.wallet?.id) {
     console.warn("🟡 Failed to load cards:", err.message);
   }
 } else {
-  console.info("ℹ️ Skipping card fetch — user has no wallet.");
+  console.info("Skipping card fetch — user has no wallet.");
 }
     const transitCards = allCards.filter(c => c.type === "transit");
     const spendingCards = allCards.filter(c => c.type === "spending");
@@ -121,7 +121,7 @@ if (user.wallet_id || user.wallet?.id) {
       });
     }
   } catch (err) {
-    console.warn("🟡 Failed to load cards:", err.message);
+    console.warn("Failed to load cards:", err.message);
     walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
   }
 } else {
@@ -190,11 +190,11 @@ userInfo.innerHTML = `
 
   ${walletHTML}
 `;
-console.log("👀 Attempting to load transactions for user:", user.id);
+console.log("Attempting to load transactions for user:", user.id);
 
 const transactionTableBody = document.querySelector("#transactionTable tbody");
 if (!transactionTableBody) {
-  console.error("❌ Transaction table body not found in DOM");
+  console.error("Transaction table body not found in DOM");
   return; // Stop here but don't throw to avoid breaking profile
 }
 
@@ -208,7 +208,7 @@ try {
   transactions = res.transactions || [];
   console.log("💳 Loaded transactions:", transactions);
 } catch (err) {
-  console.error("❌ Failed to fetch transactions:", err.message);
+  console.error("Failed to fetch transactions:", err.message);
 }
 
 const pageTransactions = transactions.slice(0, transactionsPerPage);
@@ -275,7 +275,7 @@ try {
     });
   });
 } catch (err) {
-  console.error("❌ Error attaching note button listeners:", err.message);
+  console.error("Error attaching note button listeners:", err.message);
 }  
 
 // === PAGINATION CONTROLS ===
@@ -293,13 +293,13 @@ if (nextBtn) {
   nextBtn.style.display = transactions.length > transactionsPerPage ? "inline-block" : "none";
 }
 
-// ✅ Restore assist dropdown logic
+// Restore assist dropdown logic
 const assistDropdown = document.getElementById("editAssistance");
 if (assistDropdown) {
   assistDropdown.value = user.on_assistance ? "true" : "false";
 }
 
-      // ✅ dropdown
+      // dropdown
 
 const dropdown = document.createElement("select");
 dropdown.innerHTML = `
@@ -319,7 +319,7 @@ dropdown.addEventListener("change", async () => {
     return;
   }
 
-  // ✅ Load current user info for email (like View Users does)
+  // Load current user info for email (like View Users does)
   let adminUser = null;
   try {
     const meRes = await fetch("/api/me", {
@@ -374,7 +374,7 @@ dropdown.addEventListener("change", async () => {
         throw new Error(err.message || "Force sign-out failed");
       }
 
-      alert("✅ User signed out.");
+      alert("User signed out.");
 
     } else if (action === "delete") {
       res = await fetch(`/api/users/${currentUserId}`, {
@@ -399,8 +399,8 @@ dropdown.addEventListener("change", async () => {
     await loadUserProfile();
 
   } catch (err) {
-    console.error("❌ Action failed:", err);
-    alert("❌ Action failed: " + err.message);
+    console.error("Action failed:", err);
+    alert("Action failed: " + err.message);
   }
 });
 
@@ -442,7 +442,7 @@ if (user.role === "student") {
 
     studentInfoSection.style.display = "block";
 
-    // ✅ Attach Edit + Save handlers
+    // Attach Edit + Save handlers
     const editStudentBtn = document.getElementById("editStudentBtn");
     const saveStudentBtn = document.getElementById("saveStudentBtn");
 
@@ -471,7 +471,7 @@ if (user.role === "student") {
           expiry_date: document.getElementById("editExpiry")?.value,
         };
 
-        console.log("🚨 PATCHing to:", `/api/students/${currentUserId}`);
+        console.log("PATCHing to:", `/api/students/${currentUserId}`);
 
         try {
           await fetchJSON(`/api/students/${currentUserId}`, {
@@ -484,13 +484,13 @@ if (user.role === "student") {
           saveStudentBtn.style.display = "none";
           loadUserProfile();
         } catch (err) {
-          console.error("❌ Failed to save student data:", err);
+          console.error("Failed to save student data:", err);
           alert("Failed to save student info.");
         }
       };
     }
 
-    // ✅ Fetch and display parent info
+    // Fetch and display parent info
     try {
       const parents = await fetchJSON(`/api/user-students/parents/${user.id}`);
 
@@ -506,7 +506,7 @@ if (user.role === "student") {
         document.getElementById("parentSection").style.display = "block";
       }
     } catch (err) {
-      console.warn("❌ Could not load parent info:", err.message);
+      console.warn("Could not load parent info:", err.message);
     }
   }
 }
@@ -578,7 +578,7 @@ editBtn.onclick = () => {
 saveBtn.onclick = async () => {
   let hadError = false;
 
-  // ✅ Update user base info
+  // Update user base info
   try {
     await fetchJSON(`/api/users/${currentUserId}`, {
       method: "PATCH",
@@ -595,12 +595,12 @@ saveBtn.onclick = async () => {
     });
   } catch (err) {
     hadError = true;
-    console.warn("❌ User update failed:", err);
+    console.warn("User update failed:", err);
   }
 
   
 
-  // ✅ Vendor update
+  // Vendor update
   if (currentUserData.role === "vendor") {
     try {
       await fetchJSON(`/api/vendors/${currentUserId}`, {
@@ -613,7 +613,7 @@ saveBtn.onclick = async () => {
       });
     } catch (err) {
       hadError = true;
-      console.warn("❌ Vendor update failed:", err);
+      console.warn("Vendor update failed:", err);
     }
   }
 
@@ -621,7 +621,7 @@ saveBtn.onclick = async () => {
   if (hadError) {
     alert("Some changes were saved, but not all.");
   } else {
-    alert("✅ All changes saved.");
+    alert("All changes saved.");
     isEditMode = false;
     saveBtn.style.display = "none";
 
@@ -649,7 +649,7 @@ saveBtn.onclick = async () => {
       
 
     } catch (err) {
-  console.error("❌ Failed to load user:", err);
+  console.error("Failed to load user:", err);
   alert("Error loading user: " + err.message);
 }
   }
