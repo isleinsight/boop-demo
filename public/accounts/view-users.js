@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     email: 'email'
   };
 
-  // ✅ Restrict access to only accountant-type admins
+  // Restrict access to only accountant-type admins
   try {
     const res = await fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` }
@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("🔒 Not authorized or error fetching user:", err);
     localStorage.removeItem("boop_jwt");
     localStorage.removeItem("boopUser");
-    window.location.href = "login.html";
+    window.location.href = "../government-portal.html";
     return;
   }
 
@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       userCount.textContent = `Total Users: ${data.total}`;
       paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     } catch (err) {
-      console.error("⚠️ Error loading users:", err);
+      console.error("Error loading users:", err);
       userTableBody.innerHTML = `<tr><td colspan="7">Error loading users: ${err.message}</td></tr>`;
     }
   }
@@ -143,7 +143,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       await fetchUsers();
     } catch (err) {
-      console.error("❌ performAction failed:", err);
+      console.error("performAction failed:", err);
       alert("Action failed: " + err.message);
     }
   }
@@ -291,10 +291,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           return res;
         })
       ));
-      alert("✅ Selected users deleted successfully.");
+      alert("Selected users deleted successfully.");
       fetchUsers();
     } catch (err) {
-      console.error("⚠️ Bulk delete failed:", err);
+      console.error("Bulk delete failed:", err);
       alert("Delete failed: " + err.message);
     }
   });
@@ -308,7 +308,7 @@ logoutBtn?.addEventListener("click", () => {
     .then(() => {
       localStorage.removeItem("boop_jwt");
       localStorage.removeItem("boopUser");
-      window.location.href = "login.html";
+      window.location.href = "../government-portal.html";
     })
     .catch(() => alert("Logout failed."));
 });
