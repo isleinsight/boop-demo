@@ -1,11 +1,11 @@
 // public/admin/add-user.js
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("✅ add-user.js loaded (no password field)");
+  console.log("add-user.js loaded (no password field)");
 
   // Require logged-in admin
   const token = localStorage.getItem("boop_jwt");
   if (!token) {
-    window.location.href = "login.html";
+    window.location.href = "../government-portal.html";
     return;
   }
 
@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const payload = {
       email,
-      // no password provided; backend should generate a random temp password
+      // no password provided; backend generates a random temp password
       first_name,
       middle_name,
       last_name,
