@@ -179,148 +179,151 @@
 
   <!-- Page logic -->
   <script>
-    (function(){
-      const token = localStorage.getItem("boop_jwt");
-      const listEl = document.getElementById('list');
+  (function () {
+    const listEl = document.getElementById('list');
 
-      let allTx = [];
-      let filtered = [];
+    let allTx = [];
+    let filtered = [];
 
-      const btn7 = document.getElementById('btn7');
-      const btn30 = document.getElementById('btn30');
-      const btn90 = document.getElementById('btn90');
-      const startEl = document.getElementById('startDate');
-      const endEl = document.getElementById('endDate');
-      const applyCustom = document.getElementById('applyCustom');
-      const exportBtn = document.getElementById('exportBtn');
+    const btn7 = document.getElementById('btn7');
+    const btn30 = document.getElementById('btn30');
+    const btn90 = document.getElementById('btn90');
+    const startEl = document.getElementById('startDate');
+    const endEl = document.getElementById('endDate');
+    const applyCustom = document.getElementById('applyCustom');
+    const exportBtn = document.getElementById('exportBtn');
 
-      function dollars(c){ return `$${(Number(c||0)/100).toFixed(2)}`; }
-      function byDateDesc(a,b){ return new Date(b.created_at) - new Date(a.created_at); }
+    function dollars(c) { return `$${(Number(c || 0) / 100).toFixed(2)}`; }
+    function byDateDesc(a, b) { return new Date(b.created_at) - new Date(a.created_at); }
+    function setActive(btn) { [btn7, btn30, btn90].forEach(b => b.classList.toggle('active', b === btn)); }
 
-      function setActive(btn){ [btn7, btn30, btn90].forEach(b => b.classList.toggle('active', b===btn)); }
+    function withinRange(tx, start, end) {
+      const t = new Date(tx.created_at).getTime();
+      if (start && t < start) return false;
+      if (end && t > end) return false;
+      return true;
+    }
 
-      function withinRange(tx, start, end){
-        const t = new Date(tx.created_at).getTime();
-        if (start && t < start) return false;
-        if (end && t > end) return false;
-        return true;
+    function render() {
+      if (!filtered.length) {
+        listEl.innerHTML = `<div class="empty">No transactions for this range.</div>`;
+        return;
       }
-
-      function render(){
-        if (!filtered.length){
-          listEl.innerHTML = `<div class="empty">No transactions for this range.</div>`;
-          return;
-        }
-        listEl.innerHTML = filtered.map(tx=>{
-          const isCredit = (tx.type||'').toLowerCase()==='credit';
-          const who = isCredit ? (tx.sender_name || tx.from_name || 'Customer')
-                               : (tx.recipient_name || tx.to_name || 'Counterparty');
-          const verb = isCredit ? 'Received from' : 'Sent to';
-          const sign = isCredit ? '+' : '−';
-          const cls = isCredit ? 'positive' : 'negative';
-          const initials = (who?.trim?.()[0] || 'U').toUpperCase();
-          const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : '';
-          const note = tx.note ? ` • ${tx.note}` : '';
-          return `
-            <div class="item">
-              <div class="avatar">${initials}</div>
-              <div class="line">
-                <div>
-                  <div class="who">${verb} ${who}</div>
-                  <div class="meta">${when}${note}</div>
-                </div>
-                <div class="amt ${cls}">${sign}${dollars(tx.amount_cents)}</div>
+      listEl.innerHTML = filtered.map(tx => {
+        const isCredit = (tx.type || '').toLowerCase() === 'credit';
+        const who = isCredit
+          ? (tx.sender_name || tx.from_name || 'Customer')
+          : (tx.recipient_name || tx.to_name || 'Counterparty');
+        const verb = isCredit ? 'Received from' : 'Sent to';
+        const sign = isCredit ? '+' : '−';
+        const cls = isCredit ? 'positive' : 'negative';
+        const initials = (who?.trim?.()[0] || 'U').toUpperCase();
+        const when = tx.created_at ? new Date(tx.created_at).toLocaleString() : '';
+        const note = tx.note ? ` • ${tx.note}` : '';
+        return `
+          <div class="item">
+            <div class="avatar">${initials}</div>
+            <div class="line">
+              <div>
+                <div class="who">${verb} ${who}</div>
+                <div class="meta">${when}${note}</div>
               </div>
-            </div>`;
-        }).join('');
-      }
+              <div class="amt ${cls}">${sign}${dollars(tx.amount_cents)}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
 
-      function applyRange(days){
-        const now = Date.now();
-        const start = now - days*24*60*60*1000;
-        const end = now;
-        setActive(days===7 ? btn7 : days===30 ? btn30 : btn90);
-        filtered = allTx.filter(tx => withinRange(tx, start, end)).sort(byDateDesc);
-        render();
-      }
+    function applyRange(days) {
+      const now = Date.now();
+      const start = now - days * 24 * 60 * 60 * 1000;
+      const end = now;
+      setActive(days === 7 ? btn7 : days === 30 ? btn30 : btn90);
+      filtered = allTx.filter(tx => withinRange(tx, start, end)).sort(byDateDesc);
+      render();
+    }
 
-      function applyCustomRange(){
-        const s = startEl.value ? new Date(startEl.value).setHours(0,0,0,0) : null;
-        const e = endEl.value ? new Date(endEl.value).setHours(23,59,59,999) : null;
-        setActive(null);
-        filtered = allTx.filter(tx => withinRange(tx, s, e)).sort(byDateDesc);
-        render();
-      }
+    function applyCustomRange() {
+      const s = startEl.value ? new Date(startEl.value).setHours(0, 0, 0, 0) : null;
+      const e = endEl.value ? new Date(endEl.value).setHours(23, 59, 59, 999) : null;
+      setActive(null);
+      filtered = allTx.filter(tx => withinRange(tx, s, e)).sort(byDateDesc);
+      render();
+    }
 
-      btn7.addEventListener('click', ()=> applyRange(7));
-      btn30.addEventListener('click', ()=> applyRange(30));
-      btn90.addEventListener('click', ()=> applyRange(90));
-      applyCustom.addEventListener('click', applyCustomRange);
+    btn7.addEventListener('click', () => applyRange(7));
+    btn30.addEventListener('click', () => applyRange(30));
+    btn90.addEventListener('click', () => applyRange(90));
+    applyCustom.addEventListener('click', applyCustomRange);
 
-      exportBtn.addEventListener('click', ()=>{
-        if (!filtered.length) return;
-        const headers = ["Date","Direction","Counterparty","Amount","Note","TxID"];
-        const rows = filtered.map(tx=>{
-          const isCredit = (tx.type||'').toLowerCase()==='credit';
-          const dir = isCredit ? "Received" : "Sent";
-          const who = isCredit ? (tx.sender_name || tx.from_name || '')
-                               : (tx.recipient_name || tx.to_name || '');
-          return [
-            tx.created_at ? new Date(tx.created_at).toISOString() : "",
-            dir, who,
-            (Number(tx.amount_cents||0)/100).toFixed(2),
-            (tx.note||"").replace(/,/g," "),
-            tx.id || ""
-          ];
-        });
-        const csv = [headers, ...rows].map(r=>r.join(",")).join("\n");
-        const blob = new Blob([csv], { type:"text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = "vendor-transactions.csv";
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(url);
+    exportBtn.addEventListener('click', () => {
+      if (!filtered.length) return;
+      const headers = ["Date", "Direction", "Counterparty", "Amount", "Note", "TxID"];
+      const rows = filtered.map(tx => {
+        const isCredit = (tx.type || '').toLowerCase() === 'credit';
+        const dir = isCredit ? "Received" : "Sent";
+        const who = isCredit ? (tx.sender_name || tx.from_name || '')
+                             : (tx.recipient_name || tx.to_name || '');
+        return [
+          tx.created_at ? new Date(tx.created_at).toISOString() : "",
+          dir,
+          who,
+          (Number(tx.amount_cents || 0) / 100).toFixed(2),
+          (tx.note || "").replace(/,/g, " "),
+          tx.id || ""
+        ];
       });
+      const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "vendor-transactions.csv";
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    });
 
-      async function fetchVendorRange({ startISO, endISO, limit=500 }){
-        const qs = new URLSearchParams();
-        if (startISO) qs.set("start", startISO.slice(0,10));
-        if (endISO)   qs.set("end", endISO.slice(0,10));
-        qs.set("limit", String(limit)); qs.set("offset","0");
-        const res = await fetch(`/api/vendor/transactions/report?${qs}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
-        const rows = data.transactions || [];
-        return rows.map(r => ({
-          id:r.id, created_at:r.created_at, type:r.type, amount_cents:r.amount_cents,
-          note:r.note, sender_name:r.sender_name||r.from_name, recipient_name:r.recipient_name||r.to_name
-        }));
+    async function fetchVendorRange({ startISO, endISO, limit = 500 }) {
+      const qs = new URLSearchParams();
+      if (startISO) qs.set("start", startISO.slice(0, 10));
+      if (endISO) qs.set("end", endISO.slice(0, 10));
+      qs.set("limit", String(limit));
+      qs.set("offset", "0");
+      // Use long-session helper (adds auth, auto-refreshes vendor tokens)
+      const data = await apiJSON(`/api/vendor/transactions/report?${qs.toString()}`);
+      const rows = data.transactions || [];
+      return rows.map(r => ({
+        id: r.id,
+        created_at: r.created_at,
+        type: r.type,
+        amount_cents: r.amount_cents,
+        note: r.note,
+        sender_name: r.sender_name || r.from_name,
+        recipient_name: r.recipient_name || r.to_name
+      }));
+    }
+
+    async function loadDefault() {
+      try {
+        const now = new Date();
+        const start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        allTx = await fetchVendorRange({ startISO: start.toISOString(), endISO: now.toISOString(), limit: 500 });
+        applyRange(30);
+      } catch (e) {
+        console.warn('vendor report error', e);
+        listEl.innerHTML = `<div class="empty">Couldn’t load transactions.</div>`;
       }
+    }
 
-      async function loadDefault(){
-        try{
-          const now = new Date();
-          const start = new Date(now.getTime() - 90*24*60*60*1000);
-          allTx = await fetchVendorRange({ startISO:start.toISOString(), endISO:now.toISOString(), limit:500 });
-          applyRange(30);
-        }catch(e){
-          console.warn('vendor report error', e);
-          listEl.innerHTML = `<div class="empty">Couldn’t load transactions.</div>`;
-        }
-      }
+    document.getElementById('logoutLink')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try { await apiFetch('/api/logout', { method: 'POST' }); } catch {}
+      localStorage.clear();
+      location.href = 'vendor-login.html';
+    });
 
-      document.getElementById('logoutLink')?.addEventListener('click', async (e)=>{
-        e.preventDefault();
-        try { await fetch('/api/logout', { method:'POST' }); } catch {}
-        localStorage.clear();
-        location.href = 'vendor-login.html';
-      });
-
-      loadDefault();
-    })();
-  </script>
+    loadDefault();
+  })();
+</script>
   <script src="vendor-common.js"></script>
 </body>
 </html>
