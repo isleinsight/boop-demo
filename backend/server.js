@@ -58,11 +58,13 @@ mount('/api/wallets', './auth/routes/wallets');
 mount('/api/vendors', './auth/routes/vendors', 'vendors (admin)');
 mount('/api/vendor', './auth/routes/vendors', 'vendor');
 
-// ✅ Vendor passport charge (POST /api/vendor/passport-charge)
+// Vendor passport charge (POST /api/vendor/passport-charge)
 mount('/api/vendor', './auth/routes/passport-charge', 'passport-charge');
 
 // Vendor-staff login
 mount('/auth/vendor-staff', './auth/routes/vendor-staff', 'vendor-staff');
+// Vendor-managed staff (CRUD)
+mount('/api/vendor/staff', './auth/routes/vendor-staff-manage', 'vendor-staff-manage');
 
 mount('/api/passport', './auth/routes/passport', 'passport');
 
