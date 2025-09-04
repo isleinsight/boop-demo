@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Help & Tips – Vendor | BOOP</title>
+  <title>Help & Tips – Vendor | Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
@@ -26,7 +26,7 @@
     .hero h1{ margin:0 0 6px; font-size:clamp(20px,3vw,28px); font-weight:600; }
     .hero-sub{ margin:0; color:#4b5563; }
 
-    /* Quick links tiles (reuse tile vibe) */
+    /* Quick links tiles */
     .tiles{
       max-width:1100px; margin:12px auto 20px; padding:0 18px;
       display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px;
@@ -97,13 +97,13 @@
   <script>
     (async () => {
       try {
-        const token = localStorage.getItem("boop_jwt");
+        const token = localStorage.getItem("payulot_jwt");
         if (!token) throw new Error("No token");
         const r = await fetch("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
         if (!r.ok) throw new Error("Unauthorized");
         const me = await r.json();
         if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
-        localStorage.setItem("boopUser", JSON.stringify(me));
+        localStorage.setItem("payulotUser", JSON.stringify(me));
       } catch {
         localStorage.clear(); location.href = "vendor-login.html";
       }
@@ -113,7 +113,7 @@
   <!-- Minimal header -->
   <header class="minihead">
     <div class="minihead-inner">
-      <img src="../assets/logo-white.png" alt="BOOP Logo" />
+      <img src="../assets/logo-white.png" alt="Payulot Logo" />
       <a href="#" id="logoutLink" class="logout">Log Out</a>
     </div>
   </header>
@@ -223,7 +223,7 @@
         <li>
           <details>
             <summary>
-              Can I take BOOP payments with “Passport Pay”?
+              Can I take Payulot payments with “Passport Pay”?
               <span class="caret">›</span>
             </summary>
             <p>
@@ -240,7 +240,7 @@
               <span class="caret">›</span>
             </summary>
             <p>
-              Email our team at <a href="mailto:support@boopcard.com">support@boopcard.com</a>.
+              Email our team at <a href="mailto:support@payulot.com">support@payulot.com</a>.
               Include your business name, the email on your account, and any error messages/screenshots so we can help quickly.
             </p>
           </details>
@@ -268,7 +268,7 @@
 
       <div class="contact">
         <div style="font-weight:700; margin-bottom:6px;">Still stuck?</div>
-        <div>Message us: <a href="mailto:support@boopcard.com">support@boopcard.com</a></div>
+        <div>Message us: <a href="mailto:support@payulot.com">support@payulot.com</a></div>
         <div style="margin-top:6px;">Please include: business name, vendor email, steps tried, and any error text.</div>
       </div>
     </aside>
@@ -277,7 +277,7 @@
   <!-- Footer -->
   <footer>
     <div class="footer-inner">
-      <div>© 2025 BOOP</div>
+      <div>© 2025 Payulot</div>
       <div class="footer-links">
         <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
         <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
