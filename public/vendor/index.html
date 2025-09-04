@@ -87,34 +87,70 @@
 <body>
   <!-- Auth (vendors only) + set display name from vendors.business_name -->
   <script>
-    (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
+  (async () => {
+    // --- tiny shims so this works even if vendor-common.js isn't loaded ---
+    const hasApiHelpers = (typeof window.apiJSON === 'function');
+    const tokenKey = 'boop_jwt';
 
-        // Must be mounted in server.js → mount('/api/vendor', './auth/routes/vendors', 'vendor')
-        const res = await fetch("/api/vendor/profile", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error("Unauthorized");
-
-        const profile = await res.json();
-        localStorage.setItem("boopUser", JSON.stringify(profile));
-
-        const biz =
-          (profile.business_name && String(profile.business_name).trim()) ||
-          ((profile.first_name && profile.last_name) ? `${profile.first_name} ${profile.last_name}` : (profile.email || "Vendor"));
-
-        window.__vendorDisplay = biz;
-        const titleEl = document.getElementById("welcomeTitle");
-        if (titleEl) titleEl.textContent = `${biz} Vendor Portal`;
-        document.title = `${biz} Vendor Portal – Payulot`;
-      } catch {
-        localStorage.clear();
-        location.href = "vendor-login.html";
+    async function apiJSON_fallback(url, opts = {}) {
+      const token = localStorage.getItem(tokenKey);
+      if (!token) throw new Error('No token');
+      const res = await fetch(url, {
+        ...opts,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          ...(opts.headers || {})
+        }
+      });
+      let body = {};
+      try { body = await res.json(); } catch {}
+      if (!res.ok) {
+        const msg = body?.message || body?.error || `HTTP ${res.status}`;
+        const err = new Error(msg);
+        err.status = res.status;
+        throw err;
       }
-    })();
-  </script>
+      return body;
+    }
+    const apiJSONsafe = hasApiHelpers ? window.apiJSON : apiJSON_fallback;
+
+    try {
+      // If you have the helper, ensure long vendor session (no-op if not present)
+      if (typeof window.ensureLongVendorSession === 'function') {
+        await window.ensureLongVendorSession();
+      }
+
+      // Fetch the vendor profile (requires: mount('/api/vendor', './auth/routes/vendors', 'vendor'))
+      const profile = await apiJSONsafe('/api/vendor/profile');
+
+      // Persist for other pages
+      localStorage.setItem('boopUser', JSON.stringify(profile));
+
+      // Compute display name
+      const biz =
+        (profile.business_name && String(profile.business_name).trim())
+        || ((profile.first_name && profile.last_name) ? `${profile.first_name} ${profile.last_name}` : (profile.email || 'Vendor'));
+
+      // Expose for other inline scripts if needed
+      window.__vendorDisplay = biz;
+
+      // Update title + visible header text if present
+      const titleEl = document.getElementById('welcomeTitle');
+      if (titleEl) titleEl.textContent = `${biz} Vendor Portal`;
+      document.title = `${biz} Vendor Portal – Payulot`;
+
+      // Optional: if you have a “signed in as” spot
+      const signedEl = document.getElementById('signedInAs');
+      if (signedEl) signedEl.textContent = `Signed in as ${biz}`;
+
+    } catch (e) {
+      // On any auth failure, clear + bounce to login
+      localStorage.removeItem('boopUser');
+      localStorage.removeItem('boop_jwt');
+      location.href = 'vendor-login.html';
+    }
+  })();
+</script>
 
   <!-- Minimal header (logo + logout only) -->
   <header class="minihead">
