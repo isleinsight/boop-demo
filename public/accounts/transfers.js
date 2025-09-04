@@ -113,7 +113,6 @@
   }
 
   // --- Networking
-  // Strictly load MERCHANT wallets; filter out anything that looks like treasury
 async function fetchTreasuries() {
   try {
     const res = await fetch("/api/treasury/merchant-wallets", { headers: authHeaders() });
@@ -171,7 +170,7 @@ async function fetchTreasuries() {
     return data;
   }
 
-  // Full bank details: only available when claimed by me
+  // Full bank details: only available when claimed by user
   async function fetchFullBankDetails(transferId) {
     const res = await fetch(`/api/transfers/${transferId}/bank-details`, { headers: authHeaders() });
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Failed to load bank details');
@@ -239,7 +238,7 @@ async function fetchTreasuries() {
     });
   }
 
-  // --- Row actions (FIXED: use a properly scoped `id`)
+  // --- Row actions 
   async function onRowActionClick(e) {
     const btn = e.currentTarget;
     const id = btn.dataset.id;                 // <-- corrected
@@ -306,7 +305,7 @@ async function fetchTreasuries() {
 
     bankDetailsWrap = document.createElement("div");
     bankDetailsWrap.className = "field";
-    bankDetailsWrap.style.display = "none"; // hidden by default
+    bankDetailsWrap.style.display = "none"; 
     bankDetailsWrap.innerHTML = `
       <label>Full Bank Details (visible to claimer)</label>
       <textarea id="d_bankFull" rows="3" readonly style="resize:vertical"></textarea>
