@@ -201,159 +201,217 @@
   </footer>
 
   <script>
-    // ---------- config ----------
-    const BACKEND_EXPECTS_CENTS = false;
+  // ---------- config ----------
+  const BACKEND_EXPECTS_CENTS = false;
+  const KIOSK_NAME = 'payulot_kiosk';
+  const ORIGIN = location.origin;
 
-    // ---------- helpers ----------
-    const $ = (id) => document.getElementById(id);
-    const maskPid = (pid) => (pid && typeof pid === 'string') ? ('••••-••••-••••-' + pid.slice(-4)) : '';
-    const showStatus = (el, msg, cls) => { if(!el) return; el.className = 'status ' + (cls||''); el.textContent = msg; el.style.display = 'block'; };
-    const hideStatus = (el) => { if(el){ el.style.display = 'none'; } };
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const maskPid = (pid) => (pid && typeof pid === 'string') ? ('••••-••••-••••-' + pid.slice(-4)) : '';
+  const showStatus = (el, msg, cls) => { if(!el) return; el.className = 'status ' + (cls||''); el.textContent = msg; el.style.display = 'block'; };
+  const hideStatus = (el) => { if(el){ el.style.display = 'none'; } };
 
-    function roleKey(me) {
-      const r = String(me?.role || '').toLowerCase().trim();
-      const t = String(me?.type || '').toLowerCase().trim();
-      const v = r || t;
-      if (['vendor','rolevendor'].includes(v)) return 'vendor';
-      if (['health','health_professional','healthprofessional','medical','emt','ambulance'].includes(v)) return 'health';
-      if (['transit','bus','ferry','rail','operator'].includes(v)) return 'transit';
-      return 'unknown';
+  function roleKey(me) {
+    const r = String(me?.role || '').toLowerCase().trim();
+    const t = String(me?.type || '').toLowerCase().trim();
+    const v = r || t;
+    if (['vendor','rolevendor'].includes(v)) return 'vendor';
+    if (['health','health_professional','healthprofessional','medical','emt','ambulance'].includes(v)) return 'health';
+    if (['transit','bus','ferry','rail','operator'].includes(v)) return 'transit';
+    return 'unknown';
+  }
+  function fullNameOrEmail(me) {
+    const first = (me?.first_name || '').trim();
+    const last  = (me?.last_name  || '').trim();
+    const name = (first + ' ' + last).trim();
+    return name || me?.email || 'User';
+  }
+  async function fetchMe() {
+    const token = localStorage.getItem('boop_jwt');
+    if (!token) throw new Error('No token');
+    const headers = { Authorization: `Bearer ${token}` };
+    const r = await fetch('/api/me', { headers });
+    if (!r.ok) {
+      let m = 'Unauthorized';
+      try { m = (await r.json())?.message || m; } catch {}
+      throw new Error(m);
     }
-    function fullNameOrEmail(me) {
-      const first = (me?.first_name || '').trim();
-      const last  = (me?.last_name  || '').trim();
-      const name = (first + ' ' + last).trim();
-      return name || me?.email || 'User';
+    const basic = await r.json();
+    try {
+      const more = await fetch('/api/users/me', { headers });
+      if (more.ok) return { ...basic, ...(await more.json()) };
+    } catch {}
+    return basic;
+  }
+  function setRoleView(role) {
+    ['view-vendor','view-health','view-transit'].forEach(id => $(id)?.classList.remove('active'));
+    if (role === 'vendor') $('view-vendor')?.classList.add('active');
+    if (role === 'health') $('view-health')?.classList.add('active');
+    if (role === 'transit') $('view-transit')?.classList.add('active');
+  }
+
+  // ---------- kiosk window + messaging ----------
+  try { if (window.name !== KIOSK_NAME) window.name = KIOSK_NAME; } catch {}
+
+  function updateUrlPid(pid) {
+    try {
+      const u = new URL(location.href);
+      if (pid) u.searchParams.set('pid', pid); else u.searchParams.delete('pid');
+      history.replaceState(null, '', u.toString());
+    } catch {}
+  }
+
+  function acceptPID(newPid) {
+    PID = (newPid || '').trim();
+    updateUrlPid(PID);
+
+    // reflect masked pid
+    $('pidFull').value = PID || '';
+    $('pidMasked').textContent = PID ? maskPid(PID) : 'No passport detected';
+    $('pidHint').textContent = PID ? '(masked — last 4 only)' : '';
+
+    // reset vendor form for new tap
+    chargedLock = false;
+    hideStatus($('v_status'));
+    $('v_amount') && ($('v_amount').disabled = false, $('v_amount').value = '');
+    $('v_note')   && ($('v_note').disabled   = false, $('v_note').value   = '');
+    $('v_chargeBtn') && ($('v_chargeBtn').disabled = !(PID && currentRole === 'vendor'));
+    $('v_amount')?.focus();
+
+    // transit button enable based on role
+    $('t_validateBtn') && ($('t_validateBtn').disabled = !(PID && currentRole === 'transit'));
+  }
+
+  function sendTokenTo(openerWin) {
+    try {
+      openerWin?.postMessage({ type:'token:reply', token: localStorage.getItem('boop_jwt') || '' }, ORIGIN);
+    } catch {}
+  }
+
+  window.addEventListener('message', (ev) => {
+    if (ev.origin !== ORIGIN) return;
+    const d = ev.data || {};
+    if (d.type === 'charge:start')   acceptPID(d.pn);
+    if (d.type === 'token:request')  sendTokenTo(window.opener);
+  });
+
+  function notifyReady() {
+    try { window.opener?.postMessage({ type:'charge:ready' }, ORIGIN); } catch {}
+  }
+
+  // ---------- state ----------
+  let PID = '';
+  let currentRole = 'unknown';
+  let processing = false;
+  let chargedLock = false;
+
+  // ---------- boot ----------
+  document.addEventListener('DOMContentLoaded', async () => {
+    $('year') && ($('year').textContent = new Date().getFullYear());
+
+    // pick up ?pid= if page was opened directly
+    try {
+      const u = new URL(location.href);
+      const raw = (u.searchParams.get('pid') || '').trim();
+      if (raw && /^[A-Za-z0-9_-]{12,}$/.test(raw)) PID = raw;
+    } catch {}
+    acceptPID(PID); // will also handle PID==''
+
+    // auth + role
+    try {
+      const me = await fetchMe();
+      const who = fullNameOrEmail(me);
+      currentRole = roleKey(me);
+
+      $('signedInAs').textContent = `Signed in as ${who}`;
+      $('roleBadge').textContent = currentRole;
+      $('whoBadge').textContent = who;
+
+      setRoleView(currentRole);
+
+      // enable buttons if PID present
+      $('v_chargeBtn') && ($('v_chargeBtn').disabled = !(PID && currentRole === 'vendor'));
+      $('t_validateBtn') && ($('t_validateBtn').disabled = !(PID && currentRole === 'transit'));
+    } catch (e) {
+      try { await fetch('/api/logout', { method:'POST' }); } catch {}
+      localStorage.clear();
+      location.href = '/index.html';
+      return;
     }
-    async function fetchMe() {
-      const token = localStorage.getItem('boop_jwt');
-      if (!token) throw new Error('No token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const r = await fetch('/api/me', { headers });
-      if (!r.ok) {
-        let m = 'Unauthorized';
-        try { m = (await r.json())?.message || m; } catch {}
-        throw new Error(m);
-      }
-      const basic = await r.json();
-      try {
-        const more = await fetch('/api/users/me', { headers });
-        if (more.ok) return { ...basic, ...(await more.json()) };
-      } catch {}
-      return basic;
-    }
-    function setRoleView(role) {
-      ['view-vendor','view-health','view-transit'].forEach(id => $(id)?.classList.remove('active'));
-      if (role === 'vendor') $('view-vendor')?.classList.add('active');
-      if (role === 'health') $('view-health')?.classList.add('active');
-      if (role === 'transit') $('view-transit')?.classList.add('active');
-    }
 
-    // ---------- boot ----------
-    document.addEventListener('DOMContentLoaded', async () => {
-      $('year') && ($('year').textContent = new Date().getFullYear());
+    // let the relay know we can receive PIDs
+    notifyReady();
 
-      // 1) Require ?pid= from deep link
-      let PID = '';
-      try {
-        const u = new URL(location.href);
-        const raw = (u.searchParams.get('pid') || '').trim();
-        if (raw && /^[A-Za-z0-9_-]{12,}$/.test(raw)) PID = raw;
-      } catch {}
-      const pidFull = $('pidFull');
-      const pidMaskedEl = $('pidMasked');
-      const pidHint = $('pidHint');
-      const commonStatus = $('commonStatus');
-
-      if (!PID) {
-        pidFull.value = '';
-        pidMaskedEl.textContent = 'No passport detected';
-        pidHint.textContent = '';
-        showStatus(commonStatus, 'Open this page from the scanner. Missing or invalid token.', 'warn');
-      } else {
-        pidFull.value = PID;
-        pidMaskedEl.textContent = maskPid(PID);
-        pidHint.textContent = '(masked — last 4 only)';
-        hideStatus(commonStatus);
-      }
-
-      // 2) Auth + identity + role gate
-      try {
-        const me = await fetchMe();
-        const who = fullNameOrEmail(me);
-        const role = roleKey(me);
-
-        $('signedInAs').textContent = `Signed in as ${who}`;
-        $('roleBadge').textContent = role;
-        $('whoBadge').textContent = who;
-
-        setRoleView(role);
-
-        // enable actions only if PID present
-        if (PID) {
-          if (role === 'vendor') $('v_chargeBtn').disabled = false;
-          if (role === 'transit') $('t_validateBtn').disabled = false;
-        } else {
-          $('v_chargeBtn').disabled = true;
-          $('t_validateBtn').disabled = true;
-        }
-      } catch (e) {
-        try { await fetch('/api/logout', { method:'POST' }); } catch {}
-        localStorage.clear();
-        location.href = '/index.html';
-        return;
-      }
-
-      // 3) Vendor: charge
-      $('v_amount')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('v_chargeBtn')?.click(); });
-      $('v_chargeBtn')?.addEventListener('click', async () => {
-        const out = $('v_status');
-        hideStatus(out);
-        const amt = Number($('v_amount')?.value || 0);
-        const note = $('v_note')?.value || null;
-        if (!pidFull.value) return showStatus(out, 'No passport detected.', 'err');
-        if (!Number.isFinite(amt) || amt <= 0) return showStatus(out, 'Enter a valid amount.', 'err');
-
-        const btn = $('v_chargeBtn'); btn.disabled = true;
-        try {
-          const token = localStorage.getItem('boop_jwt') || '';
-          const payload = BACKEND_EXPECTS_CENTS
-            ? { pid_token: pidFull.value, amount_cents: Math.round(amt * 100), note }
-            : { pid_token: pidFull.value, amount: amt, note };
-
-          const r = await fetch('/api/vendor/passport-charge', {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify(payload)
-          });
-          const j = await r.json().catch(()=>({}));
-          if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
-          showStatus(out, 'Charge completed.', 'ok');
-        } catch (err) {
-          showStatus(out, `❌ ${err.message || err}`, 'err');
-        } finally {
-          btn.disabled = false;
-        }
-      });
-
-      // 4) Transit (demo)
-      $('t_validateBtn')?.addEventListener('click', async () => {
-        const out = $('t_status');
-        hideStatus(out);
-        if (!pidFull.value) return showStatus(out, 'No passport detected.', 'err');
-        const fare = Number($('t_fare')?.value || 0);
-        const mode = $('t_mode')?.value || 'bus';
-        if (!Number.isFinite(fare) || fare < 0) return showStatus(out, 'Enter a valid fare.', 'err');
-        showStatus(out, `(demo) ${mode} fare deducted: ${fare.toFixed(2)}`, 'ok');
-      });
-
-      // 5) Logout
-      $('logoutLink')?.addEventListener('click', async (e)=>{
-        e.preventDefault();
-        try { await fetch('/api/logout', { method:'POST' }); } catch {}
-        localStorage.clear(); location.href = '../login.html';
-      });
+    // logout
+    $('logoutLink')?.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      try { await fetch('/api/logout', { method:'POST' }); } catch {}
+      localStorage.clear(); location.href = '../login.html';
     });
-  </script>
+
+    // vendor charge (one-shot until next tap)
+    $('v_amount')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('v_chargeBtn')?.click(); });
+    $('v_chargeBtn')?.addEventListener('click', async () => {
+      const out = $('v_status');
+      hideStatus(out);
+
+      if (!PID) return showStatus(out, 'No passport detected.', 'err');
+      if (chargedLock) return showStatus(out, 'Already charged. Tap a new card to start another sale.', 'warn');
+      if (processing) return;
+
+      const amt = Number($('v_amount')?.value || 0);
+      const note = $('v_note')?.value || null;
+      if (!Number.isFinite(amt) || amt <= 0) return showStatus(out, 'Enter a valid amount.', 'err');
+
+      processing = true;
+      const btn = $('v_chargeBtn'); btn.disabled = true;
+      $('v_amount') && ($('v_amount').disabled = true);
+      $('v_note')   && ($('v_note').disabled   = true);
+
+      try {
+        const token = localStorage.getItem('boop_jwt') || '';
+        const payload = BACKEND_EXPECTS_CENTS
+          ? { pid_token: PID, amount_cents: Math.round(amt * 100), note }
+          : { pid_token: PID, amount: amt, note };
+
+        const r = await fetch('/api/vendor/passport-charge', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        const j = await r.json().catch(()=>({}));
+        if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
+
+        showStatus(out, 'Charge completed.', 'ok');
+
+        // lock until next tap
+        chargedLock = true;
+
+        // tell opener (relay) we’re done (optional)
+        try { window.opener?.postMessage({ type:'charge:done', txn: j?.transaction || null }, ORIGIN); } catch {}
+      } catch (err) {
+        showStatus(out, `❌ ${err.message || err}`, 'err');
+        // allow retry on error
+        $('v_amount') && ($('v_amount').disabled = false);
+        $('v_note')   && ($('v_note').disabled   = false);
+        btn.disabled = false;
+      } finally {
+        processing = false;
+      }
+    });
+
+    // transit (demo)
+    $('t_validateBtn')?.addEventListener('click', async () => {
+      const out = $('t_status');
+      hideStatus(out);
+      if (!PID) return showStatus(out, 'No passport detected.', 'err');
+      const fare = Number($('t_fare')?.value || 0);
+      const mode = $('t_mode')?.value || 'bus';
+      if (!Number.isFinite(fare) || fare < 0) return showStatus(out, 'Enter a valid fare.', 'err');
+      showStatus(out, `(demo) ${mode} fare deducted: ${fare.toFixed(2)}`, 'ok');
+    });
+  });
+</script>
 </body>
 </html>
