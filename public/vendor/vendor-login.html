@@ -15,8 +15,7 @@
       --field:#0f1624; --field-border:#293143;
       --focus:#5aa2ff; --shadow:0 20px 40px rgba(0,0,0,.35);
       --radius:16px; --container:820px;
-      --link:#c9d7ff;
-      --pill:#0e1524; --pill-border:#24314a;
+      --link:#c9d7ff; --pill:#0e1524; --pill-border:#24314a;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -60,9 +59,7 @@
     .tab{
       border:0; background:transparent; color:#cfe0ff; cursor:pointer; padding:8px 14px; border-radius:999px; font-weight:600;
     }
-    .tab[aria-selected="true"]{
-      background:var(--brand); color:#fff;
-    }
+    .tab[aria-selected="true"]{ background:var(--brand); color:#fff; }
 
     form{display:grid; gap:12px}
     label{font-size:.9rem; color:#dbe3ff}
@@ -123,7 +120,7 @@
         <!-- Vendor form -->
         <div id="panelVendor" role="tabpanel" aria-labelledby="tabVendor">
           <h2 style="margin:0 0 12px; text-align:center">Vendor Login</h2>
-          <form id="vendorForm" data-redirect="/vendor/index.html" novalidate>
+          <form id="vendorForm" data-redirect="/vendor/session.html" novalidate>
             <div>
               <label for="vEmail">Email</label>
               <input type="email" id="vEmail" placeholder="you@business.com" required autocomplete="email" />
@@ -144,7 +141,7 @@
         <!-- Cashier form -->
         <div id="panelCashier" role="tabpanel" aria-labelledby="tabCashier" hidden>
           <h2 style="margin:8px 0 12px; text-align:center">Cashier Login</h2>
-          <form id="cashierForm" data-redirect="/vendor/index.html" novalidate>
+          <form id="cashierForm" data-redirect="/vendor/session.html" novalidate>
             <div>
               <label for="cVendorEmail">Vendor’s Email</label>
               <input type="email" id="cVendorEmail" placeholder="owner@business.com" required autocomplete="email" />
@@ -193,11 +190,14 @@
       tabCashier.setAttribute('aria-selected', vendorOn ? 'false' : 'true');
       panelVendor.hidden  = !vendorOn;
       panelCashier.hidden = vendorOn;
+      // update URL hash so refresh keeps tab
+      history.replaceState(null, '', '#' + (vendorOn ? 'vendor' : 'cashier'));
     }
     tabVendor.addEventListener('click', ()=> selectTab('vendor'));
     tabCashier.addEventListener('click',()=> selectTab('cashier'));
+    if ((location.hash || '').toLowerCase() === '#cashier') selectTab('cashier');
 
-    // Basic helpers
+    // Helper
     async function postJSON(url, body) {
       const res = await fetch(url, {
         method:'POST',
@@ -233,7 +233,8 @@
 
         localStorage.setItem('boop_jwt', data.token);
         localStorage.setItem('boopUser', JSON.stringify(data.user || {}));
-        localStorage.removeItem('boopStaff'); // clear any prior staff context
+        localStorage.removeItem('boopStaff'); // ensure no stale staff context
+        localStorage.setItem('boop_login_at', String(Date.now()));
 
         const role = (data?.user?.role || '').toLowerCase();
         if (role !== 'vendor'){
@@ -241,7 +242,7 @@
           vendorStatus.className = 'status error';
           return;
         }
-        window.location.href = vendorForm.dataset.redirect || '/vendor/index.html';
+        window.location.href = vendorForm.dataset.redirect || '/vendor/session.html';
       } catch (err){
         vendorStatus.textContent = 'Login failed. ' + (err?.message || '');
         vendorStatus.className = 'status error';
@@ -255,8 +256,8 @@
       e.preventDefault();
       cashierStatus.textContent = '';
 
-      const vendor_email = document.getElementById('cVendorEmail').value.trim();
-      const username     = document.getElementById('cUsername').value.trim();
+      const vendor_email = document.getElementById('cVendorEmail').value.trim().toLowerCase();
+      const username     = document.getElementById('cUsername').value.trim().toLowerCase();
       const password     = document.getElementById('cPassword').value;
 
       if (!vendor_email || !username || !password){
@@ -265,18 +266,17 @@
         return;
       }
       try{
-        // Your staff login route (returns a VENDOR token + user + staff context)
         const data = await postJSON('/auth/vendor-staff/login', { vendor_email, username, password });
         if (!data?.token) throw new Error('Missing token');
 
         localStorage.setItem('boop_jwt', data.token);
         localStorage.setItem('boopUser', JSON.stringify(data.user || {}));
-        // keep lightweight staff echo (optional—useful for displaying “Signed in as …”)
+        localStorage.setItem('boop_login_at', String(Date.now()));
+        // store staff echo for display on session page
         if (data?.user?.staff){
           localStorage.setItem('boopStaff', JSON.stringify(data.user.staff));
         }
 
-        // Still role “vendor” (token acts as vendor)
         const role = (data?.user?.role || '').toLowerCase();
         if (role !== 'vendor'){
           cashierStatus.textContent = 'This login grants vendor access; contact support.';
@@ -284,17 +284,12 @@
           return;
         }
 
-        window.location.href = cashierForm.dataset.redirect || '/vendor/index.html';
+        window.location.href = cashierForm.dataset.redirect || '/vendor/session.html';
       } catch (err){
         cashierStatus.textContent = 'Login failed. ' + (err?.message || '');
         cashierStatus.className = 'status error';
       }
     });
-
-    // Optional: deep link to tab via hash (#cashier or #vendor)
-    if (location.hash.replace('#','').toLowerCase() === 'cashier') {
-      selectTab('cashier');
-    }
   </script>
 </body>
 </html>
