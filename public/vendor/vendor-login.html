@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Vendor Login – Payulot</title>
+  <title>Vendor & Cashier Login – Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <meta name="description" content="Log in to your Payulot vendor account." />
+  <meta name="description" content="Log in to your Payulot vendor or cashier account." />
   <style>
     :root{
       --brand:#2f80ed; --brand-dark:#1c6fd8;
@@ -14,8 +14,9 @@
       --card:#121826; --card-border:rgba(255,255,255,.06);
       --field:#0f1624; --field-border:#293143;
       --focus:#5aa2ff; --shadow:0 20px 40px rgba(0,0,0,.35);
-      --radius:16px; --container: 820px;
+      --radius:16px; --container:820px;
       --link:#c9d7ff;
+      --pill:#0e1524; --pill-border:#24314a;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -49,7 +50,19 @@
       border:1px solid var(--card-border); border-radius:var(--radius);
       box-shadow:var(--shadow); padding:22px;
     }
-    .card h2{margin:0 0 12px; font-size:1.2rem; text-align:center}
+
+    /* Toggle (tabs) */
+    .tabs{
+      display:flex; gap:8px; justify-content:center; align-items:center;
+      background:var(--pill); border:1px solid var(--pill-border);
+      border-radius:999px; padding:6px; margin:0 auto 14px; width:max-content;
+    }
+    .tab{
+      border:0; background:transparent; color:#cfe0ff; cursor:pointer; padding:8px 14px; border-radius:999px; font-weight:600;
+    }
+    .tab[aria-selected="true"]{
+      background:var(--brand); color:#fff;
+    }
 
     form{display:grid; gap:12px}
     label{font-size:.9rem; color:#dbe3ff}
@@ -96,28 +109,62 @@
   <main>
     <div class="stack">
       <section class="intro" aria-label="Welcome">
-        <h1>Welcome, vendors.</h1>
-        <p>Log in to manage your Payulot payouts and transactions.</p>
+        <h1>Welcome.</h1>
+        <p>Log in to your Payulot vendor or cashier account.</p>
       </section>
 
-      <section class="card" aria-label="Vendor login form">
-        <h2>Vendor Login</h2>
-        <form id="loginForm" data-role="vendor" data-redirect="/vendor/index.html" novalidate>
-          <div>
-            <label for="email">Email</label>
-            <input type="email" id="email" placeholder="you@business.com" required autocomplete="email" />
-          </div>
-          <div>
-            <label for="password">Password</label>
-            <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password" />
-          </div>
-          <button class="btn" type="submit">Log in</button>
-          <div class="helper">
-            <a href="forgot-password.html">Forgot your password?</a>
-            <a href="vendor-apply.html">Become a vendor</a>
-          </div>
-          <p id="loginStatus" class="status" role="status" aria-live="polite"></p>
-        </form>
+      <section class="card" aria-label="Login">
+        <!-- Tabs -->
+        <div class="tabs" role="tablist" aria-label="Login type">
+          <button id="tabVendor" class="tab" role="tab" aria-selected="true" aria-controls="panelVendor">Vendor</button>
+          <button id="tabCashier" class="tab" role="tab" aria-selected="false" aria-controls="panelCashier">Cashier</button>
+        </div>
+
+        <!-- Vendor form -->
+        <div id="panelVendor" role="tabpanel" aria-labelledby="tabVendor">
+          <h2 style="margin:0 0 12px; text-align:center">Vendor Login</h2>
+          <form id="vendorForm" data-redirect="/vendor/index.html" novalidate>
+            <div>
+              <label for="vEmail">Email</label>
+              <input type="email" id="vEmail" placeholder="you@business.com" required autocomplete="email" />
+            </div>
+            <div>
+              <label for="vPassword">Password</label>
+              <input type="password" id="vPassword" placeholder="••••••••" required autocomplete="current-password" />
+            </div>
+            <button class="btn" type="submit">Log in</button>
+            <div class="helper">
+              <a href="forgot-password.html">Forgot your password?</a>
+              <a href="vendor-apply.html">Become a vendor</a>
+            </div>
+            <p id="vendorStatus" class="status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+
+        <!-- Cashier form -->
+        <div id="panelCashier" role="tabpanel" aria-labelledby="tabCashier" hidden>
+          <h2 style="margin:8px 0 12px; text-align:center">Cashier Login</h2>
+          <form id="cashierForm" data-redirect="/vendor/index.html" novalidate>
+            <div>
+              <label for="cVendorEmail">Vendor’s Email</label>
+              <input type="email" id="cVendorEmail" placeholder="owner@business.com" required autocomplete="email" />
+            </div>
+            <div>
+              <label for="cUsername">Cashier Username</label>
+              <input type="text" id="cUsername" placeholder="e.g., frontdesk01" required autocomplete="username" />
+            </div>
+            <div>
+              <label for="cPassword">Password</label>
+              <input type="password" id="cPassword" placeholder="••••••••" required autocomplete="current-password" />
+            </div>
+            <button class="btn" type="submit">Log in</button>
+            <div class="helper">
+              <span style="opacity:.85">Managed by the vendor.</span>
+              <a href="vendor-staff-help.html">What is this?</a>
+            </div>
+            <p id="cashierStatus" class="status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
       </section>
     </div>
   </main>
@@ -125,58 +172,129 @@
   <footer>
     <div class="footer-inner">
       <span>© <span id="y"></span> Payulot</span> •
-      <a href="terms.html">Terms &amp; Conditions</a> •
-      <a href="privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms &amp; Conditions</a> •
+      <a href="/privacy.html">Privacy Policy</a>
     </div>
   </footer>
 
   <script>
+    // Year
     document.getElementById('y').textContent = new Date().getFullYear();
 
-    // Minimal login handler (same pattern as cardholder)
-    const form = document.getElementById('loginForm');
-    const statusEl = document.getElementById('loginStatus');
+    // Tabs
+    const tabVendor  = document.getElementById('tabVendor');
+    const tabCashier = document.getElementById('tabCashier');
+    const panelVendor  = document.getElementById('panelVendor');
+    const panelCashier = document.getElementById('panelCashier');
 
+    function selectTab(which){
+      const vendorOn = (which === 'vendor');
+      tabVendor.setAttribute('aria-selected', vendorOn ? 'true' : 'false');
+      tabCashier.setAttribute('aria-selected', vendorOn ? 'false' : 'true');
+      panelVendor.hidden  = !vendorOn;
+      panelCashier.hidden = vendorOn;
+    }
+    tabVendor.addEventListener('click', ()=> selectTab('vendor'));
+    tabCashier.addEventListener('click',()=> selectTab('cashier'));
+
+    // Basic helpers
     async function postJSON(url, body) {
-      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-      if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
-      return res.json();
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(body)
+      });
+      let data = {};
+      try { data = await res.json(); } catch {}
+      if (!res.ok) {
+        const msg = data?.message || data?.error || `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+      return data;
     }
 
-    form.addEventListener('submit', async (e) => {
+    // Vendor login
+    const vendorForm   = document.getElementById('vendorForm');
+    const vendorStatus = document.getElementById('vendorStatus');
+    vendorForm.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      statusEl.textContent = '';
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+      vendorStatus.textContent = '';
+      const email = document.getElementById('vEmail').value.trim();
+      const password = document.getElementById('vPassword').value;
 
-      if (!email || !password) {
-        statusEl.textContent = 'Enter your email and password.';
-        statusEl.className = 'status error';
+      if (!email || !password){
+        vendorStatus.textContent = 'Enter your email and password.';
+        vendorStatus.className = 'status error';
         return;
       }
-
-      try {
+      try{
         const data = await postJSON('/auth/login', { email, password });
         if (!data?.token) throw new Error('Missing token');
 
-        // Save token + basic user
         localStorage.setItem('boop_jwt', data.token);
         localStorage.setItem('boopUser', JSON.stringify(data.user || {}));
+        localStorage.removeItem('boopStaff'); // clear any prior staff context
 
-        // Role gate: must be vendor
         const role = (data?.user?.role || '').toLowerCase();
-        if (role !== 'vendor') {
-          statusEl.textContent = 'This login is for vendor accounts.';
-          statusEl.className = 'status error';
+        if (role !== 'vendor'){
+          vendorStatus.textContent = 'This login is for vendor accounts.';
+          vendorStatus.className = 'status error';
+          return;
+        }
+        window.location.href = vendorForm.dataset.redirect || '/vendor/index.html';
+      } catch (err){
+        vendorStatus.textContent = 'Login failed. ' + (err?.message || '');
+        vendorStatus.className = 'status error';
+      }
+    });
+
+    // Cashier login
+    const cashierForm   = document.getElementById('cashierForm');
+    const cashierStatus = document.getElementById('cashierStatus');
+    cashierForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      cashierStatus.textContent = '';
+
+      const vendor_email = document.getElementById('cVendorEmail').value.trim();
+      const username     = document.getElementById('cUsername').value.trim();
+      const password     = document.getElementById('cPassword').value;
+
+      if (!vendor_email || !username || !password){
+        cashierStatus.textContent = 'Enter vendor email, username, and password.';
+        cashierStatus.className = 'status error';
+        return;
+      }
+      try{
+        // Your staff login route (returns a VENDOR token + user + staff context)
+        const data = await postJSON('/auth/vendor-staff/login', { vendor_email, username, password });
+        if (!data?.token) throw new Error('Missing token');
+
+        localStorage.setItem('boop_jwt', data.token);
+        localStorage.setItem('boopUser', JSON.stringify(data.user || {}));
+        // keep lightweight staff echo (optional—useful for displaying “Signed in as …”)
+        if (data?.user?.staff){
+          localStorage.setItem('boopStaff', JSON.stringify(data.user.staff));
+        }
+
+        // Still role “vendor” (token acts as vendor)
+        const role = (data?.user?.role || '').toLowerCase();
+        if (role !== 'vendor'){
+          cashierStatus.textContent = 'This login grants vendor access; contact support.';
+          cashierStatus.className = 'status error';
           return;
         }
 
-        window.location.href = form.dataset.redirect || '/vendor/index.html';
-      } catch (err) {
-        statusEl.textContent = 'Login failed. ' + (err?.message || '');
-        statusEl.className = 'status error';
+        window.location.href = cashierForm.dataset.redirect || '/vendor/index.html';
+      } catch (err){
+        cashierStatus.textContent = 'Login failed. ' + (err?.message || '');
+        cashierStatus.className = 'status error';
       }
     });
+
+    // Optional: deep link to tab via hash (#cashier or #vendor)
+    if (location.hash.replace('#','').toLowerCase() === 'cashier') {
+      selectTab('cashier');
+    }
   </script>
 </body>
 </html>
