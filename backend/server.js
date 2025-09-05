@@ -61,10 +61,11 @@ mount('/api/vendor', './auth/routes/vendors', 'vendor');
 // Vendor passport charge (POST /api/vendor/passport-charge)
 mount('/api/vendor', './auth/routes/passport-charge', 'passport-charge');
 
-// Vendor-staff login 
-mount('/auth/vendor-staff', './auth/routes/vendor-staff', 'vendor-staff');
-// Vendor-managed staff
-mount('/api/vendor/vendorstaff', './auth/routes/vendor-staff', 'vendor-staff (CRUD)');
+// Vendor-staff (login + CRUD) — mount aliases so any path works
+mount('/auth/vendor-staff', './auth/routes/vendor-staff', 'vendor-staff (auth)');
+mount('/api/vendor/vendorstaff', './auth/routes/vendor-staff', 'vendor-staff (CRUD primary)');
+mount('/api/vendor/staff',       './auth/routes/vendor-staff', 'vendor-staff (CRUD alias)');
+mount('/api/vendor/vendor-staff','./auth/routes/vendor-staff', 'vendor-staff (CRUD alias)');
 
 mount('/api/passport', './auth/routes/passport', 'passport');
 
