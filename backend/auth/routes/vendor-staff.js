@@ -14,6 +14,33 @@ const router = express.Router();
 ─────────────────────────────────────────────────────────── */
 router.get("/ping", (_req, res) => res.json({ ok: true, route: "vendor-staff" }));
 
+/**
+ * GET /api/vendor/vendorstaff
+ * Returns all staff for the logged-in vendor
+ */
+router.get("/", async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || String(user.role).toLowerCase() !== "vendor") {
+      return res.status(403).json({ message: "Only vendors can view staff" });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT id, username, display_name, disabled, created_at
+         FROM vendor_staff
+        WHERE vendor_id = $1
+          AND deleted_at IS NULL
+        ORDER BY created_at DESC`,
+      [user.id]
+    );
+
+    res.json({ staff: rows });
+  } catch (err) {
+    console.error("[vendor-staff GET] error:", err);
+    res.status(500).json({ message: "Failed to load staff" });
+  }
+});
+
 /* ───────────────────────────────────────────────────────────
    1) STAFF LOGIN  (public)
    POST /auth/vendor-staff/login
