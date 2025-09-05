@@ -14,68 +14,103 @@
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* NAV (same as vendor) */
+    /* NAV (same as transfer.html) */
     .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .vendor-nav .nav-container{
       max-width:1100px; margin:0 auto;
-      padding:10px 18px;
+      padding:10px 18px !important;
       display:flex; align-items:center; justify-content:space-between;
     }
-    .vendor-nav .nav-left img{ height:30px; display:block; }
-    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px; }
+    .vendor-nav .nav-left img{ height:30px !important; display:block; }
+    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px !important; }
     .vendor-nav .nav-right a{
-      color:#fff; text-decoration:none; font-size:.95rem; line-height:1; padding:6px 8px; border-radius:6px; opacity:.95;
+      color:#fff; text-decoration:none; font-size:.95rem !important; line-height:1 !important;
+      padding:6px 8px !important; border-radius:6px; opacity:.95;
     }
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
-    /* Header */
+    /* HEADER */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
-    /* Container */
+    /* MAIN */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
+    .grid{ display:grid; grid-template-columns:1fr; gap:16px; }
     .card{
       background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
-      box-shadow:0 8px 24px rgba(0,0,0,.06); margin-bottom:16px;
+      box-shadow:0 8px 24px rgba(0,0,0,.06);
     }
-    h2{ margin:0 0 12px; font-size:1.12rem; }
+    .card h2{ margin:0 0 10px; font-size:1.12rem; }
+    .muted{ color:var(--muted); }
 
-    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px;
-      padding:8px 14px; border-radius:10px; font-weight:600; cursor:pointer; border:1px solid transparent; }
+    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:700;
+      border:1px solid transparent; cursor:pointer;
+    }
     .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
-    .btn.primary:hover{ background:var(--blue-dark); }
+    .btn.primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
     .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
     .btn.ghost:hover{ border-color:#cbd5e1; }
-    .btn.danger{ background:var(--bad); color:#fff; border-color:var(--bad); }
-    .btn.small{ padding:6px 10px; font-size:.85rem; }
+    .btn.small{ padding:8px 10px; font-weight:600; }
 
-    table{ width:100%; border-collapse:collapse; }
-    th, td{ text-align:left; padding:10px; border-bottom:1px solid var(--stroke); }
-    th{ background:#f9fafb; font-size:.9rem; color:#374151; }
-    td.actions{ white-space:nowrap; }
+    label{ display:block; color:var(--muted); font-size:.92rem; margin:10px 0 6px; }
+    input, select{
+      width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke);
+      background:#fff; color:#111827; font-size:1rem;
+    }
+    .half{ flex:1 1 260px; }
 
-    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); margin-bottom:12px; }
+    table{ width:100%; border-collapse:separate; border-spacing:0 8px; }
+    thead th{ text-align:left; font-size:.9rem; color:#64748b; padding:0 10px; }
+    tbody tr{ background:#fff; border:1px solid var(--stroke); }
+    tbody td{ padding:12px 10px; vertical-align:middle; }
+    tbody tr td:first-child{ border-radius:12px 0 0 12px; }
+    tbody tr td:last-child{ border-radius:0 12px 12px 0; }
+
+    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; }
     .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; }
     .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; }
 
     /* Modal */
     .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center;
       background:rgba(0,0,0,.45); z-index:1000; }
-    .modal-content{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:18px; max-width:420px; width:92%; }
-    .modal-content label{ display:block; margin:10px 0 4px; font-size:.9rem; color:var(--muted); }
-    .modal-content input{ width:100%; padding:10px; border:1px solid var(--stroke); border-radius:8px; }
+    .modal-card{ background:#fff; color:#111827; border:1px solid var(--stroke); border-radius:12px; padding:18px;
+      max-width:540px; width:92%; }
   </style>
 </head>
 <body>
+  <!-- Vendor auth gate (same as transfer page) -->
+  <script>
+    (async () => {
+      try {
+        const token = localStorage.getItem("boop_jwt");
+        if (!token) throw new Error("No token");
+        let me = JSON.parse(localStorage.getItem("boopUser") || "null");
+        if (!me) {
+          const r = await fetch("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
+          if (!r.ok) throw new Error("Unauthorized");
+          me = await r.json(); localStorage.setItem("boopUser", JSON.stringify(me));
+        }
+        if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
+      } catch {
+        localStorage.clear(); location.href = "vendor-login.html";
+      }
+    })();
+  </script>
+
   <!-- NAV -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html"><img src="../assets/logo-white.png" alt="Payulot"></a>
+        <a href="index.html" aria-label="Payulot home">
+          <img src="../assets/logo-white.png" alt="Payulot Logo" />
+        </a>
       </div>
-      <div class="nav-right">
+      <div class="nav-right" aria-label="Primary">
         <a href="index.html">Home</a>
         <a href="transfer.html">Transfer</a>
         <a href="transactions.html">Transactions</a>
@@ -85,153 +120,234 @@
     </div>
   </nav>
 
-  <!-- Header -->
+  <!-- HEADER -->
   <header class="header">
     <h1>Manage Staff</h1>
-    <p class="sub">Add, edit, or remove staff accounts for your business.</p>
+    <p class="sub">Create cashier logins for your business. Cashiers can charge customers but won’t see balances or reports.</p>
   </header>
 
-  <!-- Content -->
+  <!-- MAIN -->
   <main class="container">
     <div id="flash" class="alert" style="display:none;"></div>
 
     <section class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2>Staff Members</h2>
-        <button id="addStaffBtn" class="btn primary">+ Add Staff</button>
+      <div class="row" style="justify-content:space-between; align-items:flex-end;">
+        <div class="half">
+          <label>Search</label>
+          <input id="searchInput" type="search" placeholder="Name or email…" />
+        </div>
+        <div><button class="btn primary" id="btnAdd">Add Staff</button></div>
       </div>
-      <table>
-        <thead>
-          <tr><th>Name</th><th>Email</th><th>Role</th><th class="actions">Actions</th></tr>
-        </thead>
-        <tbody id="staffTable"><tr><td colspan="4">Loading…</td></tr></tbody>
-      </table>
+
+      <div style="margin-top:12px; overflow-x:auto;">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Email</th><th>Status</th><th style="width:210px;">Actions</th></tr>
+          </thead>
+          <tbody id="rows"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
   <!-- Add/Edit Modal -->
   <div id="staffModal" class="modal">
-    <div class="modal-content">
-      <h3 id="modalTitle">Add Staff</h3>
-      <label>Name</label>
-      <input id="staffName" type="text" />
+    <div class="modal-card">
+      <h3 id="modalTitle" style="margin:0 0 10px;">Add Staff</h3>
+      <div class="row">
+        <div class="half">
+          <label>First name</label>
+          <input id="fFirst" type="text" />
+        </div>
+        <div class="half">
+          <label>Last name</label>
+          <input id="fLast" type="text" />
+        </div>
+      </div>
       <label>Email</label>
-      <input id="staffEmail" type="email" />
+      <input id="fEmail" type="email" />
       <label>Password</label>
-      <input id="staffPassword" type="password" placeholder="Set password" />
-      <div id="staffMsg" class="alert bad" style="display:none;"></div>
-      <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
-        <button id="saveStaffBtn" class="btn primary">Save</button>
-        <button id="cancelStaffBtn" class="btn ghost">Cancel</button>
+      <input id="fPass" type="password" placeholder="Set or reset password" />
+      <div id="formMsg" class="muted" style="margin-top:8px;"></div>
+      <div class="row" style="margin-top:12px;">
+        <button id="btnSave" class="btn primary">Save</button>
+        <button id="btnCancel" class="btn ghost">Cancel</button>
       </div>
     </div>
   </div>
 
   <footer>
-    <div class="footer-inner" style="max-width:1100px;margin:0 auto;padding:16px 18px;display:flex;justify-content:space-between;color:#6b7280;font-size:.9rem;">
+    <div class="footer-inner" style="max-width:1100px;margin:0 auto;padding:16px 18px;display:flex;gap:14px;align-items:center;justify-content:space-between;color:#6b7280;font-size:.9rem;">
       <div>© 2025 Payulot</div>
       <div class="footer-links">
-        <a href="../terms.html">Terms</a>
-        <a href="../privacy.html">Privacy</a>
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
       </div>
     </div>
   </footer>
 
+  <!-- Shared vendor helpers (JWT renew, apiFetch/apiJSON, etc.) -->
+  <script src="/vendor/VendorCommons.js"></script>
+
+  <!-- Page logic -->
   <script>
-    const token = localStorage.getItem("boop_jwt");
-    const staffTable = document.getElementById("staffTable");
-    const flash = document.getElementById("flash");
+    (function(){
+      const rows = document.getElementById('rows');
+      const flash = document.getElementById('flash');
+      const searchInput = document.getElementById('searchInput');
 
-    const staffModal = document.getElementById("staffModal");
-    const modalTitle = document.getElementById("modalTitle");
-    const staffName = document.getElementById("staffName");
-    const staffEmail = document.getElementById("staffEmail");
-    const staffPassword = document.getElementById("staffPassword");
-    const staffMsg = document.getElementById("staffMsg");
-    const saveStaffBtn = document.getElementById("saveStaffBtn");
-    const cancelStaffBtn = document.getElementById("cancelStaffBtn");
+      const modal = document.getElementById('staffModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const fFirst = document.getElementById('fFirst');
+      const fLast  = document.getElementById('fLast');
+      const fEmail = document.getElementById('fEmail');
+      const fPass  = document.getElementById('fPass');
+      const formMsg= document.getElementById('formMsg');
+      const btnSave= document.getElementById('btnSave');
+      const btnCancel = document.getElementById('btnCancel');
 
-    let editingId = null;
+      document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        location.href = 'vendor-login.html';
+      });
 
-    function showFlash(msg, ok=true){
-      flash.textContent = msg;
-      flash.className = "alert " + (ok ? "ok" : "bad");
-      flash.style.display = "block";
-      setTimeout(()=> flash.style.display="none", 4000);
-    }
+      function showFlash(msg, ok=true){
+        flash.textContent = msg;
+        flash.className = "alert " + (ok ? "ok" : "bad");
+        flash.style.display = "block";
+        setTimeout(()=> flash.style.display = "none", 4000);
+      }
 
-    async function loadStaff(){
-      staffTable.innerHTML = "<tr><td colspan='4'>Loading…</td></tr>";
-      try{
-        const res = await fetch("/api/vendor-staff", { headers:{ Authorization:`Bearer ${token}` }});
-        const data = await res.json();
-        if(!res.ok) throw new Error(data.message || "Failed to load staff");
-        if(!Array.isArray(data) || !data.length){
-          staffTable.innerHTML = "<tr><td colspan='4'>No staff yet.</td></tr>";
+      let cache = [];
+      let editingId = null;
+
+      function filterAndRender(){
+        const q = (searchInput.value || '').trim().toLowerCase();
+        const data = q ? cache.filter(s =>
+          (s.first_name||'').toLowerCase().includes(q) ||
+          (s.last_name||'').toLowerCase().includes(q) ||
+          (s.email||'').toLowerCase().includes(q)
+        ) : cache;
+
+        if (!data.length){
+          rows.innerHTML = `<tr><td colspan="4" class="muted">No staff found.</td></tr>`;
           return;
         }
-        staffTable.innerHTML = data.map(s=>`
-          <tr>
-            <td>${s.name||""}</td>
-            <td>${s.email||""}</td>
-            <td>${s.role||"cashier"}</td>
-            <td class="actions">
-              <button class="btn small ghost" onclick="editStaff('${s.id}','${s.name}','${s.email}')">Edit</button>
-              <button class="btn small danger" onclick="deleteStaff('${s.id}')">Delete</button>
-            </td>
-          </tr>`).join("");
-      }catch(e){
-        staffTable.innerHTML = `<tr><td colspan="4">${e.message}</td></tr>`;
+        rows.innerHTML = data.map(s=>{
+          const name = `${s.first_name||''} ${s.last_name||''}`.trim() || '—';
+          const status = (s.status || 'active');
+          return `
+            <tr data-id="${s.id}">
+              <td>${name}</td>
+              <td>${s.email||'—'}</td>
+              <td>${status}</td>
+              <td>
+                <div class="row" style="gap:8px;">
+                  <button class="btn small ghost" data-act="edit">Edit</button>
+                  <button class="btn small ghost" data-act="reset">Reset PW</button>
+                  <button class="btn small" style="background:#ef4444;color:#fff;border-color:#ef4444" data-act="delete">Delete</button>
+                </div>
+              </td>
+            </tr>`;
+        }).join('');
       }
-    }
 
-    // Add / Edit
-    document.getElementById("addStaffBtn").addEventListener("click", ()=>{
-      editingId = null;
-      modalTitle.textContent = "Add Staff";
-      staffName.value=""; staffEmail.value=""; staffPassword.value="";
-      staffModal.style.display="flex"; staffMsg.style.display="none";
-    });
-    cancelStaffBtn.addEventListener("click", ()=> staffModal.style.display="none");
-
-    saveStaffBtn.addEventListener("click", async ()=>{
-      const body = { name:staffName.value.trim(), email:staffEmail.value.trim(), password:staffPassword.value.trim() };
-      try{
-        let res;
-        if(editingId){
-          res = await fetch("/api/vendor-staff/"+editingId, { method:"PATCH", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body:JSON.stringify(body) });
-        }else{
-          res = await fetch("/api/vendor-staff", { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body:JSON.stringify(body) });
+      async function loadStaff(){
+        rows.innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
+        try{
+          const data = await apiGet('/api/vendor/vendorstaff');
+          cache = Array.isArray(data) ? data : (data.rows || []);
+          filterAndRender();
+        }catch(e){
+          rows.innerHTML = `<tr><td colspan="4" class="muted">Failed to load staff.</td></tr>`;
+          console.warn(e);
         }
-        const data = await res.json();
-        if(!res.ok) throw new Error(data.message||"Save failed");
-        staffModal.style.display="none"; showFlash("Saved.", true); loadStaff();
-      }catch(e){ staffMsg.textContent=e.message; staffMsg.style.display="block"; }
-    });
+      }
 
-    // Edit / Delete helpers
-    window.editStaff = (id,name,email)=>{
-      editingId = id;
-      modalTitle.textContent="Edit Staff";
-      staffName.value=name; staffEmail.value=email; staffPassword.value="";
-      staffModal.style.display="flex"; staffMsg.style.display="none";
-    };
-    window.deleteStaff = async (id)=>{
-      if(!confirm("Delete this staff?")) return;
-      try{
-        const res = await fetch("/api/vendor-staff/"+id, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` }});
-        const data = await res.json();
-        if(!res.ok) throw new Error(data.message||"Delete failed");
-        showFlash("Deleted.", true); loadStaff();
-      }catch(e){ showFlash(e.message,false); }
-    };
+      function openModal(mode, staff){
+        modalTitle.textContent = mode === 'edit' ? 'Edit Staff' : 'Add Staff';
+        editingId = mode === 'edit' ? staff.id : null;
+        fFirst.value = staff?.first_name || '';
+        fLast.value  = staff?.last_name  || '';
+        fEmail.value = staff?.email      || '';
+        fPass.value  = '';
+        formMsg.textContent = '';
+        modal.style.display = 'flex';
+      }
+      function closeModal(){ modal.style.display='none'; }
 
-    // Logout
-    document.getElementById("logoutBtn").addEventListener("click", async (e)=>{
-      e.preventDefault(); try{ await fetch("/api/logout",{method:"POST"});}catch{} localStorage.clear(); location.href="vendor-login.html";
-    });
+      // Add
+      document.getElementById('btnAdd').addEventListener('click', ()=> openModal('add'));
 
-    loadStaff();
+      // Row actions
+      rows.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('button[data-act]'); if(!btn) return;
+        const tr = e.target.closest('tr[data-id]'); if(!tr) return;
+        const id = tr.getAttribute('data-id');
+        const act = btn.getAttribute('data-act');
+
+        const staff = cache.find(s=>String(s.id)===String(id));
+
+        if (act==='edit'){
+          openModal('edit', staff);
+        } else if (act==='reset'){
+          if (!confirm('Reset password for this staff?')) return;
+          try{
+            await apiPost(`/api/vendor/vendorstaff/${id}/password-reset`, {});
+            showFlash('Password reset email sent.', true);
+          }catch(err){
+            showFlash(err.message || 'Failed to reset password.', false);
+          }
+        } else if (act==='delete'){
+          if (!confirm('Delete this staff? This cannot be undone.')) return;
+          try{
+            await apiDelete(`/api/vendor/vendorstaff/${id}`);
+            showFlash('Deleted.', true);
+            await loadStaff();
+          }catch(err){
+            showFlash(err.message || 'Failed to delete.', false);
+          }
+        }
+      });
+
+      // Save (create/update)
+      btnSave.addEventListener('click', async ()=>{
+        const first_name = fFirst.value.trim();
+        const last_name  = fLast.value.trim();
+        const email      = fEmail.value.trim();
+        const password   = fPass.value; // optional on edit
+
+        if (!first_name || !last_name || !email){
+          formMsg.textContent = 'Please fill in name and email.';
+          return;
+        }
+
+        try{
+          if (editingId){
+            const body = { first_name, last_name, email };
+            if (password) body.password = password;
+            await apiPatch(`/api/vendor/vendorstaff/${editingId}`, body);
+            showFlash('Updated.', true);
+          } else {
+            await apiPost('/api/vendor/vendorstaff', { first_name, last_name, email, password });
+            showFlash('Staff added.', true);
+          }
+          closeModal();
+          await loadStaff();
+        }catch(err){
+          formMsg.textContent = err.message || 'Save failed.';
+        }
+      });
+
+      btnCancel.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+      searchInput.addEventListener('input', filterAndRender);
+
+      // Boot
+      loadStaff();
+    })();
   </script>
 </body>
 </html>
