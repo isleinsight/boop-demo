@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../../db");
+const jwt = require("jsonwebtoken");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
 /* -------------------------------------------------------------------------
@@ -14,21 +15,24 @@ const { authenticateToken } = require("../middleware/authMiddleware");
    Route-level guards below enforce who can call which endpoints.
 ---------------------------------------------------------------------------*/
 
-// ───────────────────────────────── helpers ─────────────────────────────────
+// ───────────────────────────── helpers ─────────────────────────────
 function requireAdmin(req, res, next) {
   const role = (req.user?.role || "").toLowerCase();
   if (role !== "admin") return res.status(403).json({ error: "Admin access required." });
   next();
 }
+
 function requireVendor(req, res, next) {
   const role = (req.user?.role || "").toLowerCase();
   if (role !== "vendor") return res.status(403).json({ message: "Vendor role required." });
   next();
 }
+
 function toInt(v, d) {
   const n = Number.parseInt(v, 10);
   return Number.isFinite(n) ? n : d;
 }
+
 async function audit({ action, status = "completed", adminId, targetUserId }) {
   try {
     await db.query(
@@ -41,9 +45,65 @@ async function audit({ action, status = "completed", adminId, targetUserId }) {
   }
 }
 
+// ─────────────── vendor token auto-renew helper (server emits header) ───────────────
+function minutesUntilEpoch(expSeconds) {
+  const now = Math.floor(Date.now() / 1000);
+  return (expSeconds - now) / 60;
+}
+
+/**
+ * If a vendor token is near expiry, issue a fresh token,
+ * swap it in the sessions row, and expose it via x-renew-jwt
+ * so the frontend (vendor-common.js) can store it.
+ */
+async function renewVendorIfNeeded(req, res) {
+  try {
+    const u = req.user;
+    if (!u || String(u.role).toLowerCase() !== "vendor") return;
+    if (!u.exp) return;
+
+    const renewWindowMin = Number(process.env.JWT_VENDOR_RENEW_WINDOW_MIN || 30);  // e.g. 30 min
+    const accessTTLMin   = Number(process.env.JWT_VENDOR_ACCESS_TTL_MIN || 960);   // e.g. 16h
+    const minsLeft = minutesUntilEpoch(u.exp);
+    if (minsLeft > renewWindowMin) return;
+
+    const payload = {
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      type: u.type,
+      first_name: u.first_name || null,
+      last_name: u.last_name || null,
+    };
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return;
+
+    const fresh = jwt.sign(payload, secret, { expiresIn: accessTTLMin * 60 });
+
+    // Replace the token in the current session row
+    const oldToken = (req.headers.authorization || "").split(" ")[1] || null;
+    if (oldToken) {
+      await db.query(
+        `UPDATE sessions
+            SET jwt_token = $1
+          WHERE email = $2
+            AND jwt_token = $3`,
+        [fresh, u.email, oldToken]
+      );
+    }
+
+    // Let the browser pick it up
+    res.setHeader("x-renew-jwt", fresh);
+  } catch (e) {
+    console.error("[vendor renew] failed:", e.message);
+    // don't fail the request solely because renewal failed
+  }
+}
+
 // ─────────────────────────── vendor self profile ───────────────────────────
 // GET /api/vendor/profile  → returns business_name + basic user info
 router.get("/profile", authenticateToken, requireVendor, async (req, res) => {
+  await renewVendorIfNeeded(req, res);
   try {
     const userId = req.user?.id || req.user?.userId;
 
@@ -79,6 +139,13 @@ router.get("/profile", authenticateToken, requireVendor, async (req, res) => {
     console.error("❌ GET /api/vendor/profile error:", err);
     return res.status(500).json({ message: "Failed to load vendor profile." });
   }
+});
+
+// ─────────────────────────── vendor keep-alive ────────────────────────────
+// GET /api/vendor/ping  → used by frontend every ~10 minutes
+router.get("/ping", authenticateToken, requireVendor, async (req, res) => {
+  await renewVendorIfNeeded(req, res);
+  res.json({ ok: true, role: req.user?.role || null });
 });
 
 // ─────────────────────── admin: block direct create ────────────────────────
@@ -201,6 +268,7 @@ router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
        }
 ===========================================================================*/
 router.get("/transactions/report", authenticateToken, requireVendor, async (req, res) => {
+  await renewVendorIfNeeded(req, res);
   try {
     const userId = req.user?.id || req.user?.userId;
 
@@ -237,8 +305,7 @@ router.get("/transactions/report", authenticateToken, requireVendor, async (req,
     const limit  = Math.min(Math.max(toInt(req.query.limit || "25", 25), 1), 200);
     const offset = Math.max(toInt(req.query.offset || "0", 0), 0);
 
-    // Data:
-    // For credits to vendor, sender_id is the customer (buyer).
+    // Data
     const dataSql = `
       SELECT
         t.id,
@@ -249,7 +316,6 @@ router.get("/transactions/report", authenticateToken, requireVendor, async (req,
         TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')) AS customer_name,
         $${params.length + 1}::text AS business_name,
         'received'::text AS direction,
-        -- UI label vendors should show:
         'Received from ' ||
           COALESCE(
             NULLIF(TRIM(COALESCE(sf.first_name,'') || ' ' || COALESCE(sf.last_name,'')), ''),
