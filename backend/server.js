@@ -67,6 +67,17 @@ mount('/api/vendor/vendorstaff', './auth/routes/vendor-staff', 'vendor-staff (CR
 mount('/api/vendor/staff',       './auth/routes/vendor-staff', 'vendor-staff (CRUD alias)');
 mount('/api/vendor/vendor-staff','./auth/routes/vendor-staff', 'vendor-staff (CRUD alias)');
 
+// Keep-alive ping for vendor (used by frontend to renew JWT)
+app.get('/api/vendor/ping', authenticateToken, (req, res) => {
+  const role = String(req.user?.role || req.user?.type || '').toLowerCase();
+  if (role !== 'vendor') {
+    return res.status(403).json({ message: 'Vendor only' });
+  }
+  // no-store so browsers don’t cache the 200
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok: true, ts: Date.now(), staff: !!req.user?.staff });
+});
+
 mount('/api/passport', './auth/routes/passport', 'passport');
 
 // Students / parents / sessions / txns / payouts / sales
