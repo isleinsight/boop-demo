@@ -154,78 +154,98 @@
   <!-- Shared helpers (make sure the path & name match your file on disk) -->
   <script src="vendor-common.js"></script>
 
-  <script>
-  // ---- Tiny fallbacks if vendor-common.js isn't present ----
+<script>
+  /* ─────────────────────────────────────────────────────────
+     Tiny fallbacks (in case vendor-common.js wasn't loaded)
+  ───────────────────────────────────────────────────────── */
   (function ensureHelpers(){
     if (typeof window.apiFetch === 'function') return;
-    window.apiFetch = async (url, opts={}) => {
+    window.apiFetch = async (url, opts = {}) => {
       const token = localStorage.getItem('boop_jwt');
-      const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
+      const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
       if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch(url, { ...opts, headers });
-      const renewed = res.headers.get('x-renew-jwt'); if (renewed) localStorage.setItem('boop_jwt', renewed);
+      const renewed = res.headers.get('x-renew-jwt');
+      if (renewed) localStorage.setItem('boop_jwt', renewed);
       return res;
     };
-    window.apiJSON = async (url, opts={}) => {
-      const r = await apiFetch(url, opts); const j = await r.json().catch(()=> ({}));
-      if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`); return j;
+    window.apiJSON = async (url, opts = {}) => {
+      const r = await apiFetch(url, opts);
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
+      return j;
     };
-    window.apiGet    = (u)        => apiJSON(u);
-    window.apiPost   = (u,b)      => apiJSON(u, { method:'POST', body: JSON.stringify(b||{}) });
-    window.apiPatch  = (u,b)      => apiJSON(u, { method:'PATCH', body: JSON.stringify(b||{}) });
-    window.apiDelete = (u,b)      => apiJSON(u, { method:'DELETE', body: JSON.stringify(b||{}) });
+    window.apiGet    = (u)   => apiJSON(u);
+    window.apiPost   = (u,b) => apiJSON(u, { method:'POST',   body: JSON.stringify(b||{}) });
+    window.apiPatch  = (u,b) => apiJSON(u, { method:'PATCH',  body: JSON.stringify(b||{}) });
+    window.apiDelete = (u,b) => apiJSON(u, { method:'DELETE', body: JSON.stringify(b||{}) });
   })();
 
-  // ---- Page logic ----
+  /* ─────────────────────────────────────────────────────────
+     Manage Staff page logic
+  ───────────────────────────────────────────────────────── */
   (function(){
-    const flash = document.getElementById('flash');
-    const body  = document.getElementById('staffBody');
-    const addBtn = document.getElementById('addBtn');
+    const flash     = document.getElementById('flash');
+    const body      = document.getElementById('staffBody');    // <tbody id="staffBody">
+    const addBtn    = document.getElementById('addBtn');
 
-    const modal  = document.getElementById('editModal');
-    const title  = document.getElementById('modalTitle');
-    const fName  = document.getElementById('fName');
-    const fEmail = document.getElementById('fEmail');
-    const fPass  = document.getElementById('fPassword');
-    const mMsg   = document.getElementById('modalMsg');
-    const saveBtn= document.getElementById('saveBtn');
+    // Modal controls
+    const modal     = document.getElementById('editModal');
+    const title     = document.getElementById('modalTitle');
+    const fName     = document.getElementById('fName');
+    const fEmail    = document.getElementById('fEmail');
+    const fPass     = document.getElementById('fPassword');
+    const mMsg      = document.getElementById('modalMsg');
+    const saveBtn   = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
 
     let editingId = null;
 
     function showFlash(msg, ok=true){
+      if (!flash) return;
       flash.textContent = msg;
       flash.className = 'alert ' + (ok ? 'ok' : 'bad');
       flash.style.display = 'block';
-      setTimeout(()=> flash.style.display='none', 3500);
+      setTimeout(()=> (flash.style.display='none'), 3500);
     }
+
     function openModal(mode, staff){
-      editingId = mode === 'edit' ? staff.id : null;
-      title.textContent = mode === 'edit' ? 'Edit staff' : 'Add staff';
-      fName.value  = staff?.name  || '';
+      editingId = (mode === 'edit') ? staff.id : null;
+      title.textContent = (mode === 'edit') ? 'Edit staff' : 'Add staff';
+      fName.value  = staff?.name  || staff?.display_name || '';
       fEmail.value = staff?.email || '';
       fPass.value  = '';
+      mMsg.textContent = '';
       mMsg.style.display = 'none';
       modal.style.display = 'grid';
       fName.focus();
     }
-    function closeModal(){ modal.style.display='none'; }
+    function closeModal(){ modal.style.display = 'none'; }
 
     async function loadStaff(){
-      body.innerHTML = `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>`;
+      body.innerHTML =
+        `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>`;
       try{
-        const rows = await apiGet('/api/vendor/vendorstaff');
-        const list = Array.isArray(rows) ? rows : (rows.staff || []);
-        if (!list.length){
-          body.innerHTML = `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">No staff yet.</td></tr>`;
+        // API returns { staff: [...] }
+        const data = await apiGet('/api/vendor/vendorstaff');
+        const list = Array.isArray(data?.staff) ? data.staff : Array.isArray(data) ? data : [];
+
+        if (list.length === 0){
+          body.innerHTML =
+            `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">
+               No staff yet.<br/>Click <b>Add Staff</b> to create your first cashier login.
+             </td></tr>`;
           return;
         }
-        body.innerHTML = list.map(s=>{
-          const status = s.is_active === false ? 'Inactive' : 'Active';
+
+        body.innerHTML = list.map(s => {
+          const status = s.disabled ? 'Inactive' : 'Active';
+          const name   = s.display_name || s.name || s.username || '—';
+          const email  = s.email || '—';
           return `
-            <tr class="tr">
-              <td>${(s.name||'—')}</td>
-              <td>${(s.email||'—')}</td>
+            <tr class="tr" data-id="${s.id}">
+              <td>${name}</td>
+              <td>${email}</td>
               <td>${status}</td>
               <td>
                 <div class="actions">
@@ -235,75 +255,83 @@
               </td>
             </tr>`;
         }).join('');
-      }catch(e){
-        body.innerHTML = `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;color:#991b1b;">Failed to load staff.</td></tr>`;
-        console.error(e);
+
+      } catch (e){
+        body.innerHTML =
+          `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;color:#991b1b;">
+             Couldn’t load staff. ${e && e.message ? e.message : ''}
+           </td></tr>`;
+        console.error('loadStaff error:', e);
       }
     }
 
     // Add
-    addBtn.addEventListener('click', ()=> openModal('add'));
+    addBtn.addEventListener('click', () => openModal('add'));
 
     // Save (add or edit)
-    saveBtn.addEventListener('click', async ()=>{
-      const name = fName.value.trim();
+    saveBtn.addEventListener('click', async () => {
+      const name  = fName.value.trim();
       const email = fEmail.value.trim();
-      const password = fPass.value.trim();
+      const pass  = fPass.value.trim();
 
-      if (!name || !email || (!editingId && !password)){
+      if (!name || !email || (!editingId && !pass)){
         mMsg.textContent = 'Name and email are required. Password is required when creating.';
-        mMsg.className = 'alert bad'; mMsg.style.display='block'; return;
+        mMsg.className = 'alert bad';
+        mMsg.style.display = 'block';
+        return;
       }
+
       try{
         if (editingId){
-          await apiPatch(`/api/vendor/vendorstaff/${editingId}`, { name, email, password: password || undefined });
+          await apiPatch(`/api/vendor/vendorstaff/${editingId}`, { name, email, password: pass || undefined });
           showFlash('Staff updated.', true);
         } else {
-          await apiPost('/api/vendor/vendorstaff', { name, email, password });
+          await apiPost('/api/vendor/vendorstaff', { name, email, password: pass });
           showFlash('Staff added.', true);
         }
-        closeModal(); loadStaff();
-      }catch(e){
+        closeModal();
+        loadStaff();
+      } catch(e){
         mMsg.textContent = e.message || 'Save failed';
-        mMsg.className = 'alert bad'; mMsg.style.display='block';
+        mMsg.className = 'alert bad';
+        mMsg.style.display = 'block';
       }
     });
 
-    // Cancel
+    // Cancel + backdrop click
     cancelBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e)=>{ if (e.target === modal) closeModal(); });
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
     // Row actions (edit/delete)
-    body.addEventListener('click', (e)=>{
+    body.addEventListener('click', (e) => {
       const editId = e.target?.getAttribute?.('data-edit');
       const delId  = e.target?.getAttribute?.('data-del');
+
       if (editId){
-        // pull current values from row
         const tr = e.target.closest('tr');
-        const name = tr.children[0].textContent.trim();
-        const email= tr.children[1].textContent.trim();
+        const name  = tr.children[0].textContent.trim();
+        const email = tr.children[1].textContent.trim();
         openModal('edit', { id: editId, name, email });
       } else if (delId){
         if (confirm('Delete this staff account?')){
-          apiDelete(`/api/vendor/vendorstaff/${delId}`).then(()=>{
-            showFlash('Staff deleted.', true); loadStaff();
-          }).catch(err=>{
-            showFlash(err.message || 'Delete failed', false);
-          });
+          apiDelete(`/api/vendor/vendorstaff/${delId}`)
+            .then(() => { showFlash('Staff deleted.', true); loadStaff(); })
+            .catch(err => showFlash(err.message || 'Delete failed', false));
         }
       }
     });
 
-    // Logout
+    // Logout (top-right)
     document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
       e.preventDefault();
       try { await fetch('/api/logout', { method:'POST' }); } catch {}
-      localStorage.clear(); location.href = 'vendor-login.html';
+      localStorage.clear();
+      location.href = 'vendor-login.html';
     });
 
     // Init
     loadStaff();
   })();
-  </script>
+</script>
 </body>
 </html>
