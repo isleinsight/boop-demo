@@ -76,6 +76,13 @@
       }
     })();
   </script>
+  <script>
+  setInterval(() => {
+    fetch('/api/vendor/ping', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
+    }).catch(()=>{});
+  }, 10 * 60 * 1000); // every 10 minutes
+</script>
 
   <!-- NAV -->
   <nav class="vendor-nav">
