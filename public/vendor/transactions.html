@@ -15,9 +15,6 @@
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* ──────────────────────────────────────────────
-       LOCKED VENDOR NAV — same spec as homepage
-    ────────────────────────────────────────────── */
     .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .vendor-nav .nav-container{
       max-width:1100px; margin:0 auto;
@@ -34,7 +31,6 @@
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
-    /* HERO */
     .hero-band{
       background:
         radial-gradient(1000px 600px at 85% -10%, var(--grad1), transparent 60%),
@@ -46,7 +42,6 @@
     .hero-title{ margin:0; font-size:clamp(20px,3.2vw,28px); font-weight:600; }
     .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
 
-    /* MAIN */
     .container{ max-width:1100px; margin:18px auto 40px; padding:0 20px; }
     .filters{
       display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-bottom:16px;
@@ -83,7 +78,6 @@
 
     .empty{ text-align:center; color:#64748b; padding:20px; border:1px dashed var(--stroke); border-radius:12px; background:#fff; }
 
-    /* Footer */
     footer{ border-top:1px solid var(--stroke); background:#fff; }
     .footer-inner{ max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
     .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
@@ -109,14 +103,18 @@
       }
     })();
   </script>
-<script>
-  setInterval(() => {
-    fetch('/api/vendor/ping', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
-    }).catch(()=>{});
-  }, 10 * 60 * 1000); // every 10 minutes
-</script>
-  <!-- NAV (locked to homepage spec) -->
+
+  <!-- Load vendor helpers BEFORE page logic -->
+  <script src="vendor-common.js"></script>
+
+  <!-- Keep-alive using helper (captures x-renew-jwt) -->
+  <script>
+    setInterval(() => {
+      apiFetch('/api/vendor/ping').catch(()=>{});
+    }, 10 * 60 * 1000);
+  </script>
+
+  <!-- NAV -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
@@ -126,6 +124,7 @@
         <a href="index.html">Home</a>
         <a href="transfer.html">Transfer</a>
         <a href="transactions.html" aria-current="page">Transactions</a>
+        <a href="manage-staff.html">Manage Staff</a>
         <a href="#" id="logoutLink">Log Out</a>
       </div>
     </div>
@@ -143,7 +142,6 @@
 
   <!-- MAIN -->
   <main class="container">
-    <!-- Filters -->
     <div class="filters">
       <div class="btn-group" role="group" aria-label="Quick ranges">
         <button id="btn7">Last 7 days</button>
@@ -167,7 +165,6 @@
       <button id="exportBtn" class="export-btn">Export CSV</button>
     </div>
 
-    <!-- List -->
     <div id="list" class="list">
       <div class="empty">Loading…</div>
     </div>
@@ -183,7 +180,7 @@
     </div>
   </footer>
 
-  <!-- Page logic -->
+  <!-- Page logic (uses apiJSON from vendor-common.js) -->
   <script>
   (function () {
     const listEl = document.getElementById('list');
@@ -291,10 +288,9 @@
     async function fetchVendorRange({ startISO, endISO, limit = 500 }) {
       const qs = new URLSearchParams();
       if (startISO) qs.set("start", startISO.slice(0, 10));
-      if (endISO) qs.set("end", endISO.slice(0, 10));
+      if (endISO)   qs.set("end",   endISO.slice(0, 10));
       qs.set("limit", String(limit));
       qs.set("offset", "0");
-      // Use long-session helper (adds auth, auto-refreshes vendor tokens)
       const data = await apiJSON(`/api/vendor/transactions/report?${qs.toString()}`);
       const rows = data.transactions || [];
       return rows.map(r => ({
@@ -329,7 +325,6 @@
 
     loadDefault();
   })();
-</script>
-  <script src="vendor-common.js"></script>
+  </script>
 </body>
 </html>
