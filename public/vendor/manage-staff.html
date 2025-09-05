@@ -14,76 +14,51 @@
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* NAV (same as transfer.html) */
+    /* ── Vendor NAV (matches other vendor pages) ── */
     .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
-    .vendor-nav .nav-container{
-      max-width:1100px; margin:0 auto;
-      padding:10px 18px !important;
-      display:flex; align-items:center; justify-content:space-between;
-    }
-    .vendor-nav .nav-left img{ height:30px !important; display:block; }
-    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px !important; }
-    .vendor-nav .nav-right a{
-      color:#fff; text-decoration:none; font-size:.95rem !important; line-height:1 !important;
-      padding:6px 8px !important; border-radius:6px; opacity:.95;
-    }
+    .vendor-nav .nav-container{ max-width:1100px; margin:0 auto; padding:10px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .vendor-nav .nav-left img{ height:30px; display:block; }
+    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px; }
+    .vendor-nav .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; line-height:1; padding:6px 8px; border-radius:6px; opacity:.95; }
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
-    /* HEADER */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
-    /* MAIN */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
     .grid{ display:grid; grid-template-columns:1fr; gap:16px; }
-    .card{
-      background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
-      box-shadow:0 8px 24px rgba(0,0,0,.06);
-    }
+    .card{ background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.06); }
     .card h2{ margin:0 0 10px; font-size:1.12rem; }
-    .muted{ color:var(--muted); }
 
-    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:700;
-      border:1px solid transparent; cursor:pointer;
-    }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; border-radius:10px; font-weight:700; border:1px solid transparent; cursor:pointer; }
     .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
     .btn.primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
     .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
     .btn.ghost:hover{ border-color:#cbd5e1; }
-    .btn.small{ padding:8px 10px; font-weight:600; }
 
+    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
     label{ display:block; color:var(--muted); font-size:.92rem; margin:10px 0 6px; }
-    input, select{
-      width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke);
-      background:#fff; color:#111827; font-size:1rem;
-    }
-    .half{ flex:1 1 260px; }
+    input{ width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke); background:#fff; font-size:1rem; }
 
-    table{ width:100%; border-collapse:separate; border-spacing:0 8px; }
-    thead th{ text-align:left; font-size:.9rem; color:#64748b; padding:0 10px; }
-    tbody tr{ background:#fff; border:1px solid var(--stroke); }
-    tbody td{ padding:12px 10px; vertical-align:middle; }
-    tbody tr td:first-child{ border-radius:12px 0 0 12px; }
-    tbody tr td:last-child{ border-radius:0 12px 12px 0; }
+    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; display:none; }
+    .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; display:block; }
+    .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; display:block; }
 
-    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; }
-    .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; }
-    .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; }
+    .table{ width:100%; border-collapse:separate; border-spacing:0 10px; }
+    .table th{ text-align:left; font-weight:600; color:#374151; padding:0 8px; }
+    .table td{ background:#fff; border:1px solid var(--stroke); padding:12px 10px; }
+    .tr{ border-radius:12px; }
+    .actions{ display:flex; gap:8px; justify-content:flex-end; }
 
     /* Modal */
-    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.45); z-index:1000; }
-    .modal-card{ background:#fff; color:#111827; border:1px solid var(--stroke); border-radius:12px; padding:18px;
-      max-width:540px; width:92%; }
+    .modal{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:1000; }
+    .modal-card{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:18px; width:92%; max-width:520px; }
   </style>
 </head>
 <body>
-  <!-- Vendor auth gate (same as transfer page) -->
+  <!-- Vendor auth gate -->
   <script>
     (async () => {
       try {
@@ -114,7 +89,7 @@
         <a href="index.html">Home</a>
         <a href="transfer.html">Transfer</a>
         <a href="transactions.html">Transactions</a>
-        <a href="managestaff.html" aria-current="page">Manage Staff</a>
+        <a href="manage-staff.html" aria-current="page">Manage Staff</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
     </div>
@@ -122,232 +97,213 @@
 
   <!-- HEADER -->
   <header class="header">
-    <h1>Manage Staff</h1>
-    <p class="sub">Create cashier logins for your business. Cashiers can charge customers but won’t see balances or reports.</p>
+    <h1>Manage staff</h1>
+    <p class="sub">Create, edit, and remove cashier logins for your business.</p>
   </header>
 
-  <!-- MAIN -->
   <main class="container">
-    <div id="flash" class="alert" style="display:none;"></div>
+    <div id="flash" class="alert"></div>
 
     <section class="card">
-      <div class="row" style="justify-content:space-between; align-items:flex-end;">
-        <div class="half">
-          <label>Search</label>
-          <input id="searchInput" type="search" placeholder="Name or email…" />
-        </div>
-        <div><button class="btn primary" id="btnAdd">Add Staff</button></div>
+      <div class="row" style="justify-content:space-between;">
+        <h2 style="margin:0">Staff</h2>
+        <button id="addBtn" class="btn primary">Add Staff</button>
       </div>
 
-      <div style="margin-top:12px; overflow-x:auto;">
-        <table>
-          <thead>
-            <tr><th>Name</th><th>Email</th><th>Status</th><th style="width:210px;">Actions</th></tr>
-          </thead>
-          <tbody id="rows"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
-        </table>
-      </div>
+      <table class="table" aria-describedby="staffTable">
+        <thead>
+          <tr>
+            <th style="width:30%">Name</th>
+            <th style="width:35%">Email</th>
+            <th style="width:20%">Status</th>
+            <th style="width:15%"></th>
+          </tr>
+        </thead>
+        <tbody id="staffBody">
+          <tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>
+        </tbody>
+      </table>
     </section>
   </main>
 
   <!-- Add/Edit Modal -->
-  <div id="staffModal" class="modal">
-    <div class="modal-card">
-      <h3 id="modalTitle" style="margin:0 0 10px;">Add Staff</h3>
-      <div class="row">
-        <div class="half">
-          <label>First name</label>
-          <input id="fFirst" type="text" />
-        </div>
-        <div class="half">
-          <label>Last name</label>
-          <input id="fLast" type="text" />
-        </div>
-      </div>
-      <label>Email</label>
-      <input id="fEmail" type="email" />
-      <label>Password</label>
-      <input id="fPass" type="password" placeholder="Set or reset password" />
-      <div id="formMsg" class="muted" style="margin-top:8px;"></div>
-      <div class="row" style="margin-top:12px;">
-        <button id="btnSave" class="btn primary">Save</button>
-        <button id="btnCancel" class="btn ghost">Cancel</button>
+  <div id="editModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle" style="margin:0 0 10px;">Add staff</h3>
+      <label>Full name</label>
+      <input id="fName" type="text" placeholder="e.g., Suzy Q" />
+      <label style="margin-top:8px;">Email</label>
+      <input id="fEmail" type="email" placeholder="name@example.com" />
+      <label style="margin-top:8px;">Password</label>
+      <input id="fPassword" type="password" placeholder="Set a password" />
+      <div id="modalMsg" class="alert" style="margin-top:10px;"></div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px;">
+        <button id="saveBtn" class="btn primary">Save</button>
+        <button id="cancelBtn" class="btn ghost">Cancel</button>
       </div>
     </div>
   </div>
 
-  <footer>
-    <div class="footer-inner" style="max-width:1100px;margin:0 auto;padding:16px 18px;display:flex;gap:14px;align-items:center;justify-content:space-between;color:#6b7280;font-size:.9rem;">
+  <footer style="border-top:1px solid var(--stroke);background:#fff;">
+    <div style="max-width:1100px;margin:0 auto;padding:16px 18px;display:flex;gap:14px;align-items:center;justify-content:space-between;color:#6b7280;font-size:.9rem;">
       <div>© 2025 Payulot</div>
-      <div class="footer-links">
-        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
-        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
-      </div>
+      <div><a href="/terms.html" target="_blank" rel="noopener" style="color:#6b7280;text-decoration:none;margin-right:12px;">Terms</a><a href="/privacy.html" target="_blank" rel="noopener" style="color:#6b7280;text-decoration:none;">Privacy</a></div>
     </div>
   </footer>
 
-  <!-- Shared vendor helpers (JWT renew, apiFetch/apiJSON, etc.) -->
+  <!-- Shared helpers (make sure the path & name match your file on disk) -->
   <script src="/vendor/vendor-common.js"></script>
 
-  <!-- Page logic -->
   <script>
-    (function(){
-      const rows = document.getElementById('rows');
-      const flash = document.getElementById('flash');
-      const searchInput = document.getElementById('searchInput');
+  // ---- Tiny fallbacks if vendor-common.js isn't present ----
+  (function ensureHelpers(){
+    if (typeof window.apiFetch === 'function') return;
+    window.apiFetch = async (url, opts={}) => {
+      const token = localStorage.getItem('boop_jwt');
+      const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(url, { ...opts, headers });
+      const renewed = res.headers.get('x-renew-jwt'); if (renewed) localStorage.setItem('boop_jwt', renewed);
+      return res;
+    };
+    window.apiJSON = async (url, opts={}) => {
+      const r = await apiFetch(url, opts); const j = await r.json().catch(()=> ({}));
+      if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`); return j;
+    };
+    window.apiGet    = (u)        => apiJSON(u);
+    window.apiPost   = (u,b)      => apiJSON(u, { method:'POST', body: JSON.stringify(b||{}) });
+    window.apiPatch  = (u,b)      => apiJSON(u, { method:'PATCH', body: JSON.stringify(b||{}) });
+    window.apiDelete = (u,b)      => apiJSON(u, { method:'DELETE', body: JSON.stringify(b||{}) });
+  })();
 
-      const modal = document.getElementById('staffModal');
-      const modalTitle = document.getElementById('modalTitle');
-      const fFirst = document.getElementById('fFirst');
-      const fLast  = document.getElementById('fLast');
-      const fEmail = document.getElementById('fEmail');
-      const fPass  = document.getElementById('fPass');
-      const formMsg= document.getElementById('formMsg');
-      const btnSave= document.getElementById('btnSave');
-      const btnCancel = document.getElementById('btnCancel');
+  // ---- Page logic ----
+  (function(){
+    const flash = document.getElementById('flash');
+    const body  = document.getElementById('staffBody');
+    const addBtn = document.getElementById('addBtn');
 
-      document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
-        e.preventDefault();
-        try { await fetch('/api/logout', { method:'POST' }); } catch {}
-        localStorage.clear();
-        location.href = 'vendor-login.html';
-      });
+    const modal  = document.getElementById('editModal');
+    const title  = document.getElementById('modalTitle');
+    const fName  = document.getElementById('fName');
+    const fEmail = document.getElementById('fEmail');
+    const fPass  = document.getElementById('fPassword');
+    const mMsg   = document.getElementById('modalMsg');
+    const saveBtn= document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
 
-      function showFlash(msg, ok=true){
-        flash.textContent = msg;
-        flash.className = "alert " + (ok ? "ok" : "bad");
-        flash.style.display = "block";
-        setTimeout(()=> flash.style.display = "none", 4000);
-      }
+    let editingId = null;
 
-      let cache = [];
-      let editingId = null;
+    function showFlash(msg, ok=true){
+      flash.textContent = msg;
+      flash.className = 'alert ' + (ok ? 'ok' : 'bad');
+      flash.style.display = 'block';
+      setTimeout(()=> flash.style.display='none', 3500);
+    }
+    function openModal(mode, staff){
+      editingId = mode === 'edit' ? staff.id : null;
+      title.textContent = mode === 'edit' ? 'Edit staff' : 'Add staff';
+      fName.value  = staff?.name  || '';
+      fEmail.value = staff?.email || '';
+      fPass.value  = '';
+      mMsg.style.display = 'none';
+      modal.style.display = 'grid';
+      fName.focus();
+    }
+    function closeModal(){ modal.style.display='none'; }
 
-      function filterAndRender(){
-        const q = (searchInput.value || '').trim().toLowerCase();
-        const data = q ? cache.filter(s =>
-          (s.first_name||'').toLowerCase().includes(q) ||
-          (s.last_name||'').toLowerCase().includes(q) ||
-          (s.email||'').toLowerCase().includes(q)
-        ) : cache;
-
-        if (!data.length){
-          rows.innerHTML = `<tr><td colspan="4" class="muted">No staff found.</td></tr>`;
+    async function loadStaff(){
+      body.innerHTML = `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>`;
+      try{
+        const rows = await apiGet('/api/vendor/vendorstaff');
+        const list = Array.isArray(rows) ? rows : (rows.staff || []);
+        if (!list.length){
+          body.innerHTML = `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">No staff yet.</td></tr>`;
           return;
         }
-        rows.innerHTML = data.map(s=>{
-          const name = `${s.first_name||''} ${s.last_name||''}`.trim() || '—';
-          const status = (s.status || 'active');
+        body.innerHTML = list.map(s=>{
+          const status = s.is_active === false ? 'Inactive' : 'Active';
           return `
-            <tr data-id="${s.id}">
-              <td>${name}</td>
-              <td>${s.email||'—'}</td>
+            <tr class="tr">
+              <td>${(s.name||'—')}</td>
+              <td>${(s.email||'—')}</td>
               <td>${status}</td>
               <td>
-                <div class="row" style="gap:8px;">
-                  <button class="btn small ghost" data-act="edit">Edit</button>
-                  <button class="btn small ghost" data-act="reset">Reset PW</button>
-                  <button class="btn small" style="background:#ef4444;color:#fff;border-color:#ef4444" data-act="delete">Delete</button>
+                <div class="actions">
+                  <button class="btn ghost" data-edit="${s.id}">Edit</button>
+                  <button class="btn ghost" data-del="${s.id}">Delete</button>
                 </div>
               </td>
             </tr>`;
         }).join('');
+      }catch(e){
+        body.innerHTML = `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;color:#991b1b;">Failed to load staff.</td></tr>`;
+        console.error(e);
       }
+    }
 
-      async function loadStaff(){
-        rows.innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
-        try{
-          const data = await apiGet('/api/vendor/vendorstaff');
-          cache = Array.isArray(data) ? data : (data.rows || []);
-          filterAndRender();
-        }catch(e){
-          rows.innerHTML = `<tr><td colspan="4" class="muted">Failed to load staff.</td></tr>`;
-          console.warn(e);
+    // Add
+    addBtn.addEventListener('click', ()=> openModal('add'));
+
+    // Save (add or edit)
+    saveBtn.addEventListener('click', async ()=>{
+      const name = fName.value.trim();
+      const email = fEmail.value.trim();
+      const password = fPass.value.trim();
+
+      if (!name || !email || (!editingId && !password)){
+        mMsg.textContent = 'Name and email are required. Password is required when creating.';
+        mMsg.className = 'alert bad'; mMsg.style.display='block'; return;
+      }
+      try{
+        if (editingId){
+          await apiPatch(`/api/vendor/vendorstaff/${editingId}`, { name, email, password: password || undefined });
+          showFlash('Staff updated.', true);
+        } else {
+          await apiPost('/api/vendor/vendorstaff', { name, email, password });
+          showFlash('Staff added.', true);
+        }
+        closeModal(); loadStaff();
+      }catch(e){
+        mMsg.textContent = e.message || 'Save failed';
+        mMsg.className = 'alert bad'; mMsg.style.display='block';
+      }
+    });
+
+    // Cancel
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e)=>{ if (e.target === modal) closeModal(); });
+
+    // Row actions (edit/delete)
+    body.addEventListener('click', (e)=>{
+      const editId = e.target?.getAttribute?.('data-edit');
+      const delId  = e.target?.getAttribute?.('data-del');
+      if (editId){
+        // pull current values from row
+        const tr = e.target.closest('tr');
+        const name = tr.children[0].textContent.trim();
+        const email= tr.children[1].textContent.trim();
+        openModal('edit', { id: editId, name, email });
+      } else if (delId){
+        if (confirm('Delete this staff account?')){
+          apiDelete(`/api/vendor/vendorstaff/${delId}`).then(()=>{
+            showFlash('Staff deleted.', true); loadStaff();
+          }).catch(err=>{
+            showFlash(err.message || 'Delete failed', false);
+          });
         }
       }
+    });
 
-      function openModal(mode, staff){
-        modalTitle.textContent = mode === 'edit' ? 'Edit Staff' : 'Add Staff';
-        editingId = mode === 'edit' ? staff.id : null;
-        fFirst.value = staff?.first_name || '';
-        fLast.value  = staff?.last_name  || '';
-        fEmail.value = staff?.email      || '';
-        fPass.value  = '';
-        formMsg.textContent = '';
-        modal.style.display = 'flex';
-      }
-      function closeModal(){ modal.style.display='none'; }
+    // Logout
+    document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      try { await fetch('/api/logout', { method:'POST' }); } catch {}
+      localStorage.clear(); location.href = 'vendor-login.html';
+    });
 
-      // Add
-      document.getElementById('btnAdd').addEventListener('click', ()=> openModal('add'));
-
-      // Row actions
-      rows.addEventListener('click', async (e)=>{
-        const btn = e.target.closest('button[data-act]'); if(!btn) return;
-        const tr = e.target.closest('tr[data-id]'); if(!tr) return;
-        const id = tr.getAttribute('data-id');
-        const act = btn.getAttribute('data-act');
-
-        const staff = cache.find(s=>String(s.id)===String(id));
-
-        if (act==='edit'){
-          openModal('edit', staff);
-        } else if (act==='reset'){
-          if (!confirm('Reset password for this staff?')) return;
-          try{
-            await apiPost(`/api/vendor/vendorstaff/${id}/password-reset`, {});
-            showFlash('Password reset email sent.', true);
-          }catch(err){
-            showFlash(err.message || 'Failed to reset password.', false);
-          }
-        } else if (act==='delete'){
-          if (!confirm('Delete this staff? This cannot be undone.')) return;
-          try{
-            await apiDelete(`/api/vendor/vendorstaff/${id}`);
-            showFlash('Deleted.', true);
-            await loadStaff();
-          }catch(err){
-            showFlash(err.message || 'Failed to delete.', false);
-          }
-        }
-      });
-
-      // Save (create/update)
-      btnSave.addEventListener('click', async ()=>{
-        const first_name = fFirst.value.trim();
-        const last_name  = fLast.value.trim();
-        const email      = fEmail.value.trim();
-        const password   = fPass.value; // optional on edit
-
-        if (!first_name || !last_name || !email){
-          formMsg.textContent = 'Please fill in name and email.';
-          return;
-        }
-
-        try{
-          if (editingId){
-            const body = { first_name, last_name, email };
-            if (password) body.password = password;
-            await apiPatch(`/api/vendor/vendorstaff/${editingId}`, body);
-            showFlash('Updated.', true);
-          } else {
-            await apiPost('/api/vendor/vendorstaff', { first_name, last_name, email, password });
-            showFlash('Staff added.', true);
-          }
-          closeModal();
-          await loadStaff();
-        }catch(err){
-          formMsg.textContent = err.message || 'Save failed.';
-        }
-      });
-
-      btnCancel.addEventListener('click', closeModal);
-      modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
-      searchInput.addEventListener('input', filterAndRender);
-
-      // Boot
-      loadStaff();
-    })();
+    // Init
+    loadStaff();
+  })();
   </script>
 </body>
 </html>
