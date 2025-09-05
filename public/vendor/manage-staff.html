@@ -163,7 +163,7 @@
     async function loadStaff(){
       staffTable.innerHTML = "<tr><td colspan='4'>Loading…</td></tr>";
       try{
-        const res = await fetch("/api/vendor/vendorstaff", { headers:{ Authorization:`Bearer ${token}` }});
+        const res = await fetch("/api/vendor/vendor-staff", { headers:{ Authorization:`Bearer ${token}` }});
         const data = await res.json();
         if(!res.ok) throw new Error(data.message || "Failed to load staff");
         if(!Array.isArray(data) || !data.length){
@@ -199,9 +199,9 @@
       try{
         let res;
         if(editingId){
-          res = await fetch("/api/vendor/vendorstaff/"+editingId, { method:"PATCH", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body:JSON.stringify(body) });
+          res = await fetch("/api/vendor/vendor-staff/"+editingId, { method:"PATCH", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body:JSON.stringify(body) });
         }else{
-          res = await fetch("/api/vendor/vendorstaff", { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body:JSON.stringify(body) });
+          res = await fetch("/api/vendor/vendor-staff", { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body:JSON.stringify(body) });
         }
         const data = await res.json();
         if(!res.ok) throw new Error(data.message||"Save failed");
@@ -219,7 +219,7 @@
     window.deleteStaff = async (id)=>{
       if(!confirm("Delete this staff?")) return;
       try{
-        const res = await fetch("/api/vendor/vendorstaff/"+id, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` }});
+        const res = await fetch("/api/vendor/vendor-staff/"+id, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` }});
         const data = await res.json();
         if(!res.ok) throw new Error(data.message||"Delete failed");
         showFlash("Deleted.", true); loadStaff();
