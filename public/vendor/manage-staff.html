@@ -163,7 +163,7 @@
 
 <script>
   /* ─────────────────────────────────────────────────────────
-     Tiny fallbacks (in case vendor-common.js wasn't loaded)
+     Tiny fallbacks (in case vendor-common.js isn't loaded)
   ───────────────────────────────────────────────────────── */
   (function ensureHelpers(){
     if (typeof window.apiFetch === 'function') return;
@@ -189,18 +189,18 @@
   })();
 
   /* ─────────────────────────────────────────────────────────
-     Manage Staff page logic
+     Manage Staff page logic (uses display_name + username)
   ───────────────────────────────────────────────────────── */
   (function(){
     const flash     = document.getElementById('flash');
-    const body      = document.getElementById('staffBody');    // <tbody id="staffBody">
+    const body      = document.getElementById('staffBody');
     const addBtn    = document.getElementById('addBtn');
 
     // Modal controls
     const modal     = document.getElementById('editModal');
     const title     = document.getElementById('modalTitle');
-    const fName     = document.getElementById('fName');
-    const fEmail    = document.getElementById('fEmail');
+    const fName     = document.getElementById('fName');    // display_name
+    const fEmail    = document.getElementById('fEmail');   // username (email-looking)
     const fPass     = document.getElementById('fPassword');
     const mMsg      = document.getElementById('modalMsg');
     const saveBtn   = document.getElementById('saveBtn');
@@ -217,11 +217,11 @@
     }
 
     function openModal(mode, staff){
-      editingId = (mode === 'edit') ? staff.id : null;
+      editingId      = (mode === 'edit') ? staff.id : null;
       title.textContent = (mode === 'edit') ? 'Edit staff' : 'Add staff';
-      fName.value  = staff?.name  || staff?.display_name || '';
-      fEmail.value = staff?.email || '';
-      fPass.value  = '';
+      fName.value    = staff?.display_name || staff?.name || '';
+      fEmail.value   = staff?.username || staff?.email || '';
+      fPass.value    = '';
       mMsg.textContent = '';
       mMsg.style.display = 'none';
       modal.style.display = 'grid';
@@ -233,11 +233,11 @@
       body.innerHTML =
         `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>`;
       try{
-        // API returns { staff: [...] }
+        // API may return an array or { staff:[...] } depending on your route impl
         const data = await apiGet('/api/vendor/vendorstaff');
-        const list = Array.isArray(data?.staff) ? data.staff : Array.isArray(data) ? data : [];
+        const list = Array.isArray(data?.staff) ? data.staff : (Array.isArray(data) ? data : []);
 
-        if (list.length === 0){
+        if (!list.length){
           body.innerHTML =
             `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">
                No staff yet.<br/>Click <b>Add Staff</b> to create your first cashier login.
@@ -246,13 +246,15 @@
         }
 
         body.innerHTML = list.map(s => {
-          const status = s.disabled ? 'Inactive' : 'Active';
-          const name   = s.display_name || s.name || s.username || '—';
-          const email  = s.email || '—';
+          // Your table now uses is_active (boolean). Fall back to !disabled if present.
+          const isActive = (typeof s.is_active === 'boolean') ? s.is_active : !s.disabled;
+          const status   = isActive ? 'Active' : 'Inactive';
+          const name     = s.display_name || s.name || s.username || '—';
+          const username = s.username || '—';  // ← show this in the “Email” column
           return `
             <tr class="tr" data-id="${s.id}">
               <td>${name}</td>
-              <td>${email}</td>
+              <td>${username}</td>
               <td>${status}</td>
               <td>
                 <div class="actions">
@@ -277,11 +279,11 @@
 
     // Save (add or edit)
     saveBtn.addEventListener('click', async () => {
-      const name  = fName.value.trim();
-      const email = fEmail.value.trim();
-      const pass  = fPass.value.trim();
+      const display_name = fName.value.trim();
+      const username     = (fEmail.value || '').trim().toLowerCase(); // store as username
+      const password     = fPass.value.trim();
 
-      if (!name || !email || (!editingId && !pass)){
+      if (!display_name || !username || (!editingId && !password)){
         mMsg.textContent = 'Name and email are required. Password is required when creating.';
         mMsg.className = 'alert bad';
         mMsg.style.display = 'block';
@@ -290,10 +292,18 @@
 
       try{
         if (editingId){
-          await apiPatch(`/api/vendor/vendorstaff/${editingId}`, { name, email, password: pass || undefined });
+          await apiPatch(`/api/vendor/vendorstaff/${editingId}`, {
+            display_name,
+            username,
+            password: password || undefined
+          });
           showFlash('Staff updated.', true);
         } else {
-          await apiPost('/api/vendor/vendorstaff', { name, email, password: pass });
+          await apiPost('/api/vendor/vendorstaff', {
+            display_name,
+            username,
+            password
+          });
           showFlash('Staff added.', true);
         }
         closeModal();
@@ -315,10 +325,10 @@
       const delId  = e.target?.getAttribute?.('data-del');
 
       if (editId){
-        const tr = e.target.closest('tr');
-        const name  = tr.children[0].textContent.trim();
-        const email = tr.children[1].textContent.trim();
-        openModal('edit', { id: editId, name, email });
+        const tr  = e.target.closest('tr');
+        const name = tr.children[0].textContent.trim();
+        const uname= tr.children[1].textContent.trim();
+        openModal('edit', { id: editId, display_name: name, username: uname });
       } else if (delId){
         if (confirm('Delete this staff account?')){
           apiDelete(`/api/vendor/vendorstaff/${delId}`)
@@ -328,7 +338,7 @@
       }
     });
 
-    // Logout (top-right)
+    // Logout
     document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
       e.preventDefault();
       try { await fetch('/api/logout', { method:'POST' }); } catch {}
