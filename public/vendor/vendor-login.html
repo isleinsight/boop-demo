@@ -175,121 +175,124 @@
   </footer>
 
   <script>
-    // Year
-    document.getElementById('y').textContent = new Date().getFullYear();
+  // Year
+  document.getElementById('y').textContent = new Date().getFullYear();
 
-    // Tabs
-    const tabVendor  = document.getElementById('tabVendor');
-    const tabCashier = document.getElementById('tabCashier');
-    const panelVendor  = document.getElementById('panelVendor');
-    const panelCashier = document.getElementById('panelCashier');
+  // Tabs
+  const tabVendor    = document.getElementById('tabVendor');
+  const tabCashier   = document.getElementById('tabCashier');
+  const panelVendor  = document.getElementById('panelVendor');
+  const panelCashier = document.getElementById('panelCashier');
 
-    function selectTab(which){
-      const vendorOn = (which === 'vendor');
-      tabVendor.setAttribute('aria-selected', vendorOn ? 'true' : 'false');
-      tabCashier.setAttribute('aria-selected', vendorOn ? 'false' : 'true');
-      panelVendor.hidden  = !vendorOn;
-      panelCashier.hidden = vendorOn;
-      // update URL hash so refresh keeps tab
-      history.replaceState(null, '', '#' + (vendorOn ? 'vendor' : 'cashier'));
+  function selectTab(which){
+    const vendorOn = (which === 'vendor');
+    tabVendor.setAttribute('aria-selected', vendorOn ? 'true' : 'false');
+    tabCashier.setAttribute('aria-selected', vendorOn ? 'false' : 'true');
+    panelVendor.hidden  = !vendorOn;
+    panelCashier.hidden = vendorOn;
+    // keep tab on refresh
+    history.replaceState(null, '', '#' + (vendorOn ? 'vendor' : 'cashier'));
+  }
+  tabVendor.addEventListener('click', ()=> selectTab('vendor'));
+  tabCashier.addEventListener('click',()=> selectTab('cashier'));
+  // initial tab
+  if ((location.hash || '').toLowerCase() === '#cashier') { selectTab('cashier'); }
+  else { selectTab('vendor'); }
+
+  // Helper
+  async function postJSON(url, body) {
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (!res.ok) {
+      const msg = data?.message || data?.error || `HTTP ${res.status}`;
+      throw new Error(msg);
     }
-    tabVendor.addEventListener('click', ()=> selectTab('vendor'));
-    tabCashier.addEventListener('click',()=> selectTab('cashier'));
-    if ((location.hash || '').toLowerCase() === '#cashier') selectTab('cashier');
+    return data;
+  }
 
-    // Helper
-    async function postJSON(url, body) {
-      const res = await fetch(url, {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify(body)
-      });
-      let data = {};
-      try { data = await res.json(); } catch {}
-      if (!res.ok) {
-        const msg = data?.message || data?.error || `HTTP ${res.status}`;
-        throw new Error(msg);
-      }
-      return data;
+  // Vendor login (owner → /vendor/index.html)
+  const vendorForm   = document.getElementById('vendorForm');
+  const vendorStatus = document.getElementById('vendorStatus');
+  vendorForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    vendorStatus.textContent = '';
+    const email = document.getElementById('vEmail').value.trim();
+    const password = document.getElementById('vPassword').value;
+
+    if (!email || !password){
+      vendorStatus.textContent = 'Enter your email and password.';
+      vendorStatus.className = 'status error';
+      return;
     }
+    try{
+      const data = await postJSON('/auth/login', { email, password });
+      if (!data?.token) throw new Error('Missing token');
 
-    // Vendor login
-    const vendorForm   = document.getElementById('vendorForm');
-    const vendorStatus = document.getElementById('vendorStatus');
-    vendorForm.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      vendorStatus.textContent = '';
-      const email = document.getElementById('vEmail').value.trim();
-      const password = document.getElementById('vPassword').value;
+      localStorage.setItem('boop_jwt', data.token);
+      localStorage.setItem('boopUser', JSON.stringify(data.user || {}));
+      localStorage.removeItem('boopStaff'); // ensure no staff context
+      localStorage.setItem('boop_login_at', String(Date.now()));
 
-      if (!email || !password){
-        vendorStatus.textContent = 'Enter your email and password.';
+      const role = (data?.user?.role || '').toLowerCase();
+      if (role !== 'vendor'){
+        vendorStatus.textContent = 'This login is for vendor accounts.';
         vendorStatus.className = 'status error';
         return;
       }
-      try{
-        const data = await postJSON('/auth/login', { email, password });
-        if (!data?.token) throw new Error('Missing token');
+      // Owner goes to vendor dashboard
+      window.location.href = '/vendor/index.html';
+    } catch (err){
+      vendorStatus.textContent = 'Login failed. ' + (err?.message || '');
+      vendorStatus.className = 'status error';
+    }
+  });
 
-        localStorage.setItem('boop_jwt', data.token);
-        localStorage.setItem('boopUser', JSON.stringify(data.user || {}));
-        localStorage.removeItem('boopStaff'); // ensure no stale staff context
-        localStorage.setItem('boop_login_at', String(Date.now()));
+  // Cashier login (staff → /vendor/sessions.html)
+  const cashierForm   = document.getElementById('cashierForm');
+  const cashierStatus = document.getElementById('cashierStatus');
+  cashierForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    cashierStatus.textContent = '';
 
-        const role = (data?.user?.role || '').toLowerCase();
-        if (role !== 'vendor'){
-          vendorStatus.textContent = 'This login is for vendor accounts.';
-          vendorStatus.className = 'status error';
-          return;
-        }
-        window.location.href = vendorForm.dataset.redirect || '/vendor/session.html';
-      } catch (err){
-        vendorStatus.textContent = 'Login failed. ' + (err?.message || '');
-        vendorStatus.className = 'status error';
+    const vendor_email = document.getElementById('cVendorEmail').value.trim().toLowerCase();
+    const username     = document.getElementById('cUsername').value.trim().toLowerCase();
+    const password     = document.getElementById('cPassword').value;
+
+    if (!vendor_email || !username || !password){
+      cashierStatus.textContent = 'Enter vendor email, username, and password.';
+      cashierStatus.className = 'status error';
+      return;
+    }
+    try{
+      const data = await postJSON('/auth/vendor-staff/login', { vendor_email, username, password });
+      if (!data?.token) throw new Error('Missing token');
+
+      localStorage.setItem('boop_jwt', data.token);
+      localStorage.setItem('boopUser', JSON.stringify(data.user || {}));
+      localStorage.setItem('boop_login_at', String(Date.now()));
+      if (data?.user?.staff){
+        localStorage.setItem('boopStaff', JSON.stringify(data.user.staff));
       }
-    });
 
-    // Cashier login
-    const cashierForm   = document.getElementById('cashierForm');
-    const cashierStatus = document.getElementById('cashierStatus');
-    cashierForm.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      cashierStatus.textContent = '';
-
-      const vendor_email = document.getElementById('cVendorEmail').value.trim().toLowerCase();
-      const username     = document.getElementById('cUsername').value.trim().toLowerCase();
-      const password     = document.getElementById('cPassword').value;
-
-      if (!vendor_email || !username || !password){
-        cashierStatus.textContent = 'Enter vendor email, username, and password.';
+      const role = (data?.user?.role || '').toLowerCase();
+      if (role !== 'vendor'){
+        cashierStatus.textContent = 'This login grants vendor access; contact support.';
         cashierStatus.className = 'status error';
         return;
       }
-      try{
-        const data = await postJSON('/auth/vendor-staff/login', { vendor_email, username, password });
-        if (!data?.token) throw new Error('Missing token');
 
-        localStorage.setItem('boop_jwt', data.token);
-        localStorage.setItem('boopUser', JSON.stringify(data.user || {}));
-        localStorage.setItem('boop_login_at', String(Date.now()));
-        // store staff echo for display on session page
-        if (data?.user?.staff){
-          localStorage.setItem('boopStaff', JSON.stringify(data.user.staff));
-        }
-
-        const role = (data?.user?.role || '').toLowerCase();
-        if (role !== 'vendor'){
-          cashierStatus.textContent = 'This login grants vendor access; contact support.';
-          cashierStatus.className = 'status error';
-          return;
-        }
-
-        window.location.href = cashierForm.dataset.redirect || '/vendor/session.html';
-      } catch (err){
-        cashierStatus.textContent = 'Login failed. ' + (err?.message || '');
-        cashierStatus.className = 'status error';
-      }
-    });
-  </script>
+      // Staff goes to sessions page
+      window.location.href = '/vendor/sessions.html';
+    } catch (err){
+      cashierStatus.textContent = 'Login failed. ' + (err?.message || '');
+      cashierStatus.className = 'status error';
+    }
+  });
+</script>
 </body>
 </html>
