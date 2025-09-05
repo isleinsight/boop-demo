@@ -151,7 +151,13 @@
     }
   })();
 </script>
-
+<script>
+  setInterval(() => {
+    fetch('/api/vendor/ping', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
+    }).catch(()=>{});
+  }, 10 * 60 * 1000); // every 10 minutes
+</script>
   <!-- Minimal header (logo + logout only) -->
   <header class="minihead">
     <div class="minihead-inner">
