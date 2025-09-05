@@ -2,89 +2,174 @@
 const jwt = require("jsonwebtoken");
 const pool = require("../../db");
 
-// Read your existing envs (minutes)
-const TTL_MIN   = Number(process.env.JWT_VENDOR_ACCESS_TTL_MIN || 720);  // how long a vendor token lasts
-const RENEW_MIN = Number(process.env.JWT_VENDOR_RENEW_WINDOW_MIN || 60); // renew when <= this many minutes remain
+/**
+ * Long-lived vendor sessions with automatic renewal.
+ *
+ * ENV (add to .env if not already):
+ *   JWT_VENDOR_EXPIRES=43200                 # 12h in seconds (or your desired length)
+ *   VENDOR_RENEW_THRESHOLD_SECONDS=7200      # renew when < 2h remain
+ *   VENDOR_RENEW_GRACE_SECONDS=900           # allow 15m grace after expiry to auto-renew
+ */
 
-function isVendorLike(user) {
-  const r = String(user?.role || user?.type || "").toLowerCase();
-  return r === "vendor";
+const VENDOR_MAX_AGE = Number(process.env.JWT_VENDOR_EXPIRES || 43200);
+const VENDOR_RENEW_THRESHOLD = Number(process.env.VENDOR_RENEW_THRESHOLD_SECONDS || 7200);
+const VENDOR_RENEW_GRACE = Number(process.env.VENDOR_RENEW_GRACE_SECONDS || 900);
+
+function isVendorUser(decoded) {
+  const role = String(decoded?.role || "").toLowerCase();
+  return role === "vendor";
 }
 
-function signVendorToken(fromUser) {
-  // keep the same identity fields that your tokens currently include
+async function findSession(email, token) {
+  const { rows } = await pool.query(
+    `SELECT email, jwt_token, staff_id, staff_username, staff_display_name
+       FROM sessions
+      WHERE email = $1 AND jwt_token = $2
+      LIMIT 1`,
+    [email, token]
+  );
+  return rows[0] || null;
+}
+
+async function replaceSessionToken(email, oldToken, newToken, staffCtx) {
+  // replace the row in a single statement
+  await pool.query(
+    `UPDATE sessions
+        SET jwt_token = $1,
+            staff_id = COALESCE($2, staff_id),
+            staff_username = COALESCE($3, staff_username),
+            staff_display_name = COALESCE($4, staff_display_name)
+      WHERE email = $5
+        AND jwt_token = $6`,
+    [
+      newToken,
+      staffCtx?.id || null,
+      staffCtx?.username || null,
+      staffCtx?.display_name || null,
+      email,
+      oldToken,
+    ]
+  );
+}
+
+function signVendorToken(decodedBase) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("Missing JWT_SECRET");
+  // copy minimal profile fields from previous token
   const payload = {
-    id: fromUser.id || fromUser.userId,
-    email: fromUser.email,
-    role: fromUser.role || "vendor",
-    type: fromUser.type || "vendor",
-    first_name: fromUser.first_name || null,
-    last_name: fromUser.last_name || null,
+    id: decodedBase.id,
+    email: decodedBase.email,
+    role: decodedBase.role || "vendor",
+    type: decodedBase.type || "vendor",
+    first_name: decodedBase.first_name || null,
+    last_name: decodedBase.last_name || null,
   };
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: TTL_MIN * 60 }); // minutes -> seconds
+  return jwt.sign(payload, secret, { expiresIn: VENDOR_MAX_AGE });
 }
 
-// 🔐 Main middleware: validates JWT and session, and renews vendor tokens when near expiry
+// 🔐 Main middleware
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
   if (!token) return res.status(401).json({ message: "No token provided" });
 
+  let decoded = null;
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const email = decoded.email; // session owner
-
-    // 🔎 Check active session (also carries staff context if present)
-    const { rows } = await pool.query(
-      `SELECT email, jwt_token, staff_id, staff_username, staff_display_name
-         FROM sessions
-        WHERE email = $1 AND jwt_token = $2
-        LIMIT 1`,
-      [email, token]
-    );
-    if (!rows.length) {
-      return res.status(403).json({ message: "Session not found or revoked" });
-    }
-    const sess = rows[0];
-
-    // Attach decoded JWT + staff context
-    req.user = {
-      ...decoded,
-      staff: sess.staff_id
-        ? {
-            id: sess.staff_id,
-            username: sess.staff_username || null,
-            display_name: sess.staff_display_name || null,
+    // First, try normal verify
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    // If expired, consider vendor grace renewal
+    if (err && err.name === "TokenExpiredError") {
+      try {
+        const decodedExpired = jwt.verify(token, process.env.JWT_SECRET, {
+          ignoreExpiration: true,
+        });
+        // Vendor only: try grace renewal if a matching session exists
+        if (isVendorUser(decodedExpired)) {
+          const email = decodedExpired.email;
+          const sess = await findSession(email, token);
+          if (sess) {
+            const nowSec = Math.floor(Date.now() / 1000);
+            const expSec = Number(decodedExpired.exp || 0);
+            const ageOver = nowSec - expSec; // seconds past expiry
+            if (ageOver >= 0 && ageOver <= VENDOR_RENEW_GRACE) {
+              const fresh = signVendorToken(decodedExpired);
+              // Update session to new token
+              const staffCtx = sess.staff_id
+                ? {
+                    id: sess.staff_id,
+                    username: sess.staff_username || null,
+                    display_name: sess.staff_display_name || null,
+                  }
+                : null;
+              await replaceSessionToken(email, token, fresh, staffCtx);
+              // attach and emit new token
+              res.setHeader("x-renew-jwt", fresh);
+              decoded = jwt.verify(fresh, process.env.JWT_SECRET); // finalize decoded
+            } else {
+              return res.status(403).json({ message: "Invalid or expired token" });
+            }
+          } else {
+            return res.status(403).json({ message: "Session not found or revoked" });
           }
-        : null,
-    };
+        } else {
+          return res.status(403).json({ message: "Invalid or expired token" });
+        }
+      } catch {
+        return res.status(403).json({ message: "Invalid or expired token" });
+      }
+    } else {
+      return res.status(403).json({ message: "Invalid or expired token" });
+    }
+  }
 
-    // ➜ Sliding renewal ONLY for vendors
-    if (isVendorLike(decoded) && decoded.exp) {
-      const now = Math.floor(Date.now() / 1000);
-      const remainingSec = decoded.exp - now;
-      const renewThresholdSec = RENEW_MIN * 60;
+  // At this point we have a valid decoded token (either original or renewed)
+  const email = decoded.email;
+  const sess = await findSession(email, token).catch(() => null);
 
-      if (remainingSec <= renewThresholdSec) {
+  // If we just renewed above, sess may not match the *old* token. Try with the new one from header:
+  let finalSession = sess;
+  if (!finalSession) {
+    const candidate = res.getHeader("x-renew-jwt");
+    if (candidate) {
+      finalSession = await findSession(email, candidate).catch(() => null);
+    }
+  }
+
+  if (!finalSession) {
+    return res.status(403).json({ message: "Session not found or revoked" });
+  }
+
+  // Attach req.user (+ staff context if present)
+  req.user = {
+    ...decoded,
+    staff: finalSession.staff_id
+      ? {
+          id: finalSession.staff_id,
+          username: finalSession.staff_username || null,
+          display_name: finalSession.staff_display_name || null,
+        }
+      : null,
+  };
+
+  // If vendor token is getting close to expiry, proactively renew
+  if (isVendorUser(decoded)) {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const timeLeft = Number(decoded.exp || 0) - nowSec;
+    if (timeLeft > 0 && timeLeft <= VENDOR_RENEW_THRESHOLD) {
+      try {
         const fresh = signVendorToken(decoded);
-
-        // Swap token in the session row (preserves staff_* columns)
-        await pool.query(
-          `UPDATE sessions
-              SET jwt_token = $1, updated_at = NOW()
-            WHERE email = $2 AND jwt_token = $3`,
-          [fresh, email, token]
-        );
-
-        // Frontend (vendor-common.js) stores this automatically
+        await replaceSessionToken(email, token, fresh, req.user.staff || null);
         res.setHeader("x-renew-jwt", fresh);
+      } catch (e) {
+        // non-fatal: if renewal fails, continue with current token
+        // console.error("Vendor token renewal failed:", e.message);
       }
     }
-
-    next();
-  } catch (err) {
-    return res.status(403).json({ message: "Invalid or expired token" });
   }
+
+  next();
 }
 
 // ✅ Optional role check
