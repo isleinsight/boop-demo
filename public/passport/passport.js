@@ -2,20 +2,20 @@
 (function () {
   // ---------- config ----------
   const BACKEND_EXPECTS_CENTS = false; // flip to true if your backend wants amount_cents
+  const KIOSK_NAME = 'payulot_kiosk';
+  const ORIGIN = location.origin;
 
   // ---------- helpers ----------
   const $ = (id) => document.getElementById(id);
   const show = (el) => { if (el) el.style.display = ""; };
   const hide = (el) => { if (el) el.style.display = "none"; };
   const fmtMoney = (a) => "BMD $" + Number(a || 0).toFixed(2);
-
   const setStatus = (el, msg, kind) => {
     if (!el) return;
     el.textContent = msg;
     el.className = "status" + (kind ? " " + kind : "");
     show(el);
   };
-
   function maskPid(pid){
     if(!pid || typeof pid !== 'string') return '';
     const last4 = pid.slice(-4);
@@ -28,7 +28,6 @@
     "health","health_professional","healthprofessional","medical","emt","ambulance",
     "transit","bus","ferry","rail","operator"
   ]);
-
   function roleKey(me) {
     const r = String(me?.role || "").toLowerCase().trim();
     const t = String(me?.type || "").toLowerCase().trim();
@@ -38,7 +37,6 @@
     if (["transit","bus","ferry","rail","operator"].includes(v)) return "transit";
     return "unknown";
   }
-
   function fullNameOrEmail(me) {
     const first = (me?.first_name || "").trim();
     const last  = (me?.last_name  || "").trim();
@@ -77,44 +75,84 @@
     if (role === "transit") $("view-transit")?.classList.add("active");
   }
 
+  // ---------- kiosk window + messaging ----------
+  try { if (window.name !== KIOSK_NAME) window.name = KIOSK_NAME; } catch {}
+
+  function updateUrlPid(pid) {
+    try {
+      const url = new URL(location.href);
+      if (pid) url.searchParams.set('pid', pid);
+      else url.searchParams.delete('pid');
+      history.replaceState(null, '', url.toString());
+    } catch {}
+  }
+
+  // Accept PID from opener (each tap)
+  function acceptPID(newPid) {
+    PID = newPid || "";
+    updateUrlPid(PID);
+
+    // Reset form & UI for the new tap
+    const pidField = $("pid");
+    if (pidField) {
+      pidField.value = PID ? maskPid(PID) : "";
+      pidField.readOnly = true;
+      pidField.placeholder = "Passport is hidden";
+      pidField.style.caretColor = "transparent";
+      ["keydown","keypress","beforeinput","input","paste","drop","copy","cut","contextmenu"]
+        .forEach(evt => pidField.addEventListener(evt, e => e.preventDefault()));
+    }
+
+    chargedLock = false;           // unlock for this PID
+    processing = false;
+    $("v_chargeBtn") && ($("v_chargeBtn").disabled = role !== "vendor");
+    $("v_amount") && (($("v_amount").disabled = false), ($("v_amount").value = ""));
+    $("v_note") &&  (($("v_note").disabled  = false), ($("v_note").value  = ""));
+    hide($("v_receipt"));
+    setStatus($("v_status"), PID ? "Passport read. Enter amount." : "Waiting for tap…", "");
+    $("v_amount")?.focus();
+  }
+
+  // Reply with token when kiosk asks
+  function sendTokenTo(openerWin) {
+    try {
+      openerWin?.postMessage({
+        type: 'token:reply',
+        token: localStorage.getItem('boop_jwt') || ''
+      }, ORIGIN);
+    } catch {}
+  }
+
+  window.addEventListener('message', (ev) => {
+    if (ev.origin !== ORIGIN) return;
+    const d = ev.data || {};
+    if (d.type === 'charge:start')   acceptPID(d.pn);
+    if (d.type === 'token:request')  sendTokenTo(window.opener);
+  });
+
+  // If we were opened by a relay page, announce we're ready
+  function notifyReady() {
+    try { window.opener?.postMessage({ type:'charge:ready' }, ORIGIN); } catch {}
+  }
+
   // ---------- state ----------
   let PID = "";
+  let role = "unknown";
+  let processing = false;  // while a charge is running
+  let chargedLock = false; // after a successful charge, wait for next tap
 
   // ---------- boot ----------
   document.addEventListener("DOMContentLoaded", async () => {
     $("year") && ($("year").textContent = new Date().getFullYear());
 
-    // 1) Require ?pid= (opened from scanner)
-    let pid = "";
+    // Pick up pid from URL (if first open came directly with ?pid=)
     try {
-      const url = new URL(location.href);
-      const raw = (url.searchParams.get("pid") || "").trim();
-      if (raw && /^[A-Za-z0-9_-]{12,}$/.test(raw)) pid = raw;
+      const raw = new URL(location.href).searchParams.get("pid") || "";
+      if (raw && /^[A-Za-z0-9_-]{12,}$/.test(raw)) PID = raw.trim();
     } catch {}
+    if (PID) acceptPID(PID);
 
-    if (!pid) {
-      // No PID: show gentle message; disable actions
-      setStatus($("commonStatus"),
-        "This page should be opened from the scanner (deep link includes ?pid=…).",
-        "warn"
-      );
-      $("v_chargeBtn") && ($("v_chargeBtn").disabled = true);
-      $("t_validateBtn") && ($("t_validateBtn").disabled = true);
-    } else {
-      PID = pid;
-      const pidField = $("pid");
-      if (pidField) {
-        // read-only + masked
-        pidField.value = maskPid(PID);
-        pidField.readOnly = true;
-        pidField.placeholder = "Passport is hidden";
-        pidField.style.caretColor = "transparent";
-        ["keydown","keypress","beforeinput","input","paste","drop","copy","cut","contextmenu"]
-          .forEach(evt => pidField.addEventListener(evt, e => e.preventDefault()));
-      }
-    }
-
-    // 2) Auth + identity + role gate
+    // Auth + role gate
     try {
       const me = await fetchMe();
       const rawRole = String(me.role || me.type || "").toLowerCase().trim();
@@ -127,29 +165,26 @@
 
       localStorage.setItem("boopUser", JSON.stringify(me));
       const who = fullNameOrEmail(me);
-      const role = roleKey(me);
+      role = roleKey(me);
 
       $("signedInAs") && ($("signedInAs").textContent = `Signed in as ${who}`);
       $("roleBadge") && ($("roleBadge").textContent = role);
       $("whoBadge") && ($("whoBadge").textContent = who);
-
       setRoleView(role);
 
-      // If we do have a PID, enable vendor/transit buttons
-      if (PID) {
-        $("v_chargeBtn") && ($("v_chargeBtn").disabled = (role !== "vendor"));
-        $("t_validateBtn") && ($("t_validateBtn").disabled = (role !== "transit"));
-      }
-
+      $("v_chargeBtn") && ($("v_chargeBtn").disabled = (role !== "vendor") || !PID);
+      $("t_validateBtn") && ($("t_validateBtn").disabled = (role !== "transit") || !PID);
     } catch (err) {
-      // Token missing/expired
       try { await fetch("/api/logout", { method: "POST" }); } catch {}
       localStorage.clear();
       location.href = "/index.html";
       return;
     }
 
-    // 3) Logout link
+    // Tell relay we're ready to receive PIDs
+    notifyReady();
+
+    // Logout link
     $("logoutLink")?.addEventListener("click", async (e) => {
       e.preventDefault();
       try { await fetch("/api/logout", { method: "POST" }); } catch {}
@@ -157,7 +192,7 @@
       location.href = "/index.html";
     });
 
-    // 4) Vendor: charge
+    // Vendor: charge — one-shot guarded
     $("v_amount")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") $("v_chargeBtn")?.click();
     });
@@ -167,12 +202,15 @@
       const amtInput  = $("v_amount");
       const noteInput = $("v_note");
 
-      if (!PID) return setStatus(st, "No passport detected. Open this page from the scanner.", "err");
+      if (!PID)  return setStatus(st, "No passport detected. Open this page from the scanner.", "err");
+      if (chargedLock) return setStatus(st, "Already charged. Tap a new card to start another sale.", "warn");
+      if (processing)  return; // ignore double-clicks
 
       const amt = parseFloat(amtInput?.value || "");
       const note = noteInput?.value || "";
       if (!Number.isFinite(amt) || amt <= 0) return setStatus(st, "Enter a valid amount.", "err");
 
+      processing = true;
       hide(st);
       $("v_chargeBtn").disabled = true;
       amtInput && (amtInput.disabled = true);
@@ -198,9 +236,8 @@
 
         if (!res.ok) throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
 
+        // Success UI
         setStatus(st, "Charge completed.", "ok");
-
-        // Optional: receipt fill (masked pid)
         $("r_status") && ( $("r_status").textContent = "Success" );
         $("r_amount") && ( $("r_amount").textContent = fmtMoney(amt) );
         $("r_pid") && ( $("r_pid").textContent = maskPid(PID) );
@@ -208,16 +245,23 @@
         $("r_time") && ( $("r_time").textContent = new Date().toLocaleString() );
         $("v_receipt") && show($("v_receipt"));
 
+        // Lock until next tap
+        chargedLock = true;
+        $("v_chargeBtn").disabled = true;
+
+        // Let opener (relay) know we finished
+        try { window.opener?.postMessage({ type:'charge:done', txn: body?.transaction || null }, ORIGIN); } catch {}
       } catch (err) {
         setStatus(st, `❌ ${err.message || err}`, "err");
+        try { window.opener?.postMessage({ type:'charge:error', error: String(err?.message || err) }, ORIGIN); } catch {}
       } finally {
-        $("v_chargeBtn").disabled = false;
+        processing = false;
         amtInput && (amtInput.disabled = false);
         noteInput && (noteInput.disabled = false);
       }
     });
 
-    // 5) Transit: demo deduct
+    // Transit demo — unchanged
     $("t_validateBtn")?.addEventListener("click", async () => {
       const st = $("t_status");
       if (!PID)  return setStatus(st, "No passport detected. Open this page from the scanner.", "err");
