@@ -8,23 +8,23 @@
   <style>
     :root{
       --ink:#102a43; --muted:#6b7c93; --blue:#2f80ed; --blue-dark:#1a5fcc;
-      --bg:#ffffff; --panel:#ffffff; --stroke:#e5e7eb; --soft:#f8fafc; --nav:#0b1220;
-      --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444;
+      --bg:#ffffff; --panel:#ffffff; --stroke:#e5e7eb; --soft:#f8fafc;
+      --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444; --nav:#0b1220;
     }
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* ───── Locked vendor nav (identical to Transfer page) ───── */
+    /* NAV (same as vendor) */
     .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .vendor-nav .nav-container{
-      max-width:1100px; margin:0 auto; padding:10px 18px !important;
+      max-width:1100px; margin:0 auto;
+      padding:10px 18px;
       display:flex; align-items:center; justify-content:space-between;
     }
-    .vendor-nav .nav-left img{ height:30px !important; display:block; }
-    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px !important; }
+    .vendor-nav .nav-left img{ height:30px; display:block; }
+    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px; }
     .vendor-nav .nav-right a{
-      color:#fff; text-decoration:none; font-size:.95rem !important; line-height:1 !important;
-      padding:6px 8px !important; border-radius:6px; opacity:.95;
+      color:#fff; text-decoration:none; font-size:.95rem; line-height:1; padding:6px 8px; border-radius:6px; opacity:.95;
     }
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
@@ -34,88 +34,48 @@
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
-    /* Main container */
+    /* Container */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
     .card{
       background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
-      box-shadow:0 8px 24px rgba(0,0,0,.06);
+      box-shadow:0 8px 24px rgba(0,0,0,.06); margin-bottom:16px;
     }
-    .card h2{ margin:0 0 10px; font-size:1.12rem; }
-    .muted{ color:var(--muted); }
-    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; border:1px solid transparent;
-    }
+    h2{ margin:0 0 12px; font-size:1.12rem; }
+
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      padding:8px 14px; border-radius:10px; font-weight:600; cursor:pointer; border:1px solid transparent; }
     .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
-    .btn.primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
+    .btn.primary:hover{ background:var(--blue-dark); }
     .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
     .btn.ghost:hover{ border-color:#cbd5e1; }
-    .input{ width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke); background:#fff; }
+    .btn.danger{ background:var(--bad); color:#fff; border-color:var(--bad); }
+    .btn.small{ padding:6px 10px; font-size:.85rem; }
 
-    .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
-    .search{ flex:1 1 280px; display:flex; gap:8px; }
-    .search .input{ flex:1; }
+    table{ width:100%; border-collapse:collapse; }
+    th, td{ text-align:left; padding:10px; border-bottom:1px solid var(--stroke); }
+    th{ background:#f9fafb; font-size:.9rem; color:#374151; }
+    td.actions{ white-space:nowrap; }
 
-    /* Staff list */
-    .list{ display:grid; gap:10px; }
-    .item{
-      background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:12px 14px;
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-    }
-    .who{ font-weight:600; }
-    .meta{ color:#6b7c93; font-size:.9rem; margin-top:2px; }
-    .actions{ display:flex; gap:8px; flex-wrap:wrap; }
-
-    /* Alerts */
-    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; display:none; }
+    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); margin-bottom:12px; }
     .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; }
     .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; }
 
-    /* Modal (shared) */
-    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:1000; }
-    .modal-card{ background:#fff; color:#111827; border:1px solid var(--stroke); border-radius:12px; padding:18px; max-width:520px; width:92%; }
-    .modal-card h3{ margin:0 0 10px; }
-    .modal-row{ display:grid; gap:8px; }
-    .modal-row label{ font-size:.92rem; color:var(--muted); }
-    .modal-actions{ display:flex; gap:10px; align-items:center; margin-top:12px; }
-
-    /* Footer */
-    footer{ border-top:1px solid var(--stroke); background:#fff; }
-    .footer-inner{ max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
-    .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
-    .footer-links a:hover{ text-decoration:underline; }
+    /* Modal */
+    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.45); z-index:1000; }
+    .modal-content{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:18px; max-width:420px; width:92%; }
+    .modal-content label{ display:block; margin:10px 0 4px; font-size:.9rem; color:var(--muted); }
+    .modal-content input{ width:100%; padding:10px; border:1px solid var(--stroke); border-radius:8px; }
   </style>
 </head>
 <body>
-  <!-- Vendor auth guard (same pattern as other pages) -->
-  <script>
-    (async () => {
-      try {
-        const token = localStorage.getItem("boop_jwt");
-        if (!token) throw new Error("No token");
-        let me = JSON.parse(localStorage.getItem("boopUser") || "null");
-        if (!me) {
-          const r = await fetch("/api/me", { headers:{ Authorization:`Bearer ${token}` }});
-          if (!r.ok) throw new Error("Unauthorized");
-          me = await r.json(); localStorage.setItem("boopUser", JSON.stringify(me));
-        }
-        if ((me.role||"").toLowerCase() !== "vendor") throw new Error("Not a vendor");
-      } catch {
-        localStorage.clear(); location.href = "vendor-login.html";
-      }
-    })();
-  </script>
-
-  <!-- NAV (identical layout/classes to Transfer page) -->
+  <!-- NAV -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
-        <a href="index.html" aria-label="Payulot home">
-          <img src="../assets/logo-white.png" alt="Payulot Logo" />
-        </a>
+        <a href="index.html"><img src="../assets/logo-white.png" alt="Payulot"></a>
       </div>
-      <div class="nav-right" aria-label="Primary">
+      <div class="nav-right">
         <a href="index.html">Home</a>
         <a href="transfer.html">Transfer</a>
         <a href="transactions.html">Transactions</a>
@@ -127,284 +87,151 @@
 
   <!-- Header -->
   <header class="header">
-    <h1>Manage staff</h1>
-    <p class="sub">Create cashier logins and control what they can access. Changes take effect immediately.</p>
+    <h1>Manage Staff</h1>
+    <p class="sub">Add, edit, or remove staff accounts for your business.</p>
   </header>
 
-  <!-- Main -->
+  <!-- Content -->
   <main class="container">
-    <div id="flash" class="alert"></div>
+    <div id="flash" class="alert" style="display:none;"></div>
 
     <section class="card">
-      <div class="toolbar">
-        <div class="search">
-          <input id="searchInput" class="input" type="search" placeholder="Search staff (name or email)…" />
-          <button id="clearSearch" class="btn ghost" type="button">Clear</button>
-        </div>
-        <div class="row">
-          <button id="addBtn" class="btn primary" type="button">Add staff</button>
-        </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Staff Members</h2>
+        <button id="addStaffBtn" class="btn primary">+ Add Staff</button>
       </div>
-
-      <div id="list" class="list">
-        <div class="muted">Loading…</div>
-      </div>
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Role</th><th class="actions">Actions</th></tr>
+        </thead>
+        <tbody id="staffTable"><tr><td colspan="4">Loading…</td></tr></tbody>
+      </table>
     </section>
   </main>
 
-  <!-- Add Modal -->
-  <div id="addModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addTitle">
-      <h3 id="addTitle">Add staff</h3>
-      <div class="modal-row">
-        <label>Full name</label>
-        <input id="addName" class="input" type="text" placeholder="e.g., Suzy Q" />
-        <label>Email</label>
-        <input id="addEmail" class="input" type="email" placeholder="name@example.com" />
-        <label>Temporary password</label>
-        <input id="addPass" class="input" type="text" placeholder="Set a temp password" />
-        <label>Role</label>
-        <select id="addRole" class="input">
-          <option value="cashier" selected>Cashier (POS only)</option>
-          <option value="manager">Manager (limited admin)</option>
-        </select>
-        <div id="addMsg" class="muted"></div>
-      </div>
-      <div class="modal-actions">
-        <button id="addSave" class="btn primary">Save</button>
-        <button id="addCancel" class="btn ghost">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit Modal -->
-  <div id="editModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editTitle">
-      <h3 id="editTitle">Edit staff</h3>
-      <div class="modal-row">
-        <label>Full name</label>
-        <input id="editName" class="input" type="text" />
-        <label>Email</label>
-        <input id="editEmail" class="input" type="email" />
-        <label>Role</label>
-        <select id="editRole" class="input">
-          <option value="cashier">Cashier</option>
-          <option value="manager">Manager</option>
-        </select>
-        <div id="editMsg" class="muted"></div>
-      </div>
-      <div class="modal-actions">
-        <button id="editSave" class="btn primary">Save changes</button>
-        <button id="editCancel" class="btn ghost">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Reset Password Modal -->
-  <div id="resetModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
-      <h3 id="resetTitle">Reset password</h3>
-      <div class="modal-row">
-        <label>New temporary password</label>
-        <input id="resetPass" class="input" type="text" placeholder="e.g., Temp-1234" />
-        <div id="resetMsg" class="muted"></div>
-      </div>
-      <div class="modal-actions">
-        <button id="resetSave" class="btn primary">Set password</button>
-        <button id="resetCancel" class="btn ghost">Cancel</button>
+  <!-- Add/Edit Modal -->
+  <div id="staffModal" class="modal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Add Staff</h3>
+      <label>Name</label>
+      <input id="staffName" type="text" />
+      <label>Email</label>
+      <input id="staffEmail" type="email" />
+      <label>Password</label>
+      <input id="staffPassword" type="password" placeholder="Set password" />
+      <div id="staffMsg" class="alert bad" style="display:none;"></div>
+      <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
+        <button id="saveStaffBtn" class="btn primary">Save</button>
+        <button id="cancelStaffBtn" class="btn ghost">Cancel</button>
       </div>
     </div>
   </div>
 
   <footer>
-    <div class="footer-inner">
+    <div class="footer-inner" style="max-width:1100px;margin:0 auto;padding:16px 18px;display:flex;justify-content:space-between;color:#6b7280;font-size:.9rem;">
       <div>© 2025 Payulot</div>
       <div class="footer-links">
-        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
-        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+        <a href="../terms.html">Terms</a>
+        <a href="../privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
-  <!-- Page logic -->
   <script>
-    (function(){
-      'use strict';
+    const token = localStorage.getItem("boop_jwt");
+    const staffTable = document.getElementById("staffTable");
+    const flash = document.getElementById("flash");
 
-      /* Fallback helpers if vendor-common.js not present */
-      if (typeof window.apiGet !== 'function') {
-        async function _apiFetch(url, opts = {}) {
-          const token = localStorage.getItem('boop_jwt');
-          const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-          if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(url, { ...opts, headers });
-          const renewed = res.headers.get('x-renew-jwt');
-          if (renewed) localStorage.setItem('boop_jwt', renewed);
-          return res;
-        }
-        async function _apiJSON(url, opts = {}) {
-          const res = await _apiFetch(url, opts);
-          const data = await res.json().catch(()=> ({}));
-          if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
-          return data;
-        }
-        window.apiGet    = (u)      => _apiJSON(u);
-        window.apiPost   = (u, b={})=> _apiJSON(u, { method:'POST',  body: JSON.stringify(b) });
-        window.apiPatch  = (u, b={})=> _apiJSON(u, { method:'PATCH', body: JSON.stringify(b) });
-        window.apiDelete = (u, b={})=> _apiJSON(u, { method:'DELETE',body: JSON.stringify(b) });
-      }
+    const staffModal = document.getElementById("staffModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const staffName = document.getElementById("staffName");
+    const staffEmail = document.getElementById("staffEmail");
+    const staffPassword = document.getElementById("staffPassword");
+    const staffMsg = document.getElementById("staffMsg");
+    const saveStaffBtn = document.getElementById("saveStaffBtn");
+    const cancelStaffBtn = document.getElementById("cancelStaffBtn");
 
-      const $ = (id) => document.getElementById(id);
-      const flash = $('flash');
-      function showFlash(msg, ok=true){
-        if(!flash) return;
-        flash.textContent = msg;
-        flash.className = 'alert ' + (ok ? 'ok' : 'bad');
-        flash.style.display = 'block';
-        setTimeout(()=>{ flash.style.display='none'; }, 3500);
-      }
+    let editingId = null;
 
-      const listEl = $('list');
-      const searchInput = $('searchInput');
-      const clearSearch = $('clearSearch');
-      const addBtn = $('addBtn');
+    function showFlash(msg, ok=true){
+      flash.textContent = msg;
+      flash.className = "alert " + (ok ? "ok" : "bad");
+      flash.style.display = "block";
+      setTimeout(()=> flash.style.display="none", 4000);
+    }
 
-      const addModal = $('addModal'), addName=$('addName'), addEmail=$('addEmail'), addPass=$('addPass'), addRole=$('addRole'), addMsg=$('addMsg');
-      const editModal = $('editModal'), editName=$('editName'), editEmail=$('editEmail'), editRole=$('editRole'), editMsg=$('editMsg');
-      const resetModal = $('resetModal'), resetPass=$('resetPass'), resetMsg=$('resetMsg');
-
-      let staff = [];
-      let currentEditId = null;
-      let currentResetId = null;
-
-      function openModal(el){ el.style.display='flex'; }
-      function closeModal(el){ el.style.display='none'; }
-
-      // Close by backdrop click
-      [addModal, editModal, resetModal].forEach(m => m.addEventListener('click', (e)=>{ if(e.target===m) closeModal(m); }));
-
-      // Logout
-      $('logoutBtn')?.addEventListener('click', async (e)=>{
-        e.preventDefault(); try{ await fetch('/api/logout', { method:'POST' }); }catch{}
-        localStorage.clear(); location.href='vendor-login.html';
-      });
-
-      function renderList(items){
-        if (!items.length){
-          listEl.innerHTML = '<div class="muted">No staff found.</div>';
+    async function loadStaff(){
+      staffTable.innerHTML = "<tr><td colspan='4'>Loading…</td></tr>";
+      try{
+        const res = await fetch("/api/vendor/vendorstaff", { headers:{ Authorization:`Bearer ${token}` }});
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.message || "Failed to load staff");
+        if(!Array.isArray(data) || !data.length){
+          staffTable.innerHTML = "<tr><td colspan='4'>No staff yet.</td></tr>";
           return;
         }
-        listEl.innerHTML = items.map(s=>{
-          const initials = (s.name||s.email||'?').trim()[0]?.toUpperCase() || 'U';
-          const role = (s.role || 'cashier');
-          const status = s.is_active === false ? ' • inactive' : '';
-          return (
-            '<div class="item">' +
-              '<div>' +
-                `<div class="who">${s.name || '(no name)'} <span class="meta">• ${s.email} • ${role}${status}</span></div>` +
-              '</div>' +
-              '<div class="actions">' +
-                `<button class="btn ghost" data-act="edit" data-id="${s.id}">Edit</button>` +
-                `<button class="btn ghost" data-act="reset" data-id="${s.id}">Reset password</button>` +
-                `<button class="btn ghost" data-act="delete" data-id="${s.id}">Delete</button>` +
-              '</div>' +
-            '</div>'
-          );
-        }).join('');
+        staffTable.innerHTML = data.map(s=>`
+          <tr>
+            <td>${s.name||""}</td>
+            <td>${s.email||""}</td>
+            <td>${s.role||"cashier"}</td>
+            <td class="actions">
+              <button class="btn small ghost" onclick="editStaff('${s.id}','${s.name}','${s.email}')">Edit</button>
+              <button class="btn small danger" onclick="deleteStaff('${s.id}')">Delete</button>
+            </td>
+          </tr>`).join("");
+      }catch(e){
+        staffTable.innerHTML = `<tr><td colspan="4">${e.message}</td></tr>`;
       }
+    }
 
-      function applyFilter(){
-        const q = (searchInput.value||'').toLowerCase();
-        const filtered = !q ? staff : staff.filter(s =>
-          (s.name||'').toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q)
-        );
-        renderList(filtered);
-      }
+    // Add / Edit
+    document.getElementById("addStaffBtn").addEventListener("click", ()=>{
+      editingId = null;
+      modalTitle.textContent = "Add Staff";
+      staffName.value=""; staffEmail.value=""; staffPassword.value="";
+      staffModal.style.display="flex"; staffMsg.style.display="none";
+    });
+    cancelStaffBtn.addEventListener("click", ()=> staffModal.style.display="none");
 
-      // Load staff
-      async function loadStaff(){
-        try{
-          const data = await apiGet('/api/vendor/staff');
-          staff = Array.isArray(data) ? data : (data.staff || []);
-          applyFilter();
-        }catch(e){
-          listEl.innerHTML = '<div class="muted">Couldn’t load staff.</div>';
+    saveStaffBtn.addEventListener("click", async ()=>{
+      const body = { name:staffName.value.trim(), email:staffEmail.value.trim(), password:staffPassword.value.trim() };
+      try{
+        let res;
+        if(editingId){
+          res = await fetch("/api/vendor/vendorstaff/"+editingId, { method:"PATCH", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body:JSON.stringify(body) });
+        }else{
+          res = await fetch("/api/vendor/vendorstaff", { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body:JSON.stringify(body) });
         }
-      }
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.message||"Save failed");
+        staffModal.style.display="none"; showFlash("Saved.", true); loadStaff();
+      }catch(e){ staffMsg.textContent=e.message; staffMsg.style.display="block"; }
+    });
 
-      // Handlers
-      addBtn.addEventListener('click', ()=>{
-        addMsg.textContent=''; addName.value=''; addEmail.value=''; addPass.value=''; addRole.value='cashier';
-        openModal(addModal);
-      });
-      $('addCancel').addEventListener('click', ()=> closeModal(addModal));
-      $('addSave').addEventListener('click', async ()=>{
-        addMsg.textContent='';
-        const name=addName.value.trim(), email=addEmail.value.trim(), pwd=addPass.value.trim(), role=addRole.value;
-        if(!email || !pwd){ addMsg.textContent='Email and temporary password are required.'; return; }
-        try{
-          await apiPost('/api/vendor/staff', { name, email, temp_password: pwd, role });
-          closeModal(addModal); showFlash('Staff added.', true); await loadStaff();
-        }catch(e){ addMsg.textContent = e.message || 'Failed to add staff.'; }
-      });
+    // Edit / Delete helpers
+    window.editStaff = (id,name,email)=>{
+      editingId = id;
+      modalTitle.textContent="Edit Staff";
+      staffName.value=name; staffEmail.value=email; staffPassword.value="";
+      staffModal.style.display="flex"; staffMsg.style.display="none";
+    };
+    window.deleteStaff = async (id)=>{
+      if(!confirm("Delete this staff?")) return;
+      try{
+        const res = await fetch("/api/vendor/vendorstaff/"+id, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` }});
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.message||"Delete failed");
+        showFlash("Deleted.", true); loadStaff();
+      }catch(e){ showFlash(e.message,false); }
+    };
 
-      listEl.addEventListener('click', (e)=>{
-        const btn = e.target.closest('[data-act]'); if(!btn) return;
-        const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
-        const row = staff.find(s => String(s.id) === String(id));
-        if(!row) return;
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async (e)=>{
+      e.preventDefault(); try{ await fetch("/api/logout",{method:"POST"});}catch{} localStorage.clear(); location.href="vendor-login.html";
+    });
 
-        if (act === 'edit'){
-          currentEditId = row.id;
-          editMsg.textContent=''; editName.value = row.name||''; editEmail.value = row.email||''; editRole.value = row.role||'cashier';
-          openModal(editModal);
-        }
-        if (act === 'reset'){
-          currentResetId = row.id;
-          resetMsg.textContent=''; resetPass.value='';
-          openModal(resetModal);
-        }
-        if (act === 'delete'){
-          if (!confirm('Delete this staff user? This cannot be undone.')) return;
-          (async ()=>{
-            try{ await apiDelete(`/api/vendor/staff/${id}`); showFlash('Staff deleted.', true); await loadStaff(); }
-            catch(e){ showFlash(e.message || 'Delete failed.', false); }
-          })();
-        }
-      });
-
-      $('editCancel').addEventListener('click', ()=> closeModal(editModal));
-      $('editSave').addEventListener('click', async ()=>{
-        if (!currentEditId) return;
-        editMsg.textContent='';
-        try{
-          await apiPatch(`/api/vendor/staff/${currentEditId}`, {
-            name: editName.value.trim(),
-            email: editEmail.value.trim(),
-            role: editRole.value
-          });
-          closeModal(editModal); showFlash('Changes saved.', true); await loadStaff();
-        }catch(e){ editMsg.textContent = e.message || 'Update failed.'; }
-      });
-
-      $('resetCancel').addEventListener('click', ()=> closeModal(resetModal));
-      $('resetSave').addEventListener('click', async ()=>{
-        if (!currentResetId) return;
-        resetMsg.textContent='';
-        const tmp = resetPass.value.trim();
-        if(!tmp){ resetMsg.textContent='Enter a temporary password.'; return; }
-        try{
-          await apiPost(`/api/vendor/staff/${currentResetId}/reset-password`, { temp_password: tmp });
-          closeModal(resetModal); showFlash('Password reset.', true);
-        }catch(e){ resetMsg.textContent = e.message || 'Reset failed.'; }
-      });
-
-      searchInput.addEventListener('input', applyFilter);
-      clearSearch.addEventListener('click', ()=>{ searchInput.value=''; applyFilter(); });
-
-      // init
-      loadStaff();
-    })();
+    loadStaff();
   </script>
 </body>
 </html>
