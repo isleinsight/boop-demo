@@ -1,91 +1,85 @@
 // backend/auth/routes/login.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const pool = require('../../db');
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const pool = require("../../db");
 
-router.post('/', async (req, res) => {
-  const { email, password } = req.body;
-  console.log("📨 Login attempt:", email); // DEBUG
-
-  if (!email || !password) {
-    console.log("⛔ Missing credentials"); // DEBUG
-    return res.status(400).json({ message: 'Email and password are required.' });
-  }
-
+router.post("/", async (req, res) => {
   try {
-    // 🔍 Check if user exists
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    console.log("🔍 DB result:", result.rows); // DEBUG
+    const emailInput = String(req.body?.email || "").trim().toLowerCase();
+    const password = String(req.body?.password || "");
 
-    if (result.rows.length === 0) {
-      console.log("❌ No account found with that email."); // DEBUG
-      return res.status(404).json({ message: 'No account found with that email.' });
+    if (!emailInput || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
     }
 
-    const user = result.rows[0];
+    // Fetch user (case-insensitive)
+    const uq = await pool.query(
+      `SELECT id, email, role, type, status, first_name, last_name, password_hash
+         FROM users
+        WHERE LOWER(email) = $1
+        LIMIT 1`,
+      [emailInput]
+    );
+    const user = uq.rows[0];
+    if (!user) return res.status(404).json({ message: "No account found with that email." });
 
-    // ❌ Check if suspended
-    if (user.status === 'suspended') {
-      console.log("⛔ Account suspended"); // DEBUG
-      return res.status(403).json({ message: 'This account has been suspended.' });
+    // Status gate
+    if (String(user.status || "").toLowerCase() === "suspended") {
+      return res.status(403).json({ message: "This account has been suspended." });
     }
 
-    // 🔐 Check password
-    const match = await bcrypt.compare(password, user.password_hash);
-    console.log("🔐 Password match:", match); // DEBUG
+    // Password check
+    const ok = await bcrypt.compare(password, user.password_hash || "");
+    if (!ok) return res.status(401).json({ message: "Incorrect password." });
 
-    if (!match) {
-      console.log("❌ Incorrect password"); // DEBUG
-      return res.status(401).json({ message: 'Incorrect password.' });
-    }
+    // JWT
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return res.status(500).json({ message: "Server missing JWT secret" });
 
-    // ✅ Create JWT
-    const tokenPayload = {
+    const expSeconds = Number(process.env.JWT_VENDOR_EXPIRES || 43200); // default 12h
+    const payload = {
       id: user.id,
       email: user.email,
-      role: user.role,
-      type: user.type
+      role: user.role || "vendor",
+      type: user.type || user.role || "vendor",
+      first_name: user.first_name || null,
+      last_name: user.last_name || null,
     };
+    const token = jwt.sign(payload, secret, { expiresIn: expSeconds });
 
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '2h' });
+    // Session UPSERT — match your actual columns and clear any staff context
+    await pool.query(
+      `INSERT INTO sessions (email, jwt_token, staff_id, staff_username, staff_display_name, created_at)
+       VALUES ($1, $2, NULL, NULL, NULL, NOW())
+       ON CONFLICT (email)
+       DO UPDATE SET
+         jwt_token = EXCLUDED.jwt_token,
+         staff_id = NULL,
+         staff_username = NULL,
+         staff_display_name = NULL,
+         created_at = NOW()`,
+      [user.email, token]
+    );
 
-    // 🧠 Upsert session
-    try {
-      await pool.query(`
-        INSERT INTO sessions (email, user_id, jwt_token, created_at, expires_at, status)
-        VALUES ($1, $2, $3, NOW(), NOW() + INTERVAL '2 hours', 'online')
-        ON CONFLICT (email) DO UPDATE SET
-          jwt_token = EXCLUDED.jwt_token,
-          created_at = NOW(),
-          expires_at = NOW() + INTERVAL '2 hours',
-          status = 'online'
-      `, [user.email, user.id, token]);
-    } catch (sessionErr) {
-      console.error("❌ Session insert error:", sessionErr.message);
-      return res.status(500).json({
-        message: 'Server misconfiguration — please contact support.'
-      });
-    }
-
-    // 🚀 Success response
-    console.log("✅ Login successful"); // DEBUG
-    res.status(200).json({
-      message: 'Login successful',
+    // Response
+    return res.status(200).json({
+      message: "Login successful",
       token,
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
-        type: user.type,
-        name: `${user.first_name} ${user.last_name}`
-      }
+        role: payload.role,
+        type: payload.type,
+        first_name: user.first_name || null,
+        last_name: user.last_name || null,
+        name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
+      },
     });
-
   } catch (err) {
-    console.error('🔥 Login error:', err.message);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("🔥 /auth/login error:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 
