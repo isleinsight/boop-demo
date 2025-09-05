@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Scanning…</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0b1220;color:#eaf0ff;
+         display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .s {text-align:center;opacity:.9}
+  </style>
+</head>
+<body>
+  <div class="s">Scanning…</div>
+  <script>
+  (function(){
+    // 1) Parse params from the tag/QR
+    const u = new URL(window.location.href);
+    const pid  = (u.searchParams.get('pid') || '').trim();
+    const mode = (u.searchParams.get('mode') || '').trim().toLowerCase(); // optional hint
+
+    // 2) Build the kiosk URL (your existing Passport page)
+    //    Add &mode=… so index.html can optionally switch the visible view.
+    const params = new URLSearchParams();
+    if (pid)  params.set('pid', pid);
+    if (mode) params.set('mode', mode);
+    const kioskUrl = `/passport/index.html?${params.toString()}`;
+
+    // 3) Reuse/update a SINGLE named window
+    //    If it exists, we just retarget its URL; if not, this creates it.
+    //    If a popup blocker prevents it on first-ever tap, we hard-navigate as fallback.
+    let w = null;
+    try { w = window.open('', 'payulot_kiosk'); } catch {}
+    if (w) {
+      try { w.location.replace(kioskUrl); }
+      catch { w.location.href = kioskUrl; }
+    } else {
+      // Popup-blocked or disallowed: just navigate this tab.
+      window.location.href = kioskUrl;
+      return; // don’t close if we’re navigating this tab
+    }
+
+    // 4) Close this relay page (best-effort)
+    try { window.close(); } catch {}
+    // If it doesn’t close (some iOS/Android policies), no big deal—it’s a blank “Scanning…” page.
+    // You can auto-redirect it “home” after a beat:
+    setTimeout(()=>{ try{ window.location.replace('/'); }catch{} }, 1500);
+  })();
+  </script>
+</body>
+</html>
