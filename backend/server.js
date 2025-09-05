@@ -61,10 +61,10 @@ mount('/api/vendor', './auth/routes/vendors', 'vendor');
 // Vendor passport charge (POST /api/vendor/passport-charge)
 mount('/api/vendor', './auth/routes/passport-charge', 'passport-charge');
 
-// Vendor-staff login
-mount('/auth/vendorstaff', './auth/routes/vendor-staff', 'vendor-staff');
-// Vendor-managed staff (CRUD)
-mount('/api/vendor/staff', './auth/routes/vendor-staff-manage', 'vendor-staff-manage');
+// Vendor-staff login 
+mount('/auth/vendor-staff', './auth/routes/vendor-staff', 'vendor-staff');
+// Vendor-managed staff
+mount('/api/vendor/vendorstaff', './auth/routes/vendor-staff', 'vendor-staff (CRUD)');
 
 mount('/api/passport', './auth/routes/passport', 'passport');
 
