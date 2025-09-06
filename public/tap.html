@@ -15,37 +15,43 @@
   <div class="s">Scanning…</div>
   <script>
   (function(){
-    // 1) Parse params from the tag/QR
+    const ORIGIN = location.origin;
+    const KIOSK_NAME = 'payulot_kiosk';
+
+    // 1) Get pid from the tag/QR
     const u = new URL(window.location.href);
     const pid  = (u.searchParams.get('pid') || '').trim();
-    const mode = (u.searchParams.get('mode') || '').trim().toLowerCase(); // optional hint
+    // Optional hint (kept, but not forwarded in URL)
+    const mode = (u.searchParams.get('mode') || '').trim().toLowerCase();
 
-    // 2) Build the kiosk URL (your existing Passport page)
-    //    Add &mode=… so index.html can optionally switch the visible view.
-    const params = new URLSearchParams();
-    if (pid)  params.set('pid', pid);
-    if (mode) params.set('mode', mode);
-    const kioskUrl = `/passport/index.html?${params.toString()}`;
+    // 2) Always open kiosk WITHOUT pid in the URL
+    const kioskUrl = '/passport/index.html';
 
-    // 3) Reuse/update a SINGLE named window
-    //    If it exists, we just retarget its URL; if not, this creates it.
-    //    If a popup blocker prevents it on first-ever tap, we hard-navigate as fallback.
+    // 3) Try to reuse a named window; if we cannot (same-tab fallback), stash pid in sessionStorage
     let w = null;
-    try { w = window.open('', 'payulot_kiosk'); } catch {}
-    if (w) {
-      try { w.location.replace(kioskUrl); }
-      catch { w.location.href = kioskUrl; }
-    } else {
-      // Popup-blocked or disallowed: just navigate this tab.
-      window.location.href = kioskUrl;
-      return; // don’t close if we’re navigating this tab
-    }
+    try { w = window.open('', KIOSK_NAME); } catch {}
 
-    // 4) Close this relay page (best-effort)
-    try { window.close(); } catch {}
-    // If it doesn’t close (some iOS/Android policies), no big deal—it’s a blank “Scanning…” page.
-    // You can auto-redirect it “home” after a beat:
-    setTimeout(()=>{ try{ window.location.replace('/'); }catch{} }, 1500);
+    if (w) {
+      try { w.location.replace(kioskUrl); } catch { w.location.href = kioskUrl; }
+
+      // Handshake: when kiosk signals ready, send pid via postMessage
+      const onReady = (ev) => {
+        if (ev.origin !== ORIGIN) return;
+        const d = ev.data || {};
+        if (d.type === 'charge:ready') {
+          try { w.postMessage({ type: 'charge:start', pn: pid, mode }, ORIGIN); } catch {}
+          window.removeEventListener('message', onReady);
+          // Close this relay
+          try { window.close(); } catch {}
+          setTimeout(()=>{ try{ window.location.replace('/'); }catch{} }, 1200);
+        }
+      };
+      window.addEventListener('message', onReady);
+    } else {
+      // Same-tab fallback: stash pid so kiosk can pick it up on load
+      try { sessionStorage.setItem('tap:pendingPid', pid); sessionStorage.setItem('tap:pendingMode', mode); } catch {}
+      window.location.href = kioskUrl;
+    }
   })();
   </script>
 </body>
