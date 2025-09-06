@@ -54,23 +54,27 @@ router.put("/mine", authenticateToken, requireCardholderLike, async (req, res) =
 
     // Try update first
     const upd = await client.query(
-      `UPDATE passports
-         SET passport_id = $1, updated_at = NOW()
-       WHERE user_id = $2
-       RETURNING passport_id`,
-      [raw, userId]
-    );
+  `UPDATE passports
+     SET passport_id = $1,
+         pid_token = COALESCE(pid_token, encode(gen_random_bytes(12), 'hex')),
+         pid_created_at = COALESCE(pid_created_at, NOW()),
+         updated_at = NOW()
+   WHERE user_id = $2
+   RETURNING passport_id, pid_token`,
+  [raw, userId]
+);
 
     let passportRow = upd.rows[0];
 
     // If nothing updated, insert
     if (!passportRow) {
       const ins = await client.query(
-        `INSERT INTO passports (id, user_id, passport_id, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1, $2, NOW(), NOW())
-         RETURNING passport_id`,
-        [userId, raw]
-      );
+  `INSERT INTO passports (id, user_id, passport_id, pid_token, pid_created_at, created_at, updated_at)
+   VALUES (gen_random_uuid(), $1, $2, encode(gen_random_bytes(12), 'hex'), NOW(), NOW(), NOW())
+   RETURNING passport_id, pid_token`,
+  [userId, raw]
+);
+passportRow = ins.rows[0];
       passportRow = ins.rows[0];
     }
 
