@@ -88,8 +88,7 @@
   try {
     const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
     if (staff) {
-      // optional: show a quick message first
-      // alert('Cashier accounts cannot access vendor owner pages.');
+      
       location.replace('session.html');
     }
   } catch {}
@@ -243,7 +242,6 @@
       body.innerHTML =
         `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>`;
       try{
-        // API may return an array or { staff:[...] } depending on your route impl
         const data = await apiGet('/api/vendor/vendorstaff');
         const list = Array.isArray(data?.staff) ? data.staff : (Array.isArray(data) ? data : []);
 
