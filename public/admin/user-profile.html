@@ -7,71 +7,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/styles.css" />
 </head>
-  <script>
-(async () => {
-  const inp = document.getElementById("passportLink");
-  if (!inp) return;
-
-  // Show we’re alive
-  inp.value = "Loading… (checking endpoint)";
-
-  // Where do we get the user ID from?
-  const uid =
-    localStorage.getItem("selectedUserId") ||
-    new URLSearchParams(location.search).get("uid");
-
-  if (!uid) {
-    inp.value = "ERR: no user id";
-    console.warn("Passport check: missing userId (selectedUserId or ?uid=)");
-    return;
-  }
-
-  const token = localStorage.getItem("boop_jwt");
-  const auth = token ? { Authorization: `Bearer ${token}` } : {};
-
-  // Try a few possible paths in order
-  const candidates = [
-    `/api/passport/admin/${uid}`,
-    // fallback shapes if router is mounted elsewhere in your app
-    `/api/admin/users/${uid}/passport`,
-    `/api/passport/admin?userId=${encodeURIComponent(uid)}`
-  ];
-
-  let data = null, lastStatus = null, lastBody = null, lastUrl = null;
-
-  for (const url of candidates) {
-    try {
-      console.log("Passport probe →", url);
-      const res = await fetch(url, { headers: auth });
-      lastStatus = res.status;
-      lastUrl = url;
-      const bodyText = await res.text();
-      lastBody = bodyText;
-
-      // Try to parse JSON if possible
-      try { data = JSON.parse(bodyText || "{}"); } catch { data = {}; }
-
-      if (res.ok && (data.passport_id || data.passportId)) {
-        const pid = String(data.passport_id || data.passportId || "");
-        const link = `${location.origin}/tap.html?pid=${encodeURIComponent(pid)}`;
-        inp.value = link;
-        console.log("Passport OK from", url, "→", pid);
-        return;
-      }
-    } catch (e) {
-      console.warn("Passport fetch error for", lastUrl, e);
-    }
-  }
-
-  // If we got here, nothing worked — show a readable reason
-  if (lastStatus) {
-    inp.value = `ERR ${lastStatus} on ${lastUrl}`;
-  } else {
-    inp.value = "ERR: network or script error";
-  }
-  console.warn("Last response from passport fetch:", { lastUrl, lastStatus, lastBody });
-})();
-</script>
 <body>
 <div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; 
   display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
@@ -151,25 +86,6 @@
 </div>
 
     <div class="user-details-grid" id="userInfo"></div>
-
-    <!-- Passport (NFC deep link for this user) -->
-<div class="section-title">Passport</div>
-<div class="user-details-grid" id="passportBlock">
-  <div>
-    <span class="label">Tap Link (copy to the user’s NFC card)</span>
-    <div style="display:flex; gap:8px; align-items:center;">
-      <input
-        type="text"
-        id="passportLink"
-        readonly
-        style="flex:1; background:#f9fafb; border:1px solid #d1d9e6; padding:10px 12px; border-radius:6px;"
-        value="Loading…"
-      />
-      <button type="button" id="copyPassportLink" class="btn-secondary">Copy</button>
-    </div>
-    
-  </div>
-</div>
 
     <!-- Vendor Info -->
     <div id="vendorSection" style="display: none; margin-top: 40px;">
