@@ -4,7 +4,9 @@ const router = express.Router();
 const db = require("../../db");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
-// Allow: cardholder / student / senior (case-insensitive)
+/* -----------------------------------------------------------
+   Role guards
+----------------------------------------------------------- */
 function requireCardholderLike(req, res, next) {
   const role = String(req.user?.role || "").toLowerCase();
   if (!["cardholder", "student", "senior"].includes(role)) {
@@ -12,6 +14,18 @@ function requireCardholderLike(req, res, next) {
   }
   next();
 }
+
+function requireAdmin(req, res, next) {
+  const role = String(req.user?.role || "").toLowerCase();
+  if (role !== "admin") {
+    return res.status(403).json({ message: "Admin access required." });
+  }
+  next();
+}
+
+/* -----------------------------------------------------------
+   CARDHOLDER/STUDENT/SENIOR
+----------------------------------------------------------- */
 
 // GET /api/passport/mine  → { passport_id } | {}
 router.get("/mine", authenticateToken, requireCardholderLike, async (req, res) => {
@@ -52,29 +66,28 @@ router.put("/mine", authenticateToken, requireCardholderLike, async (req, res) =
       return res.status(409).json({ message: "Passport ID already in use." });
     }
 
-    // Try update first
+    // Try update first (also ensure pid_token/pid_created_at exist)
     const upd = await client.query(
-  `UPDATE passports
-     SET passport_id = $1,
-         pid_token = COALESCE(pid_token, encode(gen_random_bytes(12), 'hex')),
-         pid_created_at = COALESCE(pid_created_at, NOW()),
-         updated_at = NOW()
-   WHERE user_id = $2
-   RETURNING passport_id, pid_token`,
-  [raw, userId]
-);
+      `UPDATE passports
+          SET passport_id   = $1,
+              pid_token     = COALESCE(pid_token, encode(gen_random_bytes(12), 'hex')),
+              pid_created_at= COALESCE(pid_created_at, NOW()),
+              updated_at    = NOW()
+        WHERE user_id = $2
+        RETURNING passport_id, pid_token`,
+      [raw, userId]
+    );
 
     let passportRow = upd.rows[0];
 
     // If nothing updated, insert
     if (!passportRow) {
       const ins = await client.query(
-  `INSERT INTO passports (id, user_id, passport_id, pid_token, pid_created_at, created_at, updated_at)
-   VALUES (gen_random_uuid(), $1, $2, encode(gen_random_bytes(12), 'hex'), NOW(), NOW(), NOW())
-   RETURNING passport_id, pid_token`,
-  [userId, raw]
-);
-passportRow = ins.rows[0];
+        `INSERT INTO passports (id, user_id, passport_id, pid_token, pid_created_at, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, encode(gen_random_bytes(12), 'hex'), NOW(), NOW(), NOW())
+         RETURNING passport_id, pid_token`,
+        [userId, raw]
+      );
       passportRow = ins.rows[0];
     }
 
@@ -84,18 +97,16 @@ passportRow = ins.rows[0];
   } catch (e) {
     try { await db.query("ROLLBACK"); } catch {}
     console.error("PUT /passport/mine error:", e);
-    // If DB throws unique violation on passport_id, surface as 409
     if (e?.code === "23505") {
       return res.status(409).json({ message: "Passport ID already in use." });
     }
     return res.status(500).json({ message: "Failed to save passport." });
   } finally {
-    // If we still hold the client for any reason, release it
     try { client.release && client.release(); } catch {}
   }
 });
 
-// (optional) DELETE /api/passport/mine
+// DELETE /api/passport/mine
 router.delete("/mine", authenticateToken, requireCardholderLike, async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id;
@@ -107,20 +118,27 @@ router.delete("/mine", authenticateToken, requireCardholderLike, async (req, res
   }
 });
 
-// ────────────────────────────────────────────────────────────────
-// ADMIN: set/rotate a user's passport_id
-// PUT /api/passport/admin/:userId
-// Body: { passport_id?: string }   // optional; if omitted we auto-generate
-// Only admin role can call this
-// ────────────────────────────────────────────────────────────────
-function requireAdmin(req, res, next) {
-  const role = String(req.user?.role || "").toLowerCase();
-  if (role !== "admin") {
-    return res.status(403).json({ message: "Admin access required." });
-  }
-  next();
-}
+/* -----------------------------------------------------------
+   ADMIN
+----------------------------------------------------------- */
 
+// GET /api/passport/admin/:userId  -> { passport_id } or {}
+router.get("/admin/:userId", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.params.userId || "").trim();
+    if (!userId) return res.status(400).json({ message: "Missing userId" });
+
+    const q = `SELECT passport_id FROM passports WHERE user_id = $1 LIMIT 1`;
+    const { rows } = await db.query(q, [userId]);
+    return res.json(rows[0] || {});
+  } catch (e) {
+    console.error("GET /passport/admin/:userId error:", e);
+    return res.status(500).json({ message: "Failed to load passport." });
+  }
+});
+
+// PUT /api/passport/admin/:userId
+// Body: { passport_id?: string }  (if omitted, auto-generate)
 router.put("/admin/:userId", authenticateToken, requireAdmin, async (req, res) => {
   const client = await db.connect();
   try {
@@ -130,8 +148,7 @@ router.put("/admin/:userId", authenticateToken, requireAdmin, async (req, res) =
     let raw = String(req.body?.passport_id || "").trim();
 
     if (!raw) {
-      // auto-generate: compact UUID without dashes, truncated (e.g. 20 chars)
-      // This matches your earlier light validation (A–Z, 0–9, dash/space, 4–64)
+      // auto-generate: compact UUID without dashes, truncated to 20 chars
       const gen = await db.query(`SELECT REPLACE(gen_random_uuid()::text, '-', '') AS token`);
       raw = (gen.rows?.[0]?.token || "").slice(0, 20);
     }
@@ -143,7 +160,7 @@ router.put("/admin/:userId", authenticateToken, requireAdmin, async (req, res) =
 
     await client.query("BEGIN");
 
-    // Uniqueness: ensure no one else is using this passport_id
+    // Ensure unique across users
     const inUse = await client.query(
       `SELECT 1 FROM passports WHERE LOWER(passport_id) = LOWER($1) AND user_id <> $2 LIMIT 1`,
       [raw, userId]
@@ -157,7 +174,8 @@ router.put("/admin/:userId", authenticateToken, requireAdmin, async (req, res) =
     // Try update first
     const upd = await client.query(
       `UPDATE passports
-          SET passport_id = $1, updated_at = NOW()
+          SET passport_id = $1,
+              updated_at  = NOW()
         WHERE user_id = $2
         RETURNING passport_id`,
       [raw, userId]
