@@ -12,7 +12,7 @@ async function apiFetch(url, opts = {}) {
   return res;
 }
 
-// Optional helpers if you like concise code:
+
 async function apiJSON(url, opts = {}) {
   const res = await apiFetch(url, opts);
   const data = await res.json().catch(()=> ({}));
