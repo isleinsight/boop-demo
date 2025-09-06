@@ -215,6 +215,64 @@ userInfo.innerHTML = `
 
   ${walletHTML}
 `;
+
+      // ─── PASSPORT: fetch + populate + copy link ────────────────────────────────
+try {
+  // Elements we just added in the HTML template
+  const viewPidEl   = document.getElementById("viewPassportId");
+  const editPidEl   = document.getElementById("editPassportId");
+  const linkEl      = document.getElementById("viewPassportLink");
+  const copyBtnEl   = document.getElementById("copyPassportLinkBtn");
+
+  // Build a base origin (uses current site; falls back to production)
+  const ORIGIN = (location && location.origin) ? location.origin : "https://payulot.com";
+
+  // GET admin view of this user’s passport
+  // (Endpoint from earlier step: GET /api/admin/users/:id/passport → { passport_id } | {} )
+  const pp = await fetchJSON(`/api/admin/users/${user.id}/passport`);
+  const passportId = (pp && pp.passport_id) ? String(pp.passport_id) : "";
+
+  // Fill display + edit fields
+  if (viewPidEl) viewPidEl.textContent = passportId || "—";
+  if (editPidEl) editPidEl.value = passportId;
+
+  // Build deep link (tap target): https://<origin>/passport/?pid=<passportId>
+  const deepLink = passportId ? `${ORIGIN}/passport/?pid=${encodeURIComponent(passportId)}` : "#";
+
+  if (linkEl) {
+    linkEl.href = deepLink;
+    linkEl.textContent = passportId ? deepLink : "—";
+  }
+
+  // Copy button
+  if (copyBtnEl) {
+    copyBtnEl.addEventListener("click", async () => {
+      try {
+        if (!passportId) {
+          alert("No Passport ID set for this user yet.");
+          return;
+        }
+        await navigator.clipboard.writeText(deepLink);
+        const old = copyBtnEl.textContent;
+        copyBtnEl.textContent = "Copied!";
+        setTimeout(() => (copyBtnEl.textContent = old), 1200);
+      } catch (err) {
+        alert("Copy failed. You can manually copy the link shown.");
+      }
+    });
+  }
+} catch (err) {
+  console.warn("Passport fetch failed:", err?.message || err);
+  const viewPidEl = document.getElementById("viewPassportId");
+  const linkEl    = document.getElementById("viewPassportLink");
+  if (viewPidEl) viewPidEl.textContent = "—";
+  if (linkEl) {
+    linkEl.removeAttribute("href");
+    linkEl.textContent = "—";
+  }
+}
+// ───────────────────────────────────────────────────────────────────────────
+      
 console.log("Attempting to load transactions for user:", user.id);
 
 const transactionTableBody = document.querySelector("#transactionTable tbody");
