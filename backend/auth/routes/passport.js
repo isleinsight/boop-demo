@@ -107,4 +107,88 @@ router.delete("/mine", authenticateToken, requireCardholderLike, async (req, res
   }
 });
 
+// ────────────────────────────────────────────────────────────────
+// ADMIN: set/rotate a user's passport_id
+// PUT /api/passport/admin/:userId
+// Body: { passport_id?: string }   // optional; if omitted we auto-generate
+// Only admin role can call this
+// ────────────────────────────────────────────────────────────────
+function requireAdmin(req, res, next) {
+  const role = String(req.user?.role || "").toLowerCase();
+  if (role !== "admin") {
+    return res.status(403).json({ message: "Admin access required." });
+  }
+  next();
+}
+
+router.put("/admin/:userId", authenticateToken, requireAdmin, async (req, res) => {
+  const client = await db.connect();
+  try {
+    const userId = String(req.params.userId || "").trim();
+
+    // If admin supplied a value, validate it; otherwise generate a clean token.
+    let raw = String(req.body?.passport_id || "").trim();
+
+    if (!raw) {
+      // auto-generate: compact UUID without dashes, truncated (e.g. 20 chars)
+      // This matches your earlier light validation (A–Z, 0–9, dash/space, 4–64)
+      const gen = await db.query(`SELECT REPLACE(gen_random_uuid()::text, '-', '') AS token`);
+      raw = (gen.rows?.[0]?.token || "").slice(0, 20);
+    }
+
+    if (!/^[A-Za-z0-9\- ]{4,64}$/.test(raw)) {
+      client.release();
+      return res.status(400).json({ message: "Invalid passport format." });
+    }
+
+    await client.query("BEGIN");
+
+    // Uniqueness: ensure no one else is using this passport_id
+    const inUse = await client.query(
+      `SELECT 1 FROM passports WHERE LOWER(passport_id) = LOWER($1) AND user_id <> $2 LIMIT 1`,
+      [raw, userId]
+    );
+    if (inUse.rowCount) {
+      await client.query("ROLLBACK");
+      client.release();
+      return res.status(409).json({ message: "Passport ID already in use." });
+    }
+
+    // Try update first
+    const upd = await client.query(
+      `UPDATE passports
+          SET passport_id = $1, updated_at = NOW()
+        WHERE user_id = $2
+        RETURNING passport_id`,
+      [raw, userId]
+    );
+
+    let passportRow = upd.rows[0];
+
+    // If no existing row, insert
+    if (!passportRow) {
+      const ins = await client.query(
+        `INSERT INTO passports (id, user_id, passport_id, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, NOW(), NOW())
+         RETURNING passport_id`,
+        [userId, raw]
+      );
+      passportRow = ins.rows[0];
+    }
+
+    await client.query("COMMIT");
+    client.release();
+    return res.json({ passport_id: passportRow.passport_id });
+  } catch (e) {
+    try { await db.query("ROLLBACK"); } catch {}
+    console.error("PUT /passport/admin/:userId error:", e);
+    if (e?.code === "23505") {
+      return res.status(409).json({ message: "Passport ID already in use." });
+    }
+    return res.status(500).json({ message: "Failed to set passport." });
+  } finally {
+    try { client.release && client.release(); } catch {}
+  }
+});
+
 module.exports = router;
