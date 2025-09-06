@@ -230,6 +230,7 @@ try {
   // (Endpoint from earlier step: GET /api/admin/users/:id/passport → { passport_id } | {} )
   const pp = await fetchJSON(`/api/admin/users/${user.id}/passport`);
   const passportId = (pp && pp.passport_id) ? String(pp.passport_id) : "";
+  currentUserData._passport_id = passportId;
 
   // Fill display + edit fields
   if (viewPidEl) viewPidEl.textContent = passportId || "—";
@@ -652,7 +653,7 @@ editBtn.onclick = () => {
   isEditMode = true;
 
   // Toggle user input fields
-  ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach(field => {
+  ["FirstName", "MiddleName", "LastName", "Email", "Assistance", "PassportId"].forEach(field => {
     const viewEl = document.getElementById(`view${field}`);
     const editEl = document.getElementById(`edit${field}`);
     if (viewEl && editEl) {
@@ -707,7 +708,34 @@ saveBtn.onclick = async () => {
     console.warn("User update failed:", err);
   }
 
-  
+  // --- Save Passport ID (PUT to set/update, DELETE to clear) -----------------
+try {
+  const newPid = (document.getElementById("editPassportId")?.value || "").trim();
+  const oldPid = currentUserData?._passport_id || "";
+
+  // Only do anything if it actually changed
+  if (newPid !== oldPid) {
+    if (newPid === "") {
+      // Clear passport link
+      await fetchJSON(`/api/admin/users/${currentUserId}/passport`, {
+        method: "DELETE"
+      });
+    } else {
+      // Validate (must match backend validation)
+      const ok = /^[A-Za-z0-9\- ]{4,64}$/.test(newPid);
+      if (!ok) throw new Error("Passport ID must be 4–64 chars (letters, numbers, spaces, dashes).");
+
+      // Set/update
+      await fetchJSON(`/api/admin/users/${currentUserId}/passport`, {
+        method: "PUT",
+        body: JSON.stringify({ passport_id: newPid })
+      });
+    }
+  }
+} catch (err) {
+  hadError = true;
+  console.warn("Passport save failed:", err);
+}
 
   // Vendor update
   if (currentUserData.role === "vendor") {
@@ -735,10 +763,11 @@ saveBtn.onclick = async () => {
     saveBtn.style.display = "none";
 
     [
-      "FirstName", "MiddleName", "LastName", "Email", "Assistance",
-      "School", "Grade", "Expiry",
-      "Business", "Category", "Phone", "VendorApproved"
-    ].forEach(field => {
+  "FirstName", "MiddleName", "LastName", "Email", "Assistance",
+  "PassportId",
+  "School", "Grade", "Expiry",
+  "Business", "Category", "Phone", "VendorApproved"
+].forEach(field => {
       const viewEl = document.getElementById(`view${field}`) || document.getElementById(`vendor${field}`);
       const editEl = document.getElementById(`edit${field}`) || document.getElementById(`editVendor${field}`);
       if (viewEl && editEl) {
