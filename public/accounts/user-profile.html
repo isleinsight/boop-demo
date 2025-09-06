@@ -513,6 +513,27 @@
 
     <div class="user-details-grid" id="userInfo"></div>
 
+    <!-- Passport (NFC deep link for this user) -->
+<div class="section-title">Passport</div>
+<div class="user-details-grid" id="passportBlock">
+  <div>
+    <span class="label">Tap Link (copy to the user’s NFC card)</span>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input
+        type="text"
+        id="passportLink"
+        readonly
+        style="flex:1; background:#f9fafb; border:1px solid #d1d9e6; padding:10px 12px; border-radius:6px;"
+        value="Loading…"
+      />
+      <button type="button" id="copyPassportLink" class="btn-secondary">Copy</button>
+    </div>
+    <div style="font-size:.85rem; color:#6b7280; margin-top:6px;">
+      This URL opens <code>tap.html</code> and routes by whoever is signed in (vendor / transit / health).
+    </div>
+  </div>
+</div>
+
     <!-- Vendor Info -->
     <div id="vendorSection" style="display: none; margin-top: 40px;">
       <div class="section-title">Vendor Information</div>
