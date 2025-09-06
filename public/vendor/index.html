@@ -106,6 +106,18 @@
     })();
   </script>
 
+  <script>
+  // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
+  try {
+    const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
+    if (staff) {
+      // optional: show a quick message first
+      // alert('Cashier accounts cannot access vendor owner pages.');
+      location.replace('/vendor/sessions.html');
+    }
+  } catch {}
+</script>
+  
   <!-- Shared vendor helpers (apiFetch/apiJSON + token renew) -->
   <script src="vendor-common.js"></script>
 
