@@ -8,20 +8,14 @@
   <style>
     :root{
       --ink:#0f1b2d; --muted:#6b7280; --stroke:#e6ebf1; --ok:#065f46; --warn:#92400e; --err:#7f1d1d;
-      --blue:#2f80ed; --blue-dark:#1c6fd8; --bg:#f5f7fa; --card:#ffffff;
+      --blue:#2f80ed; --blue-dark:#1c6fd8; --bg:#f5f7fa; --card:#ffffff; --overlay:#0b1220A6;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
-      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      display:flex; flex-direction:column;
-    }
+    body{ margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; display:flex; flex-direction:column; }
     .topbar{ background:#0b1220; color:#fff; border-bottom:1px solid #0f172a; }
-    .topbar__inner{
-      max-width:1100px; margin:0 auto; padding:12px 16px;
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-    }
+    .topbar__inner{ max-width:1100px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .brand{ display:flex; align-items:center; gap:10px; }
     .brand img{ height:28px; display:block; }
     .brand .who{ font-size:.9rem; opacity:.85 }
@@ -29,59 +23,41 @@
     .logout:hover{ text-decoration:underline; }
 
     .wrap{ max-width:1100px; margin:24px auto; padding:0 16px; width:100%; }
-    .card{
-      background:var(--card); border:1px solid var(--stroke); border-radius:14px;
-      box-shadow:0 8px 24px rgba(15, 23, 42, .06); padding:18px;
-    }
+    .card{ background:var(--card); border:1px solid var(--stroke); border-radius:14px; box-shadow:0 8px 24px rgba(15, 23, 42, .06); padding:18px; }
     h1{ margin:0 0 6px; font-size:1.25rem; }
     .sub{ margin:0 0 14px; color:var(--muted); font-size:.95rem; }
     label{ display:block; font-size:.9rem; color:#1f2a44; margin:10px 0 6px; }
-    input, textarea, button, select{
-      width:100%; border:1px solid #d1d9e6; border-radius:10px; padding:10px 12px;
-      font-size:1rem; font-family:inherit; background:#fff;
-    }
+    input, textarea, button, select{ width:100%; border:1px solid #d1d9e6; border-radius:10px; padding:10px 12px; font-size:1rem; font-family:inherit; background:#fff; }
     input:focus, textarea:focus, select:focus{ outline:none; border-color:var(--blue); }
     .row{ display:flex; gap:12px; flex-wrap:wrap; }
     .row > .col{ flex:1 1 260px; }
-
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      margin-top:14px; padding:10px 14px; border-radius:10px; border:1px solid transparent;
-      background:var(--blue); color:#fff; font-weight:700; cursor:pointer;
-    }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; margin-top:14px; padding:10px 14px; border-radius:10px; border:1px solid transparent; background:var(--blue); color:#fff; font-weight:700; cursor:pointer; }
     .btn:hover{ background:var(--blue-dark); }
     .btn.secondary{ background:#fff; color:var(--ink); border-color:#d1d9e6; }
     .btn.secondary:hover{ background:#f3f4f6; }
-
     .status{ margin-top:12px; padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); display:none; }
     .status.ok{ background:#ecfdf5; border-color:#a7f3d0; color:var(--ok); display:block; }
     .status.warn{ background:#fff7ed; border-color:#fed7aa; color:#b45309; display:block; }
     .status.err{ background:#fef2f2; border-color:#fecaca; color:#991b1b; display:block; }
-
     .view{ display:none; }
     .view.active{ display:block; }
-
     .kv{ display:flex; gap:12px; flex-wrap:wrap; margin:8px 0 0; }
     .kv .item{ padding:8px 10px; border:1px solid var(--stroke); border-radius:10px; background:#fff; }
     .muted{ color:var(--muted) }
-
-    .pid-chip{
-      display:inline-flex; align-items:center; gap:8px; padding:8px 10px;
-      border:1px dashed var(--stroke); border-radius:10px; background:#f8fafc; color:#111827;
-      min-height:42px;
-    }
+    .pid-chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px dashed var(--stroke); border-radius:10px; background:#f8fafc; color:#111827; min-height:42px; }
     .pid-chip .pid{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing:.02em; }
     .pid-chip .hint{ color:var(--muted); font-size:.9rem; }
-
     footer{ margin-top:auto; border-top:1px solid var(--stroke); background:#fff; }
-    .footer__inner{ max-width:1100px; margin:0 auto; padding:14px 16px; font-size:.9rem; color:#4b5563;
-      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .footer__inner{ max-width:1100px; margin:0 auto; padding:14px 16px; font-size:.9rem; color:#4b5563; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .footer__links a{ color:#2f80ed; text-decoration:none; margin-right:12px; }
     .footer__links a:hover{ text-decoration:underline; }
+    .overlay { position: fixed; inset: 0; background: var(--overlay); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
+    .overlay__card { background: #0b1220; color: #eaf0ff; border-radius: 14px; padding: 20px 22px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,.35); max-width: 520px; width: calc(100% - 32px); }
+    .overlay__title { margin: 0 0 6px; font-size: 1.25rem; font-weight: 700; }
+    .overlay__sub { margin: 0; color: #cbd5e1; }
   </style>
 </head>
 <body>
-  <!-- Header -->
   <div class="topbar">
     <div class="topbar__inner">
       <div class="brand">
@@ -93,14 +69,10 @@
   </div>
 
   <div class="wrap">
-
-    <!-- Common passport header -->
     <div class="card" style="margin-bottom:16px;">
       <h1>Passport</h1>
-      <p class="sub">This page opens from the scanner (deep link includes a Passport token). The full ID is never displayed.</p>
-
+      <p class="sub">This page opens from the scanner. The full ID is never displayed.</p>
       <input id="pidFull" type="hidden" autocomplete="off" />
-
       <div class="row">
         <div class="col">
           <label>Selected Passport</label>
@@ -110,9 +82,7 @@
           </div>
         </div>
       </div>
-
       <div id="commonStatus" class="status"></div>
-
       <div class="kv">
         <div class="item"><span class="muted">Signed-in role:</span> <strong id="roleBadge">—</strong></div>
         <div class="item"><span class="muted">Signed-in user:</span> <strong id="whoBadge">—</strong></div>
@@ -123,7 +93,6 @@
     <section id="view-vendor" class="view card">
       <h2 style="margin:0 0 6px;">Vendor • Charge by Passport</h2>
       <p class="sub">Enter an amount and complete the charge for the selected passport.</p>
-
       <div class="row">
         <div class="col">
           <label>Amount</label>
@@ -134,7 +103,6 @@
           <input id="v_note" type="text" maxlength="120" placeholder="Short description for receipt" />
         </div>
       </div>
-
       <button class="btn" id="v_chargeBtn" disabled>Charge</button>
       <div id="v_status" class="status"></div>
     </section>
@@ -142,7 +110,7 @@
     <!-- Health VIEW -->
     <section id="view-health" class="view card">
       <h2 style="margin:0 0 6px;">Health • Emergency Passport</h2>
-      <p class="sub">Read-only info for emergency care (placeholder until your health API is live).</p>
+      <p class="sub">Read-only info for emergency care (placeholder).</p>
       <div class="row">
         <div class="col">
           <label>Flag</label>
@@ -153,19 +121,12 @@
           <input disabled value="(example) Jane Doe • +1 441-555-0134" />
         </div>
       </div>
-      <div class="row">
-        <div class="col">
-          <label>Notes</label>
-          <textarea disabled rows="3">This section renders from your health API when ready.</textarea>
-        </div>
-      </div>
     </section>
 
     <!-- Transit VIEW -->
     <section id="view-transit" class="view card">
       <h2 style="margin:0 0 6px;">Transit • Validate & Deduct</h2>
       <p class="sub">Validate the passport and deduct a ride or fare.</p>
-
       <div class="row">
         <div class="col">
           <label>Mode</label>
@@ -180,11 +141,9 @@
           <input id="t_fare" type="number" inputmode="decimal" min="0" step="0.01" value="2.75" />
         </div>
       </div>
-
       <button class="btn" id="t_validateBtn" disabled>Validate & Deduct</button>
       <div id="t_status" class="status"></div>
     </section>
-
   </div>
 
   <footer>
@@ -196,6 +155,13 @@
       </div>
     </div>
   </footer>
+
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="overlay__card">
+      <h3 class="overlay__title">Charge completed</h3>
+      <p class="overlay__sub">Ready for the next tap. Present a new card to continue.</p>
+    </div>
+  </div>
 
   <script>
   // ---------- config ----------
@@ -228,16 +194,9 @@
     if (!token) throw new Error('No token');
     const headers = { Authorization: `Bearer ${token}` };
     const r = await fetch('/api/me', { headers });
-    if (!r.ok) {
-      let m = 'Unauthorized';
-      try { m = (await r.json())?.message || m; } catch {}
-      throw new Error(m);
-    }
+    if (!r.ok) { let m = 'Unauthorized'; try { m = (await r.json())?.message || m; } catch{}; throw new Error(m); }
     const basic = await r.json();
-    try {
-      const more = await fetch('/api/users/me', { headers });
-      if (more.ok) return { ...basic, ...(await more.json()) };
-    } catch {}
+    try { const more = await fetch('/api/users/me', { headers }); if (more.ok) return { ...basic, ...(await more.json()) }; } catch{}
     return basic;
   }
   function setRoleView(role) {
@@ -250,21 +209,19 @@
   // ---------- kiosk window + messaging ----------
   try { if (window.name !== KIOSK_NAME) window.name = KIOSK_NAME; } catch {}
 
-  function updateUrlPid(pid) {
-    try {
-      const u = new URL(location.href);
-      if (pid) u.searchParams.set('pid', pid); else u.searchParams.delete('pid');
-      history.replaceState(null, '', u.toString());
-    } catch {}
+  function scrubPidFromUrl(){
+    try { const u = new URL(location.href); u.searchParams.delete('pid'); history.replaceState(null, '', u.toString()); } catch {}
   }
 
   function acceptPID(newPid) {
     PID = (newPid || '').trim();
-    updateUrlPid(PID);
+    scrubPidFromUrl(); // keep URL clean — no pid
 
     $('pidFull').value = PID || '';
     $('pidMasked').textContent = PID ? maskPid(PID) : 'No passport detected';
     $('pidHint').textContent = PID ? '(masked — last 4 only)' : '';
+
+    if (isPidLocked(PID)) { hardLockPage('Charge completed'); return; }
 
     chargedLock = false;
     hideStatus($('v_status'));
@@ -277,9 +234,7 @@
   }
 
   function sendTokenTo(openerWin) {
-    try {
-      openerWin?.postMessage({ type:'token:reply', token: localStorage.getItem('boop_jwt') || '' }, ORIGIN);
-    } catch {}
+    try { openerWin?.postMessage({ type:'token:reply', token: localStorage.getItem('boop_jwt') || '' }, ORIGIN); } catch {}
   }
 
   window.addEventListener('message', (ev) => {
@@ -298,95 +253,85 @@
   let currentRole = 'unknown';
   let processing = false;
   let chargedLock = false;
+  let currentIdemKey = null;
 
-  // ---------- boot ----------
+  // ---------- lock helpers ----------
+  function isPidLocked(pid){ return pid && sessionStorage.getItem('charged:'+pid) === '1'; }
+  function lockPid(pid){ try { if (pid) sessionStorage.setItem('charged:'+pid, '1'); } catch{} }
+  function disableAllInteractive(){ try { document.querySelectorAll('input,button,select,textarea,a').forEach(el=>{ el.disabled = true; el.style.pointerEvents = 'none'; }); } catch {} }
+  function hardLockPage(titleText){ disableAllInteractive(); const o = $('overlay'); if (o){ o.querySelector('.overlay__title').textContent = titleText || 'Charge completed'; o.style.display = 'flex'; o.setAttribute('aria-hidden', 'false'); } }
+
   document.addEventListener('DOMContentLoaded', async () => {
     $('year') && ($('year').textContent = new Date().getFullYear());
 
-    try {
-      const u = new URL(location.href);
-      const raw = (u.searchParams.get('pid') || '').trim();
-      if (raw && /^[A-Za-z0-9_-]{12,}$/.test(raw)) PID = raw;
-    } catch {}
+    // Legacy support: if a pid is in URL (old tags), use it once, then scrub immediately
+    try { const u = new URL(location.href); const raw = (u.searchParams.get('pid') || '').trim(); if (raw) { PID = raw; scrubPidFromUrl(); } } catch{}
+
+    // Preferred path: read pendingPid set by tap.html when same-tab navigation occurred
+    try { const pending = sessionStorage.getItem('tap:pendingPid'); if (!PID && pending) { PID = pending; sessionStorage.removeItem('tap:pendingPid'); sessionStorage.removeItem('tap:pendingMode'); } } catch{}
+
+    if (isPidLocked(PID)) hardLockPage('Charge completed');
     acceptPID(PID);
 
     try {
       const me = await fetchMe();
       const who = fullNameOrEmail(me);
       currentRole = roleKey(me);
-
       $('signedInAs').textContent = `Signed in as ${who}`;
       $('roleBadge').textContent = currentRole;
       $('whoBadge').textContent = who;
-
       setRoleView(currentRole);
-
-      $('v_chargeBtn') && ($('v_chargeBtn').disabled = !(PID && currentRole === 'vendor'));
-      $('t_validateBtn') && ($('t_validateBtn').disabled = !(PID && currentRole === 'transit'));
+      if (!isPidLocked(PID)) {
+        $('v_chargeBtn') && ($('v_chargeBtn').disabled = !(PID && currentRole === 'vendor'));
+        $('t_validateBtn') && ($('t_validateBtn').disabled = !(PID && currentRole === 'transit'));
+      }
     } catch (e) {
       try { await fetch('/api/logout', { method:'POST' }); } catch {}
-      localStorage.clear();
-      location.href = '/index.html';
-      return;
+      localStorage.clear(); location.href = '/index.html'; return;
     }
 
+    // Handshake for tap.html (named window/opened case)
     notifyReady();
 
-    $('logoutLink')?.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      try { await fetch('/api/logout', { method:'POST' }); } catch {}
-      localStorage.clear(); location.href = '../login.html';
-    });
+    $('logoutLink')?.addEventListener('click', async (e)=>{ e.preventDefault(); try { await fetch('/api/logout', { method:'POST' }); } catch {}; localStorage.clear(); location.href = '../login.html'; });
 
     $('v_amount')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('v_chargeBtn')?.click(); });
 
-    // >>> FIXED: send keys backend expects (pid/passport_id + amount) <<<
     $('v_chargeBtn')?.addEventListener('click', async () => {
-      const out = $('v_status');
-      hideStatus(out);
-
+      const out = $('v_status'); hideStatus(out);
       if (!PID) return showStatus(out, 'No passport detected.', 'err');
-      if (chargedLock) return showStatus(out, 'Already charged. Tap a new card to start another sale.', 'warn');
+      if (chargedLock || isPidLocked(PID)) return showStatus(out, 'Already charged. Tap a new card to start another sale.', 'warn');
       if (processing) return;
 
       const amt = Number($('v_amount')?.value || 0);
       const note = $('v_note')?.value || null;
       if (!Number.isFinite(amt) || amt <= 0) return showStatus(out, 'Enter a valid amount.', 'err');
 
-      processing = true;
-      const btn = $('v_chargeBtn'); btn.disabled = true;
-      $('v_amount') && ($('v_amount').disabled = true);
-      $('v_note')   && ($('v_note').disabled   = true);
+      processing = true; const btn = $('v_chargeBtn'); btn.disabled = true; $('v_amount') && ($('v_amount').disabled = true); $('v_note') && ($('v_note').disabled = true);
 
       try {
         const token = localStorage.getItem('boop_jwt') || '';
-        const payload = { pid: PID, amount: amt, note }; // << correct keys
-
+        currentIdemKey = currentIdemKey || (crypto?.randomUUID ? crypto.randomUUID() : (Date.now()+'-'+Math.random().toString(36).slice(2)));
         const r = await fetch('/api/vendor/passport-charge', {
           method:'POST',
-          headers:{ 'Content-Type':'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify(payload)
+          headers:{ 'Content-Type':'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), 'Idempotency-Key': currentIdemKey },
+          body: JSON.stringify({ pid: PID, amount: amt, note })
         });
         const j = await r.json().catch(()=>({}));
         if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
-
         showStatus(out, 'Charge completed.', 'ok');
-        chargedLock = true;
-
+        chargedLock = true; lockPid(PID); setTimeout(()=>{ hardLockPage('Charge completed'); }, 150);
         try { window.opener?.postMessage({ type:'charge:done', txn: j?.transaction || null }, ORIGIN); } catch {}
       } catch (err) {
         showStatus(out, `❌ ${err.message || err}`, 'err');
         $('v_amount') && ($('v_amount').disabled = false);
         $('v_note')   && ($('v_note').disabled   = false);
-        btn.disabled = false;
-      } finally {
-        processing = false;
-      }
+        $('v_chargeBtn').disabled = false;
+      } finally { processing = false; }
     });
 
     $('t_validateBtn')?.addEventListener('click', async () => {
-      const out = $('t_status');
-      hideStatus(out);
+      const out = $('t_status'); hideStatus(out);
       if (!PID) return showStatus(out, 'No passport detected.', 'err');
       const fare = Number($('t_fare')?.value || 0);
       const mode = $('t_mode')?.value || 'bus';
@@ -394,6 +339,6 @@
       showStatus(out, `(demo) ${mode} fare deducted: ${fare.toFixed(2)}`, 'ok');
     });
   });
-</script>
+  </script>
 </body>
 </html>
