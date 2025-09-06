@@ -58,6 +58,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const parentSection = document.getElementById("parentSection");
   const studentInfoSection = document.getElementById("studentInfoSection");
 
+  // Use the EXISTING passport inputs in your HTML section
+  const passportInput = document.getElementById("passportLink");
+  const passportCopyBtn = document.getElementById("copyPassportLink");
+
   const currentAdmin = JSON.parse(localStorage.getItem("boopUser") || "null");
   if (currentAdmin?.role === "admin" && ["viewer", "accountant"].includes(currentAdmin?.type)) {
     if (editBtn) editBtn.style.display = "none";
@@ -86,65 +90,50 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
       currentUserData = user;
 
-       // ---- Fill the existing "Passport link" input using this user's passport_id ----
-(async () => {
-  const input = document.getElementById("passportLink");
-  const copyBtn = document.getElementById("copyPassportLink");
-  if (!input) return;
+      // ---- Populate the existing Passport link input in the static HTML ----
+      if (passportInput) passportInput.value = "Loading…";
+      try {
+        const pp = await fetchJSON(`/api/passport/admin/${user.id}`);
+        const passportId = (pp && pp.passport_id) ? String(pp.passport_id) : "";
+        currentUserData._passport_id = passportId;
 
-  input.value = "Loading…";
-
-  try {
-    // IMPORTANT: this matches your backend route:
-    // router.get("/admin/:userId", ...) inside backend/auth/routes/passport.js
-    const token = localStorage.getItem("boop_jwt");
-    const res = await fetch(`/api/passport/admin/${encodeURIComponent(user.id)}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-
-    // If server ever returns non-JSON (e.g., error HTML), avoid crashing:
-    const text = await res.text();
-    let data = {};
-    try { data = JSON.parse(text); } catch {}
-
-    const pid = data?.passport_id || "";
-
-    if (!res.ok || !pid) {
-      input.value = "No passport assigned";
-      return;
-    }
-
-    // Build the NFC deep link exactly like you want:
-    input.value = `https://payulot.com/tap.html?pid=${encodeURIComponent(pid)}`;
-
-    // Wire up the Copy button once
-    if (copyBtn && !copyBtn._wired) {
-      copyBtn._wired = true;
-      copyBtn.addEventListener("click", async () => {
-        const val = input.value || "";
-        if (!val || val === "No passport assigned") {
-          alert("No passport link to copy.");
-          return;
+        if (passportInput) {
+          if (passportId) {
+            // Use the payulot.com tap route you wanted
+            const deepLink = `https://payulot.com/tap.html?pid=${encodeURIComponent(passportId)}`;
+            passportInput.value = deepLink;
+          } else {
+            passportInput.value = "No passport assigned";
+          }
         }
-        try {
-          await navigator.clipboard.writeText(val);
-          const old = copyBtn.textContent;
-          copyBtn.textContent = "Copied!";
-          setTimeout(() => (copyBtn.textContent = old), 1200);
-        } catch {
-          input.select();
-          document.execCommand("copy");
-          const old = copyBtn.textContent;
-          copyBtn.textContent = "Copied!";
-          setTimeout(() => (copyBtn.textContent = old), 1200);
-        }
-      });
-    }
-  } catch (e) {
-    console.warn("Passport populate error:", e);
-    input.value = "No passport assigned";
-  }
-})();
+      } catch (e) {
+        console.warn("Could not populate passport link:", e?.message || e);
+        if (passportInput) passportInput.value = "No passport assigned";
+      }
+
+      // Wire up Copy once
+      if (passportCopyBtn && !passportCopyBtn._wired) {
+        passportCopyBtn._wired = true;
+        passportCopyBtn.addEventListener("click", async () => {
+          const val = passportInput?.value || "";
+          if (!val || val === "No passport assigned") {
+            alert("No passport link to copy.");
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(val);
+            const old = passportCopyBtn.textContent;
+            passportCopyBtn.textContent = "Copied!";
+            setTimeout(() => (passportCopyBtn.textContent = old), 1200);
+          } catch {
+            passportInput?.select();
+            document.execCommand("copy");
+            const old = passportCopyBtn.textContent;
+            passportCopyBtn.textContent = "Copied!";
+            setTimeout(() => (passportCopyBtn.textContent = old), 1200);
+          }
+        });
+      }
 
       // 2) Wallet balance
       let walletBalance = "N/A";
@@ -206,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
       }
 
-      // 5) Render main details (includes the Passport deep-link row)
+      // 5) Render main details (NO injected passport row here)
       userInfo.innerHTML = `
         <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
 
@@ -234,21 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
           <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" />
         </div>
 
-        <!-- Passport deep link (for NFC cards) -->
-        <div class="passport-link-row" style="display:flex; gap:10px; align-items:center;">
-          <div style="flex:1">
-            <span class="label">Passport deep link</span>
-            <input
-              type="text"
-              id="passportLink"
-              readonly
-              style="width:100%; background:#f9fafb; border:1px solid #d1d9e6; padding:10px 12px; border-radius:6px;"
-              value="Loading…"
-            />
-          </div>
-          <button id="copyPassportLink" class="btnEdit" type="button">Copy</button>
-        </div>
-
         <div>
           <span class="label">Status</span>
           <span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span>
@@ -261,53 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ${walletHTML}
       `;
 
-      // 6) Populate Passport deep link
-      currentUserData._passport_id = ""; // track current for save comparison
-      try {
-        const pp = await fetchJSON(`/api/passport/admin/${user.id}`);
-        const passportId = (pp && pp.passport_id) ? String(pp.passport_id) : "";
-        currentUserData._passport_id = passportId;
-
-        const input = document.getElementById("passportLink");
-        if (input) {
-          if (passportId) {
-            const deepLink = `${location.origin}/tap.html?pid=${encodeURIComponent(passportId)}`;
-            input.value = deepLink;
-          } else {
-            input.value = "No passport assigned";
-          }
-        }
-      } catch (e) {
-        const input = document.getElementById("passportLink");
-        if (input) input.value = "No passport assigned";
-        console.warn("Could not populate passport link:", e?.message || e);
-      }
-
-      // 7) Copy passport link
-      (() => {
-        const copyBtn = document.getElementById("copyPassportLink");
-        if (!copyBtn) return;
-        copyBtn.addEventListener("click", async () => {
-          const val = document.getElementById("passportLink")?.value || "";
-          if (!val || val === "No passport assigned") {
-            alert("No passport link to copy.");
-            return;
-          }
-          try {
-            await navigator.clipboard.writeText(val);
-            copyBtn.textContent = "Copied!";
-            setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
-          } catch {
-            const inp = document.getElementById("passportLink");
-            inp?.select();
-            document.execCommand("copy");
-            copyBtn.textContent = "Copied!";
-            setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
-          }
-        });
-      })();
-
-      // 8) Transactions
+      // 6) Transactions
       const transactionTableBody = document.querySelector("#transactionTable tbody");
       if (!transactionTableBody) {
         console.error("Transaction table body not found in DOM");
@@ -492,7 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       userInfo.appendChild(dropdown);
 
-      // Student view
+      // Student / Parent blocks (unchanged)
       if (user.role === "student") {
         const s = user.student_profile;
         if (s) {
@@ -581,7 +509,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // Parent view (assigned students)
       if (user.role === "parent" && Array.isArray(user.assigned_students)) {
         studentInfoSection.innerHTML = `<div class="section-title">Assigned Students</div>`;
         user.assigned_students.forEach(student => {
@@ -602,7 +529,7 @@ document.addEventListener("DOMContentLoaded", () => {
         studentInfoSection.style.display = "block";
       }
 
-      // Edit: toggle fields (includes Assistance and PassportId)
+      // Edit toggling
       if (editBtn) {
         editBtn.onclick = () => {
           isEditMode = true;
@@ -614,7 +541,7 @@ document.addEventListener("DOMContentLoaded", () => {
               editEl.style.display = "block";
             }
           });
-          // vendor fields (if present in DOM)
+
           if (currentUserData.role === "vendor") {
             ["Business", "Category", "Phone", "VendorApproved"].forEach(field => {
               const viewEl = document.getElementById(`vendor${field}`) || document.getElementById(`view${field}`);
@@ -625,17 +552,17 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             });
           }
+
           if (saveBtn) saveBtn.style.display = "inline-block";
           document.querySelectorAll(".remove-student-wrapper").forEach(el => (el.style.display = "block"));
         };
       }
 
-      // Save changes (user + passport + vendor)
+      // Save changes
       if (saveBtn) {
         saveBtn.onclick = async () => {
           let hadError = false;
 
-          // save main user fields
           try {
             await fetchJSON(`/api/users/${currentUserId}`, {
               method: "PATCH",
@@ -655,11 +582,10 @@ document.addEventListener("DOMContentLoaded", () => {
             console.warn("User update failed:", err);
           }
 
-          // save passport id (from edit field if you add one on the page)
+          // If you add an edit field for passport in the future, keep this logic
           try {
             const newPid = (document.getElementById("editPassportId")?.value || "").trim();
             const oldPid = currentUserData?._passport_id || "";
-
             if (newPid !== oldPid) {
               if (newPid === "") {
                 await fetchJSON(`/api/passport/admin/${currentUserId}`, { method: "DELETE" });
@@ -677,7 +603,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.warn("Passport save failed:", err);
           }
 
-          // vendor patch
           if (currentUserData.role === "vendor") {
             try {
               await fetchJSON(`/api/vendors/${currentUserId}`, {
@@ -808,7 +733,6 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.appendChild(box);
     document.body.appendChild(modal);
   }
-  // expose for listeners above
   window.showNote = showNote;
 
   // Kick off
