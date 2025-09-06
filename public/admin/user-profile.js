@@ -185,13 +185,20 @@ userInfo.innerHTML = `
 
   <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
     <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
-  <div>
-  <span class="label">Passport Link</span>
-  <span class="value">
-    <a href="#" id="passportLinkDisplay" target="_blank" style="word-break: break-all;">—</a>
-  </span>
-  <button id="copyPassportLink" class="btn-secondary" style="margin-left:8px;">Copy</button>
-</div>
+  // Build Passport Link
+try {
+  const passportLinkEl = document.getElementById("passportLink");
+  if (passportLinkEl) {
+    const baseUrl = "https://payulot.com/tap.html?pid=";
+    if (user.passport_id) {
+      passportLinkEl.value = baseUrl + user.passport_id;
+    } else {
+      passportLinkEl.value = "No passport assigned";
+    }
+  }
+} catch (err) {
+  console.warn("Could not populate passport link:", err.message);
+}
   <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
 
   <div><span class="label">Role</span><span class="value">${user.role}</span></div>
