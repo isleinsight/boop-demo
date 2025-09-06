@@ -238,7 +238,15 @@
     $('pidFull').value = '';
     $('pidMasked').textContent = 'No passport detected';
     $('pidHint').textContent = '';
-    $('v_chargeBtn') && ($('v_chargeBtn').disabled = true);
+    // reset amount & note and hide statuses
+    const amt = $('v_amount');
+    const note = $('v_note');
+    if (amt) { amt.value = ''; }
+    if (note) { note.value = ''; }
+    hideStatus($('v_status'));
+    hideStatus($('t_status'));
+    // disable charge until a new PID arrives
+    if ($('v_chargeBtn')) $('v_chargeBtn').disabled = true;
   }
   function hardLockPage(titleText){
     disableAllInteractive();
@@ -246,6 +254,9 @@
     const title = o.querySelector('.overlay__title');
     const sub   = o.querySelector('.overlay__sub');
     if (title) title.textContent = titleText || 'Charge completed';
+
+    // hide any prior inline status to avoid seeing it under the overlay
+    hideStatus($('v_status'));
 
     if (sub && SHOW_COUNTDOWN) {
       const update = () => {
@@ -262,6 +273,8 @@
           o.style.display = 'none'; o.setAttribute('aria-hidden', 'true');
           PID = '';
           setNoPassportUI();
+          // clear idempotency key for the next sale window
+          currentIdemKey = null;
         }
       };
       if (countdownTimer) clearInterval(countdownTimer);
