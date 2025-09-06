@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const logoutBtn = document.getElementById("logoutBtn");
-  const parentSection = document.getElementById("parentSection");
   const studentInfoSection = document.getElementById("studentInfoSection");
 
   let currentUserId =
@@ -32,24 +31,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- helpers ----------
   async function fetchJSON(url, options = {}) {
     const token = localStorage.getItem("boop_jwt");
-
-    const headers = {
-      "Content-Type": "application/json",
-      ...options.headers,
-    };
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    } else if (options.autoRedirect !== false) {
+    const headers = { "Content-Type": "application/json", ...options.headers };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    else if (options.autoRedirect !== false) {
       window.location.href = "../government-portal.html";
       return Promise.reject(new Error("Unauthorized"));
     }
-
     const res = await fetch(url, { ...options, headers });
     if (res.status === 401 || res.status === 403) {
-      if (options.autoRedirect !== false) {
-        window.location.href = "../government-portal.html";
-      }
+      if (options.autoRedirect !== false) window.location.href = "../government-portal.html";
       throw new Error("Unauthorized");
     }
     if (!res.ok) throw new Error((await res.text()) || "Network error");
@@ -69,49 +59,89 @@ document.addEventListener("DOMContentLoaded", () => {
     el.style.color = isError ? "#b91c1c" : "#6b7280";
   }
 
+  function buildActionsHTML() {
+    return `
+      <select id="passportActions" style="min-width:220px;">
+        <option value="">Select action…</option>
+        <option value="copy">Copy Tap Link</option>
+        <option value="open">Open Tap Link</option>
+        <option value="regen">Regenerate Passport ID</option>
+      </select>
+      <span id="tapLinkStatus" style="margin-left:8px;color:#6b7280;"></span>
+    `;
+  }
+
   function ensurePassportSection() {
     let section = document.getElementById("passportSection");
-    if (section) return section;
-
     const page = document.querySelector(".user-profile-page");
     if (!page) return null;
 
-    const sectionTitle = document.createElement("div");
-    sectionTitle.className = "section-title";
-    sectionTitle.textContent = "Passport";
+    if (!section) {
+      const sectionTitle = document.createElement("div");
+      sectionTitle.className = "section-title";
+      sectionTitle.textContent = "Passport";
 
-    section = document.createElement("div");
-    section.className = "user-details-grid";
-    section.id = "passportSection";
-    section.innerHTML = `
-      <div>
+      section = document.createElement("div");
+      section.className = "user-details-grid";
+      section.id = "passportSection";
+      section.innerHTML = `
+        <div>
+          <span class="label">Tap Link</span>
+          <span class="value" id="passportTapLinkValue">Loading…</span>
+          <input type="text" id="passportTapLinkInput" style="display:none; width:100%;" readonly />
+        </div>
+        <div>
+          <span class="label">Actions</span>
+          <div class="value">${buildActionsHTML()}</div>
+        </div>
+      `;
+      const txnTitle = Array.from(page.querySelectorAll(".section-title"))
+        .find((el) => el.textContent.trim() === "Transaction History");
+      if (txnTitle) {
+        page.insertBefore(sectionTitle, txnTitle);
+        page.insertBefore(section, txnTitle);
+      } else {
+        page.appendChild(sectionTitle);
+        page.appendChild(section);
+      }
+      return section;
+    }
+
+    // Normalize existing section that still has the old Copy button
+    const copyBtn = section.querySelector("#copyTapLinkBtn");
+    const hasDropdown = section.querySelector("#passportActions");
+    if (!hasDropdown) {
+      if (copyBtn) {
+        const valueDiv = copyBtn.parentElement;
+        if (valueDiv) valueDiv.innerHTML = buildActionsHTML(); // replace button with dropdown
+      } else {
+        // If there's no Actions row at all, append one
+        const actionsRow = document.createElement("div");
+        actionsRow.innerHTML = `
+          <span class="label">Actions</span>
+          <div class="value">${buildActionsHTML()}</div>
+        `;
+        section.appendChild(actionsRow);
+      }
+    }
+
+    // Ensure Tap Link line exists
+    if (!section.querySelector("#passportTapLinkValue")) {
+      const tapRow = document.createElement("div");
+      tapRow.innerHTML = `
         <span class="label">Tap Link</span>
         <span class="value" id="passportTapLinkValue">Loading…</span>
         <input type="text" id="passportTapLinkInput" style="display:none; width:100%;" readonly />
-      </div>
-      <div>
-        <span class="label">Actions</span>
-        <div class="value">
-          <select id="passportActions" style="min-width:220px;">
-            <option value="">Select action…</option>
-            <option value="copy">Copy Tap Link</option>
-            <option value="open">Open Tap Link</option>
-            <option value="regen">Regenerate Passport ID</option>
-          </select>
-          <span id="tapLinkStatus" style="margin-left:8px;color:#6b7280;"></span>
-        </div>
-      </div>
-    `;
-
-    const txnTitle = Array.from(page.querySelectorAll(".section-title"))
-      .find((el) => el.textContent.trim() === "Transaction History");
-    if (txnTitle) {
-      page.insertBefore(sectionTitle, txnTitle);
-      page.insertBefore(section, txnTitle);
-    } else {
-      page.appendChild(sectionTitle);
-      page.appendChild(section);
+      `;
+      section.insertBefore(tapRow, section.firstChild);
     }
+
+    // Ensure status span exists
+    if (!section.querySelector("#tapLinkStatus")) {
+      const actionsValue = section.querySelector("#passportActions")?.parentElement;
+      if (actionsValue) actionsValue.insertAdjacentHTML("beforeend", `<span id="tapLinkStatus" style="margin-left:8px;color:#6b7280;"></span>`);
+    }
+
     return section;
   }
 
@@ -120,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const valueSpan = document.getElementById("passportTapLinkValue");
     const input = document.getElementById("passportTapLinkInput");
-    const actions = document.getElementById("passportActions");
+    let actions = document.getElementById("passportActions");
     if (!valueSpan || !actions) return;
 
     valueSpan.textContent = "Loading…";
@@ -134,24 +164,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!passportId) {
         valueSpan.textContent = "No passport assigned";
-        setTapStatus("Assign or regenerate a passport ID to generate the tap link.", true);
-        actions.disabled = false; // allow regen even if none exists
-        // Rebind dropdown to allow regen
+        setTapStatus("Select “Regenerate” to create a new passport ID.", true);
+        actions.disabled = false;
         const fresh = actions.cloneNode(true);
         actions.parentNode.replaceChild(fresh, actions);
         fresh.addEventListener("change", async () => {
           const choice = fresh.value;
           fresh.value = "";
-          if (choice === "regen") {
-            try {
-              if (!confirm("Regenerate passport ID? This invalidates any old NFC card.")) return;
-              setTapStatus("Regenerating…");
-              await fetchJSON(`/api/passport/${encodeURIComponent(userId)}/regenerate`, { method: "POST" });
-              setTapStatus("New passport ID created.");
-              await loadPassport(userId);
-            } catch (err) {
-              setTapStatus(err.message || "Failed to regenerate.", true);
-            }
+          if (choice !== "regen") return;
+          try {
+            if (!confirm("Regenerate passport ID? This invalidates any old NFC card.")) return;
+            setTapStatus("Regenerating…");
+            await fetchJSON(`/api/passport/${encodeURIComponent(userId)}/regenerate`, { method: "POST" });
+            setTapStatus("New passport ID created.");
+            await loadPassport(userId);
+          } catch (err) {
+            setTapStatus(err.message || "Failed to regenerate.", true);
           }
         });
         return;
@@ -161,7 +189,6 @@ document.addEventListener("DOMContentLoaded", () => {
       valueSpan.textContent = tapLink;
       if (input) input.value = tapLink;
 
-      // Fresh handler to avoid duplicates
       const fresh = actions.cloneNode(true);
       actions.parentNode.replaceChild(fresh, actions);
       fresh.disabled = false;
@@ -206,7 +233,6 @@ document.addEventListener("DOMContentLoaded", () => {
           const allCards = await fetchJSON(`/api/cards?wallet_id=${user.wallet_id || user.wallet?.id}`);
           const transitCards = allCards.filter((c) => c.type === "transit");
           const spendingCards = allCards.filter((c) => c.type === "spending");
-
           if (transitCards.length) {
             transitCards.forEach((card) => {
               walletHTML += `<div><span class="label">Transit Card</span><span class="value">${card.uid}</span></div>`;
@@ -219,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
               walletHTML += `<div><span class="label">Spending Card</span><span class="value">${card.uid}</span></div>`;
             });
           }
-        } catch (err) {
+        } catch {
           walletHTML += `<div><span class="label">Cards</span><span class="value">Failed to load</span></div>`;
         }
       } else {
@@ -243,9 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let walletBalance = "N/A";
       try {
         const w = await fetchJSON(`/api/wallets/user/${user.id}`);
-        const cents = Number(
-          w?.balance_cents ?? w?.balance ?? w?.wallet?.balance_cents ?? w?.wallet?.balance ?? 0
-        );
+        const cents = Number(w?.balance_cents ?? w?.balance ?? w?.wallet?.balance_cents ?? w?.wallet?.balance ?? 0);
         if (Number.isFinite(cents)) walletBalance = `$${(cents / 100).toFixed(2)}`;
       } catch {}
 
@@ -275,18 +299,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Transactions
       const transactionTableBody = document.querySelector("#transactionTable tbody");
-      if (!transactionTableBody) {
-        console.error("Transaction table body not found");
-        return;
-      }
+      if (!transactionTableBody) return;
       transactionTableBody.innerHTML = "";
 
       let transactions = [];
       try {
         const offset = (currentPage - 1) * transactionsPerPage;
-        const res = await fetchJSON(
-          `/api/transactions/user/${user.id}?limit=${transactionsPerPage + 1}&offset=${offset}`
-        );
+        const res = await fetchJSON(`/api/transactions/user/${user.id}?limit=${transactionsPerPage + 1}&offset=${offset}`);
         transactions = res.transactions || [];
       } catch (err) {
         console.error("Failed to fetch transactions:", err.message);
@@ -305,10 +324,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const direction = isCredit ? "Received" : tx.type === "debit" ? "Sent" : tx.type || "-";
           const counterparty = tx.counterparty_name || "Unknown";
           const name = isCredit ? `From ${counterparty}` : `To ${counterparty}`;
-          const noteBtn =
-            typeof tx.note === "string" && tx.note
-              ? `<button class="btn-view-note" data-note="${tx.note.replace(/"/g, "&quot;")}">View</button>`
-              : "-";
+          const noteBtn = typeof tx.note === "string" && tx.note
+            ? `<button class="btn-view-note" data-note="${tx.note.replace(/"/g, "&quot;")}">View</button>`
+            : "-";
           const id = tx.id || "-";
 
           const row = document.createElement("tr");
@@ -328,7 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
         button.addEventListener("click", () => showNote(button.dataset.note || ""));
       });
 
-      // Pagination UI
+      // Pagination
       const pageIndicator = document.getElementById("transactionPageIndicator");
       const prevBtn = document.getElementById("prevTransactions");
       const nextBtn = document.getElementById("nextTransactions");
@@ -336,11 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (prevBtn) prevBtn.style.display = currentPage === 1 ? "none" : "inline-block";
       if (nextBtn) nextBtn.style.display = transactions.length > transactionsPerPage ? "inline-block" : "none";
 
-      // Assistance dropdown value
-      const assistDropdown = document.getElementById("editAssistance");
-      if (assistDropdown) assistDropdown.value = user.on_assistance ? "true" : "false";
-
-      // Actions dropdown
+      // Actions dropdown (admin)
       const dropdown = document.createElement("select");
       dropdown.innerHTML = `
         <option value="">Actions</option>
@@ -381,16 +395,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!res.ok) throw new Error((await res.json()).message || "Failed to update status");
             alert(`User status updated to ${newStatus}.`);
             if (newStatus === "suspended") {
-              await fetch(`/api/users/${currentUserId}/signout`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-              });
+              await fetch(`/api/users/${currentUserId}/signout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
             }
           } else if (action === "signout") {
-            res = await fetch(`/api/users/${currentUserId}/signout`, {
-              method: "POST",
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            res = await fetch(`/api/users/${currentUserId}/signout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
             if (!res.ok) throw new Error((await res.json()).message || "Force sign-out failed");
             alert("User signed out.");
           } else if (action === "delete") {
@@ -437,168 +445,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
       }
-
-      // Student / Parent sections (unchanged)
-      if (user.role === "student") {
-        const s = user.student_profile;
-        if (s) {
-          studentInfoSection.innerHTML = `
-            <div class="section-title">Student Info</div>
-            <div style="margin-top: 10px; margin-bottom: 10px;">
-              <button id="editStudentBtn" class="btnEdit">Edit Student</button>
-              <button id="saveStudentBtn" class="btnEdit" style="display:none;">Save Student Info</button>
-            </div>
-            <div class="user-details-grid">
-              <div><span class="label">School</span><span class="value" id="viewSchool">${s.school_name || "-"}</span>
-                <input type="text" id="editSchool" value="${s.school_name || ""}" style="display:none; width: 100%;" />
-              </div>
-              <div><span class="label">Grade</span><span class="value" id="viewGrade">${s.grade_level || "-"}</span>
-                <input type="text" id="editGrade" value="${s.grade_level || ""}" style="display:none; width: 100%;" />
-              </div>
-              <div><span class="label">Expiry</span><span class="value" id="viewExpiry">${s.expiry_date ? formatDatePretty(s.expiry_date) : "-"}</span>
-                <input type="date" id="editExpiry" value="${s.expiry_date ? s.expiry_date.slice(0, 10) : ""}" style="display:none; width: 100%;" />
-              </div>
-            </div>
-          `;
-          studentInfoSection.style.display = "block";
-
-          const editStudentBtn = document.getElementById("editStudentBtn");
-          const saveStudentBtn = document.getElementById("saveStudentBtn");
-          if (editStudentBtn) {
-            editStudentBtn.onclick = () => {
-              ["School", "Grade", "Expiry"].forEach((f) => {
-                const v = document.getElementById(`view${f}`);
-                const e = document.getElementById(`edit${f}`);
-                if (v && e) { v.style.display = "none"; e.style.display = "block"; }
-              });
-              if (saveStudentBtn) saveStudentBtn.style.display = "inline-block";
-            };
-          }
-          if (saveStudentBtn) {
-            saveStudentBtn.onclick = async () => {
-              const studentData = {
-                school_name: document.getElementById("editSchool")?.value,
-                grade_level: document.getElementById("editGrade")?.value,
-                expiry_date: document.getElementById("editExpiry")?.value,
-              };
-              try {
-                await fetchJSON(`/api/students/${currentUserId}`, { method: "PATCH", body: JSON.stringify(studentData) });
-                alert("Student info saved.");
-                isEditMode = false;
-                saveStudentBtn.style.display = "none";
-                loadUserProfile();
-              } catch {
-                alert("Failed to save student info.");
-              }
-            };
-          }
-
-          try {
-            const parents = await fetchJSON(`/api/user-students/parents/${user.id}`);
-            if (Array.isArray(parents) && parents.length > 0) {
-              const parent = parents[0];
-              document.getElementById("parentName").innerHTML =
-                `<a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">${parent.first_name} ${parent.last_name}</a>`;
-              document.getElementById("parentEmail").textContent = parent.email;
-              document.getElementById("parentSection").style.display = "block";
-            }
-          } catch {}
-        }
-      }
-
-      if (user.role === "parent" && Array.isArray(user.assigned_students)) {
-        studentInfoSection.innerHTML = `<div class="section-title">Assigned Students</div>`;
-        user.assigned_students.forEach((student) => {
-          const block = document.createElement("div");
-          block.classList.add("user-details-grid");
-          block.innerHTML = `
-            <div><span class="label">Name</span><span class="value">
-              <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${student.id}')">
-                ${student.first_name} ${student.last_name}
-              </a></span></div>
-            <div><span class="label">Email</span><span class="value">${student.email}</span></div>
-            <div><span class="label">School</span><span class="value">${student.school_name || "-"}</span></div>
-            <div><span class="label">Grade</span><span class="value">${student.grade_level || "-"}</span></div>
-            <div><span class="label">Expiry</span><span class="value">${student.expiry_date ? formatDatePretty(student.expiry_date) : "-"}</span></div>
-          `;
-          studentInfoSection.appendChild(block);
-        });
-        studentInfoSection.style.display = "block";
-      }
-
-      // Edit Profile
-      editBtn.onclick = () => {
-        isEditMode = true;
-        ["FirstName", "MiddleName", "LastName", "Email", "Assistance"].forEach((f) => {
-          const v = document.getElementById(`view${f}`);
-          const e = document.getElementById(`edit${f}`);
-          if (v && e) { v.style.display = "none"; e.style.display = "block"; }
-        });
-        if (currentUserData.role === "vendor") {
-          ["Business", "Category", "Phone", "VendorApproved"].forEach((f) => {
-            const v = document.getElementById(`vendor${f}`) || document.getElementById(`view${f}`);
-            const e = document.getElementById(`editVendor${f}`) || document.getElementById(`edit${f}`);
-            if (v && e) { v.style.display = "none"; e.style.display = "block"; }
-          });
-        }
-        saveBtn.style.display = "inline-block";
-        document.querySelectorAll(".remove-student-wrapper").forEach((el) => (el.style.display = "block"));
-      };
-
-      saveBtn.onclick = async () => {
-        let hadError = false;
-        try {
-          await fetchJSON(`/api/users/${currentUserId}`, {
-            method: "PATCH",
-            body: JSON.stringify({
-              first_name: document.getElementById("editFirstName").value,
-              middle_name: document.getElementById("editMiddleName").value,
-              last_name: document.getElementById("editLastName").value,
-              email: document.getElementById("editEmail").value,
-              on_assistance: (() => {
-                const el = document.getElementById("editAssistance");
-                return el ? el.value === "true" : false;
-              })(),
-            }),
-          });
-        } catch {
-          hadError = true;
-        }
-
-        if (currentUserData.role === "vendor") {
-          try {
-            await fetchJSON(`/api/vendors/${currentUserId}`, {
-              method: "PATCH",
-              body: JSON.stringify({
-                business_name: document.getElementById("editVendorBusiness")?.value,
-                category: document.getElementById("editVendorCategory")?.value,
-                phone: document.getElementById("editVendorPhone")?.value,
-              }),
-            });
-          } catch {
-            hadError = true;
-          }
-        }
-
-        if (hadError) {
-          alert("Some changes were saved, but not all.");
-        } else {
-          alert("All changes saved.");
-          isEditMode = false;
-          saveBtn.style.display = "none";
-          [
-            "FirstName", "MiddleName", "LastName", "Email", "Assistance",
-            "School", "Grade", "Expiry",
-            "Business", "Category", "Phone", "VendorApproved",
-          ].forEach((f) => {
-            const v = document.getElementById(`view${f}`) || document.getElementById(`vendor${f}`);
-            const e = document.getElementById(`edit${f}`) || document.getElementById(`editVendor${f}`);
-            if (v && e) { v.style.display = "inline-block"; e.style.display = "none"; }
-          });
-          document.querySelectorAll(".remove-student-wrapper").forEach((el) => (el.style.display = "none"));
-          loadUserProfile();
-        }
-      };
     } catch (err) {
       console.error("Failed to load user:", err);
       alert("Error loading user: " + err.message);
