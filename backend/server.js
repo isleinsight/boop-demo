@@ -78,6 +78,9 @@ app.get('/api/vendor/ping', authenticateToken, (req, res) => {
   res.json({ ok: true, ts: Date.now(), staff: !!req.user?.staff });
 });
 
+const passportRouter = require('./auth/routes/passport');
+app.use('/api/passport', authenticateToken, passportRouter);
+
 mount('/api/passport', './auth/routes/passport', 'passport');
 
 // Students / parents / sessions / txns / payouts / sales
