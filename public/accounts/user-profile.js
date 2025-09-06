@@ -186,7 +186,25 @@ userInfo.innerHTML = `
 
   <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
     <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
+  <!-- Passport (admin-managed) -->
+  <div>
+    <span class="label">Passport ID</span>
+    <span class="value" id="viewPassportId">—</span>
+    <input
+      type="text"
+      id="editPassportId"
+      style="display:none; width: 100%;"
+      placeholder="Enter passport ID (e.g., ABCD-1234)"
+    />
+  </div>
 
+  <div>
+    <span class="label">Passport Link</span>
+    <span class="value">
+      <a id="viewPassportLink" href="#" target="_blank" rel="noopener">—</a>
+      <button id="copyPassportLinkBtn" class="btn-secondary" style="margin-left:8px;">Copy</button>
+    </span>
+  </div>
   <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
 
   <div><span class="label">Role</span><span class="value">${user.role}</span></div>
