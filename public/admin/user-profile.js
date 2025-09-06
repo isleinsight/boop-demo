@@ -209,7 +209,39 @@ try {
 
   ${walletHTML}
 `;
+// Update passport link field
+const passportInput = document.getElementById("passportLink");
+if (passportInput) {
+  if (user.passport_id) {
+    const url = `https://payulot.com/tap.html?pid=${encodeURIComponent(user.passport_id)}`;
+    passportInput.value = url;
+  } else {
+    passportInput.value = "No passport assigned";
+  }
+}
 
+      const copyBtn = document.getElementById("copyPassportLink");
+if (copyBtn) {
+  copyBtn.addEventListener("click", async () => {
+    const val = document.getElementById("passportLink")?.value || "";
+    if (!val || val === "No passport assigned") {
+      alert("No passport link to copy.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(val);
+      copyBtn.textContent = "Copied!";
+      setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
+    } catch {
+      const inp = document.getElementById("passportLink");
+      inp?.select();
+      document.execCommand("copy");
+      copyBtn.textContent = "Copied!";
+      setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
+    }
+  });
+}
+      
       // ─── PASSPORT: fetch + populate + copy link ────────────────────────────────
 try {
   // Elements we just added in the HTML template
