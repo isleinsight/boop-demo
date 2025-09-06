@@ -65,7 +65,6 @@
     .kv .item{ padding:8px 10px; border:1px solid var(--stroke); border-radius:10px; background:#fff; }
     .muted{ color:var(--muted) }
 
-    /* Masked PID chip */
     .pid-chip{
       display:inline-flex; align-items:center; gap:8px; padding:8px 10px;
       border:1px dashed var(--stroke); border-radius:10px; background:#f8fafc; color:#111827;
@@ -100,10 +99,8 @@
       <h1>Passport</h1>
       <p class="sub">This page opens from the scanner (deep link includes a Passport token). The full ID is never displayed.</p>
 
-      <!-- Hidden full PID (set ONLY from deep link) -->
       <input id="pidFull" type="hidden" autocomplete="off" />
 
-      <!-- Masked PID display -->
       <div class="row">
         <div class="col">
           <label>Selected Passport</label>
@@ -202,7 +199,6 @@
 
   <script>
   // ---------- config ----------
-  const BACKEND_EXPECTS_CENTS = false;
   const KIOSK_NAME = 'payulot_kiosk';
   const ORIGIN = location.origin;
 
@@ -266,12 +262,10 @@
     PID = (newPid || '').trim();
     updateUrlPid(PID);
 
-    // reflect masked pid
     $('pidFull').value = PID || '';
     $('pidMasked').textContent = PID ? maskPid(PID) : 'No passport detected';
     $('pidHint').textContent = PID ? '(masked — last 4 only)' : '';
 
-    // reset vendor form for new tap
     chargedLock = false;
     hideStatus($('v_status'));
     $('v_amount') && ($('v_amount').disabled = false, $('v_amount').value = '');
@@ -279,7 +273,6 @@
     $('v_chargeBtn') && ($('v_chargeBtn').disabled = !(PID && currentRole === 'vendor'));
     $('v_amount')?.focus();
 
-    // transit button enable based on role
     $('t_validateBtn') && ($('t_validateBtn').disabled = !(PID && currentRole === 'transit'));
   }
 
@@ -310,15 +303,13 @@
   document.addEventListener('DOMContentLoaded', async () => {
     $('year') && ($('year').textContent = new Date().getFullYear());
 
-    // pick up ?pid= if page was opened directly
     try {
       const u = new URL(location.href);
       const raw = (u.searchParams.get('pid') || '').trim();
       if (raw && /^[A-Za-z0-9_-]{12,}$/.test(raw)) PID = raw;
     } catch {}
-    acceptPID(PID); // will also handle PID==''
+    acceptPID(PID);
 
-    // auth + role
     try {
       const me = await fetchMe();
       const who = fullNameOrEmail(me);
@@ -330,7 +321,6 @@
 
       setRoleView(currentRole);
 
-      // enable buttons if PID present
       $('v_chargeBtn') && ($('v_chargeBtn').disabled = !(PID && currentRole === 'vendor'));
       $('t_validateBtn') && ($('t_validateBtn').disabled = !(PID && currentRole === 'transit'));
     } catch (e) {
@@ -340,18 +330,17 @@
       return;
     }
 
-    // let the relay know we can receive PIDs
     notifyReady();
 
-    // logout
     $('logoutLink')?.addEventListener('click', async (e)=>{
       e.preventDefault();
       try { await fetch('/api/logout', { method:'POST' }); } catch {}
       localStorage.clear(); location.href = '../login.html';
     });
 
-    // vendor charge (one-shot until next tap)
     $('v_amount')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('v_chargeBtn')?.click(); });
+
+    // >>> FIXED: send keys backend expects (pid/passport_id + amount) <<<
     $('v_chargeBtn')?.addEventListener('click', async () => {
       const out = $('v_status');
       hideStatus(out);
@@ -371,28 +360,22 @@
 
       try {
         const token = localStorage.getItem('boop_jwt') || '';
-        const payload = BACKEND_EXPECTS_CENTS
-          ? { pid_token: PID, amount_cents: Math.round(amt * 100), note }
-          : { pid_token: PID, amount: amt, note };
+        const payload = { pid: PID, amount: amt, note }; // << correct keys
 
         const r = await fetch('/api/vendor/passport-charge', {
           method:'POST',
-          headers:{ 'Content-Type':'application/json', Authorization: `Bearer ${token}` },
+          headers:{ 'Content-Type':'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify(payload)
         });
         const j = await r.json().catch(()=>({}));
         if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
 
         showStatus(out, 'Charge completed.', 'ok');
-
-        // lock until next tap
         chargedLock = true;
 
-        // tell opener (relay) we’re done (optional)
         try { window.opener?.postMessage({ type:'charge:done', txn: j?.transaction || null }, ORIGIN); } catch {}
       } catch (err) {
         showStatus(out, `❌ ${err.message || err}`, 'err');
-        // allow retry on error
         $('v_amount') && ($('v_amount').disabled = false);
         $('v_note')   && ($('v_note').disabled   = false);
         btn.disabled = false;
@@ -401,7 +384,6 @@
       }
     });
 
-    // transit (demo)
     $('t_validateBtn')?.addEventListener('click', async () => {
       const out = $('t_status');
       hideStatus(out);
