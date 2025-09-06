@@ -171,44 +171,95 @@ try {
   console.warn("Could not load wallet balance:", err.message);
 }
       
+// 1) Render core profile fields (adds a Passport deep-link row with an input + Copy button)
 userInfo.innerHTML = `
   <div><span class="label">User ID</span><span class="value">${user.id}</span></div>
   
-  <div><span class="label">First Name</span><span class="value" id="viewFirstName">${user.first_name}</span>
-    <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" /></div>
+  <div>
+    <span class="label">First Name</span>
+    <span class="value" id="viewFirstName">${user.first_name}</span>
+    <input type="text" id="editFirstName" value="${user.first_name}" style="display:none; width: 100%;" />
+  </div>
 
-  <div><span class="label">Middle Name</span><span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
-    <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" /></div>
+  <div>
+    <span class="label">Middle Name</span>
+    <span class="value" id="viewMiddleName">${user.middle_name || "-"}</span>
+    <input type="text" id="editMiddleName" value="${user.middle_name || ""}" style="display:none; width: 100%;" />
+  </div>
 
-  <div><span class="label">Last Name</span><span class="value" id="viewLastName">${user.last_name}</span>
-    <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" /></div>
+  <div>
+    <span class="label">Last Name</span>
+    <span class="value" id="viewLastName">${user.last_name}</span>
+    <input type="text" id="editLastName" value="${user.last_name}" style="display:none; width: 100%;" />
+  </div>
 
-  <div><span class="label">Email</span><span class="value" id="viewEmail">${user.email}</span>
-    <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" /></div>
-  
-  <div><span class="label">Status</span><span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span></div>
+  <div>
+    <span class="label">Email</span>
+    <span class="value" id="viewEmail">${user.email}</span>
+    <input type="email" id="editEmail" value="${user.email}" style="display:none; width: 100%;" />
+  </div>
+
+  <!-- Passport deep link (for NFC cards) -->
+  <div class="passport-link-row" style="display:flex; gap:10px; align-items:center;">
+    <div style="flex:1">
+      <span class="label">Passport deep link</span>
+      <input
+        type="text"
+        id="passportLink"
+        readonly
+        style="width:100%; background:#f9fafb; border:1px solid #d1d9e6; padding:10px 12px; border-radius:6px;"
+        value="Loading…"
+      />
+    </div>
+    <button id="copyPassportLink" class="btnEdit" type="button">Copy</button>
+  </div>
+
+  <div>
+    <span class="label">Status</span>
+    <span class="value" style="color:${user.status === "suspended" ? "red" : "green"}">${user.status}</span>
+  </div>
 
   <div><span class="label">Role</span><span class="value">${user.role}</span></div>
 
   <div><span class="label">Balance</span><span class="value">${walletBalance}</span></div>
-  
-  ${assistanceHTML} 
 
+  ${assistanceHTML}
   ${walletHTML}
 `;
-// Update passport link field
-const passportInput = document.getElementById("passportLink");
-if (passportInput) {
-  if (user.passport_id) {
-    const url = `https://payulot.com/tap.html?pid=${encodeURIComponent(user.passport_id)}`;
-    passportInput.value = url;
-  } else {
-    passportInput.value = "No passport assigned";
-  }
-}
 
-      const copyBtn = document.getElementById("copyPassportLink");
-if (copyBtn) {
+// 2) Populate the Passport deep link (after the DOM above exists)
+(async () => {
+  try {
+    // Use admin endpoint (authoritative); fall back to user.passport_id if needed
+    let passportId = "";
+    try {
+      const pp = await fetchJSON(`/api/admin/users/${user.id}/passport`);
+      passportId = (pp && pp.passport_id) ? String(pp.passport_id) : "";
+    } catch {
+      passportId = user.passport_id || "";
+    }
+
+    const input = document.getElementById("passportLink");
+    if (!input) return;
+
+    if (passportId) {
+      // Route through tap.html so it behaves by whoever is signed-in (vendor/transit/health)
+      const deepLink = `https://payulot.com/tap.html?pid=${encodeURIComponent(passportId)}`;
+      input.value = deepLink;
+    } else {
+      input.value = "No passport assigned";
+    }
+  } catch (e) {
+    const input = document.getElementById("passportLink");
+    if (input) input.value = "No passport assigned";
+    console.warn("Could not populate passport link:", e?.message || e);
+  }
+})();
+
+// 3) Copy button (clipboard)
+(() => {
+  const copyBtn = document.getElementById("copyPassportLink");
+  if (!copyBtn) return;
   copyBtn.addEventListener("click", async () => {
     const val = document.getElementById("passportLink")?.value || "";
     if (!val || val === "No passport assigned") {
@@ -227,7 +278,7 @@ if (copyBtn) {
       setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
     }
   });
-}
+})();
       
       // ─── PASSPORT: fetch + populate + copy link ────────────────────────────────
 try {
