@@ -86,6 +86,66 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
       currentUserData = user;
 
+       // ---- Fill the existing "Passport link" input using this user's passport_id ----
+(async () => {
+  const input = document.getElementById("passportLink");
+  const copyBtn = document.getElementById("copyPassportLink");
+  if (!input) return;
+
+  input.value = "Loading…";
+
+  try {
+    // IMPORTANT: this matches your backend route:
+    // router.get("/admin/:userId", ...) inside backend/auth/routes/passport.js
+    const token = localStorage.getItem("boop_jwt");
+    const res = await fetch(`/api/passport/admin/${encodeURIComponent(user.id)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+
+    // If server ever returns non-JSON (e.g., error HTML), avoid crashing:
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch {}
+
+    const pid = data?.passport_id || "";
+
+    if (!res.ok || !pid) {
+      input.value = "No passport assigned";
+      return;
+    }
+
+    // Build the NFC deep link exactly like you want:
+    input.value = `https://payulot.com/tap.html?pid=${encodeURIComponent(pid)}`;
+
+    // Wire up the Copy button once
+    if (copyBtn && !copyBtn._wired) {
+      copyBtn._wired = true;
+      copyBtn.addEventListener("click", async () => {
+        const val = input.value || "";
+        if (!val || val === "No passport assigned") {
+          alert("No passport link to copy.");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(val);
+          const old = copyBtn.textContent;
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => (copyBtn.textContent = old), 1200);
+        } catch {
+          input.select();
+          document.execCommand("copy");
+          const old = copyBtn.textContent;
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => (copyBtn.textContent = old), 1200);
+        }
+      });
+    }
+  } catch (e) {
+    console.warn("Passport populate error:", e);
+    input.value = "No passport assigned";
+  }
+})();
+
       // 2) Wallet balance
       let walletBalance = "N/A";
       try {
