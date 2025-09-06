@@ -1,6 +1,13 @@
 let currentPage = 1;
 const transactionsPerPage = 10;
 
+// --- helper: build Passport link for NFC/cards
+function buildPassportLink(pidToken) {
+  if (!pidToken) return "";
+  // Always point to your passport page; adjust path if different
+  return `${location.origin}/passport/index.html?pid=${encodeURIComponent(pidToken)}`;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
   const userInfo = document.getElementById("userInfo");
