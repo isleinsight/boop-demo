@@ -92,7 +92,12 @@ document.addEventListener("DOMContentLoaded", () => {
       <div>
         <span class="label">Actions</span>
         <div class="value">
-          <button id="copyTapLinkBtn" class="btnEdit" disabled>Copy</button>
+          <select id="passportActions" style="min-width:220px;">
+            <option value="">Select action…</option>
+            <option value="copy">Copy Tap Link</option>
+            <option value="open">Open Tap Link</option>
+            <option value="regen">Regenerate Passport ID</option>
+          </select>
           <span id="tapLinkStatus" style="margin-left:8px;color:#6b7280;"></span>
         </div>
       </div>
@@ -115,12 +120,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const valueSpan = document.getElementById("passportTapLinkValue");
     const input = document.getElementById("passportTapLinkInput");
-    const copyBtn = document.getElementById("copyTapLinkBtn");
-    if (!valueSpan || !copyBtn) return;
+    const actions = document.getElementById("passportActions");
+    if (!valueSpan || !actions) return;
 
     valueSpan.textContent = "Loading…";
     if (input) input.style.display = "none";
-    copyBtn.disabled = true;
+    actions.disabled = true;
     setTapStatus("");
 
     try {
@@ -129,7 +134,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!passportId) {
         valueSpan.textContent = "No passport assigned";
-        setTapStatus("Assign a passport ID to generate the tap link.", true);
+        setTapStatus("Assign or regenerate a passport ID to generate the tap link.", true);
+        actions.disabled = false; // allow regen even if none exists
+        // Rebind dropdown to allow regen
+        const fresh = actions.cloneNode(true);
+        actions.parentNode.replaceChild(fresh, actions);
+        fresh.addEventListener("change", async () => {
+          const choice = fresh.value;
+          fresh.value = "";
+          if (choice === "regen") {
+            try {
+              if (!confirm("Regenerate passport ID? This invalidates any old NFC card.")) return;
+              setTapStatus("Regenerating…");
+              await fetchJSON(`/api/passport/${encodeURIComponent(userId)}/regenerate`, { method: "POST" });
+              setTapStatus("New passport ID created.");
+              await loadPassport(userId);
+            } catch (err) {
+              setTapStatus(err.message || "Failed to regenerate.", true);
+            }
+          }
+        });
         return;
       }
 
@@ -137,25 +161,36 @@ document.addEventListener("DOMContentLoaded", () => {
       valueSpan.textContent = tapLink;
       if (input) input.value = tapLink;
 
-      const newBtn = copyBtn.cloneNode(true);
-      copyBtn.parentNode.replaceChild(newBtn, copyBtn);
-      newBtn.disabled = false;
-      newBtn.addEventListener("click", async () => {
+      // Fresh handler to avoid duplicates
+      const fresh = actions.cloneNode(true);
+      actions.parentNode.replaceChild(fresh, actions);
+      fresh.disabled = false;
+      fresh.addEventListener("change", async () => {
+        const choice = fresh.value;
+        fresh.value = "";
+        if (!choice) return;
         try {
-          await navigator.clipboard.writeText(tapLink);
-          setTapStatus("Copied to clipboard.");
-        } catch {
-          setTapStatus("Copy failed. Select and copy manually.", true);
-          if (input) {
-            input.style.display = "block";
-            input.focus();
-            input.select();
+          if (choice === "copy") {
+            await navigator.clipboard.writeText(tapLink);
+            setTapStatus("Copied to clipboard.");
+          } else if (choice === "open") {
+            window.open(tapLink, "_blank", "noopener");
+            setTapStatus("");
+          } else if (choice === "regen") {
+            if (!confirm("Regenerate passport ID? This invalidates the old NFC card.")) return;
+            setTapStatus("Regenerating…");
+            await fetchJSON(`/api/passport/${encodeURIComponent(userId)}/regenerate`, { method: "POST" });
+            setTapStatus("New passport ID created.");
+            await loadPassport(userId);
           }
+        } catch (err) {
+          setTapStatus(err.message || "Action failed", true);
         }
       });
     } catch (err) {
       valueSpan.textContent = "Error loading Tap Link";
       setTapStatus(err.message || "Failed to load tap link", true);
+      actions.disabled = false;
     }
   }
 
