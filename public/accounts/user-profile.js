@@ -4,7 +4,7 @@ const transactionsPerPage = 10;
 // --- helper: build Passport link for NFC/cards
 function buildPassportLink(pidToken) {
   if (!pidToken) return "";
-  // Always point to your passport page; adjust path if different
+  // Always point to passport page; adjust path if different
   return `${location.origin}/passport/index.html?pid=${encodeURIComponent(pidToken)}`;
 }
 
