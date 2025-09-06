@@ -69,10 +69,10 @@ router.put("/mine", authenticateToken, requireCardholderLike, async (req, res) =
     // Try update first (also ensure pid_token/pid_created_at exist)
     const upd = await client.query(
       `UPDATE passports
-          SET passport_id   = $1,
-              pid_token     = COALESCE(pid_token, encode(gen_random_bytes(12), 'hex')),
-              pid_created_at= COALESCE(pid_created_at, NOW()),
-              updated_at    = NOW()
+          SET passport_id    = $1,
+              pid_token      = COALESCE(pid_token, encode(gen_random_bytes(12), 'hex')),
+              pid_created_at = COALESCE(pid_created_at, NOW()),
+              updated_at     = NOW()
         WHERE user_id = $2
         RETURNING passport_id, pid_token`,
       [raw, userId]
