@@ -22,7 +22,6 @@ async function fetchJSON(url, options = {}) {
   const res = await fetch(url, { ...options, headers });
 
   if (res.status === 401 || res.status === 403) {
-    console.warn("Token rejected or expired");
     if (options.autoRedirect !== false) {
       window.location.href = "../government-portal.html";
     }
@@ -30,21 +29,16 @@ async function fetchJSON(url, options = {}) {
   }
 
   if (!res.ok) {
-    const errText = await res.text();
+    const errText = await res.text().catch(()=>"");
     throw new Error(errText || `HTTP ${res.status}`);
   }
 
-  try {
-    return await res.json();
-  } catch {
-    return {};
-  }
+  try { return await res.json(); } catch { return {}; }
 }
 
 function formatDatePretty(dateStr) {
   const date = new Date(dateStr);
-  const options = { year: "numeric", month: "long", day: "numeric" };
-  return date.toLocaleDateString("en-US", options);
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 }
 
 /* -------------------------------------------
@@ -58,9 +52,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const parentSection = document.getElementById("parentSection");
   const studentInfoSection = document.getElementById("studentInfoSection");
 
-  // Use the EXISTING passport inputs in your HTML section
-  const passportInput = document.getElementById("passportLink");
-  const passportCopyBtn = document.getElementById("copyPassportLink");
+  // IMPORTANT: use the existing Passport inputs in your HTML "Passport" section
+  const passportInput   = document.querySelector("#passportBlock #passportLink");
+  const passportCopyBtn = document.querySelector("#passportBlock #copyPassportLink");
 
   const currentAdmin = JSON.parse(localStorage.getItem("boopUser") || "null");
   if (currentAdmin?.role === "admin" && ["viewer", "accountant"].includes(currentAdmin?.type)) {
@@ -81,6 +75,84 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  // ---- Passport fill helper (timeouts + fallbacks; never leaves "Loading…") ----
+  async function fillPassportLinkForUser(userId) {
+    if (!passportInput) return;
+
+    const token = localStorage.getItem("boop_jwt");
+    passportInput.value = "Loading…";
+
+    const withAuth = (opts = {}) => ({
+      ...opts,
+      headers: {
+        "Content-Type": "application/json",
+        ...(opts.headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const timeout = (ms, p) =>
+      Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+
+    async function getJSON(url) {
+      try {
+        const res = await timeout(3500, fetch(url, withAuth()));
+        const text = await res.text().catch(()=>"");
+        let data = {};
+        try { data = JSON.parse(text); } catch {}
+        return { ok: res.ok, data };
+      } catch (e) {
+        return { ok: false, data: null };
+      }
+    }
+
+    let pid = "";
+
+    // Try your admin endpoint first (fastest/authoritative)
+    let r = await getJSON(`/api/passport/admin/${encodeURIComponent(userId)}`);
+    if (r.ok && r.data?.passport_id) pid = String(r.data.passport_id);
+
+    // Fallback to older admin style if you have it
+    if (!pid) {
+      r = await getJSON(`/api/admin/users/${encodeURIComponent(userId)}/passport`);
+      if (r.ok && r.data?.passport_id) pid = String(r.data.passport_id);
+    }
+
+    // Final fallback if viewing yourself
+    if (!pid) {
+      r = await getJSON(`/api/passport/mine`);
+      if (r.ok && r.data?.passport_id) pid = String(r.data.passport_id);
+    }
+
+    passportInput.value = pid
+      ? `https://payulot.com/tap.html?pid=${encodeURIComponent(pid)}`
+      : "No passport assigned";
+
+    // Wire copy button once
+    if (passportCopyBtn && !passportCopyBtn._wired) {
+      passportCopyBtn._wired = true;
+      passportCopyBtn.addEventListener("click", async () => {
+        const val = passportInput.value || "";
+        if (!val || val === "No passport assigned") {
+          alert("No passport link to copy.");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(val);
+          const old = passportCopyBtn.textContent;
+          passportCopyBtn.textContent = "Copied!";
+          setTimeout(() => (passportCopyBtn.textContent = old), 1200);
+        } catch {
+          passportInput.select();
+          document.execCommand("copy");
+          const old = passportCopyBtn.textContent;
+          passportCopyBtn.textContent = "Copied!";
+          setTimeout(() => (passportCopyBtn.textContent = old), 1200);
+        }
+      });
+    }
+  }
+
   /* -------------------------------------------
      Load profile (render + data fetches)
   ------------------------------------------- */
@@ -90,50 +162,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = await fetchJSON(`/api/users/${currentUserId}`);
       currentUserData = user;
 
-      // ---- Populate the existing Passport link input in the static HTML ----
-      if (passportInput) passportInput.value = "Loading…";
-      try {
-        const pp = await fetchJSON(`/api/passport/admin/${user.id}`);
-        const passportId = (pp && pp.passport_id) ? String(pp.passport_id) : "";
-        currentUserData._passport_id = passportId;
-
-        if (passportInput) {
-          if (passportId) {
-            // Use the payulot.com tap route you wanted
-            const deepLink = `https://payulot.com/tap.html?pid=${encodeURIComponent(passportId)}`;
-            passportInput.value = deepLink;
-          } else {
-            passportInput.value = "No passport assigned";
-          }
-        }
-      } catch (e) {
-        console.warn("Could not populate passport link:", e?.message || e);
-        if (passportInput) passportInput.value = "No passport assigned";
-      }
-
-      // Wire up Copy once
-      if (passportCopyBtn && !passportCopyBtn._wired) {
-        passportCopyBtn._wired = true;
-        passportCopyBtn.addEventListener("click", async () => {
-          const val = passportInput?.value || "";
-          if (!val || val === "No passport assigned") {
-            alert("No passport link to copy.");
-            return;
-          }
-          try {
-            await navigator.clipboard.writeText(val);
-            const old = passportCopyBtn.textContent;
-            passportCopyBtn.textContent = "Copied!";
-            setTimeout(() => (passportCopyBtn.textContent = old), 1200);
-          } catch {
-            passportInput?.select();
-            document.execCommand("copy");
-            const old = passportCopyBtn.textContent;
-            passportCopyBtn.textContent = "Copied!";
-            setTimeout(() => (passportCopyBtn.textContent = old), 1200);
-          }
-        });
-      }
+      // 1a) Fill Passport deep link right away (uses existing input in HTML)
+      await fillPassportLinkForUser(user.id);
 
       // 2) Wallet balance
       let walletBalance = "N/A";
@@ -237,10 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // 6) Transactions
       const transactionTableBody = document.querySelector("#transactionTable tbody");
-      if (!transactionTableBody) {
-        console.error("Transaction table body not found in DOM");
-        return;
-      }
+      if (!transactionTableBody) return;
       transactionTableBody.innerHTML = "";
 
       let transactions = [];
@@ -300,9 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
             showNote(noteText);
           });
         });
-      } catch (err) {
-        console.error("Error attaching note button listeners:", err.message);
-      }
+      } catch {}
 
       // Pagination controls
       const pageIndicator = document.getElementById("transactionPageIndicator");
@@ -316,7 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const assistDropdown = document.getElementById("editAssistance");
       if (assistDropdown) assistDropdown.value = user.on_assistance ? "true" : "false";
 
-      // Actions dropdown (suspend/signout/delete)
+      // Actions dropdown
       const dropdown = document.createElement("select");
       dropdown.innerHTML = `
         <option value="">Actions</option>
@@ -332,20 +357,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!action) return;
 
         const token = localStorage.getItem("boop_jwt");
-        if (!token) {
-          alert("Missing token.");
-          return;
-        }
+        if (!token) { alert("Missing token."); return; }
 
         let adminUser = null;
         try {
-          const meRes = await fetch("/api/me", {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const meRes = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
           adminUser = await meRes.json();
-        } catch (e) {
-          console.warn("Failed to fetch current admin");
-        }
+        } catch {}
 
         if (action === "delete") {
           const confirmDelete = prompt("Type DELETE to confirm.");
@@ -384,12 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
               method: "POST",
               headers: { Authorization: `Bearer ${token}` }
             });
-
-            if (!res.ok) {
-              const err = await res.json();
-              throw new Error(err.message || "Force sign-out failed");
-            }
-
+            if (!res.ok) throw new Error((await res.json()).message || "Force sign-out failed");
             alert("User signed out.");
           } else if (action === "delete") {
             res = await fetch(`/api/users/${currentUserId}`, {
@@ -400,12 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
               },
               body: JSON.stringify({ uid: adminUser?.id })
             });
-
-            if (!res.ok) {
-              const err = await res.json();
-              throw new Error(err.message || "User deletion failed");
-            }
-
+            if (!res.ok) throw new Error((await res.json()).message || "User deletion failed");
             alert("User deleted.");
             window.location.href = "view-users.html";
             return;
@@ -413,14 +421,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
           await loadUserProfile();
         } catch (err) {
-          console.error("Action failed:", err);
           alert("Action failed: " + err.message);
         }
       });
 
       userInfo.appendChild(dropdown);
 
-      // Student / Parent blocks (unchanged)
+      // Student / Parent (unchanged)
       if (user.role === "student") {
         const s = user.student_profile;
         if (s) {
@@ -483,14 +490,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 isEditMode = false;
                 saveStudentBtn.style.display = "none";
                 loadUserProfile();
-              } catch (err) {
-                console.error("Failed to save student data:", err);
+              } catch {
                 alert("Failed to save student info.");
               }
             };
           }
 
-          // Parent info of a student
           try {
             const parents = await fetchJSON(`/api/user-students/parents/${user.id}`);
             if (Array.isArray(parents) && parents.length > 0) {
@@ -498,14 +503,11 @@ document.addEventListener("DOMContentLoaded", () => {
               document.getElementById("parentName").innerHTML = `
                 <a href="user-profile.html" onclick="localStorage.setItem('selectedUserId','${parent.id}')">
                   ${parent.first_name} ${parent.last_name}
-                </a>
-              `;
+                </a>`;
               document.getElementById("parentEmail").textContent = parent.email;
               document.getElementById("parentSection").style.display = "block";
             }
-          } catch (err) {
-            console.warn("Could not load parent info:", err.message);
-          }
+          } catch {}
         }
       }
 
@@ -536,20 +538,14 @@ document.addEventListener("DOMContentLoaded", () => {
           ["FirstName", "MiddleName", "LastName", "Email", "Assistance", "PassportId"].forEach(field => {
             const viewEl = document.getElementById(`view${field}`);
             const editEl = document.getElementById(`edit${field}`);
-            if (viewEl && editEl) {
-              viewEl.style.display = "none";
-              editEl.style.display = "block";
-            }
+            if (viewEl && editEl) { viewEl.style.display = "none"; editEl.style.display = "block"; }
           });
 
           if (currentUserData.role === "vendor") {
             ["Business", "Category", "Phone", "VendorApproved"].forEach(field => {
               const viewEl = document.getElementById(`vendor${field}`) || document.getElementById(`view${field}`);
               const editEl = document.getElementById(`editVendor${field}`) || document.getElementById(`edit${field}`);
-              if (viewEl && editEl) {
-                viewEl.style.display = "none";
-                editEl.style.display = "block";
-              }
+              if (viewEl && editEl) { viewEl.style.display = "none"; editEl.style.display = "block"; }
             });
           }
 
@@ -579,10 +575,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
           } catch (err) {
             hadError = true;
-            console.warn("User update failed:", err);
           }
 
-          // If you add an edit field for passport in the future, keep this logic
+          // Keep Passport update logic if you later add an edit field
           try {
             const newPid = (document.getElementById("editPassportId")?.value || "").trim();
             const oldPid = currentUserData?._passport_id || "";
@@ -590,8 +585,9 @@ document.addEventListener("DOMContentLoaded", () => {
               if (newPid === "") {
                 await fetchJSON(`/api/passport/admin/${currentUserId}`, { method: "DELETE" });
               } else {
-                const ok = /^[A-Za-z0-9\- ]{4,64}$/.test(newPid);
-                if (!ok) throw new Error("Passport ID must be 4–64 chars (letters, numbers, spaces, dashes).");
+                if (!/^[A-Za-z0-9\- ]{4,64}$/.test(newPid)) {
+                  throw new Error("Passport ID must be 4–64 chars (letters, numbers, spaces, dashes).");
+                }
                 await fetchJSON(`/api/passport/admin/${currentUserId}`, {
                   method: "PUT",
                   body: JSON.stringify({ passport_id: newPid })
@@ -600,7 +596,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           } catch (err) {
             hadError = true;
-            console.warn("Passport save failed:", err);
           }
 
           if (currentUserData.role === "vendor") {
@@ -615,7 +610,6 @@ document.addEventListener("DOMContentLoaded", () => {
               });
             } catch (err) {
               hadError = true;
-              console.warn("Vendor update failed:", err);
             }
           }
 
@@ -633,10 +627,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ].forEach(field => {
               const viewEl = document.getElementById(`view${field}`) || document.getElementById(`vendor${field}`);
               const editEl = document.getElementById(`edit${field}`) || document.getElementById(`editVendor${field}`);
-              if (viewEl && editEl) {
-                viewEl.style.display = "inline-block";
-                editEl.style.display = "none";
-              }
+              if (viewEl && editEl) { viewEl.style.display = "inline-block"; editEl.style.display = "none"; }
             });
 
             document.querySelectorAll(".remove-student-wrapper").forEach(el => (el.style.display = "none"));
@@ -647,7 +638,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
     } catch (err) {
-      console.error("Failed to load user:", err);
       alert("Error loading user: " + err.message);
     }
   }
@@ -681,15 +671,11 @@ document.addEventListener("DOMContentLoaded", () => {
           if (sessionRes.status !== 200 && sessionRes.status !== 404) {
             console.warn("Session deletion failed:", await sessionRes.text());
           }
-        } catch (err) {
-          console.warn("Session cleanup failed:", err);
-        }
+        } catch {}
 
         window.location.href = "../government-portal.html";
       }
-    } catch (err) {
-      console.error("Force sign-out check failed:", err);
-    }
+    } catch {}
   })();
 
   // Paging
