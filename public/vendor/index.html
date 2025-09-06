@@ -111,8 +111,7 @@
   try {
     const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
     if (staff) {
-      // optional: show a quick message first
-      // alert('Cashier accounts cannot access vendor owner pages.');
+      
       location.replace('session.html');
     }
   } catch {}
