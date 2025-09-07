@@ -1,1 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Payulot – Privacy Policy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Poppins, system-ui, sans-serif;
+      background: #f5f7fa;
+      color: #0f1b2d;
+      line-height: 1.6;
+    }
+    nav {
+      background: #0b1220;
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #1f2937;
+    }
+    nav img {
+      height: 36px;
+      cursor: pointer;
+    }
+    .container {
+      max-width: 800px;
+      margin: 32px auto;
+      padding: 0 16px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+    h1 {
+      margin-top: 0;
+      padding-top: 24px;
+      font-size: 1.8rem;
+      font-weight: 700;
+      text-align: center;
+    }
+    h2 {
+      font-size: 1.2rem;
+      margin-top: 24px;
+      border-bottom: 1px solid #e6ebf1;
+      padding-bottom: 4px;
+    }
+    p, li {
+      font-size: 0.95rem;
+    }
+    ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    footer {
+      margin-top: 40px;
+      padding: 16px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Nav -->
+  <nav>
+    <img src="../assets/logo-white.png" alt="Payulot Logo" onclick="window.history.back()" title="Go Back" />
+  </nav>
 
+  <!-- Main Content -->
+  <div class="container">
+    <h1>Payulot – Privacy Policy</h1>
+    <p><em>(For Attorney Review – Draft Only)</em></p>
+    <p><strong>Effective Date:</strong> [Insert Date]</p>
+
+    <p>Payulot values your privacy and complies with Bermuda privacy laws as well as international standards including the General Data Protection Regulation (GDPR) and California Consumer Privacy Act (CCPA) principles.</p>
+
+    <h2>1. Data We Collect</h2>
+    <ul>
+      <li>Identity Data: Name, email, phone, role, contact details.</li>
+      <li>Payment Data: Wallet balances, transaction history, vendor interactions.</li>
+      <li>Device Data: NFC identifiers, card numbers, login timestamps, IP addresses.</li>
+      <li>Parent-Student Links: Information connecting parents/guardians to minors.</li>
+    </ul>
+
+    <h2>2. Legal Basis for Processing</h2>
+    <p>We process data under the following bases:</p>
+    <ul>
+      <li>Contractual necessity: To provide payment services.</li>
+      <li>Legal obligation: Compliance with AML/KYC regulations.</li>
+      <li>Legitimate interests: Fraud prevention, auditing, service improvement.</li>
+      <li>Consent: Where required (e.g., for minors, marketing communications).</li>
+    </ul>
+
+    <h2>3. Use of Data</h2>
+    <p>We use collected data to:</p>
+    <ul>
+      <li>Operate wallets, payments, and vendor integrations.</li>
+      <li>Verify identity and comply with AML/KYC requirements.</li>
+      <li>Detect, prevent, and investigate fraud or suspicious activity.</li>
+      <li>Provide support and resolve disputes.</li>
+      <li>Share aggregated or anonymized insights (never personal data).</li>
+    </ul>
+
+    <h2>4. Sharing of Data</h2>
+    <ul>
+      <li>Government & Regulators: For compliance with Bermuda law, AML, and audit purposes.</li>
+      <li>Vendors: Limited data to complete transactions.</li>
+      <li>Service Providers: Hosting, security, and operational support under strict contracts.</li>
+      <li>Blockchain: Only cryptographic hashes (no personal data) are recorded on-chain.</li>
+    </ul>
+
+    <h2>5. Minors</h2>
+    <ul>
+      <li>Children under 18 require verified parental consent to use Payulot.</li>
+      <li>Parents remain responsible for all activity under linked student accounts.</li>
+      <li>Payulot applies heightened data protection for minors’ information.</li>
+    </ul>
+
+    <h2>6. International Transfers</h2>
+    <p>Data may be processed outside Bermuda, subject to safeguards ensuring compliance with GDPR/CCPA principles (e.g., contractual clauses, secure hosting).</p>
+
+    <h2>7. Data Retention</h2>
+    <p>We retain data as long as required for legal, regulatory, and business purposes, after which it will be securely deleted or anonymized.</p>
+
+    <h2>8. User Rights</h2>
+    <p>Subject to applicable law, Users may request:</p>
+    <ul>
+      <li>Access to personal data.</li>
+      <li>Correction of inaccurate data.</li>
+      <li>Deletion (“right to be forgotten”).</li>
+      <li>Restriction or objection to processing.</li>
+      <li>Data portability (export of their data).</li>
+    </ul>
+    <p>Requests can be submitted to: [Insert Contact Information].</p>
+
+    <h2>9. Security</h2>
+    <p>We implement encryption, role-based access controls, and audit trails to safeguard user data. No system is fully secure, and users must protect their credentials.</p>
+
+    <h2>10. Updates</h2>
+    <p>We may update this Privacy Policy to reflect operational, legal, or regulatory changes. Users will be notified of material changes.</p>
+
+    <footer>
+      © <span id="year"></span> Payulot. All rights reserved.
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
