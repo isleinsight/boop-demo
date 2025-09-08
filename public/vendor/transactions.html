@@ -15,22 +15,40 @@
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    /* Top nav */
+    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:1000; }
     .vendor-nav .nav-container{
-      max-width:1100px; margin:0 auto;
-      padding:10px 18px !important;
-      display:flex; align-items:center; justify-content:space-between;
+      max-width:1100px; margin:0 auto; padding:10px 18px !important;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
     .vendor-nav .nav-left img{ height:30px !important; display:block; }
     .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px !important; }
     .vendor-nav .nav-right a{
-      color:#fff; text-decoration:none;
-      font-size:.95rem !important; line-height:1 !important;
+      color:#fff; text-decoration:none; font-size:.95rem !important; line-height:1 !important;
       padding:6px 8px !important; border-radius:6px; opacity:.95;
     }
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
+    /* Hamburger */
+    .hamburger{ display:none; flex-direction:column; gap:4px; cursor:pointer; }
+    .hamburger span{ width:24px; height:3px; background:#fff; border-radius:2px; }
+    @media(max-width:900px){
+      .vendor-nav .nav-right{ display:none; }
+      .hamburger{ display:flex; }
+    }
+
+    /* Mobile menu panel + backdrop */
+    .mobile-menu{ position:fixed; top:0; right:-100%; width:240px; height:100%;
+      background:var(--nav); color:#fff; transition:right .3s ease; padding:20px;
+      display:flex; flex-direction:column; gap:12px; z-index:1100; }
+    .mobile-menu.active{ right:0; }
+    .mobile-menu a{ color:#fff; text-decoration:none; padding:8px 0; font-size:1rem; }
+
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; z-index:1050; }
+    .overlay.active{ display:block; }
+
+    /* Hero */
     .hero-band{
       background:
         radial-gradient(1000px 600px at 85% -10%, var(--grad1), transparent 60%),
@@ -42,6 +60,7 @@
     .hero-title{ margin:0; font-size:clamp(20px,3.2vw,28px); font-weight:600; }
     .hero-sub{ margin:6px 0 0; color:#cbd5e1; font-size:.95rem; }
 
+    /* Main */
     .container{ max-width:1100px; margin:18px auto 40px; padding:0 20px; }
     .filters{
       display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-bottom:16px;
@@ -61,14 +80,8 @@
     .export-btn:hover{ background:var(--blue-dark); }
 
     .list{ display:grid; gap:10px; }
-    .item{
-      background:#fff; border:1px solid var(--stroke); border-radius:12px;
-      padding:12px 14px; display:flex; align-items:center; gap:12px;
-    }
-    .avatar{
-      width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center;
-      font-weight:700; color:#334155; flex:0 0 42px;
-    }
+    .item{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:12px; }
+    .avatar{ width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; flex:0 0 42px; }
     .line{ display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px; }
     .who{ font-weight:600; }
     .amt{ font-weight:700; white-space:nowrap; }
@@ -103,24 +116,19 @@
       }
     })();
   </script>
-<script>
-  // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
-  try {
-    const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
-    if (staff) {
-    
-      location.replace('session.html');
-    }
-  } catch {}
-</script>
+  <script>
+    // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
+    try {
+      const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
+      if (staff) { location.replace('session.html'); }
+    } catch {}
+  </script>
   <!-- Load vendor helpers BEFORE page logic -->
   <script src="vendor-common.js"></script>
 
   <!-- Keep-alive using helper (captures x-renew-jwt) -->
   <script>
-    setInterval(() => {
-      apiFetch('/api/vendor/ping').catch(()=>{});
-    }, 10 * 60 * 1000);
+    setInterval(() => { apiFetch('/api/vendor/ping').catch(()=>{}); }, 10 * 60 * 1000);
   </script>
 
   <!-- NAV -->
@@ -136,8 +144,21 @@
         <a href="manage-staff.html">Manage Staff</a>
         <a href="#" id="logoutLink">Log Out</a>
       </div>
+      <div class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" role="button" tabindex="0">
+        <span></span><span></span><span></span>
+      </div>
     </div>
   </nav>
+
+  <!-- Mobile menu + overlay -->
+  <div class="mobile-menu" id="mobileMenu" aria-label="Mobile navigation">
+    <a href="index.html">Home</a>
+    <a href="transfer.html">Transfer</a>
+    <a href="transactions.html" aria-current="page">Transactions</a>
+    <a href="manage-staff.html">Manage Staff</a>
+    <a href="#" id="logoutLinkMobile">Log Out</a>
+  </div>
+  <div class="overlay" id="overlay"></div>
 
   <!-- HERO -->
   <section class="hero-band">
@@ -192,6 +213,27 @@
   <!-- Page logic (uses apiJSON from vendor-common.js) -->
   <script>
   (function () {
+    // Hamburger interactions
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const overlay = document.getElementById('overlay');
+    const logoutLinkMobile = document.getElementById('logoutLinkMobile');
+
+    function openMenu(){ mobileMenu.classList.add('active'); overlay.classList.add('active'); hamburger.setAttribute('aria-expanded','true'); }
+    function closeMenu(){ mobileMenu.classList.remove('active'); overlay.classList.remove('active'); hamburger.setAttribute('aria-expanded','false'); }
+
+    hamburger?.addEventListener('click', () => { if (mobileMenu.classList.contains('active')) closeMenu(); else openMenu(); });
+    overlay?.addEventListener('click', closeMenu);
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+    mobileMenu.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
+
+    logoutLinkMobile?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try { await apiFetch('/api/logout', { method:'POST' }); } catch {}
+      localStorage.clear(); location.href = 'vendor-login.html';
+    });
+
+    // Transactions page logic
     const listEl = document.getElementById('list');
 
     let allTx = [];
@@ -207,7 +249,7 @@
 
     function dollars(c) { return `$${(Number(c || 0) / 100).toFixed(2)}`; }
     function byDateDesc(a, b) { return new Date(b.created_at) - new Date(a.created_at); }
-    function setActive(btn) { [btn7, btn30, btn90].forEach(b => b.classList.toggle('active', b === btn)); }
+    function setActive(btn) { [btn7, btn30, btn90].forEach(b => b && b.classList.toggle('active', b === btn)); }
 
     function withinRange(tx, start, end) {
       const t = new Date(tx.created_at).getTime();
