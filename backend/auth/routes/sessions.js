@@ -4,50 +4,55 @@ const pool = require('../../db');
 
 /**
  * POST /api/sessions
- * Create a session.
+ * Create/refresh a session.
  * - Vendors may have multiple sessions.
- * - All other roles have exactly one session at a time (we DELETE then INSERT).
- * body: { email, user_id, jwt_token, status?, expires_at?, role? }
+ * - Non-vendors may have only one active session (we delete others).
+ * Body: { email, user_id, jwt_token, status?, expires_at?, role? }
  */
 router.post('/', async (req, res) => {
-  let { email, user_id, jwt_token, status, expires_at, role } = req.body;
+  let { email, user_id, jwt_token, status, expires_at, role } = req.body || {};
 
   if (!email || !user_id || !jwt_token) {
     return res.status(400).json({ message: 'email, user_id, and jwt_token are required' });
   }
 
   try {
-    // If caller didn't pass a role, resolve it from DB
+    // If role not provided, fetch it
     if (!role) {
       const r = await pool.query('SELECT role FROM users WHERE id = $1::uuid LIMIT 1', [user_id]);
       role = (r.rows[0]?.role || '').toString();
     }
-
     const isVendor = (role || '').toLowerCase() === 'vendor';
     const sessStatus = status || 'online';
 
-    if (isVendor) {
-      // Vendors can have multiple concurrent sessions
-      await pool.query(
-        `INSERT INTO sessions (user_id, email, jwt_token, status, expires_at, last_seen)
-         VALUES ($1::uuid, $2, $3, $4, $5, NOW())`,
-        [user_id, email, jwt_token, sessStatus, expires_at || null]
-      );
-    } else {
-      // Non-vendors: one active session per user — do it without ON CONFLICT
-      // to avoid the partial-index limitation.
+    // Non-vendors: ensure a single session (but keep this token if it already exists)
+    if (!isVendor) {
       await pool.query('BEGIN');
-      await pool.query(`DELETE FROM sessions WHERE user_id = $1::uuid`, [user_id]);
       await pool.query(
-        `INSERT INTO sessions (user_id, email, jwt_token, status, expires_at, last_seen)
-         VALUES ($1::uuid, $2, $3, $4, $5, NOW())`,
-        [user_id, email, jwt_token, sessStatus, expires_at || null]
+        `DELETE FROM sessions
+           WHERE user_id = $1::uuid
+             AND jwt_token <> $2`,
+        [user_id, jwt_token]
       );
       await pool.query('COMMIT');
     }
 
+    // Upsert by unique jwt token (works regardless of the partial index on user_id)
+    await pool.query(
+      `INSERT INTO sessions (user_id, email, jwt_token, status, expires_at, last_seen)
+       VALUES ($1::uuid, $2, $3, $4, $5, NOW())
+       ON CONFLICT (jwt_token) DO UPDATE
+         SET status = EXCLUDED.status,
+             expires_at = EXCLUDED.expires_at,
+             last_seen = NOW(),
+             email = EXCLUDED.email,
+             user_id = EXCLUDED.user_id`,
+      [user_id, email, jwt_token, sessStatus, expires_at || null]
+    );
+
     return res.status(201).json({ message: 'Session recorded' });
   } catch (err) {
+    // Roll back in case we were in the non-vendor transaction
     try { await pool.query('ROLLBACK'); } catch {}
     console.error('🔥 Failed to upsert session:', err);
     return res.status(500).json({ message: 'Session insert failed' });
@@ -56,8 +61,8 @@ router.post('/', async (req, res) => {
 
 /**
  * PATCH /api/sessions/seen
- * Touch last_seen for a session token (optional helper)
- * body: { jwt_token }
+ * Update last_seen for a session token.
+ * Body: { jwt_token }
  */
 router.patch('/seen', async (req, res) => {
   const { jwt_token } = req.body || {};
@@ -72,6 +77,24 @@ router.patch('/seen', async (req, res) => {
   } catch (err) {
     console.error('❌ touch last_seen failed:', err);
     return res.status(500).json({ message: 'Failed to update last_seen' });
+  }
+});
+
+/**
+ * POST /api/sessions/signout
+ * Remove a single session by token.
+ * Body: { jwt_token }
+ */
+router.post('/signout', async (req, res) => {
+  const { jwt_token } = req.body || {};
+  if (!jwt_token) return res.status(400).json({ message: 'jwt_token is required' });
+
+  try {
+    const r = await pool.query(`DELETE FROM sessions WHERE jwt_token = $1`, [jwt_token]);
+    return res.json({ deleted: r.rowCount });
+  } catch (err) {
+    console.error('❌ signout (token) failed:', err);
+    return res.status(500).json({ message: 'Failed to sign out' });
   }
 });
 
@@ -92,33 +115,13 @@ router.delete('/:email', async (req, res) => {
 });
 
 /**
- * POST /api/sessions/signout
- * Explicitly sign a single session out by token.
- * body: { jwt_token }
- */
-router.post('/signout', async (req, res) => {
-  const { jwt_token } = req.body || {};
-  if (!jwt_token) return res.status(400).json({ message: 'jwt_token is required' });
-  try {
-    const r = await pool.query(`DELETE FROM sessions WHERE jwt_token = $1`, [jwt_token]);
-    return res.json({ deleted: r.rowCount });
-  } catch (err) {
-    console.error('❌ signout (token) failed:', err);
-    return res.status(500).json({ message: 'Failed to sign out' });
-  }
-});
-
-/**
  * GET /api/sessions/force-check/:email
- * Check if a user has been force-signed-out.
+ * Check if the user has been force-signed-out.
  */
 router.get('/force-check/:email', async (req, res) => {
   const { email } = req.params;
   try {
-    const result = await pool.query(
-      `SELECT force_signed_out FROM users WHERE email = $1`,
-      [email]
-    );
+    const result = await pool.query(`SELECT force_signed_out FROM users WHERE email = $1`, [email]);
     if (!result.rows.length) return res.status(404).json({ message: 'User not found' });
     return res.json({ force_signed_out: !!result.rows[0].force_signed_out });
   } catch (err) {
