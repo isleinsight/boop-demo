@@ -15,14 +15,14 @@ router.post('/', async (req, res) => {
       // Vendors can have multiple sessions
       await pool.query(`
         INSERT INTO sessions (user_id, email, jwt_token, status, expires_at, last_seen)
-        VALUES ($1::bigint, $2, $3, $4, $5, NOW())
+        VALUES ($1::uuid, $2, $3, $4, $5, NOW())
       `, [user_id, email, jwt_token, status || 'online', expires_at]);
 
     } else {
       // Other roles: enforce unique session per user
       await pool.query(`
         INSERT INTO sessions (user_id, email, jwt_token, status, expires_at, last_seen)
-        VALUES ($1::bigint, $2, $3, $4, $5, NOW())
+        VALUES ($1::uuid, $2, $3, $4, $5, NOW())
         ON CONFLICT (user_id) DO UPDATE
           SET jwt_token = EXCLUDED.jwt_token,
               status = EXCLUDED.status,
