@@ -14,11 +14,13 @@
     *{ box-sizing:border-box }
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* Top vendor nav (matches other vendor pages) */
-    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    /* ──────────────────────────────────────────────
+       NAV + MOBILE HAMBURGER (matches Transfer page)
+    ────────────────────────────────────────────── */
+    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:1000; }
     .vendor-nav .nav-container{
       max-width:1100px; margin:0 auto; padding:10px 18px;
-      display:flex; align-items:center; justify-content:space-between;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
     .vendor-nav .nav-left img{ height:30px; display:block; }
     .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px; }
@@ -28,6 +30,31 @@
     }
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
+
+    /* Hamburger button */
+    .hamburger{ display:none; flex-direction:column; gap:4px; cursor:pointer; }
+    .hamburger span{ width:24px; height:3px; background:#fff; border-radius:2px; display:block; }
+    @media (max-width: 900px){
+      .vendor-nav .nav-right{ display:none; }
+      .hamburger{ display:flex; }
+    }
+
+    /* Slide-in mobile menu + overlay */
+    .mobile-menu{
+      position:fixed; top:0; right:-100%; width:260px; height:100%;
+      background:var(--nav); color:#fff; transition:right .3s ease;
+      padding:20px; display:flex; flex-direction:column; gap:12px;
+      z-index:1100; box-shadow:-8px 0 24px rgba(0,0,0,.35);
+    }
+    .mobile-menu a{ color:#fff; text-decoration:none; padding:10px 0; font-size:1rem; border-radius:8px; }
+    .mobile-menu a[aria-current="page"], .mobile-menu a:hover{ background:rgba(255,255,255,.08); }
+    .mobile-menu.active{ right:0; }
+
+    .overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,.5);
+      display:none; z-index:1050;
+    }
+    .overlay.active{ display:block; }
 
     /* Hero */
     .hero{ background:linear-gradient(180deg,#f7fafc,#fff); border-bottom:1px solid var(--stroke); }
@@ -107,17 +134,14 @@
   </script>
 
   <script>
-  // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
-  try {
-    const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
-    if (staff) {
-      
-      location.replace('session.html');
-    }
-  } catch {}
-</script>
-  
-  <!-- Shared vendor helpers (apiFetch/apiJSON + token renew) -->
+    // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
+    try {
+      const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
+      if (staff) { location.replace('session.html'); }
+    } catch {}
+  </script>
+
+  <!-- Shared vendor helpers -->
   <script src="vendor-common.js"></script>
 
   <!-- Keep-alive (captures x-renew-jwt via apiFetch) -->
@@ -125,7 +149,7 @@
     setInterval(() => { apiFetch('/api/vendor/ping').catch(()=>{}); }, 10 * 60 * 1000);
   </script>
 
-  <!-- NAV -->
+  <!-- NAV (desktop + mobile) -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
@@ -140,8 +164,21 @@
         <a href="manage-staff.html">Manage Staff</a>
         <a href="#" id="logoutLink">Log Out</a>
       </div>
+      <div class="hamburger" id="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </div>
     </div>
   </nav>
+
+  <!-- Mobile slide-in menu + overlay -->
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true" role="dialog" aria-modal="true">
+    <a href="index.html" aria-current="page">Home</a>
+    <a href="transfer.html">Transfer</a>
+    <a href="transactions.html">Transactions</a>
+    <a href="manage-staff.html">Manage Staff</a>
+    <a href="#" id="logoutLinkMobile">Log Out</a>
+  </div>
+  <div class="overlay" id="overlay"></div>
 
   <!-- Hero -->
   <section class="hero">
@@ -189,7 +226,6 @@
       </span>
     </a>
 
-    <!-- Replaced Help & Tips with Manage Staff -->
     <a class="tile" href="manage-staff.html">
       <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M16 11a4 4 0 10-8 0 4 4 0 008 0zm-11 9a7 7 0 0114 0" stroke="#1f2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -227,6 +263,46 @@
     </div>
   </footer>
 
+  <!-- Mobile nav JS (identical behavior to Transfer) -->
+  <script>
+    const hamburger   = document.getElementById('hamburger');
+    const mobileMenu  = document.getElementById('mobileMenu');
+    const overlay     = document.getElementById('overlay');
+    const logoutLink  = document.getElementById('logoutLink');
+    const logoutLinkMobile = document.getElementById('logoutLinkMobile');
+
+    function openMenu(){
+      mobileMenu.classList.add('active');
+      overlay.classList.add('active');
+      hamburger.setAttribute('aria-expanded','true');
+      mobileMenu.setAttribute('aria-hidden','false');
+    }
+    function closeMenu(){
+      mobileMenu.classList.remove('active');
+      overlay.classList.remove('active');
+      hamburger.setAttribute('aria-expanded','false');
+      mobileMenu.setAttribute('aria-hidden','true');
+    }
+    hamburger?.addEventListener('click', ()=>{
+      const expanded = hamburger.getAttribute('aria-expanded') === 'true';
+      expanded ? closeMenu() : openMenu();
+    });
+    overlay?.addEventListener('click', closeMenu);
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+    mobileMenu?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
+
+    // Logout (both menus)
+    async function doLogout(e){
+      e?.preventDefault();
+      try { await apiFetch('/api/logout', { method:'POST' }); } catch {}
+      localStorage.clear();
+      location.href = 'vendor-login.html';
+    }
+    logoutLink?.addEventListener('click', doLogout);
+    logoutLinkMobile?.addEventListener('click', (e)=>{ doLogout(e); closeMenu(); });
+  </script>
+
+  <!-- Page data logic -->
   <script>
     // Paint vendor name if profile already cached
     document.addEventListener("DOMContentLoaded", () => {
@@ -238,26 +314,19 @@
     });
 
     (async function init(){
-      const token = localStorage.getItem("boop_jwt");
       const setText = (id,v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
       const fmt = (cents) => `$${(Number(cents||0)/100).toFixed(2)}`;
 
       // Balance
       try {
         const r = await apiFetch("/api/wallets/mine");
-        if (r.ok) {
-          const j = await r.json();
-          if (j && typeof j.balance_cents !== "undefined") setText("balanceValue", fmt(j.balance_cents));
-        }
+        if (r.ok) { const j = await r.json(); if (j && typeof j.balance_cents !== "undefined") setText("balanceValue", fmt(j.balance_cents)); }
       } catch {}
 
       // Today’s Sales
       try {
         const r = await apiFetch("/api/sales/today");
-        if (r.ok) {
-          const j = await r.json();
-          setText("todaysSales", fmt(j.total_cents || 0));
-        } else { setText("todaysSales", "—"); }
+        if (r.ok) { const j = await r.json(); setText("todaysSales", fmt(j.total_cents || 0)); } else { setText("todaysSales", "—"); }
       } catch { setText("todaysSales", "—"); }
 
       // Pending Payouts
@@ -340,7 +409,7 @@
       }
     })();
 
-    // Logout
+    // Logout (desktop link)
     document.getElementById("logoutLink")?.addEventListener("click", async (e) => {
       e.preventDefault();
       try { await apiFetch("/api/logout", { method:"POST" }); } catch {}
