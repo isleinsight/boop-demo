@@ -5,72 +5,51 @@
   <title>Parent Portal — Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Parents can track spending, add funds, and manage their child's Payulot Card." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{
-      --ink:#0b1220;        
-      --boop:#2f80ed;       
-      --ink-2:#1a2b4a;      
-      --muted:#6b7280;
-      --bg:#f5f8fb;
-      --card:#ffffff;
-      --stroke:#e6ebf1;
-      --ok:#10b981;
-      --danger:#ef4444;
+      --ink:#0b1220; --boop:#2f80ed; --ink-2:#1a2b4a; --muted:#6b7280;
+      --bg:#f5f8fb; --card:#ffffff; --stroke:#e6ebf1; --ok:#10b981; --danger:#ef4444;
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#1f2937}
 
-    /* ===== Top Nav (solid dark blue, white logo) ===== */
-    .nav{
-      background:var(--ink);
-      border-bottom:1px solid rgba(255,255,255,.08);
-    }
-    .nav__inner{
-      max-width:1120px;margin:0 auto;padding:12px 18px;
-      display:flex;align-items:center;justify-content:flex-start;
-    }
-    .nav__logo{height:28px;display:block}
+    /* ===== Top Nav ===== */
+    .topbar{background:#0b1220;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:20}
+    .topbar__inner{max-width:1120px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .logo{height:28px;display:block}
+    .cta{background:var(--boop);color:#fff;text-decoration:none;font-weight:600;padding:10px 16px;border-radius:10px;display:inline-block;white-space:nowrap}
 
-    /* ===== Page Layout  ===== */
-    .wrap{max-width:1120px;margin:0 auto;padding:28px 18px}
+    /* ===== Layout ===== */
+    .wrap{max-width:1120px;margin:0 auto;padding:24px 18px}
     .grid{
       display:grid;
-      grid-template-columns: 1.15fr .85fr;   
-      grid-template-rows: 1fr 1fr;           
+      grid-template-columns:1.15fr .85fr;
+      grid-template-rows:auto auto;
       gap:18px;
       align-items:stretch;
     }
-    @media (max-width:900px){
-      .grid{grid-template-columns:1fr;grid-template-rows:auto}
-    }
 
-    /* Left cell spans both rows so it equals the combined height of right cards */
+    /* Left spans both rows on desktop */
     .loginCell{grid-column:1;grid-row:1 / span 2;display:flex}
     .rightCard1{grid-column:2;grid-row:1}
     .rightCard2{grid-column:2;grid-row:2}
 
-    /* ===== Cards ===== */
+    /* Cards */
     .card{
-      background:var(--card);
-      border:1px solid var(--stroke);
-      border-radius:14px;
-      box-shadow:0 10px 24px rgba(16,24,40,.06);
-      padding:20px;
-      display:flex;
-      flex-direction:column;
+      background:var(--card);border:1px solid var(--stroke);border-radius:14px;
+      box-shadow:0 10px 24px rgba(16,24,40,.06);padding:20px;display:flex;flex-direction:column
     }
 
     /* Login card specifics */
     .loginCard{width:100%}
     .eyebrow{color:var(--boop);font-weight:600;letter-spacing:.02em;text-transform:uppercase;font-size:.9rem}
-    .loginCard h1{font-size:clamp(24px,3.2vw,34px);margin:6px 0 8px;color:var(--ink-2)}
+    .loginCard h1{font-size:clamp(22px,2.6vw,34px);line-height:1.25;margin:8px 0 10px;color:var(--ink-2);max-width:22ch}
     .loginCard p{margin:0 0 14px;color:var(--muted)}
     form{display:grid;gap:12px}
     input{
       width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:10px;
-      font-size:.95rem;outline:none;transition:border-color .15s ease
+      font-size:.95rem;outline:none;transition:border-color .15s ease;background:#fff
     }
     input:focus{border-color:var(--boop)}
     button{
@@ -93,31 +72,47 @@
     ul.clean li{display:flex;gap:10px;align-items:flex-start}
     .dot{width:8px;height:8px;border-radius:999px;background:var(--boop);margin-top:8px;flex:0 0 8px}
 
-    /* ===== Footer ===== */
+    /* Footer */
     footer{margin-top:28px;border-top:1px solid var(--stroke);background:var(--bg)}
-    .footer__inner{
-      max-width:1120px;margin:0 auto;padding:18px;
-      display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:#4b5563
-    }
+    .footer__inner{max-width:1120px;margin:0 auto;padding:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:#4b5563}
     .footer__links{display:flex;gap:16px}
     .footer__links a{color:#4b5563;text-decoration:none}
     .footer__links a:hover{text-decoration:underline}
+
+    /* ===== Mobile polish ===== */
+    @media (max-width:900px){
+      .wrap{padding:18px}
+      .grid{grid-template-columns:1fr;grid-template-rows:auto;gap:14px}
+      .loginCell,.rightCard1,.rightCard2{grid-column:auto;grid-row:auto}
+      .card{padding:16px;border-radius:12px}
+      .loginCard h1{font-size:22px;line-height:1.3;margin:6px 0 8px;max-width:none}
+      .loginCard p{font-size:.95rem}
+      input{padding:12px}
+      .helpRow{flex-direction:column;align-items:flex-start;gap:8px}
+      ul.clean{gap:8px}
+      .dot{margin-top:.65rem}
+      .topbar__inner{padding:10px 14px}
+      .logo{height:24px}
+      .cta{padding:8px 12px;font-size:.94rem;border-radius:8px}
+    }
+
+    /* Very small screens */
+    @media (max-width:360px){
+      .cta{padding:8px 10px;font-size:.9rem}
+      .wrap{padding:14px}
+      .card{padding:14px}
+    }
   </style>
 </head>
 <body>
-  <header class="nav">
-    <nav style="background-color: #0b1220; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
-  <div>
-    <a href="../index.html">
-      <img src="../assets/logo-white.png" alt="BOOP Logo" style="height: 40px;">
-    </a>
-  </div>
-  <div style="display: flex; gap: 10px; align-items: center;">
-    <a href="add-child.html" style="background-color: #007BFF; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: bold;">
-      Add My Child
-    </a>
-  </div>
-</nav>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a href="../index.html" aria-label="Payulot home">
+        <img class="logo" src="../assets/logo-white.png" alt="Payulot Logo">
+      </a>
+      <a class="cta" href="add-child.html">Add My Child</a>
+    </div>
   </header>
 
   <main class="wrap">
@@ -181,7 +176,6 @@
   <script>
     (function(){
       const REDIRECT_AFTER_LOGIN = "/parent/index.html";
-
       const form = document.getElementById("parentLoginForm");
       const emailEl = document.getElementById("email");
       const pwEl = document.getElementById("password");
@@ -238,7 +232,6 @@
           try{
             const payload = JSON.parse(atob(token.split(".")[1] || ""));
             const expiresAt = payload?.exp ? new Date(payload.exp * 1000).toISOString() : null;
-
             await fetch("/api/sessions", {
               method:"POST",
               headers:{
@@ -246,19 +239,16 @@
                 "Authorization": `Bearer ${token}`
               },
               body: JSON.stringify({
-                email: user.email,
-                user_id: user.id,
-                jwt_token: token,
-                expires_at: expiresAt,
-                status: "online"
+                email: user.email, user_id: user.id, jwt_token: token,
+                expires_at: expiresAt, status: "online"
               })
             }).catch(()=>{});
-          } catch(_) {}
+          }catch(_){}
 
           showMsg("Success! Redirecting…","ok");
           window.location.href = REDIRECT_AFTER_LOGIN;
 
-        }catch(err){
+        }catch{
           showMsg("Network error. Please try again.");
           btn.disabled = false;
         }
