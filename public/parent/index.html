@@ -239,477 +239,342 @@
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-  // --- Auth guard ---
-  const token = localStorage.getItem('boop_jwt'); // left as-is to avoid breaking existing auth
-  if (!token) { window.location.href = '../index.html'; return; }
-
-  // --- State ---
-  let parentId = null;
-  let students = [];
-  let currentStudentId = null;
-  let currentWalletId = null;
-  let txns = [];
-  let page = 0;
-  const PAGE_SIZE = 8;
-
-  // --- Refs ---
-  const studentSelect = document.getElementById('studentSelect');
-  const schoolPill = document.getElementById('schoolPill');
-  const studentNameEl = document.getElementById('studentName');
-  const studentInfoEl = document.getElementById('studentInfo');
-  const cardStatusEl = document.getElementById('cardStatus');
-
-  const balanceAmount = document.getElementById('balanceAmount');
-  const balanceStatus = document.getElementById('balanceStatus');
-  const balanceMsg = document.getElementById('balanceMsg');
-
-  const activityEmpty = document.getElementById('activityEmpty');
-  const activityFeed = document.getElementById('activityFeed');
-  const activityCountPill = document.getElementById('activityCountPill');
-  const prevBtn = document.getElementById('prevPage');
-  const nextBtn = document.getElementById('nextPage');
-
-  const addFundsBtn = document.getElementById('addFundsBtn');
-  const fundsModal = document.getElementById('fundsModal');
-  const closeFunds = document.getElementById('closeFunds');
-  const confirmFunds = document.getElementById('confirmFunds');
-  const amountInput = document.getElementById('amountInput');
-  const noteInput = document.getElementById('noteInput');
-  const fundsMsg = document.getElementById('fundsMsg');
-
-  const limitInput = document.getElementById('limitInput');
-  const saveLimitBtn = document.getElementById('saveLimitBtn');
-  const clearLimitBtn = document.getElementById('clearLimitBtn');
-  const limitMsg = document.getElementById('limitMsg');
-
-  const saveCatsBtn = document.getElementById('saveCatsBtn');
-  const resetCatsBtn = document.getElementById('resetCatsBtn');
-  const catsMsg = document.getElementById('catsMsg');
-
-  const freezeBtn = document.getElementById('freezeBtn');
-
-  // --- Helpers ---
-  function fmtMoney(n) { return (typeof n === 'number' && Number.isFinite(n)) ? ('BMD $' + n.toFixed(2)) : '—'; }
-  function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch { return iso || '—'; } }
-
-  async function fetchJSON(url, opts = {}) {
-    const res = await fetch(url, {
-      ...opts,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...(opts.headers || {})
-      }
-    });
-    if (!res.ok) throw new Error(await res.text().catch(()=>'HTTP error'));
-    return res.json();
-  }
-
-  // --- Data loaders ---
-  async function loadMe() {
-    const me = await fetchJSON('/api/me');
-    if ((me.role || '').toLowerCase() !== 'parent') {
-      alert('This portal is for Parent accounts.');
-      window.location.href = '/';
-      return;
-    }
-    parentId = me.id;
-  }
-
-  async function loadAssignedStudents() {
-    const detail = await fetchJSON(`/api/users/${parentId}`);
-    students = detail.assigned_students || [];
-    renderStudentOptions();
-    if (students.length) {
-      selectStudent(students[0].id);
-    } else {
-      if (studentSelect) studentSelect.innerHTML = '<option>No students linked</option>';
-      activityEmpty.textContent = 'No students found.';
-    }
-  }
-
-  function renderStudentOptions() {
-    if (!studentSelect) return;
-    studentSelect.innerHTML = students.map(s => {
-      const full = `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Student';
-      return `<option value="${s.id}">${full}</option>`;
-    }).join('');
-    studentSelect.onchange = () => selectStudent(studentSelect.value);
-  }
-
-  async function selectStudent(studentId) {
-    currentStudentId = studentId;
-    if (balanceMsg) balanceMsg.style.display = 'none';
-    page = 0;
-
-    const stu = await fetchJSON(`/api/users/${studentId}`);
-    currentWalletId = stu.wallet_id || null;
-
-    const name = `${stu.first_name || ''} ${stu.last_name || ''}`.trim();
-    if (studentNameEl) studentNameEl.textContent = name || 'Student';
-
-    const sProfile = stu.student_profile || {};
-    const school = sProfile.school_name ? `School: ${sProfile.school_name}` : '';
-    if (schoolPill) {
-      schoolPill.style.display = school ? 'inline-block' : 'none';
-      schoolPill.textContent = school;
-    }
-    const grade = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
-    if (studentInfoEl) studentInfoEl.textContent = [grade].filter(Boolean).join(' • ') || '—';
-
-    if (cardStatusEl) cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
-
-    await Promise.all([loadBalance(), loadActivity(), loadControls()]);
-  }
-
-  function setFreezeButtonUI(isFrozen) {
-    if (!freezeBtn) return;
-    freezeBtn.textContent = isFrozen ? 'Unfreeze Card' : 'Freeze Card';
-  }
-
-  async function loadBalance() {
-    if (balanceAmount) balanceAmount.textContent = '—';
-    if (balanceStatus) balanceStatus.textContent = 'Balance';
-    if (!currentWalletId) {
-      if (balanceMsg) {
-        balanceMsg.textContent = 'Balance unavailable (no wallet found).';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
-      }
-      return;
-    }
-    try {
-      const data = await fetchJSON(`/api/wallets/user/${currentStudentId}`);
-      const cents = Number(data.balance_cents ?? 0);
-      if (!Number.isFinite(cents)) throw new Error('No balance_cents field');
-      const normalized = cents / 100;
-      if (balanceAmount) balanceAmount.textContent = fmtMoney(normalized);
-      if (balanceStatus) balanceStatus.textContent = 'Balance';
-
-      const frozen = !!data.is_frozen;
-      setFreezeButtonUI(frozen);
-      if (cardStatusEl) cardStatusEl.textContent = frozen ? 'Card: FROZEN' : 'Card: ACTIVE';
-
-      if (balanceMsg) balanceMsg.style.display = 'none';
-    } catch {
-      if (balanceMsg) {
-        balanceMsg.textContent = 'Balance currently unavailable.';
-        balanceMsg.className = 'msg error';
-        balanceMsg.style.display = 'block';
-      }
-    }
-  }
-
-  // Activity (compact list)
-  async function loadActivity() {
-    txns = [];
-    page = 0;
-    renderActivity();
-    if (!currentStudentId) return;
-
-    try {
-      const resp = await fetchJSON(`/api/transactions/user/${currentStudentId}?limit=200&offset=0`);
-      const list = Array.isArray(resp) ? resp : (resp.transactions || []);
-      txns = list.map(t => {
-        const cents = Number(t.amount_cents || 0);
-        const uid = String(currentStudentId);
-        let sign = 1;
-        const kind = (t.type || '').toLowerCase();
-        if (kind === 'debit' || kind === 'purchase') sign = -1;
-        if (kind === 'credit' || kind === 'refund')  sign =  1;
-        if (kind === 'transfer') {
-          if (String(t.sender_id) === uid)   sign = -1;
-          if (String(t.recipient_id) === uid) sign =  1;
-        }
-        const amount = (cents / 100) * sign;
-        const merchant = t.to_display || t.recipient_name || t.sender_name || t.note || '—';
-        const category =
-          (typeof t.category === 'string' && t.category) ||
-          (t.method ? String(t.method).toUpperCase() : 'GENERAL');
-
-        return {
-          amount,
-          status: (t.status || kind || 'posted').toString().toUpperCase(),
-          category,
-          merchant,
-          created_at: t.created_at
-        };
-      });
-    } catch (e) {
-      console.error(e);
-      txns = [];
-    }
-    renderActivity();
-  }
-
-  function renderActivity() {
-    const total = txns.length;
-    if (activityCountPill) {
-      activityCountPill.style.display = total ? 'inline-block' : 'none';
-      activityCountPill.textContent = `${total} items`;
-    }
-
-    const start = page * PAGE_SIZE, end = start + PAGE_SIZE, slice = txns.slice(start, end);
-    if (prevBtn) { prevBtn.disabled = page === 0; prevBtn.onclick = () => { if (page > 0) { page--; renderActivity(); } }; }
-    if (nextBtn) { nextBtn.disabled = end >= total; nextBtn.onclick = () => { if (end < total) { page++; renderActivity(); } }; }
-
-    if (!slice.length) {
-      if (activityEmpty) activityEmpty.style.display = 'block';
-      if (activityFeed) activityFeed.style.display = 'none';
-      return;
-    }
-    if (activityEmpty) activityEmpty.style.display = 'none';
-    if (activityFeed) activityFeed.style.display = 'grid';
-
-    activityFeed.innerHTML = slice.map(tx => {
-      const amt = Number(tx.amount || 0);
-      const amtClass = amt < 0 ? 'neg' : 'pos';
-      const amtStr = (amt < 0 ? '-' : '+') + ' ' + (typeof amt === 'number' ? `BMD $${Math.abs(amt).toFixed(2)}` : '—');
-      const title = tx.merchant || '—';
-      const metaBits = [
-        tx.created_at ? fmtDate(tx.created_at) : null,
-        (tx.status || 'POSTED').toString().toUpperCase(),
-        tx.category ? `Category: ${tx.category}` : null
-      ].filter(Boolean);
-      return `
-        <div class="activity-item">
-          <div class="activity-title">${title}</div>
-          <div class="activity-amount ${amtClass}">${amtStr}</div>
-          <div class="activity-meta"><span>${metaBits.join(' • ')}</span></div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  // Controls (limits + categories)
-  async function loadControls() {
-    if (limitMsg) limitMsg.style.display = 'none';
-    if (catsMsg) catsMsg.style.display = 'none';
-
-    // Monthly limit
-    try {
-      const res = await fetchJSON(`/api/students/${currentStudentId}/limits`);
-      const monthly = Number(res?.monthly_limit);
-      if (Number.isFinite(monthly) && limitInput) limitInput.value = monthly.toFixed(2);
-      else if (limitInput) limitInput.value = '';
-    } catch {
-      if (limitInput) limitInput.value = '';
-    }
-
-    // Categories
-    try {
-      const res = await fetchJSON(`/api/students/${currentStudentId}/categories`);
-      const a = res?.allow || {};
-      (document.getElementById('cat_food') || {}).checked = !!a.food;
-      (document.getElementById('cat_fastfood') || {}).checked = !!a.fastfood;
-      (document.getElementById('cat_electronics') || {}).checked = !!a.electronics;
-      (document.getElementById('cat_entertainment') || {}).checked = !!a.entertainment;
-      (document.getElementById('cat_other') || {}).checked = !!a.other;
-    } catch {
-      (document.getElementById('cat_food') || {}).checked = true;
-      (document.getElementById('cat_fastfood') || {}).checked = false;
-      (document.getElementById('cat_electronics') || {}).checked = false;
-      (document.getElementById('cat_entertainment') || {}).checked = true;
-      (document.getElementById('cat_other') || {}).checked = true;
-    }
-  }
-
-  if (saveLimitBtn) {
-    saveLimitBtn.onclick = async () => {
-      if (!limitInput || !limitMsg) return;
-      limitMsg.style.display = 'none';
-      const val = Number(limitInput.value);
-      if (!Number.isFinite(val) || val < 0) {
-        limitMsg.textContent = 'Enter a valid amount.';
-        limitMsg.className = 'msg error';
-        limitMsg.style.display = 'block';
-        return;
-      }
-      try {
-        const res = await fetch(`/api/students/${currentStudentId}/limits`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ monthly_limit: val })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        limitMsg.textContent = 'Spending limit saved.';
-        limitMsg.className = 'msg ok';
-        limitMsg.style.display = 'block';
-      } catch {
-        limitMsg.textContent = 'Failed to save limit.';
-        limitMsg.className = 'msg error';
-        limitMsg.style.display = 'block';
-      }
+  // Centralized fetch with token + renewal (matches vendor pages)
+  async function apiFetch(url, opts = {}) {
+    const token = localStorage.getItem('boop_jwt') || ''; // same key you used on login
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(opts.headers || {}),
     };
-  }
+    if (token) headers.Authorization = `Bearer ${token}`;
 
-  if (clearLimitBtn) {
-    clearLimitBtn.onclick = async () => {
-      if (!limitInput || !limitMsg) return;
-      limitMsg.style.display = 'none';
+    const res = await fetch(url, { ...opts, headers });
+
+    // Token renewal header support
+    const renewed = res.headers.get('x-renew-jwt');
+    if (renewed) localStorage.setItem('boop_jwt', renewed);
+
+    if (res.status === 401) {
+      // Not authenticated anymore — clean up and bounce to login
       try {
-        const res = await fetch(`/api/students/${currentStudentId}/limits`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error(await res.text());
-        limitInput.value = '';
-        limitMsg.textContent = 'Limit cleared.';
-        limitMsg.className = 'msg ok';
-        limitMsg.style.display = 'block';
-      } catch {
-        limitMsg.textContent = 'Failed to clear limit.';
-        limitMsg.className = 'msg error';
-        limitMsg.style.display = 'block';
-      }
-    };
-  }
-
-  if (saveCatsBtn) {
-    saveCatsBtn.onclick = async () => {
-      if (!catsMsg) return;
-      catsMsg.style.display = 'none';
-      const payload = {
-        allow: {
-          food: (document.getElementById('cat_food') || {}).checked || false,
-          fastfood: (document.getElementById('cat_fastfood') || {}).checked || false,
-          electronics: (document.getElementById('cat_electronics') || {}).checked || false,
-          entertainment: (document.getElementById('cat_entertainment') || {}).checked || false,
-          other: (document.getElementById('cat_other') || {}).checked || false
-        }
-      };
-      try {
-        const res = await fetch(`/api/students/${currentStudentId}/categories`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error(await res.text());
-        catsMsg.textContent = 'Categories saved.';
-        catsMsg.className = 'msg ok';
-        catsMsg.style.display = 'block';
-      } catch {
-        catsMsg.textContent = 'Failed to save categories.';
-        catsMsg.className = 'msg error';
-        catsMsg.style.display = 'block';
-      }
-    };
-  }
-
-  if (resetCatsBtn) {
-    resetCatsBtn.onclick = loadControls;
-  }
-
-  // Add Funds modal
-  function openFunds() {
-    if (fundsModal) { fundsModal.style.display = 'grid'; fundsModal.setAttribute('aria-hidden', 'false'); }
-    if (amountInput) amountInput.focus();
-  }
-  function closeFundsModal() {
-    if (fundsModal) { fundsModal.style.display = 'none'; fundsModal.setAttribute('aria-hidden', 'true'); }
-    if (fundsMsg) fundsMsg.style.display = 'none';
-    if (amountInput) amountInput.value = '';
-    if (noteInput) noteInput.value = '';
-  }
-  if (addFundsBtn) addFundsBtn.onclick = () => { if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; } openFunds(); };
-  if (closeFunds) closeFunds.onclick = closeFundsModal;
-  if (fundsModal) fundsModal.addEventListener('click', (e) => { if (e.target === fundsModal) closeFundsModal(); });
-  if (confirmFunds) {
-    confirmFunds.onclick = async () => {
-      if (!amountInput || !fundsMsg) return;
-      fundsMsg.style.display = 'none';
-      const amt = Number(amountInput.value);
-      if (!Number.isFinite(amt) || amt <= 0) {
-        fundsMsg.textContent = 'Please enter a valid amount.';
-        fundsMsg.className = 'msg error';
-        fundsMsg.style.display = 'block';
-        return;
-      }
-      confirmFunds.disabled = true; confirmFunds.textContent = 'Processing…';
-      try {
-        const res = await fetch(`/api/wallets/${currentWalletId}/parent-deposits`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ amount: amt, note: (noteInput && noteInput.value) || null })
-        });
-        if (!res.ok) throw new Error(await res.text().catch(()=>`HTTP ${res.status}`));
-        fundsMsg.textContent = 'Funds added successfully.';
-        fundsMsg.className = 'msg ok';
-        fundsMsg.style.display = 'block';
-        await loadBalance(); await loadActivity();
-        setTimeout(closeFundsModal, 900);
-      } catch (e) {
-        fundsMsg.textContent = 'Failed to add funds.' + (e?.message ? ` (${e.message})` : '');
-        fundsMsg.className = 'msg error';
-        fundsMsg.style.display = 'block';
-      } finally {
-        confirmFunds.disabled = false; confirmFunds.textContent = 'Add Funds';
-      }
-    };
-  }
-
-  // Freeze / Unfreeze
-  if (freezeBtn) {
-    freezeBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      if (!currentWalletId) return;
-      const isCurrentlyFrozen = /unfreeze/i.test(freezeBtn.textContent);
-      const path = isCurrentlyFrozen
-        ? `/api/wallets/${currentWalletId}/unfreeze`
-        : `/api/wallets/${currentWalletId}/freeze`;
-      let reason = '';
-      if (!isCurrentlyFrozen) reason = prompt('Reason for freezing? (optional)') || '';
-      freezeBtn.disabled = true;
-      try {
-        const res = await fetch(path, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ reason })
-        });
-        if (!res.ok) throw new Error(await res.text().catch(()=> 'HTTP error'));
-        await loadBalance(); await loadActivity();
-      } catch {
-        alert('Failed to update freeze status.');
-      } finally {
-        freezeBtn.disabled = false;
-      }
-    });
-  }
-
-  // Logout
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        const me = JSON.parse(localStorage.getItem('boopUser') || '{}'); // left as-is
-        if (me.id && token) {
-          await fetch(`/api/users/${me.id}/signout`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-          }).catch(() => {});
-        }
-      } finally {
-        localStorage.removeItem('boop_jwt'); // left as-is
-        localStorage.removeItem('boopUser'); // left as-is
+        localStorage.removeItem('boop_jwt');
+        localStorage.removeItem('boopUser');
         sessionStorage.clear();
-        window.location.href = '../index.html';
-      }
-    });
+      } catch {}
+      window.location.href = '../index.html'; // parent login/landing
+      throw new Error('Unauthorized');
+    }
+    return res;
   }
 
-  // Init
-  (async function init() {
+  async function apiJSON(url, opts = {}) {
+    const res = await apiFetch(url, opts);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = data?.message || data?.error || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  // --- Auth guard (use apiFetch so renewals work even here) ---
+  (async function guard() {
+    const token = localStorage.getItem('boop_jwt');
+    if (!token) { window.location.href = '../index.html'; return; }
+
     try {
-      await loadMe();
-      if (!parentId) return;
-      await loadAssignedStudents();
+      // Verify current token and role
+      const me = await apiJSON('/api/me');
+      if ((me.role || '').toLowerCase() !== 'parent') {
+        window.location.href = '../index.html';
+        return;
+      }
+      // Stash for later if you want
+      localStorage.setItem('boopUser', JSON.stringify(me));
+      // Continue boot
+      initParentPortal(apiJSON);
     } catch (e) {
-      console.error(e);
-      alert('Unable to load your account. Please sign in again.');
+      // Any failure here => treat as unauthenticated
       window.location.href = '../index.html';
     }
   })();
+
+  // ===== Everything below stays the same, but replace fetchJSON calls with apiJSON =====
+  function initParentPortal(apiJSON) {
+    // --- State ---
+    let parentId = null;
+    let students = [];
+    let currentStudentId = null;
+    let currentWalletId = null;
+    let txns = [];
+    let page = 0;
+    const PAGE_SIZE = 8;
+
+    // --- Refs ---
+    const studentSelect = document.getElementById('studentSelect');
+    const schoolPill = document.getElementById('schoolPill');
+    const studentNameEl = document.getElementById('studentName');
+    const studentInfoEl = document.getElementById('studentInfo');
+    const cardStatusEl = document.getElementById('cardStatus');
+    const balanceAmount = document.getElementById('balanceAmount');
+    const balanceStatus = document.getElementById('balanceStatus');
+    const balanceMsg = document.getElementById('balanceMsg');
+    const activityEmpty = document.getElementById('activityEmpty');
+    const activityFeed = document.getElementById('activityFeed');
+    const activityCountPill = document.getElementById('activityCountPill');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const addFundsBtn = document.getElementById('addFundsBtn');
+    const fundsModal = document.getElementById('fundsModal');
+    const closeFunds = document.getElementById('closeFunds');
+    const confirmFunds = document.getElementById('confirmFunds');
+    const amountInput = document.getElementById('amountInput');
+    const noteInput = document.getElementById('noteInput');
+    const fundsMsg = document.getElementById('fundsMsg');
+    const limitInput = document.getElementById('limitInput');
+    const saveLimitBtn = document.getElementById('saveLimitBtn');
+    const clearLimitBtn = document.getElementById('clearLimitBtn');
+    const limitMsg = document.getElementById('limitMsg');
+    const saveCatsBtn = document.getElementById('saveCatsBtn');
+    const resetCatsBtn = document.getElementById('resetCatsBtn');
+    const catsMsg = document.getElementById('catsMsg');
+    const freezeBtn = document.getElementById('freezeBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function fmtMoney(n){ return (typeof n === 'number' && Number.isFinite(n)) ? ('BMD $' + n.toFixed(2)) : '—'; }
+    function fmtDate(iso){ try{ return new Date(iso).toLocaleString(); }catch{ return iso || '—'; } }
+
+    // Load me
+    async function loadMe(){
+      const me = await apiJSON('/api/me');
+      if ((me.role||'').toLowerCase() !== 'parent') throw new Error('Wrong role');
+      parentId = me.id;
+    }
+
+    async function loadAssignedStudents(){
+      const detail = await apiJSON(`/api/users/${parentId}`);
+      students = detail.assigned_students || [];
+      renderStudentOptions();
+      if (students.length) selectStudent(students[0].id);
+      else {
+        if (studentSelect) studentSelect.innerHTML = '<option>No students linked</option>';
+        activityEmpty.textContent = 'No students found.';
+      }
+    }
+
+    function renderStudentOptions(){
+      if (!studentSelect) return;
+      studentSelect.innerHTML = students.map(s=>{
+        const full = `${s.first_name||''} ${s.last_name||''}`.trim() || 'Student';
+        return `<option value="${s.id}">${full}</option>`;
+      }).join('');
+      studentSelect.onchange = () => selectStudent(studentSelect.value);
+    }
+
+    async function selectStudent(studentId){
+      currentStudentId = studentId; page = 0;
+      const stu = await apiJSON(`/api/users/${studentId}`);
+      currentWalletId = stu.wallet_id || null;
+      const name = `${stu.first_name||''} ${stu.last_name||''}`.trim();
+      if (studentNameEl) studentNameEl.textContent = name || 'Student';
+      const sProfile = stu.student_profile || {};
+      if (schoolPill) {
+        const school = sProfile.school_name ? `School: ${sProfile.school_name}` : '';
+        schoolPill.style.display = school ? 'inline-block' : 'none';
+        schoolPill.textContent = school;
+      }
+      if (studentInfoEl) {
+        const grade = sProfile.grade_level ? `Grade: ${sProfile.grade_level}` : '';
+        studentInfoEl.textContent = grade || '—';
+      }
+      if (cardStatusEl) cardStatusEl.textContent = (stu.status ? `Card: ${String(stu.status).toUpperCase()}` : '').trim();
+      await Promise.all([loadBalance(), loadActivity(), loadControls()]);
+    }
+
+    async function loadBalance(){
+      if (!currentWalletId){
+        if (balanceMsg){ balanceMsg.textContent = 'Balance unavailable (no wallet found).'; balanceMsg.className='msg error'; balanceMsg.style.display='block'; }
+        return;
+      }
+      try{
+        const data = await apiJSON(`/api/wallets/user/${currentStudentId}`);
+        const cents = Number(data.balance_cents ?? 0);
+        if (balanceAmount) balanceAmount.textContent = fmtMoney(cents/100);
+        if (balanceStatus) balanceStatus.textContent = 'Balance';
+        if (balanceMsg) balanceMsg.style.display='none';
+        setFreezeButtonUI(!!data.is_frozen);
+        if (cardStatusEl) cardStatusEl.textContent = data.is_frozen ? 'Card: FROZEN' : 'Card: ACTIVE';
+      }catch{
+        if (balanceMsg){ balanceMsg.textContent = 'Balance currently unavailable.'; balanceMsg.className='msg error'; balanceMsg.style.display='block'; }
+      }
+    }
+
+    async function loadActivity(){
+      txns = []; page = 0; renderActivity();
+      if (!currentStudentId) return;
+      try{
+        const resp = await apiJSON(`/api/transactions/user/${currentStudentId}?limit=200&offset=0`);
+        const list = Array.isArray(resp) ? resp : (resp.transactions || []);
+        txns = list.map(t=>{
+          const cents = Number(t.amount_cents||0);
+          const uid = String(currentStudentId);
+          let sign = 1;
+          const kind = (t.type||'').toLowerCase();
+          if (kind==='debit'||kind==='purchase') sign = -1;
+          if (kind==='credit'||kind==='refund')  sign =  1;
+          if (kind==='transfer'){
+            if (String(t.sender_id)===uid) sign=-1;
+            if (String(t.recipient_id)===uid) sign=1;
+          }
+          const amount = (cents/100)*sign;
+          const merchant = t.to_display || t.recipient_name || t.sender_name || t.note || '—';
+          const category = (typeof t.category==='string'&&t.category) || (t.method?String(t.method).toUpperCase():'GENERAL');
+          return { amount, status:(t.status||kind||'posted').toString().toUpperCase(), category, merchant, created_at:t.created_at };
+        });
+      }catch{ txns = []; }
+      renderActivity();
+    }
+
+    function renderActivity(){
+      const PAGE_SIZE = 8;
+      const total = txns.length;
+      if (activityCountPill) {
+        activityCountPill.style.display = total ? 'inline-block' : 'none';
+        activityCountPill.textContent = `${total} items`;
+      }
+      const start = page*PAGE_SIZE, end = start+PAGE_SIZE, slice = txns.slice(start,end);
+      if (prevBtn){ prevBtn.disabled = page===0; prevBtn.onclick = ()=>{ if(page>0){ page--; renderActivity(); }};}
+      if (nextBtn){ nextBtn.disabled = end>=total; nextBtn.onclick = ()=>{ if(end<total){ page++; renderActivity(); }};}
+      if (!slice.length){ activityEmpty.style.display='block'; activityFeed.style.display='none'; return; }
+      activityEmpty.style.display='none'; activityFeed.style.display='grid';
+      activityFeed.innerHTML = slice.map(tx=>{
+        const amt = Number(tx.amount||0);
+        const amtClass = amt<0 ? 'neg' : 'pos';
+        const amtStr = (amt<0?'-':'+') + ' BMD $' + Math.abs(amt).toFixed(2);
+        const metaBits = [
+          tx.created_at ? fmtDate(tx.created_at) : null,
+          (tx.status||'POSTED').toString().toUpperCase(),
+          tx.category ? `Category: ${tx.category}` : null
+        ].filter(Boolean);
+        return `
+          <div class="activity-item">
+            <div class="activity-title">${tx.merchant || '—'}</div>
+            <div class="activity-amount ${amtClass}">${amtStr}</div>
+            <div class="activity-meta"><span>${metaBits.join(' • ')}</span></div>
+          </div>`;
+      }).join('');
+    }
+
+    function setFreezeButtonUI(isFrozen){
+      const btn = document.getElementById('freezeBtn');
+      if (!btn) return;
+      btn.textContent = isFrozen ? 'Unfreeze Card' : 'Freeze Card';
+    }
+
+    async function loadControls(){
+      // Limits
+      try{
+        const res = await apiJSON(`/api/students/${currentStudentId}/limits`);
+        const monthly = Number(res?.monthly_limit);
+        if (Number.isFinite(monthly) && limitInput) limitInput.value = monthly.toFixed(2);
+        else if (limitInput) limitInput.value = '';
+      }catch{ if (limitInput) limitInput.value = ''; }
+      // Categories
+      try{
+        const res = await apiJSON(`/api/students/${currentStudentId}/categories`);
+        const a = res?.allow || {};
+        (document.getElementById('cat_food')||{}).checked = !!a.food;
+        (document.getElementById('cat_fastfood')||{}).checked = !!a.fastfood;
+        (document.getElementById('cat_electronics')||{}).checked = !!a.electronics;
+        (document.getElementById('cat_entertainment')||{}).checked = !!a.entertainment;
+        (document.getElementById('cat_other')||{}).checked = !!a.other;
+      }catch{
+        (document.getElementById('cat_food')||{}).checked = true;
+        (document.getElementById('cat_fastfood')||{}).checked = false;
+        (document.getElementById('cat_electronics')||{}).checked = false;
+        (document.getElementById('cat_entertainment')||{}).checked = true;
+        (document.getElementById('cat_other')||{}).checked = true;
+      }
+    }
+
+    // Freeze/Unfreeze
+    if (freezeBtn){
+      freezeBtn.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        if (!currentWalletId) return;
+        const unfreezing = /unfreeze/i.test(freezeBtn.textContent);
+        const path = unfreezing ? `/api/wallets/${currentWalletId}/unfreeze` : `/api/wallets/${currentWalletId}/freeze`;
+        const reason = unfreezing ? '' : (prompt('Reason for freezing? (optional)') || '');
+        freezeBtn.disabled = true;
+        try{
+          await apiJSON(path, { method:'POST', body: JSON.stringify({ reason }) });
+          await loadBalance(); await loadActivity();
+        }catch{ alert('Failed to update freeze status.'); }
+        finally{ freezeBtn.disabled = false; }
+      });
+    }
+
+    // Add Funds modal
+    function openFunds(){
+      fundsModal.style.display='grid'; fundsModal.setAttribute('aria-hidden','false');
+      amountInput.focus();
+    }
+    function closeFundsModal(){
+      fundsModal.style.display='none'; fundsModal.setAttribute('aria-hidden','true');
+      fundsMsg.style.display='none'; amountInput.value=''; noteInput.value='';
+    }
+    if (addFundsBtn) addFundsBtn.onclick = ()=>{ if (!currentWalletId) { alert('Wallet unavailable for this student.'); return; } openFunds(); };
+    if (closeFunds) closeFunds.onclick = closeFundsModal;
+    if (fundsModal) fundsModal.addEventListener('click', (e)=>{ if (e.target===fundsModal) closeFundsModal(); });
+    if (confirmFunds){
+      confirmFunds.onclick = async ()=>{
+        fundsMsg.style.display='none';
+        const amt = Number(amountInput.value);
+        if (!Number.isFinite(amt) || amt<=0){
+          fundsMsg.textContent='Please enter a valid amount.'; fundsMsg.className='msg error'; fundsMsg.style.display='block'; return;
+        }
+        confirmFunds.disabled=true; confirmFunds.textContent='Processing…';
+        try{
+          await apiJSON(`/api/wallets/${currentWalletId}/parent-deposits`, {
+            method:'POST', body: JSON.stringify({ amount: amt, note: noteInput.value || null })
+          });
+          fundsMsg.textContent='Funds added successfully.'; fundsMsg.className='msg ok'; fundsMsg.style.display='block';
+          await loadBalance(); await loadActivity();
+          setTimeout(closeFundsModal, 900);
+        }catch(e){
+          fundsMsg.textContent='Failed to add funds.' + (e?.message ? ` (${e.message})` : '');
+          fundsMsg.className='msg error'; fundsMsg.style.display='block';
+        }finally{
+          confirmFunds.disabled=false; confirmFunds.textContent='Add Funds';
+        }
+      };
+    }
+
+    // Logout
+    if (logoutBtn){
+      logoutBtn.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try{
+          const me = JSON.parse(localStorage.getItem('boopUser') || '{}');
+          const token = localStorage.getItem('boop_jwt') || '';
+          if (me.id && token){
+            await fetch(`/api/users/${me.id}/signout`, { method:'POST', headers:{ 'Authorization': `Bearer ${token}` } }).catch(()=>{});
+          }
+        } finally {
+          localStorage.removeItem('boop_jwt');
+          localStorage.removeItem('boopUser');
+          sessionStorage.clear();
+          window.location.href = '../index.html';
+        }
+      });
+    }
+
+    // Kickoff
+    (async function init(){
+      await loadMe();
+      await loadAssignedStudents();
+    })();
+  }
 })();
 </script>
 </body>
