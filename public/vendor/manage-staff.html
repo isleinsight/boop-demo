@@ -14,68 +14,59 @@
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* ── NAV (desktop) ─────────────────────────────────────────── */
-    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    /* ──────────────────────────────────────────────
+       NAV + MOBILE HAMBURGER (identical to Transfer)
+    ────────────────────────────────────────────── */
+    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:1000; }
     .vendor-nav .nav-container{
-      max-width:1100px; margin:0 auto; padding:10px 18px;
+      max-width:1100px; margin:0 auto;
+      padding:10px 18px !important;
       display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
-    .vendor-nav .nav-left img{ height:30px; display:block; }
-    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px; }
+    .vendor-nav .nav-left img{ height:30px !important; display:block; }
+
+    /* Desktop menu */
+    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px !important; }
     .vendor-nav .nav-right a{
-      color:#fff; text-decoration:none; font-size:.95rem; line-height:1;
-      padding:6px 8px; border-radius:6px; opacity:.95;
+      color:#fff; text-decoration:none;
+      font-size:.95rem !important; line-height:1 !important;
+      padding:6px 8px !important; border-radius:6px; opacity:.95;
     }
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
-    /* ── Hamburger (mobile trigger) ────────────────────────────── */
-    .hamburger{
-      display:none; width:42px; height:42px; border-radius:10px;
-      border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06);
-      align-items:center; justify-content:center; cursor:pointer;
-    }
-    .hamburger:focus{ outline:2px solid #93c5fd; outline-offset:2px; }
-    .hamburger .bar{ width:20px; height:2px; background:#fff; position:relative; display:block; }
-    .hamburger .bar::before, .hamburger .bar::after{
-      content:""; position:absolute; left:0; width:20px; height:2px; background:#fff;
-    }
-    .hamburger .bar::before{ top:-6px; }
-    .hamburger .bar::after{ top:6px; }
+    /* Hamburger button */
+    .hamburger{ display:none; flex-direction:column; gap:4px; cursor:pointer; }
+    .hamburger span{ width:24px; height:3px; background:#fff; border-radius:2px; display:block; }
 
     @media (max-width: 900px){
       .vendor-nav .nav-right{ display:none; }
       .hamburger{ display:flex; }
     }
 
-    /* ── Right-side drawer ─────────────────────────────────────── */
-    .nav-backdrop{
-      position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:60;
+    /* Slide-in mobile menu + overlay (matches Transfer) */
+    .mobile-menu{
+      position:fixed; top:0; right:-100%; width:260px; height:100%;
+      background:var(--nav); color:#fff; transition:right .3s ease;
+      padding:20px; display:flex; flex-direction:column; gap:12px;
+      z-index:1100; box-shadow:-8px 0 24px rgba(0,0,0,.35);
     }
-    .nav-drawer{
-      position:fixed; top:0; right:0; height:100vh; width:75vw; max-width:320px;
-      background:#0b1220; color:#fff; z-index:70;
-      border-left:1px solid rgba(255,255,255,.12);
-      box-shadow:-24px 0 60px rgba(0,0,0,.45);
-      transform:translateX(100%); transition:transform .28s ease-in-out;
-      padding:20px 16px; display:flex; flex-direction:column; gap:6px;
-    }
-    .nav-drawer a{
-      display:block; color:#fff; text-decoration:none;
-      padding:14px 12px; border-radius:10px; font-size:1.05rem;
-    }
-    .nav-drawer a[aria-current="page"]{ background:rgba(255,255,255,.12); }
-    .nav-drawer a:hover{ background:rgba(255,255,255,.10); }
+    .mobile-menu a{ color:#fff; text-decoration:none; padding:10px 0; font-size:1rem; border-radius:8px; }
+    .mobile-menu a[aria-current="page"], .mobile-menu a:hover{ background:rgba(255,255,255,.08); }
+    .mobile-menu.active{ right:0; }
 
-    .nav-open { overflow:hidden; } /* lock page scroll while open */
-    .nav-open .nav-backdrop{ display:block; }
-    .nav-open .nav-drawer{ transform:translateX(0); }
+    .overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,.5);
+      display:none; z-index:1050;
+    }
+    .overlay.active{ display:block; }
 
-    /* ── Page scaffold ─────────────────────────────────────────── */
+    /* HEADER */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
+    /* MAIN */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
     .card{
       background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
@@ -83,8 +74,10 @@
     }
     .card h2{ margin:0 0 10px; font-size:1.12rem; }
 
-    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:10px 14px; border-radius:10px; font-weight:700; border:1px solid transparent; cursor:pointer; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:10px 14px; border-radius:10px; font-weight:700; border:1px solid transparent; cursor:pointer;
+    }
     .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
     .btn.primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
     .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
@@ -98,16 +91,12 @@
     .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; display:block; }
     .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; display:block; }
 
-    /* ── Table + mobile fix ────────────────────────────────────── */
+    /* Table + mobile fix */
     .table-scroll{ overflow:auto; border-radius:12px; }
     table.table{ width:100%; min-width:680px; border-collapse:separate; border-spacing:0 10px; }
     .table th{ text-align:left; font-weight:600; color:#374151; padding:0 8px; }
     .table td{ background:#fff; border:1px solid var(--stroke); padding:12px 10px; }
     .actions{ display:flex; gap:8px; justify-content:flex-end; }
-
-    /* Modal */
-    .modal{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:1000; }
-    .modal-card{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:18px; width:92%; max-width:520px; }
 
     /* Footer */
     footer{ border-top:1px solid var(--stroke); background:#fff; }
@@ -136,7 +125,7 @@
     })();
   </script>
   <script>
-    // cashier device bounce
+    // If device is logged in as cashier (boopStaff set), bounce to session page
     try {
       const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
       if (staff) { location.replace('session.html'); }
@@ -151,7 +140,7 @@
     }, 10 * 60 * 1000);
   </script>
 
-  <!-- NAV -->
+  <!-- NAV (desktop + mobile) -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
@@ -159,8 +148,6 @@
           <img src="../assets/logo-white.png" alt="Payulot Logo" />
         </a>
       </div>
-
-      <!-- Desktop links -->
       <div class="nav-right" aria-label="Primary">
         <a href="index.html">Home</a>
         <a href="transfer.html">Transfer</a>
@@ -168,23 +155,21 @@
         <a href="manage-staff.html" aria-current="page">Manage Staff</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
-
-      <!-- Mobile trigger -->
-      <button id="hamburger" class="hamburger" aria-label="Open menu" aria-controls="navDrawer" aria-expanded="false">
-        <span class="bar"></span>
-      </button>
+      <div class="hamburger" id="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </div>
     </div>
   </nav>
 
-  <!-- Drawer + Backdrop -->
-  <div id="navBackdrop" class="nav-backdrop" hidden></div>
-  <nav id="navDrawer" class="nav-drawer" aria-hidden="true" role="dialog" aria-modal="true">
+  <!-- Mobile slide-in menu + overlay (same classes/markup as Transfer) -->
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true" role="dialog" aria-modal="true">
     <a href="index.html">Home</a>
     <a href="transfer.html">Transfer</a>
     <a href="transactions.html">Transactions</a>
     <a href="manage-staff.html" aria-current="page">Manage Staff</a>
     <a href="#" id="logoutBtnMobile">Log Out</a>
-  </nav>
+  </div>
+  <div class="overlay" id="overlay"></div>
 
   <!-- HEADER -->
   <header class="header">
@@ -201,7 +186,7 @@
         <button id="addBtn" class="btn primary">Add Staff</button>
       </div>
 
-      <!-- scroll wrapper stops table from jutting off on mobile -->
+      <!-- Responsive table wrapper prevents “jutting off” on mobile -->
       <div class="table-scroll" role="region" aria-label="Staff table">
         <table class="table" aria-describedby="staffTable">
           <thead>
@@ -252,34 +237,35 @@
   <script src="vendor-common.js"></script>
 
   <script>
-    /* ---------- Right-side drawer behavior ---------- */
-    const hamburger     = document.getElementById('hamburger');
-    const navBackdrop   = document.getElementById('navBackdrop');
-    const navDrawer     = document.getElementById('navDrawer');
-    const logoutBtn     = document.getElementById('logoutBtn');
-    const logoutMobile  = document.getElementById('logoutBtnMobile');
+    /* ---------- Mobile nav behavior (identical to Transfer) ---------- */
+    const hamburger   = document.getElementById('hamburger');
+    const mobileMenu  = document.getElementById('mobileMenu');
+    const overlay     = document.getElementById('overlay');
+    const logoutBtn   = document.getElementById('logoutBtn');
+    const logoutBtnMobile = document.getElementById('logoutBtnMobile');
 
     function openMenu(){
-      document.body.classList.add('nav-open');
+      mobileMenu.classList.add('active');
+      overlay.classList.add('active');
       hamburger.setAttribute('aria-expanded','true');
-      navDrawer.setAttribute('aria-hidden','false');
-      navBackdrop.removeAttribute('hidden');
+      mobileMenu.setAttribute('aria-hidden','false');
     }
     function closeMenu(){
-      document.body.classList.remove('nav-open');
+      mobileMenu.classList.remove('active');
+      overlay.classList.remove('active');
       hamburger.setAttribute('aria-expanded','false');
-      navDrawer.setAttribute('aria-hidden','true');
-      navBackdrop.setAttribute('hidden','');
+      mobileMenu.setAttribute('aria-hidden','true');
     }
     hamburger?.addEventListener('click', ()=>{
       const expanded = hamburger.getAttribute('aria-expanded') === 'true';
       expanded ? closeMenu() : openMenu();
     });
-    navBackdrop?.addEventListener('click', closeMenu);
+    overlay?.addEventListener('click', closeMenu);
     window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-    // close after navigating
-    navDrawer?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
+    // Close after navigating
+    mobileMenu?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
 
+    /* ---------- Logout (both menus) ---------- */
     async function doLogout(e){
       e?.preventDefault();
       try { await fetch('/api/logout', { method:'POST' }); } catch {}
@@ -287,7 +273,7 @@
       location.href = 'vendor-login.html';
     }
     logoutBtn?.addEventListener('click', doLogout);
-    logoutMobile?.addEventListener('click', doLogout);
+    logoutBtnMobile?.addEventListener('click', (e)=>{ doLogout(e); closeMenu(); });
   </script>
 
   <!-- Manage Staff logic (unchanged) -->
@@ -305,9 +291,9 @@
       };
       window.apiJSON = async (url, opts = {}) => {
         const r = await apiFetch(url, opts);
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
-        return j;
+        theJ = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(theJ.message || theJ.error || `HTTP ${r.status}`);
+        return theJ;
       };
       window.apiGet    = (u)   => apiJSON(u);
       window.apiPost   = (u,b) => apiJSON(u, { method:'POST',   body: JSON.stringify(b||{}) });
@@ -332,6 +318,7 @@
       let editingId = null;
 
       function showFlash(msg, ok=true){
+        if (!flash) return;
         flash.textContent = msg;
         flash.className = 'alert ' + (ok ? 'ok' : 'bad');
         flash.style.display = 'block';
@@ -339,11 +326,11 @@
       }
 
       function openModal(mode, staff){
-        editingId        = (mode === 'edit') ? staff.id : null;
-        title.textContent= (mode === 'edit') ? 'Edit staff' : 'Add staff';
-        fName.value      = staff?.display_name || staff?.name || '';
-        fEmail.value     = staff?.username || staff?.email || '';
-        fPass.value      = '';
+        editingId      = (mode === 'edit') ? staff.id : null;
+        title.textContent = (mode === 'edit') ? 'Edit staff' : 'Add staff';
+        fName.value    = staff?.display_name || staff?.name || '';
+        fEmail.value   = staff?.username || staff?.email || '';
+        fPass.value    = '';
         mMsg.textContent = '';
         mMsg.style.display = 'none';
         modal.style.display = 'grid';
@@ -394,8 +381,10 @@
         }
       }
 
+      // Add
       addBtn.addEventListener('click', () => openModal('add'));
 
+      // Save (add or edit)
       saveBtn.addEventListener('click', async () => {
         const display_name = fName.value.trim();
         const username     = (fEmail.value || '').trim().toLowerCase();
@@ -433,9 +422,11 @@
         }
       });
 
+      // Cancel + backdrop click
       cancelBtn.addEventListener('click', closeModal);
       modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
+      // Row actions (edit/delete)
       body.addEventListener('click', (e) => {
         const editId = e.target?.getAttribute?.('data-edit');
         const delId  = e.target?.getAttribute?.('data-del');
@@ -454,6 +445,7 @@
         }
       });
 
+      // Logout (desktop)
       document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
         e.preventDefault();
         try { await fetch('/api/logout', { method:'POST' }); } catch {}
@@ -461,6 +453,7 @@
         location.href = 'vendor-login.html';
       });
 
+      // Init
       loadStaff();
     })();
   </script>
