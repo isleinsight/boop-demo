@@ -16,15 +16,14 @@
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
     /* ──────────────────────────────────────────────
-       LOCKED VENDOR NAV  +  MOBILE HAMBURGER
+       NAV + MOBILE HAMBURGER (matches transactions page)
     ────────────────────────────────────────────── */
-    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
+    .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:1000; }
     .vendor-nav .nav-container{
       max-width:1100px; margin:0 auto;
-      padding:10px 18px !important;                
+      padding:10px 18px !important;
       display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
-    .vendor-nav .nav-left{ display:flex; align-items:center; gap:12px; }
     .vendor-nav .nav-left img{ height:30px !important; display:block; }
 
     /* Desktop menu */
@@ -38,25 +37,22 @@
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
     /* Hamburger button */
-    .hamburger{ display:none; align-items:center; justify-content:center; width:40px; height:40px; border-radius:8px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); cursor:pointer; }
-    .hamburger:focus{ outline:2px solid #93c5fd; outline-offset:2px; }
-    .hamburger .bar{ width:20px; height:2px; background:#fff; position:relative; display:block; }
-    .hamburger .bar::before, .hamburger .bar::after{ content:""; position:absolute; left:0; width:20px; height:2px; background:#fff; }
-    .hamburger .bar::before{ top:-6px; }
-    .hamburger .bar::after{ top:6px; }
-
-    /* Mobile overlay & panel */
-    .nav-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:49; }
-    .nav-right.mobile{ display:none; position:fixed; right:12px; left:12px; border:1px solid rgba(255,255,255,.12); background:#0b1220; border-radius:12px; padding:10px; flex-direction:column; gap:6px !important; z-index:51; box-shadow:0 16px 32px rgba(0,0,0,.35); }
-    .nav-right.mobile a{ padding:12px 12px !important; border-radius:10px; }
-    .nav-open .nav-backdrop{ display:block; }
-    .nav-open .nav-right.mobile{ display:flex !important; }
+    .hamburger{ display:none; flex-direction:column; gap:4px; cursor:pointer; }
+    .hamburger span{ width:24px; height:3px; background:#fff; border-radius:2px; display:block; }
 
     @media (max-width: 900px){
-      .hamburger{ display:inline-flex; }
-      /* hide desktop list; use mobile panel */
       .vendor-nav .nav-right{ display:none; }
+      .hamburger{ display:flex; }
     }
+
+    /* Slide-in mobile menu + overlay */
+    .mobile-menu{ position:fixed; top:0; right:-100%; width:260px; height:100%; background:var(--nav); color:#fff; transition:right .3s ease; padding:20px; display:flex; flex-direction:column; gap:12px; z-index:1100; box-shadow:-8px 0 24px rgba(0,0,0,.35); }
+    .mobile-menu a{ color:#fff; text-decoration:none; padding:10px 0; font-size:1rem; border-radius:8px; }
+    .mobile-menu a[aria-current="page"], .mobile-menu a:hover{ background:rgba(255,255,255,.08); }
+    .mobile-menu.active{ right:0; }
+
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; z-index:1050; }
+    .overlay.active{ display:block; }
 
     /* HEADER */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
@@ -95,9 +91,7 @@
     .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
     .btn.ghost:hover{ border-color:#cbd5e1; }
 
-    .summary{
-      border:1px dashed var(--stroke); border-radius:12px; padding:12px; background:var(--soft); margin-top:10px;
-    }
+    .summary{ border:1px dashed var(--stroke); border-radius:12px; padding:12px; background:var(--soft); margin-top:10px; }
     .summary .line{ display:flex; justify-content:space-between; margin:6px 0; }
 
     .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; }
@@ -108,14 +102,8 @@
 
     /* Recent payouts  */
     .list{ display:grid; gap:10px; margin-top:8px; }
-    .item{
-      background:#fff; border:1px solid var(--stroke); border-radius:12px;
-      padding:12px 14px; display:flex; align-items:center; gap:12px;
-    }
-    .avatar{
-      width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center;
-      font-weight:700; color:#334155; flex:0 0 42px;
-    }
+    .item{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:12px; }
+    .avatar{ width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; flex:0 0 42px; }
     .line{ display:flex; align-items:center; justify-content:space-between; width:100%; }
     .amt{ font-weight:700; }
     .amt.negative{ color:#dc2626; }
@@ -156,23 +144,21 @@
     })();
   </script>
   <script>
-  // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
-  try {
-    const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
-    if (staff) {
-      location.replace('session.html');
-    }
-  } catch {}
-</script>
+    // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
+    try {
+      const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
+      if (staff) { location.replace('session.html'); }
+    } catch {}
+  </script>
   <script>
-  setInterval(() => {
-    fetch('/api/vendor/ping', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
-    }).catch(()=>{});
-  }, 10 * 60 * 1000); // every 10 minutes
-</script>
+    setInterval(() => {
+      fetch('/api/vendor/ping', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
+      }).catch(()=>{});
+    }, 10 * 60 * 1000); // every 10 minutes
+  </script>
 
-  <!-- NAV (with hamburger) -->
+  <!-- NAV (desktop + mobile) -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
@@ -187,20 +173,21 @@
         <a href="manage-staff.html">Manage Staff</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
-      <button id="hamburger" class="hamburger" aria-label="Open menu" aria-controls="navMobile" aria-expanded="false">
-        <span class="bar"></span>
-      </button>
-    </div>
-    <!-- mobile overlay + panel -->
-    <div id="navBackdrop" class="nav-backdrop" hidden></div>
-    <div class="nav-right mobile" id="navMobile" aria-hidden="true" role="dialog" aria-modal="true">
-      <a href="index.html">Home</a>
-      <a href="transfer.html" aria-current="page">Transfer</a>
-      <a href="transactions.html">Transactions</a>
-      <a href="manage-staff.html">Manage Staff</a>
-      <a href="#" id="logoutBtnMobile">Log Out</a>
+      <div class="hamburger" id="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </div>
     </div>
   </nav>
+
+  <!-- Mobile slide-in menu + overlay -->
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true" role="dialog" aria-modal="true">
+    <a href="index.html">Home</a>
+    <a href="transfer.html" aria-current="page">Transfer</a>
+    <a href="transactions.html">Transactions</a>
+    <a href="manage-staff.html">Manage Staff</a>
+    <a href="#" id="logoutBtnMobile">Log Out</a>
+  </div>
+  <div class="overlay" id="overlay"></div>
 
   <!-- HEADER -->
   <header class="header">
@@ -365,41 +352,31 @@
   };
 
   /* ---------- NAV (mobile) ---------- */
-  const hamburger   = document.getElementById('hamburger');
-  const navMobile   = document.getElementById('navMobile');
-  const navBackdrop = document.getElementById('navBackdrop');
-  const navEl       = document.querySelector('.vendor-nav');
-  const logoutBtn   = document.getElementById('logoutBtn');
+  const hamburger = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobileMenu');
+  const overlay = document.getElementById('overlay');
+  const logoutBtn = document.getElementById('logoutBtn');
   const logoutBtnMobile = document.getElementById('logoutBtnMobile');
 
-  function positionMobilePanel(){
-    try{
-      const h = (navEl?.getBoundingClientRect().height || 56);
-      navMobile.style.top = (Math.ceil(h) + 8) + 'px';
-    }catch{ navMobile.style.top = '64px'; }
-  }
   function openMenu(){
-    positionMobilePanel();
-    document.body.classList.add('nav-open');
+    mobileMenu.classList.add('active');
+    overlay.classList.add('active');
     hamburger.setAttribute('aria-expanded','true');
-    navMobile.setAttribute('aria-hidden','false');
-    navBackdrop.removeAttribute('hidden');
+    mobileMenu.setAttribute('aria-hidden','false');
   }
   function closeMenu(){
-    document.body.classList.remove('nav-open');
+    mobileMenu.classList.remove('active');
+    overlay.classList.remove('active');
     hamburger.setAttribute('aria-expanded','false');
-    navMobile.setAttribute('aria-hidden','true');
-    navBackdrop.setAttribute('hidden','');
+    mobileMenu.setAttribute('aria-hidden','true');
   }
   hamburger?.addEventListener('click', ()=>{
     const expanded = hamburger.getAttribute('aria-expanded') === 'true';
     expanded ? closeMenu() : openMenu();
   });
-  navBackdrop?.addEventListener('click', closeMenu);
+  overlay?.addEventListener('click', closeMenu);
   window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-  window.addEventListener('resize', ()=>{ if(document.body.classList.contains('nav-open')) positionMobilePanel(); });
-  // close after navigating
-  navMobile?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
+  mobileMenu?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
 
   /* ---------- DOM refs ---------- */
   const destination = $('destination');
@@ -520,7 +497,7 @@
   const abMsg    = $('abMsg');
 
   $('abCancel').addEventListener('click', ()=> { addBankModal.style.display='none'; });
-  addBankBtn.addEventListener('click', ()=>{
+  $('addBankBtn').addEventListener('click', ()=>{
     abMsg.textContent=''; abHolder.value=''; abAccount.value='';
     addBankModal.style.display='flex';
   });
@@ -544,46 +521,46 @@
 
   /* ---------- preview + review modal ---------- */
   function updatePreview(){
-    const amt = Number(amountEl.value);
-    if (!amt || amt<=0){ previewBox.style.display='none'; reviewBtn.disabled=true; return; }
+    const amt = Number(($('amount').value));
+    if (!amt || amt<=0){ $('previewBox').style.display='none'; $('reviewBtn').disabled=true; return; }
     const fee = 0;
-    pAmount.textContent  = dollars(amt*100);
-    pFee.textContent     = dollars(fee);
-    pNet.textContent     = dollars(amt*100 - fee);
-    pArrival.textContent = '1–2 business days';
-    previewBox.style.display='block';
-    reviewBtn.disabled=false;
+    $('pAmount').textContent  = dollars(amt*100);
+    $('pFee').textContent     = dollars(fee);
+    $('pNet').textContent     = dollars(amt*100 - fee);
+    $('pArrival').textContent = '1–2 business days';
+    $('previewBox').style.display='block';
+    $('reviewBtn').disabled=false;
   }
-  amountEl.addEventListener('input', updatePreview);
+  $('amount').addEventListener('input', updatePreview);
 
-  reviewBtn.addEventListener('click', ()=>{
-    const sel = destination.options[destination.selectedIndex];
-    mTo.textContent      = sel ? sel.textContent : '—';
-    mAmount.textContent  = pAmount.textContent;
-    mFee.textContent     = pFee.textContent;
-    mNet.textContent     = pNet.textContent;
-    mArrival.textContent = pArrival.textContent;
-    mMemo.textContent    = (memoEl.value||'—');
-    reviewModal.style.display='flex';
+  $('reviewBtn').addEventListener('click', ()=>{
+    const sel = $('destination').options[$('destination').selectedIndex];
+    $('mTo').textContent      = sel ? sel.textContent : '—';
+    $('mAmount').textContent  = $('pAmount').textContent;
+    $('mFee').textContent     = $('pFee').textContent;
+    $('mNet').textContent     = $('pNet').textContent;
+    $('mArrival').textContent = $('pArrival').textContent;
+    $('mMemo').textContent    = ($('memo').value||'—');
+    $('reviewModal').style.display='flex';
   });
-  cancelBtn.addEventListener('click', ()=> { reviewModal.style.display='none'; });
+  $('cancelBtn').addEventListener('click', ()=> { $('reviewModal').style.display='none'; });
 
-  confirmBtn.addEventListener('click', async ()=>{
-    const amtCents = Math.round(Number(amountEl.value)*100);
-    const bankId   = destination.value;
-    const memo     = memoEl.value || '';
-    confirmBtn.disabled = true;
-    modalMsg.textContent = 'Submitting…';
+  $('confirmBtn').addEventListener('click', async ()=>{
+    const amtCents = Math.round(Number(($('amount').value))*100);
+    const bankId   = $('destination').value;
+    const memo     = $('memo').value || '';
+    $('confirmBtn').disabled = true;
+    $('modalMsg').textContent = 'Submitting…';
     try{
       await apiPost('/api/transfers', { bank_account_id: bankId, amount_cents: amtCents, memo });
-      reviewModal.style.display='none';
+      $('reviewModal').style.display='none';
       showFlash('Transfer request submitted for review.', true);
-      amountEl.value=''; memoEl.value=''; updatePreview();
+      $('amount').value=''; $('memo').value=''; updatePreview();
       loadLatest(); loadPayouts();
     }catch(e){
-      modalMsg.textContent = e.message || 'Error';
+      $('modalMsg').textContent = e.message || 'Error';
     }finally{
-      confirmBtn.disabled = false;
+      $('confirmBtn').disabled = false;
     }
   });
 
