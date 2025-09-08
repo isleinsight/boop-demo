@@ -14,19 +14,59 @@
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* ── Vendor NAV (matches other vendor pages) ── */
+    /* ── Vendor NAV (desktop + mobile hamburger like Transactions/Transfer) ── */
     .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
-    .vendor-nav .nav-container{ max-width:1100px; margin:0 auto; padding:10px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .vendor-nav .nav-container{
+      max-width:1100px; margin:0 auto; padding:10px 18px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .vendor-nav .nav-left{ display:flex; align-items:center; gap:12px; }
     .vendor-nav .nav-left img{ height:30px; display:block; }
+
+    /* Desktop list */
     .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px; }
-    .vendor-nav .nav-right a{ color:#fff; text-decoration:none; font-size:.95rem; line-height:1; padding:6px 8px; border-radius:6px; opacity:.95; }
+    .vendor-nav .nav-right a{
+      color:#fff; text-decoration:none; font-size:.95rem; line-height:1;
+      padding:6px 8px; border-radius:6px; opacity:.95;
+    }
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
+    /* Hamburger button */
+    .hamburger{
+      display:none; align-items:center; justify-content:center; width:40px; height:40px;
+      border-radius:8px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); cursor:pointer;
+    }
+    .hamburger:focus{ outline:2px solid #93c5fd; outline-offset:2px; }
+    .hamburger .bar{ width:20px; height:2px; background:#fff; position:relative; display:block; }
+    .hamburger .bar::before, .hamburger .bar::after{
+      content:""; position:absolute; left:0; width:20px; height:2px; background:#fff;
+    }
+    .hamburger .bar::before{ top:-6px; }
+    .hamburger .bar::after{ top:6px; }
+
+    /* Mobile overlay & slide-down panel */
+    .nav-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:49; }
+    .nav-right.mobile{
+      display:none; position:fixed; right:12px; left:12px; border:1px solid rgba(255,255,255,.12);
+      background:#0b1220; border-radius:12px; padding:10px; flex-direction:column; gap:6px;
+      z-index:51; box-shadow:0 16px 32px rgba(0,0,0,.35);
+    }
+    .nav-right.mobile a{ padding:12px 12px; border-radius:10px; color:#fff; text-decoration:none; }
+    .nav-open .nav-backdrop{ display:block; }
+    .nav-open .nav-right.mobile{ display:flex !important; }
+
+    @media (max-width: 900px){
+      .hamburger{ display:inline-flex; }
+      .vendor-nav .nav-right{ display:none; } /* hide desktop links */
+    }
+
+    /* HEADER */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
+    /* MAIN */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
     .grid{ display:grid; grid-template-columns:1fr; gap:16px; }
     .card{ background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.06); }
@@ -77,23 +117,22 @@
     })();
   </script>
   <script>
-  setInterval(() => {
-    fetch('/api/vendor/ping', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
-    }).catch(()=>{});
-  }, 10 * 60 * 1000); // every 10 minutes
-</script>
-<script>
-  // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
-  try {
-    const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
-    if (staff) {
-      
-      location.replace('session.html');
-    }
-  } catch {}
-</script>
-  <!-- NAV -->
+    // keep-alive
+    setInterval(() => {
+      fetch('/api/vendor/ping', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
+      }).catch(()=>{});
+    }, 10 * 60 * 1000);
+  </script>
+  <script>
+    // cashier session bounce
+    try {
+      const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
+      if (staff) { location.replace('session.html'); }
+    } catch {}
+  </script>
+
+  <!-- NAV (with hamburger like other pages) -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
@@ -101,6 +140,8 @@
           <img src="../assets/logo-white.png" alt="Payulot Logo" />
         </a>
       </div>
+
+      <!-- desktop links -->
       <div class="nav-right" aria-label="Primary">
         <a href="index.html">Home</a>
         <a href="transfer.html">Transfer</a>
@@ -108,6 +149,21 @@
         <a href="manage-staff.html" aria-current="page">Manage Staff</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
+
+      <!-- hamburger -->
+      <button id="hamburger" class="hamburger" aria-label="Open menu" aria-controls="navMobile" aria-expanded="false">
+        <span class="bar"></span>
+      </button>
+    </div>
+
+    <!-- mobile overlay + panel -->
+    <div id="navBackdrop" class="nav-backdrop" hidden></div>
+    <div class="nav-right mobile" id="navMobile" aria-hidden="true" role="dialog" aria-modal="true">
+      <a href="index.html">Home</a>
+      <a href="transfer.html">Transfer</a>
+      <a href="transactions.html">Transactions</a>
+      <a href="manage-staff.html" aria-current="page">Manage Staff</a>
+      <a href="#" id="logoutBtnMobile">Log Out</a>
     </div>
   </nav>
 
@@ -167,10 +223,61 @@
     </div>
   </footer>
 
-  <!-- Shared helpers (make sure the path & name match your file on disk) -->
+  <!-- Shared helpers -->
   <script src="vendor-common.js"></script>
 
-<script>
+  <!-- Mobile nav logic -->
+  <script>
+    (function(){
+      const hamburger   = document.getElementById('hamburger');
+      const navMobile   = document.getElementById('navMobile');
+      const navBackdrop = document.getElementById('navBackdrop');
+      const navEl       = document.querySelector('.vendor-nav');
+      const logoutBtn   = document.getElementById('logoutBtn');
+      const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+
+      function positionMobilePanel(){
+        try{
+          const h = (navEl?.getBoundingClientRect().height || 56);
+          navMobile.style.top = (Math.ceil(h) + 8) + 'px';
+        }catch{ navMobile.style.top = '64px'; }
+      }
+      function openMenu(){
+        positionMobilePanel();
+        document.body.classList.add('nav-open');
+        hamburger.setAttribute('aria-expanded','true');
+        navMobile.setAttribute('aria-hidden','false');
+        navBackdrop.removeAttribute('hidden');
+      }
+      function closeMenu(){
+        document.body.classList.remove('nav-open');
+        hamburger.setAttribute('aria-expanded','false');
+        navMobile.setAttribute('aria-hidden','true');
+        navBackdrop.setAttribute('hidden','');
+      }
+
+      hamburger?.addEventListener('click', ()=>{
+        const expanded = hamburger.getAttribute('aria-expanded') === 'true';
+        expanded ? closeMenu() : openMenu();
+      });
+      navBackdrop?.addEventListener('click', closeMenu);
+      window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+      window.addEventListener('resize', ()=>{ if(document.body.classList.contains('nav-open')) positionMobilePanel(); });
+      navMobile?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
+
+      async function doLogout(e){
+        e?.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        location.href = 'vendor-login.html';
+      }
+      document.getElementById('logoutBtn')?.addEventListener('click', doLogout);
+      logoutBtnMobile?.addEventListener('click', (e)=>{ doLogout(e); closeMenu(); });
+    })();
+  </script>
+
+  <!-- Page logic -->
+  <script>
   /* ─────────────────────────────────────────────────────────
      Tiny fallbacks (in case vendor-common.js isn't loaded)
   ───────────────────────────────────────────────────────── */
@@ -254,11 +361,10 @@
         }
 
         body.innerHTML = list.map(s => {
-          // Your table now uses is_active (boolean). Fall back to !disabled if present.
           const isActive = (typeof s.is_active === 'boolean') ? s.is_active : !s.disabled;
           const status   = isActive ? 'Active' : 'Inactive';
           const name     = s.display_name || s.name || s.username || '—';
-          const username = s.username || '—';  // ← show this in the “Email” column
+          const username = s.username || '—';
           return `
             <tr class="tr" data-id="${s.id}">
               <td>${name}</td>
@@ -288,7 +394,7 @@
     // Save (add or edit)
     saveBtn.addEventListener('click', async () => {
       const display_name = fName.value.trim();
-      const username     = (fEmail.value || '').trim().toLowerCase(); // store as username
+      const username     = (fEmail.value || '').trim().toLowerCase();
       const password     = fPass.value.trim();
 
       if (!display_name || !username || (!editingId && !password)){
@@ -327,7 +433,7 @@
     cancelBtn.addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-    // Row actions (edit/delete)
+    // Row actions
     body.addEventListener('click', (e) => {
       const editId = e.target?.getAttribute?.('data-edit');
       const delId  = e.target?.getAttribute?.('data-del');
@@ -346,7 +452,7 @@
       }
     });
 
-    // Logout
+    // Logout (desktop)
     document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
       e.preventDefault();
       try { await fetch('/api/logout', { method:'POST' }); } catch {}
@@ -357,6 +463,6 @@
     // Init
     loadStaff();
   })();
-</script>
+  </script>
 </body>
 </html>
