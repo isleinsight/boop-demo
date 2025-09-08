@@ -1,8 +1,7 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Manage Staff – Vendor | Payulot</title>
+  <title>Transfer to Bank – Vendor | Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -10,12 +9,13 @@
       --ink:#102a43; --muted:#6b7c93; --blue:#2f80ed; --blue-dark:#1a5fcc;
       --bg:#ffffff; --panel:#ffffff; --stroke:#e5e7eb; --soft:#f8fafc;
       --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444; --nav:#0b1220;
+      --green:#16a34a; --red:#dc2626;
     }
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
     /* ──────────────────────────────────────────────
-       NAV + MOBILE HAMBURGER (identical to Transfer)
+       NAV + MOBILE HAMBURGER (matches transactions page)
     ────────────────────────────────────────────── */
     .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:1000; }
     .vendor-nav .nav-container{
@@ -44,21 +44,13 @@
       .hamburger{ display:flex; }
     }
 
-    /* Slide-in mobile menu + overlay (matches Transfer) */
-    .mobile-menu{
-      position:fixed; top:0; right:-100%; width:260px; height:100%;
-      background:var(--nav); color:#fff; transition:right .3s ease;
-      padding:20px; display:flex; flex-direction:column; gap:12px;
-      z-index:1100; box-shadow:-8px 0 24px rgba(0,0,0,.35);
-    }
+    /* Slide-in mobile menu + overlay */
+    .mobile-menu{ position:fixed; top:0; right:-100%; width:260px; height:100%; background:var(--nav); color:#fff; transition:right .3s ease; padding:20px; display:flex; flex-direction:column; gap:12px; z-index:1100; box-shadow:-8px 0 24px rgba(0,0,0,.35); }
     .mobile-menu a{ color:#fff; text-decoration:none; padding:10px 0; font-size:1rem; border-radius:8px; }
     .mobile-menu a[aria-current="page"], .mobile-menu a:hover{ background:rgba(255,255,255,.08); }
     .mobile-menu.active{ right:0; }
 
-    .overlay{
-      position:fixed; inset:0; background:rgba(0,0,0,.5);
-      display:none; z-index:1050;
-    }
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; z-index:1050; }
     .overlay.active{ display:block; }
 
     /* HEADER */
@@ -66,43 +58,69 @@
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
-    /* MAIN */
+    /* MAIN grid */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
+    .grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:16px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
+
     .card{
       background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
       box-shadow:0 8px 24px rgba(0,0,0,.06);
     }
     .card h2{ margin:0 0 10px; font-size:1.12rem; }
+    .muted{ color:var(--muted); }
+
+    label{ display:block; color:var(--muted); font-size:.92rem; margin:10px 0 6px; }
+    input, select{
+      width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke);
+      background:#fff; color:#111827; font-size:1rem;
+    }
+    input:disabled, select:disabled{ opacity:.7; }
+
+    .row{ display:flex; gap:12px; align-items:center; }
+    .row > div{ flex:1; }
 
     .btn{
       display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:10px 14px; border-radius:10px; font-weight:700; border:1px solid transparent; cursor:pointer;
+      padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:700;
+      border:1px solid transparent; cursor:pointer;
     }
     .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
     .btn.primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
     .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
     .btn.ghost:hover{ border-color:#cbd5e1; }
 
-    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-    label{ display:block; color:var(--muted); font-size:.92rem; margin:10px 0 6px; }
-    input{ width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke); background:#fff; font-size:1rem; }
+    .summary{ border:1px dashed var(--stroke); border-radius:12px; padding:12px; background:var(--soft); margin-top:10px; }
+    .summary .line{ display:flex; justify-content:space-between; margin:6px 0; }
 
-    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; display:none; }
-    .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; display:block; }
-    .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; display:block; }
+    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; }
+    .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; }
+    .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; }
 
-    /* Table + mobile fix */
-    .table-scroll{ overflow:auto; border-radius:12px; }
-    table.table{ width:100%; min-width:680px; border-collapse:separate; border-spacing:0 10px; }
-    .table th{ text-align:left; font-weight:600; color:#374151; padding:0 8px; }
-    .table td{ background:#fff; border:1px solid var(--stroke); padding:12px 10px; }
-    .actions{ display:flex; gap:8px; justify-content:flex-end; }
+    .help{ font-size:.9rem; color:var(--muted); margin-top:8px; }
+
+    /* Recent payouts  */
+    .list{ display:grid; gap:10px; margin-top:8px; }
+    .item{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:12px; }
+    .avatar{ width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; flex:0 0 42px; }
+    .line{ display:flex; align-items:center; justify-content:space-between; width:100%; }
+    .amt{ font-weight:700; }
+    .amt.negative{ color:#dc2626; }
+    .meta{ font-size:.85rem; color:#94a3b8; margin-top:2px; }
+    .pill{ font-size:.75rem; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#1e3a8a; display:inline-block; text-transform:capitalize; margin-left:8px; white-space:nowrap; }
+    .pill.pending{ background:#fff7ed; color:#9a3412; }
+    .pill.completed{ background:#ecfdf5; color:#065f46; }
+    .pill.failed{ background:#fef2f2; color:#991b1b; }
+
+    .empty{ text-align:center; color:#64748b; padding:20px; border:1px dashed var(--stroke); border-radius:12px; background:#fff; }
 
     /* Footer */
     footer{ border-top:1px solid var(--stroke); background:#fff; }
     .footer-inner{ max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
     .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
     .footer-links a:hover{ text-decoration:underline; }
+
+    .page-bottom-spacer{ height:40px; }
   </style>
 </head>
 <body>
@@ -125,19 +143,18 @@
     })();
   </script>
   <script>
-    // If device is logged in as cashier (boopStaff set), bounce to session page
+    // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
     try {
       const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
       if (staff) { location.replace('session.html'); }
     } catch {}
   </script>
   <script>
-    // keep-alive
     setInterval(() => {
       fetch('/api/vendor/ping', {
         headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
       }).catch(()=>{});
-    }, 10 * 60 * 1000);
+    }, 10 * 60 * 1000); // every 10 minutes
   </script>
 
   <!-- NAV (desktop + mobile) -->
@@ -150,9 +167,9 @@
       </div>
       <div class="nav-right" aria-label="Primary">
         <a href="index.html">Home</a>
-        <a href="transfer.html">Transfer</a>
+        <a href="transfer.html" aria-current="page">Transfer</a>
         <a href="transactions.html">Transactions</a>
-        <a href="manage-staff.html" aria-current="page">Manage Staff</a>
+        <a href="manage-staff.html">Manage Staff</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
       <div class="hamburger" id="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
@@ -161,64 +178,125 @@
     </div>
   </nav>
 
-  <!-- Mobile slide-in menu + overlay (same classes/markup as Transfer) -->
+  <!-- Mobile slide-in menu + overlay -->
   <div class="mobile-menu" id="mobileMenu" aria-hidden="true" role="dialog" aria-modal="true">
     <a href="index.html">Home</a>
-    <a href="transfer.html">Transfer</a>
+    <a href="transfer.html" aria-current="page">Transfer</a>
     <a href="transactions.html">Transactions</a>
-    <a href="manage-staff.html" aria-current="page">Manage Staff</a>
+    <a href="manage-staff.html">Manage Staff</a>
     <a href="#" id="logoutBtnMobile">Log Out</a>
   </div>
   <div class="overlay" id="overlay"></div>
 
   <!-- HEADER -->
   <header class="header">
-    <h1>Manage staff</h1>
-    <p class="sub">Create, edit, and remove cashier logins for your business.</p>
+    <h1>Request a bank transfer</h1>
+    <p class="sub">Submit a request to move money from Payulot to your bank. Our Accounts team will review and process it.</p>
   </header>
 
+  <!-- MAIN -->
   <main class="container">
-    <div id="flash" class="alert"></div>
+    <div id="flash" class="alert" style="display:none;"></div>
 
-    <section class="card">
-      <div class="row" style="justify-content:space-between;">
-        <h2 style="margin:0">Staff</h2>
-        <button id="addBtn" class="btn primary">Add Staff</button>
-      </div>
+    <div class="grid">
+      <!-- Left: Request form -->
+      <section class="card">
+        <h2>Create request</h2>
 
-      <!-- Responsive table wrapper prevents “jutting off” on mobile -->
-      <div class="table-scroll" role="region" aria-label="Staff table">
-        <table class="table" aria-describedby="staffTable">
-          <thead>
-            <tr>
-              <th style="width:30%">Name</th>
-              <th style="width:35%">Email</th>
-              <th style="width:20%">Status</th>
-              <th style="width:15%"></th>
-            </tr>
-          </thead>
-          <tbody id="staffBody">
-            <tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+        <div>
+          <label for="destination">Destination account</label>
+          <select id="destination"></select>
+          <div class="help">Saved accounts are masked for your security.</div>
+          <button id="addBankBtn" class="btn ghost" type="button" style="margin-top:8px;">Add bank</button>
+        </div>
+
+        <label for="amount">Amount</label>
+        <input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
+
+        <label for="memo">Memo (optional)</label>
+        <input id="memo" type="text" maxlength="80" placeholder="e.g., Transfer to operating account" />
+
+        <div class="summary" id="previewBox" style="display:none;">
+          <div class="line"><span>Amount</span><strong id="pAmount">—</strong></div>
+          <div class="line"><span>Fees</span><strong id="pFee">$0.00</strong></div>
+          <div class="line"><span>Net to bank</span><strong id="pNet">—</strong></div>
+          <div class="line"><span>Arrival estimate</span><strong id="pArrival">1–2 business days</strong></div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button id="reviewBtn" class="btn primary" disabled>Review request</button>
+          <div id="formMsg" class="muted"></div>
+        </div>
+      </section>
+
+      <!-- Right: Balance + Latest + Recent payouts -->
+      <section class="card">
+        <h2>Your balance</h2>
+        <div class="summary">
+          <div class="line"><span>Available</span><strong id="balanceTxt">—</strong></div>
+        </div>
+
+        <h2 style="margin-top:16px;">Latest request</h2>
+        <p class="help" style="margin-top:-4px; margin-bottom:8px;">
+          Pending amounts are not deducted until the transfer is completed.
+        </p>
+        <div id="latestBox" class="muted">No requests yet.</div>
+
+        <h2 style="margin-top:18px;">Recent payouts</h2>
+        <div id="payouts" class="list">
+          <div class="empty">Loading…</div>
+        </div>
+      </section>
+    </div>
   </main>
 
-  <!-- Add/Edit Modal -->
-  <div id="editModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <h3 id="modalTitle" style="margin:0 0 10px;">Add staff</h3>
-      <label>Full name</label>
-      <input id="fName" type="text" placeholder="e.g., Suzy Q" />
-      <label style="margin-top:8px;">Email</label>
-      <input id="fEmail" type="email" placeholder="name@example.com" />
-      <label style="margin-top:8px;">Password</label>
-      <input id="fPassword" type="password" placeholder="Set a password" />
-      <div id="modalMsg" class="alert" style="margin-top:10px;"></div>
-      <div class="row" style="justify-content:flex-end;margin-top:10px;">
-        <button id="saveBtn" class="btn primary">Save</button>
+  <div class="page-bottom-spacer"></div>
+
+  <!-- Review Modal -->
+  <div id="reviewModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
+    <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:520px;width:92%;">
+      <h3 style="margin:0 0 10px;">Confirm request</h3>
+      <div class="summary" style="background:#f8fafc;border-color:#e5e7eb;">
+        <div class="line"><span>To</span><strong id="mTo">—</strong></div>
+        <div class="line"><span>Amount</span><strong id="mAmount">—</strong></div>
+        <div class="line"><span>Fees</span><strong id="mFee">$0.00</strong></div>
+        <div class="line"><span>Net</span><strong id="mNet">—</strong></div>
+        <div class="line"><span>Arrival</span><strong id="mArrival">1–2 business days</strong></div>
+        <div class="line"><span>Memo</span><strong id="mMemo">—</strong></div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button id="confirmBtn" class="btn primary">Submit request</button>
         <button id="cancelBtn" class="btn ghost">Cancel</button>
+        <div id="modalMsg" class="muted"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Bank Modal -->
+  <div id="addBankModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1000;">
+    <div style="background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:12px;padding:18px;max-width:520px;width:92%;">
+      <h3 style="margin:0 0 10px;">Add bank account</h3>
+
+      <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Bank</label>
+      <select id="abBank" style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+        <option value="Butterfield">Butterfield (Bank of N.T. Butterfield & Son)</option>
+        <option value="HSBC Bermuda">HSBC Bermuda</option>
+        <option value="Clarien Bank">Clarien Bank</option>
+      </select>
+
+      <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account holder name</label>
+      <input id="abHolder" type="text" placeholder="Full name on account"
+             style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+
+      <label style="display:block;color:#6b7c93;font-size:.92rem;margin:10px 0 6px;">Account number</label>
+      <input id="abAccount" type="text" inputmode="numeric" placeholder="e.g. 0123456789"
+             style="width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;">
+
+      <div id="abMsg" class="muted" style="margin-top:8px;"></div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="abSave" class="btn primary">Save bank</button>
+        <button id="abCancel" class="btn ghost">Cancel</button>
       </div>
     </div>
   </div>
@@ -233,229 +311,276 @@
     </div>
   </footer>
 
-  <!-- Shared helpers -->
+  <!-- Page logic -->
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- fallback if vendor-common.js isn't loaded ---------- */
+  if (typeof window.apiGet !== 'function') {
+    async function _apiFetch(url, opts = {}) {
+      const token = localStorage.getItem('boop_jwt');
+      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(url, { ...opts, headers });
+      const renewed = res.headers.get('x-renew-jwt');
+      if (renewed) localStorage.setItem('boop_jwt', renewed);
+      return res;
+    }
+    async function _apiJSON(url, opts = {}) {
+      const res = await _apiFetch(url, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
+      return data;
+    }
+    window.apiGet    = (u)      => _apiJSON(u);
+    window.apiPost   = (u, b={})=> _apiJSON(u, { method:'POST',  body: JSON.stringify(b) });
+    window.apiPatch  = (u, b={})=> _apiJSON(u, { method:'PATCH', body: JSON.stringify(b) });
+    window.apiDelete = (u, b={})=> _apiJSON(u, { method:'DELETE',body: JSON.stringify(b) });
+  }
+
+  /* ---------- tiny helpers ---------- */
+  const $ = (id) => document.getElementById(id);
+  const dollars = (c) => `$${(Number(c||0)/100).toFixed(2)}`;
+  const showFlash = (msg, ok=true) => {
+    const flash = $('flash'); if (!flash) return;
+    flash.textContent = msg;
+    flash.className = 'alert ' + (ok ? 'ok' : 'bad');
+    flash.style.display = 'block';
+    setTimeout(()=> { flash.style.display = 'none'; }, 4000);
+  };
+
+  /* ---------- NAV (mobile) ---------- */
+  const hamburger = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobileMenu');
+  const overlay = document.getElementById('overlay');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+
+  function openMenu(){
+    mobileMenu.classList.add('active');
+    overlay.classList.add('active');
+    hamburger.setAttribute('aria-expanded','true');
+    mobileMenu.setAttribute('aria-hidden','false');
+  }
+  function closeMenu(){
+    mobileMenu.classList.remove('active');
+    overlay.classList.remove('active');
+    hamburger.setAttribute('aria-expanded','false');
+    mobileMenu.setAttribute('aria-hidden','true');
+  }
+  hamburger?.addEventListener('click', ()=>{
+    const expanded = hamburger.getAttribute('aria-expanded') === 'true';
+    expanded ? closeMenu() : openMenu();
+  });
+  overlay?.addEventListener('click', closeMenu);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+  mobileMenu?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
+
+  /* ---------- DOM refs ---------- */
+  const destination = $('destination');
+  const addBankBtn  = $('addBankBtn');
+  const amountEl    = $('amount');
+  const memoEl      = $('memo');
+
+  const previewBox  = $('previewBox');
+  const pAmount     = $('pAmount');
+  const pFee        = $('pFee');
+  const pNet        = $('pNet');
+  const pArrival    = $('pArrival');
+
+  const reviewBtn   = $('reviewBtn');
+  const formMsg     = $('formMsg');
+
+  const reviewModal = $('reviewModal');
+  const mTo         = $('mTo');
+  const mAmount     = $('mAmount');
+  const mFee        = $('mFee');
+  const mNet        = $('mNet');
+  const mArrival    = $('mArrival');
+  const mMemo       = $('mMemo');
+  const confirmBtn  = $('confirmBtn');
+  const cancelBtn   = $('cancelBtn');
+  const modalMsg    = $('modalMsg');
+
+  const balanceTxt  = $('balanceTxt');
+  const latestBox   = $('latestBox');
+  const payoutsEl   = $('payouts');
+
+  /* ---------- data loaders ---------- */
+  async function loadBalance(){
+    try{
+      const j = await apiGet('/api/wallets/mine');
+      balanceTxt.textContent = dollars(Number(j?.balance_cents||0));
+    }catch(e){
+      console.warn('loadBalance failed:', e);
+      balanceTxt.textContent = '—';
+    }
+  }
+
+  async function loadBanks(){
+    destination.innerHTML = '<option disabled selected>Loading…</option>';
+    try{
+      const j = await apiGet('/api/bank-accounts/mine');
+      const banks = Array.isArray(j) ? j : [];
+      if (!banks.length){
+        destination.innerHTML = '<option disabled selected>No bank accounts yet</option>';
+        return;
+      }
+      destination.innerHTML = banks.map(b => {
+        const last4 = b.last4 || String(b.account_number||'').slice(-4);
+        const name  = b.bank_name || 'Bank';
+        return `<option value="${b.id}">${name} •••• ${last4}</option>`;
+      }).join('');
+    }catch(e){
+      console.error('loadBanks failed:', e);
+      destination.innerHTML = '<option disabled selected>Failed to load</option>';
+    }
+  }
+
+  async function loadLatest(){
+    try{
+      const j = await apiGet('/api/transfers/mine/latest');
+      if (!j || !j.id){ latestBox.textContent = 'No requests yet.'; return; }
+      latestBox.innerHTML =
+        '<div class="summary">' +
+          `<div class="line"><span>Requested</span><strong>${new Date(j.created_at).toLocaleString()}</strong></div>` +
+          `<div class="line"><span>Amount</span><strong>${dollars(j.amount_cents)}</strong></div>` +
+          `<div class="line"><span>Status</span><strong>${(j.status||'submitted')}</strong></div>` +
+          `<div class="line"><span>To</span><strong>${(j.bank_name||'Bank')} •••• ${(j.last4||'')}</strong></div>` +
+        '</div>';
+    }catch(e){
+      console.warn('loadLatest failed:', e);
+      latestBox.textContent = '—';
+    }
+  }
+
+  async function loadPayouts(){
+    payoutsEl.innerHTML = '<div class="empty">Loading…</div>';
+    try{
+      const j = await apiGet('/api/transfers/mine?limit=25&offset=0');
+      const rows = Array.isArray(j?.transfers) ? j.transfers : (Array.isArray(j)? j : []);
+      if (!rows.length){ payoutsEl.innerHTML = '<div class="empty">No recent payouts.</div>'; return; }
+      payoutsEl.innerHTML = rows.map(t=>{
+        const when = t.created_at ? new Date(t.created_at).toLocaleString() : '';
+        const dest = (t.bank_name || 'Bank') + (t.last4 ? ` •••• ${t.last4}` : '');
+        const amt  = `−$${(Number(t.amount_cents||0)/100).toFixed(2)}`;
+        const status = (t.status||'submitted').toLowerCase();
+        const pillCls = status.includes('complete') ? 'completed' :
+                        status.includes('fail')     ? 'failed'    : 'pending';
+        const initials = (dest.trim()[0] || 'B').toUpperCase();
+        return (
+          '<div class="item">' +
+            `<div class="avatar">${initials}</div>` +
+            '<div class="line">' +
+              '<div>' +
+                `<div class="who">Payout to ${dest} <span class="pill ${pillCls}">${status}</span></div>` +
+                `<div class="meta">${when} • ${t.id||''}</div>` +
+              '</div>' +
+              `<div class="amt negative">${amt}</div>` +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }catch(e){
+      console.warn('loadPayouts failed:', e);
+      payoutsEl.innerHTML = '<div class="empty">Couldn’t load payouts.</div>';
+    }
+  }
+
+  /* ---------- add bank modal ---------- */
+  const addBankModal = $('addBankModal');
+  const abBank   = $('abBank');
+  const abHolder = $('abHolder');
+  const abAccount= $('abAccount');
+  const abMsg    = $('abMsg');
+
+  $('abCancel').addEventListener('click', ()=> { addBankModal.style.display='none'; });
+  $('addBankBtn').addEventListener('click', ()=>{
+    abMsg.textContent=''; abHolder.value=''; abAccount.value='';
+    addBankModal.style.display='flex';
+  });
+  addBankModal.addEventListener('click', (e)=>{
+    if (e.target === addBankModal) addBankModal.style.display='none';
+  });
+  $('abSave').addEventListener('click', async ()=>{
+    const holder = abHolder.value.trim();
+    const bank   = abBank.value;
+    const account= abAccount.value.trim();
+    if (!holder || !bank || !account){ abMsg.textContent='Please fill in all fields.'; return; }
+    try{
+      await apiPost('/api/bank-accounts', { holder_name: holder, bank_name: bank, account_number: account });
+      showFlash('Bank account saved.', true);
+      addBankModal.style.display='none';
+      loadBanks();
+    }catch(e){
+      abMsg.textContent = e.message || 'Could not save bank.';
+    }
+  });
+
+  /* ---------- preview + review modal ---------- */
+  function updatePreview(){
+    const amt = Number(($('amount').value));
+    if (!amt || amt<=0){ $('previewBox').style.display='none'; $('reviewBtn').disabled=true; return; }
+    const fee = 0;
+    $('pAmount').textContent  = dollars(amt*100);
+    $('pFee').textContent     = dollars(fee);
+    $('pNet').textContent     = dollars(amt*100 - fee);
+    $('pArrival').textContent = '1–2 business days';
+    $('previewBox').style.display='block';
+    $('reviewBtn').disabled=false;
+  }
+  $('amount').addEventListener('input', updatePreview);
+
+  $('reviewBtn').addEventListener('click', ()=>{
+    const sel = $('destination').options[$('destination').selectedIndex];
+    $('mTo').textContent      = sel ? sel.textContent : '—';
+    $('mAmount').textContent  = $('pAmount').textContent;
+    $('mFee').textContent     = $('pFee').textContent;
+    $('mNet').textContent     = $('pNet').textContent;
+    $('mArrival').textContent = $('pArrival').textContent;
+    $('mMemo').textContent    = ($('memo').value||'—');
+    $('reviewModal').style.display='flex';
+  });
+  $('cancelBtn').addEventListener('click', ()=> { $('reviewModal').style.display='none'; });
+
+  $('confirmBtn').addEventListener('click', async ()=>{
+    const amtCents = Math.round(Number(($('amount').value))*100);
+    const bankId   = $('destination').value;
+    const memo     = $('memo').value || '';
+    $('confirmBtn').disabled = true;
+    $('modalMsg').textContent = 'Submitting…';
+    try{
+      await apiPost('/api/transfers', { bank_account_id: bankId, amount_cents: amtCents, memo });
+      $('reviewModal').style.display='none';
+      showFlash('Transfer request submitted for review.', true);
+      $('amount').value=''; $('memo').value=''; updatePreview();
+      loadLatest(); loadPayouts();
+    }catch(e){
+      $('modalMsg').textContent = e.message || 'Error';
+    }finally{
+      $('confirmBtn').disabled = false;
+    }
+  });
+
+  /* ---------- logout (both menus) ---------- */
+  async function doLogout(e){
+    e?.preventDefault();
+    try { await fetch('/api/logout', { method:'POST' }); } catch {}
+    localStorage.clear();
+    location.href = 'vendor-login.html';
+  }
+  logoutBtn?.addEventListener('click', doLogout);
+  logoutBtnMobile?.addEventListener('click', (e)=>{ doLogout(e); closeMenu(); });
+
+  /* ---------- init ---------- */
+  (async function init(){
+    await Promise.all([loadBalance(), loadBanks()]);
+    updatePreview();
+    await Promise.all([loadLatest(), loadPayouts()]);
+  })();
+})();
+</script>
   <script src="vendor-common.js"></script>
-
-  <script>
-    /* ---------- Mobile nav behavior (identical to Transfer) ---------- */
-    const hamburger   = document.getElementById('hamburger');
-    const mobileMenu  = document.getElementById('mobileMenu');
-    const overlay     = document.getElementById('overlay');
-    const logoutBtn   = document.getElementById('logoutBtn');
-    const logoutBtnMobile = document.getElementById('logoutBtnMobile');
-
-    function openMenu(){
-      mobileMenu.classList.add('active');
-      overlay.classList.add('active');
-      hamburger.setAttribute('aria-expanded','true');
-      mobileMenu.setAttribute('aria-hidden','false');
-    }
-    function closeMenu(){
-      mobileMenu.classList.remove('active');
-      overlay.classList.remove('active');
-      hamburger.setAttribute('aria-expanded','false');
-      mobileMenu.setAttribute('aria-hidden','true');
-    }
-    hamburger?.addEventListener('click', ()=>{
-      const expanded = hamburger.getAttribute('aria-expanded') === 'true';
-      expanded ? closeMenu() : openMenu();
-    });
-    overlay?.addEventListener('click', closeMenu);
-    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-    // Close after navigating
-    mobileMenu?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
-
-    /* ---------- Logout (both menus) ---------- */
-    async function doLogout(e){
-      e?.preventDefault();
-      try { await fetch('/api/logout', { method:'POST' }); } catch {}
-      localStorage.clear();
-      location.href = 'vendor-login.html';
-    }
-    logoutBtn?.addEventListener('click', doLogout);
-    logoutBtnMobile?.addEventListener('click', (e)=>{ doLogout(e); closeMenu(); });
-  </script>
-
-  <!-- Manage Staff logic (unchanged) -->
-  <script>
-    (function ensureHelpers(){
-      if (typeof window.apiFetch === 'function') return;
-      window.apiFetch = async (url, opts = {}) => {
-        const token = localStorage.getItem('boop_jwt');
-        const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
-        if (token) headers.Authorization = `Bearer ${token}`;
-        const res = await fetch(url, { ...opts, headers });
-        const renewed = res.headers.get('x-renew-jwt');
-        if (renewed) localStorage.setItem('boop_jwt', renewed);
-        return res;
-      };
-      window.apiJSON = async (url, opts = {}) => {
-        const r = await apiFetch(url, opts);
-        theJ = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(theJ.message || theJ.error || `HTTP ${r.status}`);
-        return theJ;
-      };
-      window.apiGet    = (u)   => apiJSON(u);
-      window.apiPost   = (u,b) => apiJSON(u, { method:'POST',   body: JSON.stringify(b||{}) });
-      window.apiPatch  = (u,b) => apiJSON(u, { method:'PATCH',  body: JSON.stringify(b||{}) });
-      window.apiDelete = (u,b) => apiJSON(u, { method:'DELETE', body: JSON.stringify(b||{}) });
-    })();
-
-    (function(){
-      const flash     = document.getElementById('flash');
-      const body      = document.getElementById('staffBody');
-      const addBtn    = document.getElementById('addBtn');
-
-      const modal     = document.getElementById('editModal');
-      const title     = document.getElementById('modalTitle');
-      const fName     = document.getElementById('fName');
-      const fEmail    = document.getElementById('fEmail');
-      const fPass     = document.getElementById('fPassword');
-      const mMsg      = document.getElementById('modalMsg');
-      const saveBtn   = document.getElementById('saveBtn');
-      const cancelBtn = document.getElementById('cancelBtn');
-
-      let editingId = null;
-
-      function showFlash(msg, ok=true){
-        if (!flash) return;
-        flash.textContent = msg;
-        flash.className = 'alert ' + (ok ? 'ok' : 'bad');
-        flash.style.display = 'block';
-        setTimeout(()=> (flash.style.display='none'), 3500);
-      }
-
-      function openModal(mode, staff){
-        editingId      = (mode === 'edit') ? staff.id : null;
-        title.textContent = (mode === 'edit') ? 'Edit staff' : 'Add staff';
-        fName.value    = staff?.display_name || staff?.name || '';
-        fEmail.value   = staff?.username || staff?.email || '';
-        fPass.value    = '';
-        mMsg.textContent = '';
-        mMsg.style.display = 'none';
-        modal.style.display = 'grid';
-        fName.focus();
-      }
-      function closeModal(){ modal.style.display = 'none'; }
-
-      async function loadStaff(){
-        body.innerHTML =
-          `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>`;
-        try{
-          const data = await apiGet('/api/vendor/vendorstaff');
-          const list = Array.isArray(data?.staff) ? data.staff : (Array.isArray(data) ? data : []);
-
-          if (!list.length){
-            body.innerHTML =
-              `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">
-                 No staff yet.<br/>Click <b>Add Staff</b> to create your first cashier login.
-               </td></tr>`;
-            return;
-          }
-
-          body.innerHTML = list.map(s => {
-            const isActive = (typeof s.is_active === 'boolean') ? s.is_active : !s.disabled;
-            const status   = isActive ? 'Active' : 'Inactive';
-            const name     = s.display_name || s.name || s.username || '—';
-            const username = s.username || '—';
-            return `
-              <tr class="tr" data-id="${s.id}">
-                <td>${name}</td>
-                <td>${username}</td>
-                <td>${status}</td>
-                <td>
-                  <div class="actions">
-                    <button class="btn ghost" data-edit="${s.id}">Edit</button>
-                    <button class="btn ghost" data-del="${s.id}">Delete</button>
-                  </div>
-                </td>
-              </tr>`;
-          }).join('');
-
-        } catch (e){
-          body.innerHTML =
-            `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;color:#991b1b;">
-               Couldn’t load staff. ${e && e.message ? e.message : ''}
-             </td></tr>`;
-          console.error('loadStaff error:', e);
-        }
-      }
-
-      // Add
-      addBtn.addEventListener('click', () => openModal('add'));
-
-      // Save (add or edit)
-      saveBtn.addEventListener('click', async () => {
-        const display_name = fName.value.trim();
-        const username     = (fEmail.value || '').trim().toLowerCase();
-        const password     = fPass.value.trim();
-
-        if (!display_name || !username || (!editingId && !password)){
-          mMsg.textContent = 'Name and email are required. Password is required when creating.';
-          mMsg.className = 'alert bad';
-          mMsg.style.display = 'block';
-          return;
-        }
-
-        try{
-          if (editingId){
-            await apiPatch(`/api/vendor/vendorstaff/${editingId}`, {
-              display_name,
-              username,
-              password: password || undefined
-            });
-            showFlash('Staff updated.', true);
-          } else {
-            await apiPost('/api/vendor/vendorstaff', {
-              display_name,
-              username,
-              password
-            });
-            showFlash('Staff added.', true);
-          }
-          closeModal();
-          loadStaff();
-        } catch(e){
-          mMsg.textContent = e.message || 'Save failed';
-          mMsg.className = 'alert bad';
-          mMsg.style.display = 'block';
-        }
-      });
-
-      // Cancel + backdrop click
-      cancelBtn.addEventListener('click', closeModal);
-      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-
-      // Row actions (edit/delete)
-      body.addEventListener('click', (e) => {
-        const editId = e.target?.getAttribute?.('data-edit');
-        const delId  = e.target?.getAttribute?.('data-del');
-
-        if (editId){
-          const tr  = e.target.closest('tr');
-          const name = tr.children[0].textContent.trim();
-          const uname= tr.children[1].textContent.trim();
-          openModal('edit', { id: editId, display_name: name, username: uname });
-        } else if (delId){
-          if (confirm('Delete this staff account?')){
-            apiDelete(`/api/vendor/vendorstaff/${delId}`)
-              .then(() => { showFlash('Staff deleted.', true); loadStaff(); })
-              .catch(err => showFlash(err.message || 'Delete failed', false));
-          }
-        }
-      });
-
-      // Logout (desktop)
-      document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
-        e.preventDefault();
-        try { await fetch('/api/logout', { method:'POST' }); } catch {}
-        localStorage.clear();
-        location.href = 'vendor-login.html';
-      });
-
-      // Init
-      loadStaff();
-    })();
-  </script>
 </body>
 </html>
