@@ -48,27 +48,28 @@
       .hamburger{ display:flex; }
     }
 
-    /* ── Mobile “sheet” menu (centered panel) ──────────────────── */
+    /* ── Right-side drawer ─────────────────────────────────────── */
     .nav-backdrop{
       position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:60;
     }
-    .nav-sheet{
-      position:fixed; inset:0; display:none; place-items:center; z-index:70;
+    .nav-drawer{
+      position:fixed; top:0; right:0; height:100vh; width:75vw; max-width:320px;
+      background:#0b1220; color:#fff; z-index:70;
+      border-left:1px solid rgba(255,255,255,.12);
+      box-shadow:-24px 0 60px rgba(0,0,0,.45);
+      transform:translateX(100%); transition:transform .28s ease-in-out;
+      padding:20px 16px; display:flex; flex-direction:column; gap:6px;
     }
-    .nav-sheet .sheet-panel{
-      background:#0b1220; color:#fff; border:1px solid rgba(255,255,255,.12);
-      border-radius:18px; width:88%; max-width:380px; padding:18px;
-      box-shadow:0 24px 60px rgba(0,0,0,.45);
-    }
-    .nav-sheet a{
+    .nav-drawer a{
       display:block; color:#fff; text-decoration:none;
       padding:14px 12px; border-radius:10px; font-size:1.05rem;
     }
-    .nav-sheet a[aria-current="page"]{ background:rgba(255,255,255,.12); }
-    .nav-sheet a:hover{ background:rgba(255,255,255,.1); }
+    .nav-drawer a[aria-current="page"]{ background:rgba(255,255,255,.12); }
+    .nav-drawer a:hover{ background:rgba(255,255,255,.10); }
 
+    .nav-open { overflow:hidden; } /* lock page scroll while open */
     .nav-open .nav-backdrop{ display:block; }
-    .nav-open .nav-sheet{ display:grid; }
+    .nav-open .nav-drawer{ transform:translateX(0); }
 
     /* ── Page scaffold ─────────────────────────────────────────── */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
@@ -135,7 +136,7 @@
     })();
   </script>
   <script>
-    // If device is logged in as cashier (boopStaff set), bounce to session page
+    // cashier device bounce
     try {
       const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
       if (staff) { location.replace('session.html'); }
@@ -169,23 +170,21 @@
       </div>
 
       <!-- Mobile trigger -->
-      <button id="hamburger" class="hamburger" aria-label="Open menu" aria-controls="navSheet" aria-expanded="false">
+      <button id="hamburger" class="hamburger" aria-label="Open menu" aria-controls="navDrawer" aria-expanded="false">
         <span class="bar"></span>
       </button>
     </div>
   </nav>
 
-  <!-- Mobile menu -->
+  <!-- Drawer + Backdrop -->
   <div id="navBackdrop" class="nav-backdrop" hidden></div>
-  <div id="navSheet" class="nav-sheet" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="sheet-panel">
-      <a href="index.html">Home</a>
-      <a href="transfer.html">Transfer</a>
-      <a href="transactions.html">Transactions</a>
-      <a href="manage-staff.html" aria-current="page">Manage Staff</a>
-      <a href="#" id="logoutBtnMobile">Log Out</a>
-    </div>
-  </div>
+  <nav id="navDrawer" class="nav-drawer" aria-hidden="true" role="dialog" aria-modal="true">
+    <a href="index.html">Home</a>
+    <a href="transfer.html">Transfer</a>
+    <a href="transactions.html">Transactions</a>
+    <a href="manage-staff.html" aria-current="page">Manage Staff</a>
+    <a href="#" id="logoutBtnMobile">Log Out</a>
+  </nav>
 
   <!-- HEADER -->
   <header class="header">
@@ -202,7 +201,7 @@
         <button id="addBtn" class="btn primary">Add Staff</button>
       </div>
 
-      <!-- Responsive table wrapper prevents “jutting off” on mobile -->
+      <!-- scroll wrapper stops table from jutting off on mobile -->
       <div class="table-scroll" role="region" aria-label="Staff table">
         <table class="table" aria-describedby="staffTable">
           <thead>
@@ -253,23 +252,23 @@
   <script src="vendor-common.js"></script>
 
   <script>
-    /* ---------- Mobile nav behavior (matches Transactions page) ---------- */
-    const hamburger   = document.getElementById('hamburger');
-    const navBackdrop = document.getElementById('navBackdrop');
-    const navSheet    = document.getElementById('navSheet');
-    const logoutBtn   = document.getElementById('logoutBtn');
-    const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+    /* ---------- Right-side drawer behavior ---------- */
+    const hamburger     = document.getElementById('hamburger');
+    const navBackdrop   = document.getElementById('navBackdrop');
+    const navDrawer     = document.getElementById('navDrawer');
+    const logoutBtn     = document.getElementById('logoutBtn');
+    const logoutMobile  = document.getElementById('logoutBtnMobile');
 
     function openMenu(){
       document.body.classList.add('nav-open');
       hamburger.setAttribute('aria-expanded','true');
-      navSheet.setAttribute('aria-hidden','false');
+      navDrawer.setAttribute('aria-hidden','false');
       navBackdrop.removeAttribute('hidden');
     }
     function closeMenu(){
       document.body.classList.remove('nav-open');
       hamburger.setAttribute('aria-expanded','false');
-      navSheet.setAttribute('aria-hidden','true');
+      navDrawer.setAttribute('aria-hidden','true');
       navBackdrop.setAttribute('hidden','');
     }
     hamburger?.addEventListener('click', ()=>{
@@ -278,8 +277,8 @@
     });
     navBackdrop?.addEventListener('click', closeMenu);
     window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-    // Close the sheet after selecting a link
-    navSheet?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
+    // close after navigating
+    navDrawer?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
 
     async function doLogout(e){
       e?.preventDefault();
@@ -288,10 +287,10 @@
       location.href = 'vendor-login.html';
     }
     logoutBtn?.addEventListener('click', doLogout);
-    logoutBtnMobile?.addEventListener('click', doLogout);
+    logoutMobile?.addEventListener('click', doLogout);
   </script>
 
-  <!-- Full Manage Staff logic (unchanged) -->
+  <!-- Manage Staff logic (unchanged) -->
   <script>
     (function ensureHelpers(){
       if (typeof window.apiFetch === 'function') return;
@@ -321,11 +320,10 @@
       const body      = document.getElementById('staffBody');
       const addBtn    = document.getElementById('addBtn');
 
-      // Modal controls
       const modal     = document.getElementById('editModal');
       const title     = document.getElementById('modalTitle');
-      const fName     = document.getElementById('fName');    // display_name
-      const fEmail    = document.getElementById('fEmail');   // username (email-looking)
+      const fName     = document.getElementById('fName');
+      const fEmail    = document.getElementById('fEmail');
       const fPass     = document.getElementById('fPassword');
       const mMsg      = document.getElementById('modalMsg');
       const saveBtn   = document.getElementById('saveBtn');
@@ -334,7 +332,6 @@
       let editingId = null;
 
       function showFlash(msg, ok=true){
-        if (!flash) return;
         flash.textContent = msg;
         flash.className = 'alert ' + (ok ? 'ok' : 'bad');
         flash.style.display = 'block';
@@ -342,11 +339,11 @@
       }
 
       function openModal(mode, staff){
-        editingId      = (mode === 'edit') ? staff.id : null;
-        title.textContent = (mode === 'edit') ? 'Edit staff' : 'Add staff';
-        fName.value    = staff?.display_name || staff?.name || '';
-        fEmail.value   = staff?.username || staff?.email || '';
-        fPass.value    = '';
+        editingId        = (mode === 'edit') ? staff.id : null;
+        title.textContent= (mode === 'edit') ? 'Edit staff' : 'Add staff';
+        fName.value      = staff?.display_name || staff?.name || '';
+        fEmail.value     = staff?.username || staff?.email || '';
+        fPass.value      = '';
         mMsg.textContent = '';
         mMsg.style.display = 'none';
         modal.style.display = 'grid';
@@ -397,10 +394,8 @@
         }
       }
 
-      // Add
       addBtn.addEventListener('click', () => openModal('add'));
 
-      // Save (add or edit)
       saveBtn.addEventListener('click', async () => {
         const display_name = fName.value.trim();
         const username     = (fEmail.value || '').trim().toLowerCase();
@@ -438,11 +433,9 @@
         }
       });
 
-      // Cancel + backdrop click
       cancelBtn.addEventListener('click', closeModal);
       modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-      // Row actions (edit/delete)
       body.addEventListener('click', (e) => {
         const editId = e.target?.getAttribute?.('data-edit');
         const delId  = e.target?.getAttribute?.('data-del');
@@ -461,7 +454,6 @@
         }
       });
 
-      // Logout (desktop)
       document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
         e.preventDefault();
         try { await fetch('/api/logout', { method:'POST' }); } catch {}
@@ -469,7 +461,6 @@
         location.href = 'vendor-login.html';
       });
 
-      // Init
       loadStaff();
     })();
   </script>
