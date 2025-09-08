@@ -11,40 +11,31 @@
       --bg:#ffffff; --panel:#ffffff; --stroke:#e5e7eb; --soft:#f8fafc;
       --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444; --nav:#0b1220;
     }
-    *{box-sizing:border-box}
+    *{ box-sizing:border-box }
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* ──────────────────────────────────────────────
-       NAV + MOBILE HAMBURGER (identical to Transfer)
-    ────────────────────────────────────────────── */
+    /* ── NAV + mobile drawer (matches Transfer) ───────────────── */
     .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:1000; }
     .vendor-nav .nav-container{
-      max-width:1100px; margin:0 auto;
-      padding:10px 18px !important;
+      max-width:1100px; margin:0 auto; padding:10px 18px;
       display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
-    .vendor-nav .nav-left img{ height:30px !important; display:block; }
-
-    /* Desktop menu */
-    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px !important; }
+    .vendor-nav .nav-left img{ height:30px; display:block; }
+    .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px; }
     .vendor-nav .nav-right a{
-      color:#fff; text-decoration:none;
-      font-size:.95rem !important; line-height:1 !important;
-      padding:6px 8px !important; border-radius:6px; opacity:.95;
+      color:#fff; text-decoration:none; font-size:.95rem; line-height:1;
+      padding:6px 8px; border-radius:6px; opacity:.95;
     }
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
-    /* Hamburger button */
     .hamburger{ display:none; flex-direction:column; gap:4px; cursor:pointer; }
     .hamburger span{ width:24px; height:3px; background:#fff; border-radius:2px; display:block; }
-
     @media (max-width: 900px){
       .vendor-nav .nav-right{ display:none; }
       .hamburger{ display:flex; }
     }
 
-    /* Slide-in mobile menu + overlay (matches Transfer) */
     .mobile-menu{
       position:fixed; top:0; right:-100%; width:260px; height:100%;
       background:var(--nav); color:#fff; transition:right .3s ease;
@@ -61,17 +52,13 @@
     }
     .overlay.active{ display:block; }
 
-    /* HEADER */
+    /* ── Page scaffold ─────────────────────────────────────────── */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
-    /* MAIN */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
-    .card{
-      background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
-      box-shadow:0 8px 24px rgba(0,0,0,.06);
-    }
+    .card{ background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.06); }
     .card h2{ margin:0 0 10px; font-size:1.12rem; }
 
     .btn{
@@ -84,19 +71,24 @@
     .btn.ghost:hover{ border-color:#cbd5e1; }
 
     .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-    label{ display:block; color:var(--muted); font-size:.92rem; margin:10px 0 6px; }
-    input{ width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke); background:#fff; font-size:1rem; }
 
-    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; display:none; }
-    .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; display:block; }
-    .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; display:block; }
-
-    /* Table + mobile fix */
+    /* ── Table + mobile scroll wrapper ─────────────────────────── */
     .table-scroll{ overflow:auto; border-radius:12px; }
     table.table{ width:100%; min-width:680px; border-collapse:separate; border-spacing:0 10px; }
     .table th{ text-align:left; font-weight:600; color:#374151; padding:0 8px; }
     .table td{ background:#fff; border:1px solid var(--stroke); padding:12px 10px; }
     .actions{ display:flex; gap:8px; justify-content:flex-end; }
+
+    /* ── Flash + Modal ─────────────────────────────────────────── */
+    .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; display:none; }
+    .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; display:block; }
+    .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; display:block; }
+
+    .modal{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:1200; }
+    .modal.is-open{ display:grid; }
+    .modal-card{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:18px; width:92%; max-width:520px; }
+    .modal-card label{ display:block; color:var(--muted); font-size:.92rem; margin:10px 0 6px; }
+    .modal-card input{ width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke); background:#fff; font-size:1rem; }
 
     /* Footer */
     footer{ border-top:1px solid var(--stroke); background:#fff; }
@@ -140,7 +132,7 @@
     }, 10 * 60 * 1000);
   </script>
 
-  <!-- NAV (desktop + mobile) -->
+  <!-- NAV (desktop + mobile drawer) -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
@@ -161,7 +153,7 @@
     </div>
   </nav>
 
-  <!-- Mobile slide-in menu + overlay (same classes/markup as Transfer) -->
+  <!-- Mobile slide-in menu + overlay -->
   <div class="mobile-menu" id="mobileMenu" aria-hidden="true" role="dialog" aria-modal="true">
     <a href="index.html">Home</a>
     <a href="transfer.html">Transfer</a>
@@ -177,6 +169,7 @@
     <p class="sub">Create, edit, and remove cashier logins for your business.</p>
   </header>
 
+  <!-- MAIN -->
   <main class="container">
     <div id="flash" class="alert"></div>
 
@@ -186,7 +179,6 @@
         <button id="addBtn" class="btn primary">Add Staff</button>
       </div>
 
-      <!-- Responsive table wrapper prevents “jutting off” on mobile -->
       <div class="table-scroll" role="region" aria-label="Staff table">
         <table class="table" aria-describedby="staffTable">
           <thead>
@@ -205,7 +197,7 @@
     </section>
   </main>
 
-  <!-- Add/Edit Modal -->
+  <!-- Add/Edit Modal (hidden by default) -->
   <div id="editModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h3 id="modalTitle" style="margin:0 0 10px;">Add staff</h3>
@@ -237,7 +229,7 @@
   <script src="vendor-common.js"></script>
 
   <script>
-    /* ---------- Mobile nav behavior (identical to Transfer) ---------- */
+    /* ---------- Mobile nav (identical to Transfer) ---------- */
     const hamburger   = document.getElementById('hamburger');
     const mobileMenu  = document.getElementById('mobileMenu');
     const overlay     = document.getElementById('overlay');
@@ -262,10 +254,8 @@
     });
     overlay?.addEventListener('click', closeMenu);
     window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-    // Close after navigating
     mobileMenu?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
 
-    /* ---------- Logout (both menus) ---------- */
     async function doLogout(e){
       e?.preventDefault();
       try { await fetch('/api/logout', { method:'POST' }); } catch {}
@@ -276,7 +266,7 @@
     logoutBtnMobile?.addEventListener('click', (e)=>{ doLogout(e); closeMenu(); });
   </script>
 
-  <!-- Manage Staff logic (unchanged) -->
+  <!-- Manage Staff page logic -->
   <script>
     (function ensureHelpers(){
       if (typeof window.apiFetch === 'function') return;
@@ -291,9 +281,9 @@
       };
       window.apiJSON = async (url, opts = {}) => {
         const r = await apiFetch(url, opts);
-        theJ = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(theJ.message || theJ.error || `HTTP ${r.status}`);
-        return theJ;
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
+        return j;
       };
       window.apiGet    = (u)   => apiJSON(u);
       window.apiPost   = (u,b) => apiJSON(u, { method:'POST',   body: JSON.stringify(b||{}) });
@@ -325,18 +315,20 @@
         setTimeout(()=> (flash.style.display='none'), 3500);
       }
 
-      function openModal(mode, staff){
+      function openStaffModal(mode, staff){
         editingId      = (mode === 'edit') ? staff.id : null;
         title.textContent = (mode === 'edit') ? 'Edit staff' : 'Add staff';
         fName.value    = staff?.display_name || staff?.name || '';
         fEmail.value   = staff?.username || staff?.email || '';
         fPass.value    = '';
-        mMsg.textContent = '';
-        mMsg.style.display = 'none';
-        modal.style.display = 'grid';
-        fName.focus();
+        mMsg.textContent = ''; mMsg.className = 'alert';
+        modal.classList.add('is-open');           // ← show
+        modal.setAttribute('aria-hidden','false');
       }
-      function closeModal(){ modal.style.display = 'none'; }
+      function closeStaffModal(){
+        modal.classList.remove('is-open');        // ← hide
+        modal.setAttribute('aria-hidden','true');
+      }
 
       async function loadStaff(){
         body.innerHTML =
@@ -377,12 +369,11 @@
             `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;color:#991b1b;">
                Couldn’t load staff. ${e && e.message ? e.message : ''}
              </td></tr>`;
-          console.error('loadStaff error:', e);
         }
       }
 
       // Add
-      addBtn.addEventListener('click', () => openModal('add'));
+      addBtn.addEventListener('click', () => openStaffModal('add'));
 
       // Save (add or edit)
       saveBtn.addEventListener('click', async () => {
@@ -393,38 +384,30 @@
         if (!display_name || !username || (!editingId && !password)){
           mMsg.textContent = 'Name and email are required. Password is required when creating.';
           mMsg.className = 'alert bad';
-          mMsg.style.display = 'block';
           return;
         }
 
         try{
           if (editingId){
             await apiPatch(`/api/vendor/vendorstaff/${editingId}`, {
-              display_name,
-              username,
-              password: password || undefined
+              display_name, username, password: password || undefined
             });
             showFlash('Staff updated.', true);
           } else {
-            await apiPost('/api/vendor/vendorstaff', {
-              display_name,
-              username,
-              password
-            });
+            await apiPost('/api/vendor/vendorstaff', { display_name, username, password });
             showFlash('Staff added.', true);
           }
-          closeModal();
+          closeStaffModal();
           loadStaff();
         } catch(e){
           mMsg.textContent = e.message || 'Save failed';
           mMsg.className = 'alert bad';
-          mMsg.style.display = 'block';
         }
       });
 
       // Cancel + backdrop click
-      cancelBtn.addEventListener('click', closeModal);
-      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+      cancelBtn.addEventListener('click', closeStaffModal);
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeStaffModal(); });
 
       // Row actions (edit/delete)
       body.addEventListener('click', (e) => {
@@ -432,10 +415,10 @@
         const delId  = e.target?.getAttribute?.('data-del');
 
         if (editId){
-          const tr  = e.target.closest('tr');
+          const tr   = e.target.closest('tr');
           const name = tr.children[0].textContent.trim();
           const uname= tr.children[1].textContent.trim();
-          openModal('edit', { id: editId, display_name: name, username: uname });
+          openStaffModal('edit', { id: editId, display_name: name, username: uname });
         } else if (delId){
           if (confirm('Delete this staff account?')){
             apiDelete(`/api/vendor/vendorstaff/${delId}`)
