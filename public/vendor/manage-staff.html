@@ -14,16 +14,13 @@
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* ── Vendor NAV (desktop + mobile hamburger like Transactions/Transfer) ── */
+    /* ── NAV (desktop) ─────────────────────────────────────────── */
     .vendor-nav{ background:var(--nav); color:#fff; position:sticky; top:0; z-index:50; }
     .vendor-nav .nav-container{
       max-width:1100px; margin:0 auto; padding:10px 18px;
       display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
-    .vendor-nav .nav-left{ display:flex; align-items:center; gap:12px; }
     .vendor-nav .nav-left img{ height:30px; display:block; }
-
-    /* Desktop list */
     .vendor-nav .nav-right{ display:flex; align-items:center; gap:16px; }
     .vendor-nav .nav-right a{
       color:#fff; text-decoration:none; font-size:.95rem; line-height:1;
@@ -32,10 +29,11 @@
     .vendor-nav .nav-right a[aria-current="page"]{ opacity:1; background:rgba(255,255,255,.08); }
     .vendor-nav .nav-right a:hover{ opacity:1; background:rgba(255,255,255,.08); }
 
-    /* Hamburger button */
+    /* ── Hamburger (mobile trigger) ────────────────────────────── */
     .hamburger{
-      display:none; align-items:center; justify-content:center; width:40px; height:40px;
-      border-radius:8px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); cursor:pointer;
+      display:none; width:42px; height:42px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06);
+      align-items:center; justify-content:center; cursor:pointer;
     }
     .hamburger:focus{ outline:2px solid #93c5fd; outline-offset:2px; }
     .hamburger .bar{ width:20px; height:2px; background:#fff; position:relative; display:block; }
@@ -45,34 +43,47 @@
     .hamburger .bar::before{ top:-6px; }
     .hamburger .bar::after{ top:6px; }
 
-    /* Mobile overlay & slide-down panel */
-    .nav-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:49; }
-    .nav-right.mobile{
-      display:none; position:fixed; right:12px; left:12px; border:1px solid rgba(255,255,255,.12);
-      background:#0b1220; border-radius:12px; padding:10px; flex-direction:column; gap:6px;
-      z-index:51; box-shadow:0 16px 32px rgba(0,0,0,.35);
-    }
-    .nav-right.mobile a{ padding:12px 12px; border-radius:10px; color:#fff; text-decoration:none; }
-    .nav-open .nav-backdrop{ display:block; }
-    .nav-open .nav-right.mobile{ display:flex !important; }
-
     @media (max-width: 900px){
-      .hamburger{ display:inline-flex; }
-      .vendor-nav .nav-right{ display:none; } /* hide desktop links */
+      .vendor-nav .nav-right{ display:none; }
+      .hamburger{ display:flex; }
     }
 
-    /* HEADER */
+    /* ── Mobile “sheet” menu (centered panel) ──────────────────── */
+    .nav-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:60;
+    }
+    .nav-sheet{
+      position:fixed; inset:0; display:none; place-items:center; z-index:70;
+    }
+    .nav-sheet .sheet-panel{
+      background:#0b1220; color:#fff; border:1px solid rgba(255,255,255,.12);
+      border-radius:18px; width:88%; max-width:380px; padding:18px;
+      box-shadow:0 24px 60px rgba(0,0,0,.45);
+    }
+    .nav-sheet a{
+      display:block; color:#fff; text-decoration:none;
+      padding:14px 12px; border-radius:10px; font-size:1.05rem;
+    }
+    .nav-sheet a[aria-current="page"]{ background:rgba(255,255,255,.12); }
+    .nav-sheet a:hover{ background:rgba(255,255,255,.1); }
+
+    .nav-open .nav-backdrop{ display:block; }
+    .nav-open .nav-sheet{ display:grid; }
+
+    /* ── Page scaffold ─────────────────────────────────────────── */
     .header{ max-width:1100px; margin:18px auto 0; padding:0 20px; }
     .header h1{ margin:16px 0 6px; font-size:clamp(22px,3vw,28px); }
     .sub{ color:var(--muted); margin:0; }
 
-    /* MAIN */
     .container{ max-width:1100px; margin:16px auto 40px; padding:0 20px; }
-    .grid{ display:grid; grid-template-columns:1fr; gap:16px; }
-    .card{ background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.06); }
+    .card{
+      background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
+      box-shadow:0 8px 24px rgba(0,0,0,.06);
+    }
     .card h2{ margin:0 0 10px; font-size:1.12rem; }
 
-    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; border-radius:10px; font-weight:700; border:1px solid transparent; cursor:pointer; }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:10px 14px; border-radius:10px; font-weight:700; border:1px solid transparent; cursor:pointer; }
     .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
     .btn.primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
     .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
@@ -86,15 +97,22 @@
     .alert.ok{ border-color:#dcfce7; background:#f0fdf4; color:#166534; display:block; }
     .alert.bad{ border-color:#fee2e2; background:#fef2f2; color:#991b1b; display:block; }
 
-    .table{ width:100%; border-collapse:separate; border-spacing:0 10px; }
+    /* ── Table + mobile fix ────────────────────────────────────── */
+    .table-scroll{ overflow:auto; border-radius:12px; }
+    table.table{ width:100%; min-width:680px; border-collapse:separate; border-spacing:0 10px; }
     .table th{ text-align:left; font-weight:600; color:#374151; padding:0 8px; }
     .table td{ background:#fff; border:1px solid var(--stroke); padding:12px 10px; }
-    .tr{ border-radius:12px; }
     .actions{ display:flex; gap:8px; justify-content:flex-end; }
 
     /* Modal */
     .modal{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:1000; }
     .modal-card{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:18px; width:92%; max-width:520px; }
+
+    /* Footer */
+    footer{ border-top:1px solid var(--stroke); background:#fff; }
+    .footer-inner{ max-width:1100px; margin:0 auto; padding:16px 18px; display:flex; gap:14px; align-items:center; justify-content:space-between; color:#6b7280; font-size:.9rem; }
+    .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
+    .footer-links a:hover{ text-decoration:underline; }
   </style>
 </head>
 <body>
@@ -117,6 +135,13 @@
     })();
   </script>
   <script>
+    // If device is logged in as cashier (boopStaff set), bounce to session page
+    try {
+      const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
+      if (staff) { location.replace('session.html'); }
+    } catch {}
+  </script>
+  <script>
     // keep-alive
     setInterval(() => {
       fetch('/api/vendor/ping', {
@@ -124,15 +149,8 @@
       }).catch(()=>{});
     }, 10 * 60 * 1000);
   </script>
-  <script>
-    // cashier session bounce
-    try {
-      const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
-      if (staff) { location.replace('session.html'); }
-    } catch {}
-  </script>
 
-  <!-- NAV (with hamburger like other pages) -->
+  <!-- NAV -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
@@ -141,7 +159,7 @@
         </a>
       </div>
 
-      <!-- desktop links -->
+      <!-- Desktop links -->
       <div class="nav-right" aria-label="Primary">
         <a href="index.html">Home</a>
         <a href="transfer.html">Transfer</a>
@@ -150,22 +168,24 @@
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
 
-      <!-- hamburger -->
-      <button id="hamburger" class="hamburger" aria-label="Open menu" aria-controls="navMobile" aria-expanded="false">
+      <!-- Mobile trigger -->
+      <button id="hamburger" class="hamburger" aria-label="Open menu" aria-controls="navSheet" aria-expanded="false">
         <span class="bar"></span>
       </button>
     </div>
+  </nav>
 
-    <!-- mobile overlay + panel -->
-    <div id="navBackdrop" class="nav-backdrop" hidden></div>
-    <div class="nav-right mobile" id="navMobile" aria-hidden="true" role="dialog" aria-modal="true">
+  <!-- Mobile menu -->
+  <div id="navBackdrop" class="nav-backdrop" hidden></div>
+  <div id="navSheet" class="nav-sheet" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="sheet-panel">
       <a href="index.html">Home</a>
       <a href="transfer.html">Transfer</a>
       <a href="transactions.html">Transactions</a>
       <a href="manage-staff.html" aria-current="page">Manage Staff</a>
       <a href="#" id="logoutBtnMobile">Log Out</a>
     </div>
-  </nav>
+  </div>
 
   <!-- HEADER -->
   <header class="header">
@@ -182,19 +202,22 @@
         <button id="addBtn" class="btn primary">Add Staff</button>
       </div>
 
-      <table class="table" aria-describedby="staffTable">
-        <thead>
-          <tr>
-            <th style="width:30%">Name</th>
-            <th style="width:35%">Email</th>
-            <th style="width:20%">Status</th>
-            <th style="width:15%"></th>
-          </tr>
-        </thead>
-        <tbody id="staffBody">
-          <tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>
-        </tbody>
-      </table>
+      <!-- Responsive table wrapper prevents “jutting off” on mobile -->
+      <div class="table-scroll" role="region" aria-label="Staff table">
+        <table class="table" aria-describedby="staffTable">
+          <thead>
+            <tr>
+              <th style="width:30%">Name</th>
+              <th style="width:35%">Email</th>
+              <th style="width:20%">Status</th>
+              <th style="width:15%"></th>
+            </tr>
+          </thead>
+          <tbody id="staffBody">
+            <tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 
@@ -216,253 +239,239 @@
     </div>
   </div>
 
-  <footer style="border-top:1px solid var(--stroke);background:#fff;">
-    <div style="max-width:1100px;margin:0 auto;padding:16px 18px;display:flex;gap:14px;align-items:center;justify-content:space-between;color:#6b7280;font-size:.9rem;">
+  <footer>
+    <div class="footer-inner">
       <div>© 2025 Payulot</div>
-      <div><a href="/terms.html" target="_blank" rel="noopener" style="color:#6b7280;text-decoration:none;margin-right:12px;">Terms</a><a href="/privacy.html" target="_blank" rel="noopener" style="color:#6b7280;text-decoration:none;">Privacy</a></div>
+      <div class="footer-links">
+        <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      </div>
     </div>
   </footer>
 
   <!-- Shared helpers -->
   <script src="vendor-common.js"></script>
 
-  <!-- Mobile nav logic -->
   <script>
-    (function(){
-      const hamburger   = document.getElementById('hamburger');
-      const navMobile   = document.getElementById('navMobile');
-      const navBackdrop = document.getElementById('navBackdrop');
-      const navEl       = document.querySelector('.vendor-nav');
-      const logoutBtn   = document.getElementById('logoutBtn');
-      const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+    /* ---------- Mobile nav behavior (matches Transactions page) ---------- */
+    const hamburger   = document.getElementById('hamburger');
+    const navBackdrop = document.getElementById('navBackdrop');
+    const navSheet    = document.getElementById('navSheet');
+    const logoutBtn   = document.getElementById('logoutBtn');
+    const logoutBtnMobile = document.getElementById('logoutBtnMobile');
 
-      function positionMobilePanel(){
-        try{
-          const h = (navEl?.getBoundingClientRect().height || 56);
-          navMobile.style.top = (Math.ceil(h) + 8) + 'px';
-        }catch{ navMobile.style.top = '64px'; }
-      }
-      function openMenu(){
-        positionMobilePanel();
-        document.body.classList.add('nav-open');
-        hamburger.setAttribute('aria-expanded','true');
-        navMobile.setAttribute('aria-hidden','false');
-        navBackdrop.removeAttribute('hidden');
-      }
-      function closeMenu(){
-        document.body.classList.remove('nav-open');
-        hamburger.setAttribute('aria-expanded','false');
-        navMobile.setAttribute('aria-hidden','true');
-        navBackdrop.setAttribute('hidden','');
-      }
-
-      hamburger?.addEventListener('click', ()=>{
-        const expanded = hamburger.getAttribute('aria-expanded') === 'true';
-        expanded ? closeMenu() : openMenu();
-      });
-      navBackdrop?.addEventListener('click', closeMenu);
-      window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-      window.addEventListener('resize', ()=>{ if(document.body.classList.contains('nav-open')) positionMobilePanel(); });
-      navMobile?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
-
-      async function doLogout(e){
-        e?.preventDefault();
-        try { await fetch('/api/logout', { method:'POST' }); } catch {}
-        localStorage.clear();
-        location.href = 'vendor-login.html';
-      }
-      document.getElementById('logoutBtn')?.addEventListener('click', doLogout);
-      logoutBtnMobile?.addEventListener('click', (e)=>{ doLogout(e); closeMenu(); });
-    })();
-  </script>
-
-  <!-- Page logic -->
-  <script>
-  /* ─────────────────────────────────────────────────────────
-     Tiny fallbacks (in case vendor-common.js isn't loaded)
-  ───────────────────────────────────────────────────────── */
-  (function ensureHelpers(){
-    if (typeof window.apiFetch === 'function') return;
-    window.apiFetch = async (url, opts = {}) => {
-      const token = localStorage.getItem('boop_jwt');
-      const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(url, { ...opts, headers });
-      const renewed = res.headers.get('x-renew-jwt');
-      if (renewed) localStorage.setItem('boop_jwt', renewed);
-      return res;
-    };
-    window.apiJSON = async (url, opts = {}) => {
-      const r = await apiFetch(url, opts);
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
-      return j;
-    };
-    window.apiGet    = (u)   => apiJSON(u);
-    window.apiPost   = (u,b) => apiJSON(u, { method:'POST',   body: JSON.stringify(b||{}) });
-    window.apiPatch  = (u,b) => apiJSON(u, { method:'PATCH',  body: JSON.stringify(b||{}) });
-    window.apiDelete = (u,b) => apiJSON(u, { method:'DELETE', body: JSON.stringify(b||{}) });
-  })();
-
-  /* ─────────────────────────────────────────────────────────
-     Manage Staff page logic (uses display_name + username)
-  ───────────────────────────────────────────────────────── */
-  (function(){
-    const flash     = document.getElementById('flash');
-    const body      = document.getElementById('staffBody');
-    const addBtn    = document.getElementById('addBtn');
-
-    // Modal controls
-    const modal     = document.getElementById('editModal');
-    const title     = document.getElementById('modalTitle');
-    const fName     = document.getElementById('fName');    // display_name
-    const fEmail    = document.getElementById('fEmail');   // username (email-looking)
-    const fPass     = document.getElementById('fPassword');
-    const mMsg      = document.getElementById('modalMsg');
-    const saveBtn   = document.getElementById('saveBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-
-    let editingId = null;
-
-    function showFlash(msg, ok=true){
-      if (!flash) return;
-      flash.textContent = msg;
-      flash.className = 'alert ' + (ok ? 'ok' : 'bad');
-      flash.style.display = 'block';
-      setTimeout(()=> (flash.style.display='none'), 3500);
+    function openMenu(){
+      document.body.classList.add('nav-open');
+      hamburger.setAttribute('aria-expanded','true');
+      navSheet.setAttribute('aria-hidden','false');
+      navBackdrop.removeAttribute('hidden');
     }
-
-    function openModal(mode, staff){
-      editingId      = (mode === 'edit') ? staff.id : null;
-      title.textContent = (mode === 'edit') ? 'Edit staff' : 'Add staff';
-      fName.value    = staff?.display_name || staff?.name || '';
-      fEmail.value   = staff?.username || staff?.email || '';
-      fPass.value    = '';
-      mMsg.textContent = '';
-      mMsg.style.display = 'none';
-      modal.style.display = 'grid';
-      fName.focus();
+    function closeMenu(){
+      document.body.classList.remove('nav-open');
+      hamburger.setAttribute('aria-expanded','false');
+      navSheet.setAttribute('aria-hidden','true');
+      navBackdrop.setAttribute('hidden','');
     }
-    function closeModal(){ modal.style.display = 'none'; }
-
-    async function loadStaff(){
-      body.innerHTML =
-        `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>`;
-      try{
-        const data = await apiGet('/api/vendor/vendorstaff');
-        const list = Array.isArray(data?.staff) ? data.staff : (Array.isArray(data) ? data : []);
-
-        if (!list.length){
-          body.innerHTML =
-            `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">
-               No staff yet.<br/>Click <b>Add Staff</b> to create your first cashier login.
-             </td></tr>`;
-          return;
-        }
-
-        body.innerHTML = list.map(s => {
-          const isActive = (typeof s.is_active === 'boolean') ? s.is_active : !s.disabled;
-          const status   = isActive ? 'Active' : 'Inactive';
-          const name     = s.display_name || s.name || s.username || '—';
-          const username = s.username || '—';
-          return `
-            <tr class="tr" data-id="${s.id}">
-              <td>${name}</td>
-              <td>${username}</td>
-              <td>${status}</td>
-              <td>
-                <div class="actions">
-                  <button class="btn ghost" data-edit="${s.id}">Edit</button>
-                  <button class="btn ghost" data-del="${s.id}">Delete</button>
-                </div>
-              </td>
-            </tr>`;
-        }).join('');
-
-      } catch (e){
-        body.innerHTML =
-          `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;color:#991b1b;">
-             Couldn’t load staff. ${e && e.message ? e.message : ''}
-           </td></tr>`;
-        console.error('loadStaff error:', e);
-      }
-    }
-
-    // Add
-    addBtn.addEventListener('click', () => openModal('add'));
-
-    // Save (add or edit)
-    saveBtn.addEventListener('click', async () => {
-      const display_name = fName.value.trim();
-      const username     = (fEmail.value || '').trim().toLowerCase();
-      const password     = fPass.value.trim();
-
-      if (!display_name || !username || (!editingId && !password)){
-        mMsg.textContent = 'Name and email are required. Password is required when creating.';
-        mMsg.className = 'alert bad';
-        mMsg.style.display = 'block';
-        return;
-      }
-
-      try{
-        if (editingId){
-          await apiPatch(`/api/vendor/vendorstaff/${editingId}`, {
-            display_name,
-            username,
-            password: password || undefined
-          });
-          showFlash('Staff updated.', true);
-        } else {
-          await apiPost('/api/vendor/vendorstaff', {
-            display_name,
-            username,
-            password
-          });
-          showFlash('Staff added.', true);
-        }
-        closeModal();
-        loadStaff();
-      } catch(e){
-        mMsg.textContent = e.message || 'Save failed';
-        mMsg.className = 'alert bad';
-        mMsg.style.display = 'block';
-      }
+    hamburger?.addEventListener('click', ()=>{
+      const expanded = hamburger.getAttribute('aria-expanded') === 'true';
+      expanded ? closeMenu() : openMenu();
     });
+    navBackdrop?.addEventListener('click', closeMenu);
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+    // Close the sheet after selecting a link
+    navSheet?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
 
-    // Cancel + backdrop click
-    cancelBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-
-    // Row actions
-    body.addEventListener('click', (e) => {
-      const editId = e.target?.getAttribute?.('data-edit');
-      const delId  = e.target?.getAttribute?.('data-del');
-
-      if (editId){
-        const tr  = e.target.closest('tr');
-        const name = tr.children[0].textContent.trim();
-        const uname= tr.children[1].textContent.trim();
-        openModal('edit', { id: editId, display_name: name, username: uname });
-      } else if (delId){
-        if (confirm('Delete this staff account?')){
-          apiDelete(`/api/vendor/vendorstaff/${delId}`)
-            .then(() => { showFlash('Staff deleted.', true); loadStaff(); })
-            .catch(err => showFlash(err.message || 'Delete failed', false));
-        }
-      }
-    });
-
-    // Logout (desktop)
-    document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
-      e.preventDefault();
+    async function doLogout(e){
+      e?.preventDefault();
       try { await fetch('/api/logout', { method:'POST' }); } catch {}
       localStorage.clear();
       location.href = 'vendor-login.html';
-    });
+    }
+    logoutBtn?.addEventListener('click', doLogout);
+    logoutBtnMobile?.addEventListener('click', doLogout);
+  </script>
 
-    // Init
-    loadStaff();
-  })();
+  <!-- Full Manage Staff logic (unchanged) -->
+  <script>
+    (function ensureHelpers(){
+      if (typeof window.apiFetch === 'function') return;
+      window.apiFetch = async (url, opts = {}) => {
+        const token = localStorage.getItem('boop_jwt');
+        const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(url, { ...opts, headers });
+        const renewed = res.headers.get('x-renew-jwt');
+        if (renewed) localStorage.setItem('boop_jwt', renewed);
+        return res;
+      };
+      window.apiJSON = async (url, opts = {}) => {
+        const r = await apiFetch(url, opts);
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
+        return j;
+      };
+      window.apiGet    = (u)   => apiJSON(u);
+      window.apiPost   = (u,b) => apiJSON(u, { method:'POST',   body: JSON.stringify(b||{}) });
+      window.apiPatch  = (u,b) => apiJSON(u, { method:'PATCH',  body: JSON.stringify(b||{}) });
+      window.apiDelete = (u,b) => apiJSON(u, { method:'DELETE', body: JSON.stringify(b||{}) });
+    })();
+
+    (function(){
+      const flash     = document.getElementById('flash');
+      const body      = document.getElementById('staffBody');
+      const addBtn    = document.getElementById('addBtn');
+
+      // Modal controls
+      const modal     = document.getElementById('editModal');
+      const title     = document.getElementById('modalTitle');
+      const fName     = document.getElementById('fName');    // display_name
+      const fEmail    = document.getElementById('fEmail');   // username (email-looking)
+      const fPass     = document.getElementById('fPassword');
+      const mMsg      = document.getElementById('modalMsg');
+      const saveBtn   = document.getElementById('saveBtn');
+      const cancelBtn = document.getElementById('cancelBtn');
+
+      let editingId = null;
+
+      function showFlash(msg, ok=true){
+        if (!flash) return;
+        flash.textContent = msg;
+        flash.className = 'alert ' + (ok ? 'ok' : 'bad');
+        flash.style.display = 'block';
+        setTimeout(()=> (flash.style.display='none'), 3500);
+      }
+
+      function openModal(mode, staff){
+        editingId      = (mode === 'edit') ? staff.id : null;
+        title.textContent = (mode === 'edit') ? 'Edit staff' : 'Add staff';
+        fName.value    = staff?.display_name || staff?.name || '';
+        fEmail.value   = staff?.username || staff?.email || '';
+        fPass.value    = '';
+        mMsg.textContent = '';
+        mMsg.style.display = 'none';
+        modal.style.display = 'grid';
+        fName.focus();
+      }
+      function closeModal(){ modal.style.display = 'none'; }
+
+      async function loadStaff(){
+        body.innerHTML =
+          `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">Loading…</td></tr>`;
+        try{
+          const data = await apiGet('/api/vendor/vendorstaff');
+          const list = Array.isArray(data?.staff) ? data.staff : (Array.isArray(data) ? data : []);
+
+          if (!list.length){
+            body.innerHTML =
+              `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;">
+                 No staff yet.<br/>Click <b>Add Staff</b> to create your first cashier login.
+               </td></tr>`;
+            return;
+          }
+
+          body.innerHTML = list.map(s => {
+            const isActive = (typeof s.is_active === 'boolean') ? s.is_active : !s.disabled;
+            const status   = isActive ? 'Active' : 'Inactive';
+            const name     = s.display_name || s.name || s.username || '—';
+            const username = s.username || '—';
+            return `
+              <tr class="tr" data-id="${s.id}">
+                <td>${name}</td>
+                <td>${username}</td>
+                <td>${status}</td>
+                <td>
+                  <div class="actions">
+                    <button class="btn ghost" data-edit="${s.id}">Edit</button>
+                    <button class="btn ghost" data-del="${s.id}">Delete</button>
+                  </div>
+                </td>
+              </tr>`;
+          }).join('');
+
+        } catch (e){
+          body.innerHTML =
+            `<tr><td colspan="4" style="padding:16px;border:1px dashed var(--stroke);text-align:center;background:#fff;color:#991b1b;">
+               Couldn’t load staff. ${e && e.message ? e.message : ''}
+             </td></tr>`;
+          console.error('loadStaff error:', e);
+        }
+      }
+
+      // Add
+      addBtn.addEventListener('click', () => openModal('add'));
+
+      // Save (add or edit)
+      saveBtn.addEventListener('click', async () => {
+        const display_name = fName.value.trim();
+        const username     = (fEmail.value || '').trim().toLowerCase();
+        const password     = fPass.value.trim();
+
+        if (!display_name || !username || (!editingId && !password)){
+          mMsg.textContent = 'Name and email are required. Password is required when creating.';
+          mMsg.className = 'alert bad';
+          mMsg.style.display = 'block';
+          return;
+        }
+
+        try{
+          if (editingId){
+            await apiPatch(`/api/vendor/vendorstaff/${editingId}`, {
+              display_name,
+              username,
+              password: password || undefined
+            });
+            showFlash('Staff updated.', true);
+          } else {
+            await apiPost('/api/vendor/vendorstaff', {
+              display_name,
+              username,
+              password
+            });
+            showFlash('Staff added.', true);
+          }
+          closeModal();
+          loadStaff();
+        } catch(e){
+          mMsg.textContent = e.message || 'Save failed';
+          mMsg.className = 'alert bad';
+          mMsg.style.display = 'block';
+        }
+      });
+
+      // Cancel + backdrop click
+      cancelBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+      // Row actions (edit/delete)
+      body.addEventListener('click', (e) => {
+        const editId = e.target?.getAttribute?.('data-edit');
+        const delId  = e.target?.getAttribute?.('data-del');
+
+        if (editId){
+          const tr  = e.target.closest('tr');
+          const name = tr.children[0].textContent.trim();
+          const uname= tr.children[1].textContent.trim();
+          openModal('edit', { id: editId, display_name: name, username: uname });
+        } else if (delId){
+          if (confirm('Delete this staff account?')){
+            apiDelete(`/api/vendor/vendorstaff/${delId}`)
+              .then(() => { showFlash('Staff deleted.', true); loadStaff(); })
+              .catch(err => showFlash(err.message || 'Delete failed', false));
+          }
+        }
+      });
+
+      // Logout (desktop)
+      document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        try { await fetch('/api/logout', { method:'POST' }); } catch {}
+        localStorage.clear();
+        location.href = 'vendor-login.html';
+      });
+
+      // Init
+      loadStaff();
+    })();
   </script>
 </body>
 </html>
