@@ -7,6 +7,7 @@ const pool = require('../../db');
  * Create/refresh a session.
  * - Vendors may have multiple sessions.
  * - Non-vendors may have only one active session (we delete others).
+ * - We also clear users.force_signed_out on successful login to avoid instant boot.
  * Body: { email, user_id, jwt_token, status?, expires_at?, role? }
  */
 router.post('/', async (req, res) => {
@@ -16,28 +17,30 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ message: 'email, user_id, and jwt_token are required' });
   }
 
+  const sessStatus = status || 'online';
+
   try {
-    // If role not provided, fetch it
+    // Get role if not provided
     if (!role) {
       const r = await pool.query('SELECT role FROM users WHERE id = $1::uuid LIMIT 1', [user_id]);
       role = (r.rows[0]?.role || '').toString();
     }
     const isVendor = (role || '').toLowerCase() === 'vendor';
-    const sessStatus = status || 'online';
 
-    // Non-vendors: ensure a single session (but keep this token if it already exists)
+    // Do everything atomically
+    await pool.query('BEGIN');
+
+    // Non-vendors: ensure only one session remains (keep the current token)
     if (!isVendor) {
-      await pool.query('BEGIN');
       await pool.query(
         `DELETE FROM sessions
            WHERE user_id = $1::uuid
              AND jwt_token <> $2`,
         [user_id, jwt_token]
       );
-      await pool.query('COMMIT');
     }
 
-    // Upsert by unique jwt token (works regardless of the partial index on user_id)
+    // Upsert by unique (jwt_token)
     await pool.query(
       `INSERT INTO sessions (user_id, email, jwt_token, status, expires_at, last_seen)
        VALUES ($1::uuid, $2, $3, $4, $5, NOW())
@@ -50,9 +53,15 @@ router.post('/', async (req, res) => {
       [user_id, email, jwt_token, sessStatus, expires_at || null]
     );
 
+    // ✅ Clear force flag so the client won't immediately log you out
+    await pool.query(
+      `UPDATE users SET force_signed_out = FALSE WHERE id = $1::uuid AND force_signed_out IS TRUE`,
+      [user_id]
+    );
+
+    await pool.query('COMMIT');
     return res.status(201).json({ message: 'Session recorded' });
   } catch (err) {
-    // Roll back in case we were in the non-vendor transaction
     try { await pool.query('ROLLBACK'); } catch {}
     console.error('🔥 Failed to upsert session:', err);
     return res.status(500).json({ message: 'Session insert failed' });
@@ -61,7 +70,7 @@ router.post('/', async (req, res) => {
 
 /**
  * PATCH /api/sessions/seen
- * Update last_seen for a session token.
+ * Touch last_seen for a token.
  * Body: { jwt_token }
  */
 router.patch('/seen', async (req, res) => {
@@ -132,12 +141,12 @@ router.get('/force-check/:email', async (req, res) => {
 
 /**
  * PATCH /api/sessions/force-clear/:email
- * Clear the force-signed-out flag.
+ * Clear the force-signed-out flag (e.g., on logout).
  */
 router.patch('/force-clear/:email', async (req, res) => {
   const { email } = req.params;
   try {
-    await pool.query(`UPDATE users SET force_signed_out = false WHERE email = $1`, [email]);
+    await pool.query(`UPDATE users SET force_signed_out = FALSE WHERE email = $1`, [email]);
     return res.json({ message: 'Force sign-out cleared.' });
   } catch (err) {
     console.error('❌ Error clearing force sign-out:', err);
