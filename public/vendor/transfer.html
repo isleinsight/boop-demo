@@ -45,18 +45,17 @@
     .hamburger .bar::before{ top:-6px; }
     .hamburger .bar::after{ top:6px; }
 
-    /* Mobile menu panel */
+    /* Mobile overlay & panel */
     .nav-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:49; }
-    .nav-right.mobile{ display:none; position:fixed; top:56px; right:12px; left:12px; border:1px solid rgba(255,255,255,.12); background:#0b1220; border-radius:12px; padding:10px; flex-direction:column; gap:6px !important; z-index:51; }
-    .nav-right.mobile a{ padding:10px 12px !important; border-radius:10px; }
+    .nav-right.mobile{ display:none; position:fixed; right:12px; left:12px; border:1px solid rgba(255,255,255,.12); background:#0b1220; border-radius:12px; padding:10px; flex-direction:column; gap:6px !important; z-index:51; box-shadow:0 16px 32px rgba(0,0,0,.35); }
+    .nav-right.mobile a{ padding:12px 12px !important; border-radius:10px; }
     .nav-open .nav-backdrop{ display:block; }
-    .nav-open .nav-right.mobile{ display:flex; }
+    .nav-open .nav-right.mobile{ display:flex !important; }
 
     @media (max-width: 900px){
       .hamburger{ display:inline-flex; }
       /* hide desktop list; use mobile panel */
       .vendor-nav .nav-right{ display:none; }
-      .vendor-nav .nav-right.mobile{ display:none; }
     }
 
     /* HEADER */
@@ -69,24 +68,36 @@
     .grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:16px; }
     @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
 
-    .card{ background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.06); }
+    .card{
+      background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:18px;
+      box-shadow:0 8px 24px rgba(0,0,0,.06);
+    }
     .card h2{ margin:0 0 10px; font-size:1.12rem; }
     .muted{ color:var(--muted); }
 
     label{ display:block; color:var(--muted); font-size:.92rem; margin:10px 0 6px; }
-    input, select{ width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke); background:#fff; color:#111827; font-size:1rem; }
+    input, select{
+      width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke);
+      background:#fff; color:#111827; font-size:1rem;
+    }
     input:disabled, select:disabled{ opacity:.7; }
 
     .row{ display:flex; gap:12px; align-items:center; }
     .row > div{ flex:1; }
 
-    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:700; border:1px solid transparent; cursor:pointer; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:700;
+      border:1px solid transparent; cursor:pointer;
+    }
     .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
     .btn.primary:hover{ background:var(--blue-dark); border-color:var(--blue-dark); }
     .btn.ghost{ background:#fff; border:1px solid var(--stroke); color:#111827; }
     .btn.ghost:hover{ border-color:#cbd5e1; }
 
-    .summary{ border:1px dashed var(--stroke); border-radius:12px; padding:12px; background:var(--soft); margin-top:10px; }
+    .summary{
+      border:1px dashed var(--stroke); border-radius:12px; padding:12px; background:var(--soft); margin-top:10px;
+    }
     .summary .line{ display:flex; justify-content:space-between; margin:6px 0; }
 
     .alert{ padding:10px 12px; border-radius:10px; border:1px solid var(--stroke); background:#f9fafb; }
@@ -97,8 +108,14 @@
 
     /* Recent payouts  */
     .list{ display:grid; gap:10px; margin-top:8px; }
-    .item{ background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:12px; }
-    .avatar{ width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; flex:0 0 42px; }
+    .item{
+      background:#fff; border:1px solid var(--stroke); border-radius:12px;
+      padding:12px 14px; display:flex; align-items:center; gap:12px;
+    }
+    .avatar{
+      width:42px; height:42px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#334155; flex:0 0 42px;
+    }
     .line{ display:flex; align-items:center; justify-content:space-between; width:100%; }
     .amt{ font-weight:700; }
     .amt.negative{ color:#dc2626; }
@@ -142,19 +159,20 @@
   // If this device is logged in as cashier (boopStaff set), bounce to the cashier session page
   try {
     const staff = JSON.parse(localStorage.getItem('boopStaff') || 'null');
-    if (staff) { location.replace('session.html'); }
+    if (staff) {
+      location.replace('session.html');
+    }
   } catch {}
-  </script>
+</script>
   <script>
   setInterval(() => {
     fetch('/api/vendor/ping', {
       headers: { Authorization: `Bearer ${localStorage.getItem('boop_jwt')||''}` }
     }).catch(()=>{});
   }, 10 * 60 * 1000); // every 10 minutes
-  </script>
+</script>
 
-  <!-- NAV -->
-  <div class="nav-backdrop" id="navBackdrop" hidden></div>
+  <!-- NAV (with hamburger) -->
   <nav class="vendor-nav">
     <div class="nav-container">
       <div class="nav-left">
@@ -162,29 +180,25 @@
           <img src="../assets/logo-white.png" alt="Payulot Logo" />
         </a>
       </div>
-
-      <!-- Desktop menu -->
-      <div class="nav-right" aria-label="Primary" id="navDesktop">
+      <div class="nav-right" aria-label="Primary">
         <a href="index.html">Home</a>
         <a href="transfer.html" aria-current="page">Transfer</a>
         <a href="transactions.html">Transactions</a>
         <a href="manage-staff.html">Manage Staff</a>
         <a href="#" id="logoutBtn">Log Out</a>
       </div>
-
-      <!-- Hamburger (shown on <=900px) -->
-      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="navMobile">
+      <button id="hamburger" class="hamburger" aria-label="Open menu" aria-controls="navMobile" aria-expanded="false">
         <span class="bar"></span>
       </button>
     </div>
-
-    <!-- Mobile panel (cloned links for better layout) -->
-    <div class="nav-right mobile" id="navMobile" role="menu" aria-hidden="true">
-      <a role="menuitem" href="index.html">Home</a>
-      <a role="menuitem" href="transfer.html" aria-current="page">Transfer</a>
-      <a role="menuitem" href="transactions.html">Transactions</a>
-      <a role="menuitem" href="manage-staff.html">Manage Staff</a>
-      <a role="menuitem" href="#" id="logoutBtnMobile">Log Out</a>
+    <!-- mobile overlay + panel -->
+    <div id="navBackdrop" class="nav-backdrop" hidden></div>
+    <div class="nav-right mobile" id="navMobile" aria-hidden="true" role="dialog" aria-modal="true">
+      <a href="index.html">Home</a>
+      <a href="transfer.html" aria-current="page">Transfer</a>
+      <a href="transactions.html">Transactions</a>
+      <a href="manage-staff.html">Manage Staff</a>
+      <a href="#" id="logoutBtnMobile">Log Out</a>
     </div>
   </nav>
 
@@ -316,33 +330,6 @@
 (function(){
   'use strict';
 
-  /* ---------- MOBILE NAV ---------- */
-  const hamburger   = document.getElementById('hamburger');
-  const navMobile   = document.getElementById('navMobile');
-  const navBackdrop = document.getElementById('navBackdrop');
-  const logoutBtnMobile = document.getElementById('logoutBtnMobile');
-
-  function openMenu(){
-    document.body.classList.add('nav-open');
-    hamburger.setAttribute('aria-expanded','true');
-    navMobile.setAttribute('aria-hidden','false');
-    navBackdrop.removeAttribute('hidden');
-  }
-  function closeMenu(){
-    document.body.classList.remove('nav-open');
-    hamburger.setAttribute('aria-expanded','false');
-    navMobile.setAttribute('aria-hidden','true');
-    navBackdrop.setAttribute('hidden','');
-  }
-  hamburger?.addEventListener('click', ()=>{
-    const expanded = hamburger.getAttribute('aria-expanded') === 'true';
-    expanded ? closeMenu() : openMenu();
-  });
-  navBackdrop?.addEventListener('click', closeMenu);
-  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-  // close after navigating
-  navMobile?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
-
   /* ---------- fallback if vendor-common.js isn't loaded ---------- */
   if (typeof window.apiGet !== 'function') {
     async function _apiFetch(url, opts = {}) {
@@ -377,8 +364,44 @@
     setTimeout(()=> { flash.style.display = 'none'; }, 4000);
   };
 
+  /* ---------- NAV (mobile) ---------- */
+  const hamburger   = document.getElementById('hamburger');
+  const navMobile   = document.getElementById('navMobile');
+  const navBackdrop = document.getElementById('navBackdrop');
+  const navEl       = document.querySelector('.vendor-nav');
+  const logoutBtn   = document.getElementById('logoutBtn');
+  const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+
+  function positionMobilePanel(){
+    try{
+      const h = (navEl?.getBoundingClientRect().height || 56);
+      navMobile.style.top = (Math.ceil(h) + 8) + 'px';
+    }catch{ navMobile.style.top = '64px'; }
+  }
+  function openMenu(){
+    positionMobilePanel();
+    document.body.classList.add('nav-open');
+    hamburger.setAttribute('aria-expanded','true');
+    navMobile.setAttribute('aria-hidden','false');
+    navBackdrop.removeAttribute('hidden');
+  }
+  function closeMenu(){
+    document.body.classList.remove('nav-open');
+    hamburger.setAttribute('aria-expanded','false');
+    navMobile.setAttribute('aria-hidden','true');
+    navBackdrop.setAttribute('hidden','');
+  }
+  hamburger?.addEventListener('click', ()=>{
+    const expanded = hamburger.getAttribute('aria-expanded') === 'true';
+    expanded ? closeMenu() : openMenu();
+  });
+  navBackdrop?.addEventListener('click', closeMenu);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+  window.addEventListener('resize', ()=>{ if(document.body.classList.contains('nav-open')) positionMobilePanel(); });
+  // close after navigating
+  navMobile?.querySelectorAll('a').forEach(a=> a.addEventListener('click', closeMenu));
+
   /* ---------- DOM refs ---------- */
-  const logoutBtn   = $('logoutBtn');
   const destination = $('destination');
   const addBankBtn  = $('addBankBtn');
   const amountEl    = $('amount');
@@ -514,7 +537,9 @@
       showFlash('Bank account saved.', true);
       addBankModal.style.display='none';
       loadBanks();
-    }catch(e){ abMsg.textContent = e.message || 'Could not save bank.'; }
+    }catch(e){
+      abMsg.textContent = e.message || 'Could not save bank.';
+    }
   });
 
   /* ---------- preview + review modal ---------- */
@@ -555,19 +580,22 @@
       showFlash('Transfer request submitted for review.', true);
       amountEl.value=''; memoEl.value=''; updatePreview();
       loadLatest(); loadPayouts();
-    }catch(e){ modalMsg.textContent = e.message || 'Error'; }
-    finally{ confirmBtn.disabled = false; }
+    }catch(e){
+      modalMsg.textContent = e.message || 'Error';
+    }finally{
+      confirmBtn.disabled = false;
+    }
   });
 
   /* ---------- logout (both menus) ---------- */
-  function doLogout(e){
+  async function doLogout(e){
     e?.preventDefault();
-    fetch('/api/logout', { method:'POST' }).finally(()=>{
-      localStorage.clear(); location.href = 'vendor-login.html';
-    });
+    try { await fetch('/api/logout', { method:'POST' }); } catch {}
+    localStorage.clear();
+    location.href = 'vendor-login.html';
   }
   logoutBtn?.addEventListener('click', doLogout);
-  logoutBtnMobile?.addEventListener('click', doLogout);
+  logoutBtnMobile?.addEventListener('click', (e)=>{ doLogout(e); closeMenu(); });
 
   /* ---------- init ---------- */
   (async function init(){
