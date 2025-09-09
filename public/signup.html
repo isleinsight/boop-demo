@@ -26,8 +26,6 @@
       margin:0;
       font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       color:var(--ink);
-
-      /* Same background treatment as cardholder.html */
       background-color:#0b1220;
       background-image:
         radial-gradient(60vw 55vh at 18% -12%, rgba(47,128,237,.40) 0%, rgba(47,128,237,0) 60%),
@@ -36,11 +34,9 @@
       background-repeat:no-repeat;
       background-attachment:scroll, fixed, scroll;
       background-position:center center, center center, center center;
-
       display:flex; flex-direction:column; min-height:100vh; overflow-x:hidden;
     }
 
-    /* NAV */
     nav{position:sticky; top:0; z-index:10; background:rgba(11,18,32,.55); backdrop-filter:blur(6px); border-bottom:1px solid rgba(255,255,255,.06)}
     .nav-inner{max-width:var(--container); margin:0 auto; padding:12px 18px; display:flex; align-items:center; justify-content:space-between}
     .brand{display:flex; align-items:center; gap:10px; text-decoration:none}
@@ -48,16 +44,13 @@
     .nav-actions a{color:var(--ink); text-decoration:none; opacity:.85}
     .nav-actions a:hover{opacity:1}
 
-    /* LAYOUT */
     main{flex:1; display:flex; align-items:flex-start; justify-content:center}
     .stack{width:100%; max-width:var(--container); padding:28px 18px 48px; margin:0 auto}
 
-    /* HEAD */
     .intro{text-align:center; margin:18px 0 14px}
     .intro h1{margin:0; font-size:clamp(28px,5vw,44px); letter-spacing:.2px}
     .intro p{margin:8px 0 0; color:var(--muted)}
 
-    /*  CARD */
     .card{
       margin:18px auto 0;
       width:100%; max-width:640px;
@@ -67,9 +60,8 @@
       box-shadow:var(--shadow);
       padding:22px;
     }
-    .card h2{margin:0 0 12px; font-size:1.2rem; text-align:center}
+    .card h2{margin:0 0 12px; font-size:1.2rem; text-align:left}
 
-    /* FORM */
     form{display:grid; gap:12px}
     label{font-size:.9rem; color:#dbe3ff}
     .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
@@ -107,75 +99,10 @@
     .status.error{color:var(--danger)}
     .status.ok{color:var(--ok)}
 
-    /* FOOTER */
     footer{margin-top:auto; border-top:1px solid rgba(255,255,255,.06); background:rgba(11,18,32,.55); backdrop-filter:blur(6px)}
     .footer-inner{max-width:var(--container); margin:0 auto; padding:14px 18px; display:flex; gap:10px; align-items:center; justify-content:center; color:#b9c6e2; font-size:.92rem; flex-wrap:wrap}
     .footer-inner a{color:#c9d7ff; text-decoration:none}
     .footer-inner a:hover{text-decoration:underline}
-
-    /* SIGNUP HEADER */
-.card h2 {
-  margin: 0 0 12px;
-  font-size: 1.2rem;
-  text-align: left; /* 👈 Left aligned instead of centered */
-}
-
-/* TERMS AGREEMENT */
-/* Span full width of the form grid if you use one */
-.terms-float { grid-column: 1 / -1; display:block; max-width:100%; line-height:1.4; color:#dbe3ff; }
-
-/* Force checkbox to the left, text flows beside it and wraps */
-.terms-float input[type="checkbox"] {
-  float: left;
-  margin: 2px 10px 0 0;
-}
-
-/* Make text a block so it wraps while respecting the float */
-.terms-float span {
-  display: block;
-  overflow: hidden;   
-}
-
-/* Link color to match footer */
-.terms-float a { color:#c9d7ff; text-decoration:none; }
-.terms-float a:hover { color:#fff; text-decoration:underline; }
-
-
-    /* Make this row span the whole form grid so it has room */
-form#signupForm .terms-wrap { grid-column: 1 / -1; }
-
-/* Force checkbox + text to be side-by-side; text wraps neatly */
-form#signupForm .terms-row{
-  display: grid;
-  grid-template-columns: 22px minmax(0,1fr); /* checkbox | text */
-  align-items: start;
-  gap: 10px;
-  margin-top: 6px;
-}
-
-/* Keep the box size consistent */
-form#signupForm .terms-row input[type="checkbox"]{
-  width: 18px; height: 18px; margin: 2px 0 0 0; flex: 0 0 auto;
-}
-
-/* Ensure long text wraps next to the box (not underneath) */
-form#signupForm .terms-text{
-  min-width: 0;
-  white-space: normal;
-  line-height: 1.4;
-  color: #dbe3ff; /* your light ink */
-}
-
-/* Match footer link color */
-form#signupForm .terms-text a{
-  color: #c9d7ff;
-  text-decoration: none;
-}
-form#signupForm .terms-text a:hover{
-  color: #ffffff;
-  text-decoration: underline;
-}
-    
   </style>
 </head>
 <body>
@@ -192,12 +119,12 @@ form#signupForm .terms-text a:hover{
 
   <main>
     <div class="stack">
-      <section class="intro" aria-label="Create your Payulot account">
+      <section class="intro">
         <h1>Create your cardholder account</h1>
         <p>Set up your Payulot account to view balance, spend, and manage your card.</p>
       </section>
 
-      <section class="card" aria-label="Cardholder signup form">
+      <section class="card">
         <h2>Sign up</h2>
         <form id="signupForm" novalidate>
           <div class="row">
@@ -206,9 +133,14 @@ form#signupForm .terms-text a:hover{
               <input id="first_name" name="first_name" placeholder="Jane" required />
             </div>
             <div>
-              <label for="last_name">Last name</label>
-              <input id="last_name" name="last_name" placeholder="Doe" required />
+              <label for="middle_name">Middle name (optional)</label>
+              <input id="middle_name" name="middle_name" placeholder="Q" />
             </div>
+          </div>
+
+          <div>
+            <label for="last_name">Last name</label>
+            <input id="last_name" name="last_name" placeholder="Doe" required />
           </div>
 
           <div>
@@ -227,16 +159,15 @@ form#signupForm .terms-text a:hover{
             </div>
           </div>
 
-<!-- Terms row -->
-<div class="terms-wrap">
-  <label for="agree" class="terms-row">
-    <input type="checkbox" id="agree" required />
-    <span class="terms-text">
-      I agree to the <a href="terms.html">Terms &amp; Conditions</a> and the
-      <a href="privacy.html">Privacy Policy</a>.
-    </span>
-  </label>
-</div>
+          <div class="terms-wrap">
+            <label for="agree" class="terms-row">
+              <input type="checkbox" id="agree" required />
+              <span class="terms-text">
+                I agree to the <a href="terms.html">Terms &amp; Conditions</a> and the
+                <a href="privacy.html">Privacy Policy</a>.
+              </span>
+            </label>
+          </div>
 
           <button id="createBtn" class="btn" type="submit">Create account</button>
           <div class="helper">
@@ -260,10 +191,9 @@ form#signupForm .terms-text a:hover{
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
 
-    // ---- Configure endpoints (adjust if your backend uses a different path) ----
-    const REGISTER_ENDPOINT = '/auth/register-cardholder'; // expected body: { first_name, last_name, email, password }
-    const LOGIN_ENDPOINT    = '/auth/login';               // expected body: { email, password } -> { token, user }
-    const REDIRECT_TO       = 'cardholder.html';           // go here after auto-login
+    const REGISTER_ENDPOINT = '/auth/register-cardholder';
+    const LOGIN_ENDPOINT    = '/auth/login';
+    const REDIRECT_TO       = 'cardholder.html';
 
     const f = document.getElementById('signupForm');
     const statusEl = document.getElementById('signupStatus');
@@ -279,16 +209,16 @@ form#signupForm .terms-text a:hover{
       showStatus('', '');
       btn.disabled = true;
 
-      const first_name = f.first_name.value.trim();
-      const last_name  = f.last_name.value.trim();
-      const email      = f.email.value.trim().toLowerCase();
-      const password   = f.password.value;
-      const confirm    = document.getElementById('confirm').value;
-      const agree      = document.getElementById('agree').checked;
+      const first_name  = f.first_name.value.trim();
+      const middle_name = (f.middle_name?.value || '').trim();
+      const last_name   = f.last_name.value.trim();
+      const email       = f.email.value.trim().toLowerCase();
+      const password    = f.password.value;
+      const confirm     = document.getElementById('confirm').value;
+      const agree       = document.getElementById('agree').checked;
 
-      // basic validations
       if (!first_name || !last_name || !email || !password || !confirm) {
-        showStatus('Please fill in all fields.', 'error'); btn.disabled = false; return;
+        showStatus('Please fill in all required fields.', 'error'); btn.disabled = false; return;
       }
       if (password !== confirm) {
         showStatus('Passwords do not match.', 'error'); btn.disabled = false; return;
@@ -298,11 +228,10 @@ form#signupForm .terms-text a:hover{
       }
 
       try {
-        // 1) Create the account (role = cardholder handled server-side)
         const regRes = await fetch(REGISTER_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ first_name, last_name, email, password })
+          body: JSON.stringify({ first_name, middle_name, last_name, email, password })
         });
 
         if (!regRes.ok) {
@@ -310,12 +239,8 @@ form#signupForm .terms-text a:hover{
           throw new Error(t || `Failed to create account (HTTP ${regRes.status})`);
         }
 
-        // Optional: if backend sends { message: "...", id: "..."} you can read it here
-        // const regData = await regRes.json().catch(()=> ({}));
-
         showStatus('Account created. Signing you in…', 'ok');
 
-        // 2) Auto-login to obtain token and redirect
         const loginRes = await fetch(LOGIN_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -326,18 +251,15 @@ form#signupForm .terms-text a:hover{
           throw new Error(t || `Account created, but login failed (HTTP ${loginRes.status}). Please log in manually.`);
         }
         const loginData = await loginRes.json();
-        // Expecting something like { token, user }
         if (loginData && loginData.token) {
           localStorage.setItem('boop_jwt', loginData.token);
           localStorage.setItem('boopUser', JSON.stringify(loginData.user || {}));
         }
 
-        // 3) Redirect
         window.location.href = REDIRECT_TO;
 
       } catch (err) {
         console.error(err);
-        // Try to show a cleaner server message if it looks like JSON
         let m = String(err.message || 'Something went wrong.');
         try {
           const parsed = JSON.parse(m);
