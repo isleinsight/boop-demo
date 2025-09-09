@@ -129,7 +129,7 @@
     }
     .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
     .footer-links a:hover{ text-decoration:underline; }
-/* Force-visible hamburger bars (no markup change) */
+
 @media (max-width: 768px){
   .hamburger{
     display:flex !important;
@@ -141,24 +141,23 @@
     border:1px solid rgba(255,255,255,.15);
     border-radius:8px;
     position:relative;
-    z-index:70;                 /* stay above gradients/hero */
+    z-index:70;              
     background:transparent;
   }
-  /* ignore any existing span styles */
+
   .hamburger span{ display:none !important; }
 
-  /* draw three bars with one pseudo element */
+
   .hamburger::before{
     content:"";
     display:block;
     width:22px;
     height:3px;
     background:#fff;
-    border-radius:2px;
     box-shadow:
-      0 -7px 0 0 #fff,  /* top bar */
-      0  7px 0 0 #fff;  /* bottom bar */
-    /* middle bar is the element itself */
+      0 -7px 0 0 #fff, 
+      0  7px 0 0 #fff;
+
   }
 }
   </style>
