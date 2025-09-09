@@ -49,6 +49,7 @@ mount('/api/logout', './auth/routes/logout', 'logout (api)');
 mount('/api/users', './auth/routes/users');
 mount('/api/cards', './auth/routes/cards');
 mount('/api/wallets', './auth/routes/wallets');
+mount('/auth/register-cardholder', './auth/routes/register-cardholder', 'register-cardholder');
 
 // Vendors
 mount('/api/vendors', './auth/routes/vendors', 'vendors (admin)');
