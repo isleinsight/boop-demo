@@ -129,6 +129,22 @@
     }
     .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
     .footer-links a:hover{ text-decoration:underline; }
+    /* Force hamburger visible on mobile (Send/Request page) */
+@media (max-width: 768px){
+  .hamburger{
+    display:flex !important;
+    position: relative;
+    z-index: 70;                 /* stay above gradients/overlays */
+    padding: 10px;               /* bigger tap target */
+  }
+  .hamburger span{
+    display:block !important;
+    background:#fff !important;  /* make the bars white */
+    height:3px;
+    border-radius:2px;
+    filter: drop-shadow(0 0 1px rgba(0,0,0,.5)); /* subtle contrast on dark bg */
+  }
+}
   </style>
 </head>
 <body>
