@@ -77,6 +77,15 @@
       outline:none;
       text-align:left;
     }
+    /* Make terms & privacy links the same color as normal text */
+form#signupForm .terms-text a {
+  color: var(--ink);          /* same as the main text */
+  text-decoration: underline; /* keep it obvious it’s clickable */
+}
+
+form#signupForm .terms-text a:hover {
+  color: var(--focus);        /* brighten a little on hover */
+}
     input::placeholder{color:#93a3c4}
     input:focus{border-color:var(--focus); box-shadow:0 0 0 3px rgba(90,162,255,.25)}
 
