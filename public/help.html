@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Help & FAQs – BOOP</title>
+  <title>Help & FAQs – Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Help and FAQs for BOOP cardholders." />
+  <meta name="description" content="Help and FAQs for Payulot cardholders." />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -19,7 +19,6 @@
     --nav:#102a43;
   }
 
-  /* Layout base (sticky footer) */
   *{ box-sizing:border-box }
   html,body{ height:100% }
   body{
@@ -135,6 +134,33 @@
   }
   .footer-links a{ color:#9ca3af; text-decoration:none; margin-left:12px; }
   .footer-links a:hover{ text-decoration:underline; }
+  @media (max-width: 768px){
+  .hamburger{
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    padding:0;
+    border-radius:8px;
+    position:relative;
+    z-index:70;           
+    background:transparent;
+  }
+  .hamburger span{ display:none !important; }
+
+  .hamburger::before{
+    content:"";
+    display:block;
+    width:22px;
+    height:3px;
+    background:#fff;
+    border-radius:2px;
+    box-shadow:
+      0 -7px 0 0 #fff, 
+      0  7px 0 0 #fff; 
+  }
+}
 </style>
 </head>
 <body>
@@ -143,8 +169,8 @@
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="cardholder.html" aria-label="BOOP home">
-          <img src="assets/logo-white.png" alt="BOOP Logo" />
+        <a href="cardholder.html" aria-label="Payulot home">
+          <img src="assets/logo-white.png" alt="Payulot Logo" />
         </a>
       </div>
 
@@ -261,7 +287,7 @@
   <!-- Footer -->
   <footer>
     <div class="footer-inner">
-      <div>© <span id="year"></span> BOOP</div>
+      <div>© <span id="year"></span> Payulot</div>
       <div class="footer-links">
         <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
         <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
