@@ -1,7 +1,7 @@
 // backend/auth/routes/password.js
 const express = require('express');
 const crypto = require('crypto');
-const db = require('../../db');
+const db = require('../../db.js');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 // ✅ shared password helpers
