@@ -138,4 +138,6 @@ router.post('/', async (req, res) => {
   }
 });
 
+console.log('[login] hash prefix:', (user.password_hash||'').slice(0,15));
+
 module.exports = router;
