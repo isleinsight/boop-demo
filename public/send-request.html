@@ -133,16 +133,18 @@
 @media (max-width: 768px){
   .menu-dots {
   display:none;
-  font-size:28px;         /* make the dots big enough */
+  font-size:32px;          /* bigger than before */
+  font-weight:900;         /* makes them thicker/bolder */
   line-height:1;
-  color:#fff;             /* visible on dark nav background */
+  color:#fff;              /* strong white against dark background */
   background:none;
   border:0;
   cursor:pointer;
   padding:4px 8px;
+  margin-left:auto;        /* push it all the way right */
 }
 
-/* Show only on mobile */
+/* Only show on mobile */
 @media (max-width: 768px){
   .nav-right { display:none; }
   .menu-dots { display:block; }
