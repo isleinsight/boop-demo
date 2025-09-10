@@ -92,7 +92,8 @@ mount('/api/sales', './auth/routes/sales');
 // Money movement + bank accounts + password reset
 mount('/api/transfers', './auth/routes/transfers');
 mount('/api/bank-accounts', './auth/routes/bank-accounts');
-mount('/api/password', './auth/routes/password');
+mount('/api/password', './auth/routes/password');   // canonical
+mount('/api/passwords', './auth/routes/password');  // legacy alias (fixes 404s)
 
 // Treasury + Admin actions
 mount('/api/treasury', './auth/routes/treasury', 'treasury');
