@@ -4,31 +4,32 @@ const crypto = require('crypto');
 const db = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// ✅ shared password helpers (argon2 or bcryptjs, chosen centrally)
+// ✅ unified password helpers (argon2 or bcryptjs under the hood)
 const { hashPassword, verifyPassword } = require('../passwords');
 
 // ── Postmark setup ────────────────────────────────────────────────────────────
 const { ServerClient } = require('postmark');
 
-// Point APP_URL to your Payulot site in .env (e.g., https://payulot.com)
-const APP_URL = (process.env.APP_URL || 'https://payulot.com').replace(/\/+$/, '');
+/**
+ * Branding & URL config
+ * - Use WEB_BASE_URL for public assets/links (Payulot site).
+ * - Use RESET_BASE_URL for password links; defaults to WEB_BASE_URL.
+ * - Use SENDER_EMAIL (boopcard address) for the "From".
+ */
+const WEB_BASE_URL   = (process.env.WEB_BASE_URL   || process.env.APP_URL || 'http://localhost:8080').replace(/\/+$/, '');
+const RESET_BASE_URL = (process.env.RESET_BASE_URL || WEB_BASE_URL).replace(/\/+$/, '');
+const BRAND_NAME     = process.env.BRAND_NAME || 'Payulot';
+const BRAND_LOGO_URL = process.env.BRAND_LOGO_URL || `${WEB_BASE_URL}/assets/logo.png`; // override if path differs
 
-// From address must be verified in Postmark (set SENDER_EMAIL in .env)
 const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || '';
 const FROM_EMAIL =
-  process.env.SENDER_EMAIL ||
-  `no-reply@${new URL(APP_URL).hostname}`;
+  process.env.SENDER_EMAIL || // e.g. no-reply@boopcard.com (your working sender)
+  `no-reply@${new URL(WEB_BASE_URL).hostname}`;
+
 const postmark = POSTMARK_TOKEN ? new ServerClient(POSTMARK_TOKEN) : null;
 
-// ── Payulot branding ─────────────────────────────────────────────────────────
-const BRAND_NAME = process.env.BRAND_NAME || 'Payulot';
-const BRAND_PRIMARY = '#2f80ed';
-const BRAND_NAV_DARK = '#0b1220';
-// Your Payulot logo lives at /public/assets/logo.png
-const BRAND_LOGO_URL = `${APP_URL}/assets/logo.png`;
-
 // ── Config ───────────────────────────────────────────────────────────────────
-const TOKEN_TTL_MIN = Number(process.env.PASSWORD_RESET_TTL_MIN || 60);
+const TOKEN_TTL_MIN    = Number(process.env.PASSWORD_RESET_TTL_MIN || 60);
 const PASSWORD_MIN_LEN = Number(process.env.PASSWORD_MIN_LEN || 8);
 
 // ── Router ───────────────────────────────────────────────────────────────────
@@ -48,11 +49,10 @@ function normalizeEmail(e) {
   return String(e || '').trim().toLowerCase();
 }
 
-// Payulot-branded email HTML
+/** Email HTML (dark header, Payulot brand) */
 function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
   const safeIntro = intro || '';
   const safeFooter = footerNote || '';
-  const host = new URL(APP_URL).hostname;
 
   return `
 <!doctype html>
@@ -63,51 +63,51 @@ function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
   </head>
-  <body style="margin:0; padding:0; background:#f6f8fb; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Poppins, Arial, sans-serif;">
+  <body style="margin:0; padding:0; background:#f6f8fb; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Poppins,Arial,sans-serif;">
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f6f8fb;">
       <tr>
         <td align="center" style="padding:24px;">
-          <table width="640" cellpadding="0" cellspacing="0" role="presentation" style="max-width:640px; width:100%; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 8px 28px rgba(16,24,40,.08);">
+          <table width="640" cellpadding="0" cellspacing="0" role="presentation" style="max-width:640px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 28px rgba(16,24,40,.08);">
             <tr>
-              <td style="background:${BRAND_NAV_DARK}; padding:20px 24px;" align="left">
-                <img src="${BRAND_LOGO_URL}" width="140" height="auto" alt="${BRAND_NAME}" style="display:block; border:0; outline:none;">
+              <td style="background:#1a2b4a;padding:20px 24px;" align="left">
+                <img src="${BRAND_LOGO_URL}" width="140" height="auto" alt="${BRAND_NAME}" style="display:block;border:0;outline:none;">
               </td>
             </tr>
             <tr>
-              <td style="padding:28px 28px 8px 28px; color:#111827;">
-                <h1 style="margin:0 0 8px 0; font-size:22px; line-height:1.3; font-weight:600; color:#111827;">
+              <td style="padding:28px 28px 8px 28px;color:#111827;">
+                <h1 style="margin:0 0 8px 0;font-size:22px;line-height:1.3;font-weight:600;color:#111827;">
                   ${title}
                 </h1>
-                <p style="margin:0; color:#4b5563; font-size:15px; line-height:1.6;">
+                <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.6;">
                   ${safeIntro}
                 </p>
               </td>
             </tr>
             <tr>
               <td style="padding:16px 28px 4px 28px;">
-                <a href="${ctaUrl}" style="display:inline-block; background:${BRAND_PRIMARY}; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:10px; font-weight:600;">
+                <a href="${ctaUrl}" style="display:inline-block;background:#2f80ed;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:600;">
                   ${ctaText}
                 </a>
               </td>
             </tr>
             <tr>
               <td style="padding:8px 28px 0 28px;">
-                <p style="margin:0; color:#6b7280; font-size:13px;">
+                <p style="margin:0;color:#6b7280;font-size:13px;">
                   Or paste this link into your browser:<br>
-                  <a href="${ctaUrl}" style="color:${BRAND_PRIMARY}; word-break:break-all;">${ctaUrl}</a>
+                  <a href="${ctaUrl}" style="color:#2f80ed;word-break:break-all;">${ctaUrl}</a>
                 </p>
               </td>
             </tr>
             <tr>
               <td style="padding:16px 28px 24px 28px;">
-                <p style="margin:0; color:#6b7280; font-size:12px; line-height:1.5;">
+                <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5;">
                   ${safeFooter}
                 </p>
               </td>
             </tr>
             <tr>
-              <td style="padding:16px 24px; background:#f9fafb; color:#6b7280; font-size:12px;">
-                Sent by ${BRAND_NAME} • <a href="${APP_URL}" style="color:#6b7280; text-decoration:none;">${host}</a>
+              <td style="padding:16px 24px;background:#f9fafb;color:#6b7280;font-size:12px;">
+                Sent by ${BRAND_NAME} • <a href="${WEB_BASE_URL}" style="color:#6b7280;text-decoration:none;">${new URL(WEB_BASE_URL).hostname}</a>
               </td>
             </tr>
           </table>
@@ -124,7 +124,7 @@ async function postmarkSend({ to, subject, html, text }) {
     return;
   }
   await postmark.sendEmail({
-    From: FROM_EMAIL,
+    From: FROM_EMAIL, // e.g. no-reply@boopcard.com (working sender)
     To: to,
     Subject: subject,
     HtmlBody: html,
@@ -133,7 +133,7 @@ async function postmarkSend({ to, subject, html, text }) {
   });
 }
 
-// Pretty wrappers with Payulot copy
+// ── Email variants (Payulot copy) ────────────────────────────────────────────
 async function sendAccountSetupEmail(to, link) {
   const subject = `Finish setting up your ${BRAND_NAME} account`;
   const html = buildEmailHTML({
@@ -190,10 +190,9 @@ async function sendForgotEmail(to, link) {
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 /**
- * Admin-initiated password reset (distinct subject/copy)
- * POST /api/password/admin/initiate-reset
+ * Admin-initiated password reset
+ * POST /api/password/admin/initiate-reset  (Auth: admin)
  * Body: { user_id } OR { email }
- * Auth: admin (super_admin, admin, support, accountant, viewer, treasury)
  */
 router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
   try {
@@ -231,8 +230,8 @@ router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
       [userRow.id, tokenHash, expiresAt]
     );
 
-    // Email (admin flavor)
-    const link = `${APP_URL}/password.html?token=${raw}`;
+    // Email (admin flavor) — link to Payulot
+    const link = `${RESET_BASE_URL}/password.html?token=${raw}`;
     await sendAdminResetEmail(userRow.email, link);
 
     return res.json({ ok: true, message: 'Admin reset email sent' });
@@ -243,10 +242,9 @@ router.post('/admin/initiate-reset', authenticateToken, async (req, res) => {
 });
 
 /**
- * Public forgot-password (distinct subject/copy)
+ * Public forgot-password (always 200)
  * POST /api/password/forgot-password
  * Body: { email }
- * Always 200 to prevent user enumeration.
  */
 router.post('/forgot-password', async (req, res) => {
   const email = normalizeEmail(req.body?.email);
@@ -261,7 +259,6 @@ router.post('/forgot-password', async (req, res) => {
 
     const userId = rows[0].id;
 
-    // Create token
     const raw = generateToken();
     const tokenHash = hashToken(raw);
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
@@ -271,18 +268,17 @@ router.post('/forgot-password', async (req, res) => {
       [userId, tokenHash, expiresAt]
     );
 
-    // Email (forgot flavor)
-    const link = `${APP_URL}/password.html?token=${raw}`;
+    // Email (forgot flavor) — link to Payulot
+    const link = `${RESET_BASE_URL}/password.html?token=${raw}`;
     await sendForgotEmail(email, link);
   } catch (err) {
     console.error('forgot-password error:', err);
-    // do nothing else—we already returned 200
+    // no-op (we already returned 200)
   }
 });
 
 /**
- * (Optional) Admin-initiated ACCOUNT SETUP email (creation flavor)
- * Useful if you want to trigger the “finish setup” email from here too.
+ * Optional admin-initiated "account setup" email
  * POST /api/password/admin/initiate-setup
  * Body: { user_id } OR { email }
  */
@@ -321,8 +317,8 @@ router.post('/admin/initiate-setup', authenticateToken, async (req, res) => {
       [userRow.id, tokenHash, expiresAt]
     );
 
-    // Email (account setup flavor)
-    const link = `${APP_URL}/password.html?token=${raw}`;
+    // Email (setup flavor) — link to Payulot
+    const link = `${RESET_BASE_URL}/password.html?token=${raw}`;
     await sendAccountSetupEmail(userRow.email, link);
 
     return res.json({ ok: true, message: 'Account setup email sent' });
@@ -367,7 +363,7 @@ router.post('/reset', async (req, res) => {
     const prtId = trows[0].id;
     const userId = trows[0].user_id;
 
-    const newHash = await hashPassword(pw); // ✅ unified hasher
+    const newHash = await hashPassword(pw);
 
     await db.query('BEGIN');
     await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [newHash, userId]);
@@ -381,7 +377,7 @@ router.post('/reset', async (req, res) => {
       [userId, prtId]
     );
 
-    // Optional: force sign-out everywhere
+    // Optional: force sign-out everywhere (if you keep sessions)
     await db.query('DELETE FROM sessions WHERE user_id=$1', [userId]);
 
     await db.query('COMMIT');
@@ -415,10 +411,10 @@ router.post('/change-password', authenticateToken, async (req, res) => {
     const { rows } = await db.query('SELECT password_hash FROM users WHERE id=$1 LIMIT 1', [userId]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
-    const match = await verifyPassword(current_password, rows[0].password_hash); // ✅ unified verifier
+    const match = await verifyPassword(current_password, rows[0].password_hash);
     if (!match) return res.status(400).json({ error: 'Current password is incorrect' });
 
-    const hash = await hashPassword(new_password); // ✅ unified hasher
+    const hash = await hashPassword(new_password);
 
     await db.query('BEGIN');
     await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, userId]);
