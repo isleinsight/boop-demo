@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Request Transfer – BOOP</title>
+  <title>Request Transfer – Payulot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -14,7 +14,7 @@
     *{box-sizing:border-box}
     body{ margin:0; font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
 
-    /* NAV (keeps your cardholder dark nav) */
+
     nav{ background:#102a43; color:#fff; position:sticky; top:0; z-index:50; }
     .nav-container{ max-width:1100px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
     .nav-left img{ height:36px; display:block; }
@@ -95,16 +95,43 @@
     .row {
   display: flex;
   gap: 12px;
-  align-items: center; /* change from flex-end to center */
+  align-items: center; 
 }
 
 #addBankBtn {
-  height: 44px; /* match the select/input height */
-  padding: 0 12px; /* make sure padding is balanced */
+  height: 44px; 
+  padding: 0 12px; 
 }
-
-    /* Stick a little breathing room at bottom */
     .page-bottom-spacer{ height:40px; }
+
+    
+    @media (max-width: 768px){
+  .hamburger{
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    padding:0;
+    border-radius:8px;
+    position:relative;
+    z-index:70;           
+    background:transparent;
+  }
+  .hamburger span{ display:none !important; }
+
+  .hamburger::before{
+    content:"";
+    display:block;
+    width:22px;
+    height:3px;
+    background:#fff;
+    border-radius:2px;
+    box-shadow:
+      0 -7px 0 0 #fff, 
+      0  7px 0 0 #fff; 
+  }
+}
   </style>
 </head>
 <body>
@@ -113,8 +140,8 @@
 <nav>
   <div class="nav-container">
     <div class="nav-left">
-      <a href="cardholder.html" aria-label="BOOP home">
-        <img src="assets/logo-white.png" alt="BOOP Logo" />
+      <a href="cardholder.html" aria-label="Payulot home">
+        <img src="assets/logo-white.png" alt="Payulot Logo" />
       </a>
     </div>
 
@@ -151,7 +178,7 @@
 <!-- HEADER -->
 <header class="header">
   <h1>Request a bank transfer</h1>
-  <p class="sub">Submit a request to move money from BOOP to your bank. Our Accounts team will review and process it.</p>
+  <p class="sub">Submit a request to move money from Payulot to your bank. Our Accounts team will review and process it.</p>
 </header>
 
 <!-- MAIN -->
@@ -174,7 +201,7 @@
   </button>
 </div>
 
-      <label for="amount">Amount (BMD)</label>
+      <label for="amount">Amount</label>
       <input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
 
       <label for="memo">Memo (optional)</label>
@@ -373,7 +400,7 @@
 
     destination.addEventListener('change', (e)=> selectedBank = e.target.value);
 
-    // Add Bank modal (no routing needed in Bermuda)
+    // Add Bank 
 const addBankModal = document.getElementById('addBankModal');
 const abBank = document.getElementById('abBank');
 const abHolder = document.getElementById('abHolder');
@@ -415,7 +442,7 @@ abSave.addEventListener('click', async ()=>{
         holder_name: holder,
         bank_name: bank,
         account_number: account
-        // routing_number: not used in Bermuda
+
       })
     });
     const saved = await res.json();
@@ -526,7 +553,7 @@ abSave.addEventListener('click', async ()=>{
   <!-- FOOTER -->
 <footer>
   <div class="footer-inner">
-    <div>© 2025 BOOP</div>
+    <div>© 2025 Payulot</div>
     <div class="footer-links">
       <a href="terms.html">Terms</a>
       <a href="privacy.html">Privacy</a>
