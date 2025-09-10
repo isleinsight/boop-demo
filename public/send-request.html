@@ -131,34 +131,21 @@
     .footer-links a:hover{ text-decoration:underline; }
 
 @media (max-width: 768px){
-  .hamburger{
-    display:flex !important;
-    align-items:center;
-    justify-content:center;
-    width:36px;
-    height:36px;
-    padding:0;
-    border-radius:8px;
-    position:relative;
-    z-index:70;              
-    background:transparent;
-  }
+  .menu-dots {
+  display:none;
+  font-size:28px;         /* make the dots big enough */
+  line-height:1;
+  color:#fff;             /* visible on dark nav background */
+  background:none;
+  border:0;
+  cursor:pointer;
+  padding:4px 8px;
+}
 
-  .hamburger span{ display:none !important; }
-
-
-  .hamburger::before{
-    content:"";
-    display:block;
-    width:22px;
-    height:3px;
-    background:#fff;
-    border-radius:2px;
-    box-shadow:
-      0 -7px 0 0 #fff, 
-      0  7px 0 0 #fff;
-
-  }
+/* Show only on mobile */
+@media (max-width: 768px){
+  .nav-right { display:none; }
+  .menu-dots { display:block; }
 }
   </style>
 </head>
