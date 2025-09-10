@@ -4,30 +4,8 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const pool = require('../../db');
 
-// Try to load argon2 and bcryptjs (fallbacks are safe)
-let argon2;
-let bcrypt;
-try { argon2 = require('argon2'); } catch {}
-try { bcrypt = require('bcryptjs'); } catch {}
-
-// Verify function that supports both hash types
-async function verifyPassword(plain, hashed) {
-  if (!hashed || !plain) return false;
-
-  // Prefer format hints first
-  if (argon2 && typeof hashed === 'string' && hashed.startsWith('$argon2')) {
-    try { return await argon2.verify(hashed, plain); } catch {}
-  }
-  if (bcrypt && typeof hashed === 'string' && hashed.startsWith('$2')) {
-    try { return await bcrypt.compare(plain, hashed); } catch {}
-  }
-
-  // If format check didn’t early-return, try both to cover migrated data
-  if (argon2) { try { if (await argon2.verify(hashed, plain)) return true; } catch {} }
-  if (bcrypt) { try { if (await bcrypt.compare(plain, hashed)) return true; } catch {} }
-
-  return false;
-}
+// unified password verifier (supports argon2 + bcryptjs)
+const { verifyPassword } = require('../passwords'); // <-- uses auth/passwords.js
 
 function toPublicUser(u) {
   return {
@@ -53,7 +31,6 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required.' });
     }
 
-    // Look up user by normalized email
     const { rows } = await pool.query(
       `SELECT id, email, role, type, status,
               first_name, middle_name, last_name,
@@ -63,18 +40,27 @@ router.post('/', async (req, res) => {
         LIMIT 1`,
       [email]
     );
-    if (!rows.length) {
+    const user = rows[0];
+    if (!user) {
+      console.log('[login] no user for', email);
       return res.status(401).json({ message: 'Incorrect email or password.' });
     }
-    const user = rows[0];
 
-    // Block non-active if you want
+    // quick visibility: what kind of hash is in DB?
+    const prefix = (user.password_hash || '').slice(0, 15);
+    console.log('[login] user:', user.email, 'hash prefix:', prefix || '(null)');
+
+    if (!user.password_hash) {
+      return res.status(401).json({ message: 'Incorrect email or password.' });
+    }
+
     if (user.status && String(user.status).toLowerCase() !== 'active') {
       return res.status(403).json({ message: 'This account is not active.' });
     }
 
     const ok = await verifyPassword(password, user.password_hash);
     if (!ok) {
+      console.log('[login] password mismatch for', user.email);
       return res.status(401).json({ message: 'Incorrect email or password.' });
     }
 
@@ -89,7 +75,7 @@ router.post('/', async (req, res) => {
 
     const payload = {
       id: user.id,
-      userId: user.id, // keep legacy name some frontends expect
+      userId: user.id,
       email: user.email,
       role: effectiveRole,
       type: effectiveRole,
@@ -98,9 +84,8 @@ router.post('/', async (req, res) => {
     };
     const token = jwt.sign(payload, secret, { expiresIn: ttlSeconds });
 
-    // ---- Session policy ----
+    // session policy
     if (effectiveRole === 'vendor') {
-      // Vendor owner: clear prior owner sessions (keep cashiers: staff_id IS NOT NULL)
       await pool.query(
         `DELETE FROM sessions
           WHERE email = $1
@@ -108,7 +93,6 @@ router.post('/', async (req, res) => {
         [user.email]
       );
     } else {
-      // Non-vendor (cardholder, student, parent): keep a single active session
       await pool.query(
         `DELETE FROM sessions
           WHERE user_id = $1
@@ -117,7 +101,6 @@ router.post('/', async (req, res) => {
       );
     }
 
-    // Insert fresh session (expires matches JWT)
     await pool.query(
       `INSERT INTO sessions
          (user_id, email, jwt_token, role, status, expires_at, last_seen)
@@ -137,7 +120,5 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
-
-console.log('[login] hash prefix:', (user.password_hash||'').slice(0,15));
 
 module.exports = router;
