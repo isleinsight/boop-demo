@@ -1,9 +1,11 @@
 // backend/auth/routes/password.js
 const express = require('express');
 const crypto = require('crypto');
-const argon2 = require('argon2');
 const db = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
+
+// ✅ use the shared password helpers (argon2 or bcryptjs based on availability/ENV)
+const { hashPassword, verifyPassword } = require('../passwords');
 
 // ── Postmark setup ────────────────────────────────────────────────────────────
 const { ServerClient } = require('postmark');
@@ -95,7 +97,7 @@ function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
             </tr>
             <tr>
               <td style="padding:16px 24px; background:#f9fafb; color:#6b7280; font-size:12px;">
-                Sent by BOOP • <a href="${APP_URL}" style="color:#6b7280; text-decoration:none;">${new URL(APP_URL).hostname}</a>
+                Sent by Payulot • <a href="${APP_URL}" style="color:#6b7280; text-decoration:none;">${new URL(APP_URL).hostname}</a>
               </td>
             </tr>
           </table>
@@ -355,7 +357,7 @@ router.post('/reset', async (req, res) => {
     const prtId = trows[0].id;
     const userId = trows[0].user_id;
 
-    const newHash = await argon2.hash(pw);
+    const newHash = await hashPassword(pw); // ✅ unified hasher
 
     await db.query('BEGIN');
     await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [newHash, userId]);
@@ -403,10 +405,10 @@ router.post('/change-password', authenticateToken, async (req, res) => {
     const { rows } = await db.query('SELECT password_hash FROM users WHERE id=$1 LIMIT 1', [userId]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
-    const match = await argon2.verify(rows[0].password_hash, current_password);
+    const match = await verifyPassword(current_password, rows[0].password_hash); // ✅ unified verifier
     if (!match) return res.status(400).json({ error: 'Current password is incorrect' });
 
-    const hash = await argon2.hash(new_password);
+    const hash = await hashPassword(new_password); // ✅ unified hasher
 
     await db.query('BEGIN');
     await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, userId]);
