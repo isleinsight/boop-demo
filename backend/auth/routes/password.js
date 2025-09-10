@@ -4,18 +4,28 @@ const crypto = require('crypto');
 const db = require('../../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// ✅ use the shared password helpers (argon2 or bcryptjs based on availability/ENV)
+// ✅ shared password helpers (argon2 or bcryptjs, chosen centrally)
 const { hashPassword, verifyPassword } = require('../passwords');
 
 // ── Postmark setup ────────────────────────────────────────────────────────────
 const { ServerClient } = require('postmark');
 
-const APP_URL = (process.env.APP_URL || 'http://localhost:8080').replace(/\/+$/, '');
+// Point APP_URL to your Payulot site in .env (e.g., https://payulot.com)
+const APP_URL = (process.env.APP_URL || 'https://payulot.com').replace(/\/+$/, '');
+
+// From address must be verified in Postmark (set SENDER_EMAIL in .env)
 const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || '';
 const FROM_EMAIL =
   process.env.SENDER_EMAIL ||
   `no-reply@${new URL(APP_URL).hostname}`;
 const postmark = POSTMARK_TOKEN ? new ServerClient(POSTMARK_TOKEN) : null;
+
+// ── Payulot branding ─────────────────────────────────────────────────────────
+const BRAND_NAME = process.env.BRAND_NAME || 'Payulot';
+const BRAND_PRIMARY = '#2f80ed';
+const BRAND_NAV_DARK = '#0b1220';
+// Your Payulot logo lives at /public/assets/logo.png
+const BRAND_LOGO_URL = `${APP_URL}/assets/logo.png`;
 
 // ── Config ───────────────────────────────────────────────────────────────────
 const TOKEN_TTL_MIN = Number(process.env.PASSWORD_RESET_TTL_MIN || 60);
@@ -38,11 +48,11 @@ function normalizeEmail(e) {
   return String(e || '').trim().toLowerCase();
 }
 
-// Use a dark header so your white logo is visible
+// Payulot-branded email HTML
 function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
-  const logoUrl = `${APP_URL}/assets/Boop-Logo.png`;
   const safeIntro = intro || '';
   const safeFooter = footerNote || '';
+  const host = new URL(APP_URL).hostname;
 
   return `
 <!doctype html>
@@ -53,14 +63,14 @@ function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
   </head>
-  <body style="margin:0; padding:0; background:#f6f8fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Poppins, Arial, sans-serif;">
+  <body style="margin:0; padding:0; background:#f6f8fb; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Poppins, Arial, sans-serif;">
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f6f8fb;">
       <tr>
         <td align="center" style="padding:24px;">
           <table width="640" cellpadding="0" cellspacing="0" role="presentation" style="max-width:640px; width:100%; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 8px 28px rgba(16,24,40,.08);">
             <tr>
-              <td style="background:#1a2b4a; padding:20px 24px;" align="left">
-                <img src="${logoUrl}" width="140" height="auto" alt="BOOP" style="display:block; border:0; outline:none;">
+              <td style="background:${BRAND_NAV_DARK}; padding:20px 24px;" align="left">
+                <img src="${BRAND_LOGO_URL}" width="140" height="auto" alt="${BRAND_NAME}" style="display:block; border:0; outline:none;">
               </td>
             </tr>
             <tr>
@@ -75,7 +85,7 @@ function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
             </tr>
             <tr>
               <td style="padding:16px 28px 4px 28px;">
-                <a href="${ctaUrl}" style="display:inline-block; background:#2f80ed; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:10px; font-weight:600;">
+                <a href="${ctaUrl}" style="display:inline-block; background:${BRAND_PRIMARY}; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:10px; font-weight:600;">
                   ${ctaText}
                 </a>
               </td>
@@ -84,7 +94,7 @@ function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
               <td style="padding:8px 28px 0 28px;">
                 <p style="margin:0; color:#6b7280; font-size:13px;">
                   Or paste this link into your browser:<br>
-                  <a href="${ctaUrl}" style="color:#2f80ed; word-break:break-all;">${ctaUrl}</a>
+                  <a href="${ctaUrl}" style="color:${BRAND_PRIMARY}; word-break:break-all;">${ctaUrl}</a>
                 </p>
               </td>
             </tr>
@@ -97,7 +107,7 @@ function buildEmailHTML({ title, intro, ctaText, ctaUrl, footerNote }) {
             </tr>
             <tr>
               <td style="padding:16px 24px; background:#f9fafb; color:#6b7280; font-size:12px;">
-                Sent by Payulot • <a href="${APP_URL}" style="color:#6b7280; text-decoration:none;">${new URL(APP_URL).hostname}</a>
+                Sent by ${BRAND_NAME} • <a href="${APP_URL}" style="color:#6b7280; text-decoration:none;">${host}</a>
               </td>
             </tr>
           </table>
@@ -123,29 +133,29 @@ async function postmarkSend({ to, subject, html, text }) {
   });
 }
 
-// Pretty wrappers with distinct subjects & copy
+// Pretty wrappers with Payulot copy
 async function sendAccountSetupEmail(to, link) {
-  const subject = 'Finish setting up your BOOP account';
+  const subject = `Finish setting up your ${BRAND_NAME} account`;
   const html = buildEmailHTML({
-    title: 'Welcome to BOOP',
-    intro: `Your BOOP account was created. Click the button below to set your password and finish setup.
+    title: `Welcome to ${BRAND_NAME}`,
+    intro: `Your ${BRAND_NAME} account was created. Click the button below to set your password and finish setup.
             This link expires in ${TOKEN_TTL_MIN} minutes.`,
     ctaText: 'Set up your password',
     ctaUrl: link,
     footerNote: `If you didn’t expect this, you can ignore this email.`,
   });
   const text =
-    `Welcome to BOOP.\n\n` +
+    `Welcome to ${BRAND_NAME}.\n\n` +
     `Set your password here (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
     `If you didn’t expect this, ignore this email.`;
   await postmarkSend({ to, subject, html, text });
 }
 
 async function sendAdminResetEmail(to, link) {
-  const subject = 'Admin reset link for your BOOP account';
+  const subject = `Admin reset link for your ${BRAND_NAME} account`;
   const html = buildEmailHTML({
-    title: 'Reset your BOOP password',
-    intro: `An administrator started a password reset for your BOOP account.
+    title: `Reset your ${BRAND_NAME} password`,
+    intro: `An administrator started a password reset for your ${BRAND_NAME} account.
             Use the button below to choose a new password.
             This link expires in ${TOKEN_TTL_MIN} minutes.`,
     ctaText: 'Reset password',
@@ -153,16 +163,16 @@ async function sendAdminResetEmail(to, link) {
     footerNote: `Didn’t expect this? Contact support or ignore this email.`,
   });
   const text =
-    `An administrator initiated a password reset for your BOOP account.\n\n` +
+    `An administrator initiated a password reset for your ${BRAND_NAME} account.\n\n` +
     `Reset link (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
     `If you didn’t expect this, contact support or ignore this email.`;
   await postmarkSend({ to, subject, html, text });
 }
 
 async function sendForgotEmail(to, link) {
-  const subject = 'Reset your BOOP password';
+  const subject = `Reset your ${BRAND_NAME} password`;
   const html = buildEmailHTML({
-    title: 'Reset your BOOP password',
+    title: `Reset your ${BRAND_NAME} password`,
     intro: `We received a request to reset your password.
             Click the button below to set a new one.
             This link expires in ${TOKEN_TTL_MIN} minutes.`,
@@ -171,7 +181,7 @@ async function sendForgotEmail(to, link) {
     footerNote: `If you didn’t request a reset, you can safely ignore this email.`,
   });
   const text =
-    `We received a request to reset your BOOP password.\n\n` +
+    `We received a request to reset your ${BRAND_NAME} password.\n\n` +
     `Reset link (expires in ${TOKEN_TTL_MIN} minutes):\n${link}\n\n` +
     `If you didn’t request this, ignore this email.`;
   await postmarkSend({ to, subject, html, text });
@@ -371,7 +381,7 @@ router.post('/reset', async (req, res) => {
       [userId, prtId]
     );
 
-    // Optional: force sign-out everywhere (if you keep sessions)
+    // Optional: force sign-out everywhere
     await db.query('DELETE FROM sessions WHERE user_id=$1', [userId]);
 
     await db.query('COMMIT');
