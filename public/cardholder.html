@@ -92,7 +92,7 @@
     .section-title{ font-size:1.1rem; font-weight:600; margin:0; }
     .view-all{ font-size:.9rem; text-decoration:none; color:var(--blue); }
 
-    /* Recent activity compact list */
+    /* Recent activity list */
     .activity-list{ display:grid; gap:10px; }
     .activity-item{
       background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:12px 14px;
@@ -119,6 +119,34 @@
     }
     .footer-links a{ color:#6b7280; text-decoration:none; margin-left:12px; }
     .footer-links a:hover{ text-decoration:underline; }
+
+    @media (max-width: 768px){
+  .hamburger{
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    padding:0;
+    border-radius:8px;
+    position:relative;
+    z-index:70;           
+    background:transparent;
+  }
+  .hamburger span{ display:none !important; }
+
+  .hamburger::before{
+    content:"";
+    display:block;
+    width:22px;
+    height:3px;
+    background:#fff;
+    border-radius:2px;
+    box-shadow:
+      0 -7px 0 0 #fff, 
+      0  7px 0 0 #fff; 
+  }
+}
   </style>
 </head>
 <body>
@@ -127,8 +155,8 @@
   <nav>
     <div class="nav-container">
       <div class="nav-left">
-        <a href="cardholder.html" aria-label="BOOP home">
-          <img src="assets/logo-white.png" alt="BOOP Logo" />
+        <a href="cardholder.html" aria-label="Payulot home">
+          <img src="assets/logo-white.png" alt="Payulot Logo" />
         </a>
       </div>
 
