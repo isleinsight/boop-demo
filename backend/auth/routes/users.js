@@ -2,10 +2,19 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../../db");
 const bcrypt = require("bcrypt");
+// ---- add near top (after imports) ------------------------------------------
+const argon2 = require('argon2');
+const ARGON_OPTS = { type: argon2.argon2id, memoryCost: 15360, timeCost: 2, parallelism: 1 };
+
+function randHex(n = 16){ return require('crypto').randomBytes(n).toString('hex'); }
+function passportId(){ return 'PID-' + randHex(12); }
+function pidToken(){   return 'PTK-' + randHex(24); }
+function cardUID(){    return 'CARD-' + randHex(12); }
+
 
 const {
   authenticateToken
-} = require("../middleware/authMiddleware"); // ✅ THIS IS THE FIX
+} = require("../middleware/authMiddleware"); 
 
 const crypto = require("crypto");
 
@@ -80,11 +89,11 @@ async function guardProtectedUser(targetId, callerId) {
   return { blocked: false };
 }
 
-// ✅ Create user
+// ✅ Create user (admin)
 router.post("/", authenticateToken, async (req, res) => {
   const {
     email,
-    password,
+    password,                // optional; if omitted we generate a temp one & email reset link
     first_name,
     middle_name,
     last_name,
@@ -93,134 +102,149 @@ router.post("/", authenticateToken, async (req, res) => {
     on_assistance,
     vendor,
     student
-  } = req.body;
+  } = req.body || {};
 
   const client = await pool.connect();
-try {
-  await client.query("BEGIN");
+  try {
+    await client.query("BEGIN");
 
-const tempPw = password || generateTempPassword(24);
-const hashedPassword = await bcrypt.hash(tempPw, 12);
-  const result = await client.query(
-    `INSERT INTO users (
-       email, password_hash, first_name, middle_name, last_name, role, type, on_assistance
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING *`,
-    [email, hashedPassword, first_name, middle_name || null, last_name, role, type, on_assistance]
-  );
+    // 1) hash password with Argon2id (safer)
+    const tempPw = password || generateTempPassword(24);
+    const password_hash = await argon2.hash(tempPw, ARGON_OPTS);
 
-  const user = result.rows[0];
-
-  // 💳 Wallet
-  if (rolesWithWallet.includes(role)) {
-    const walletRes = await client.query(
-  `INSERT INTO wallets (user_id, id)
-   VALUES ($1, gen_random_uuid())
-   RETURNING id`,
-  [user.id]
-);
-    const walletId = walletRes.rows[0].id;
-    await client.query(
-      `UPDATE users SET wallet_id = $1 WHERE id = $2`,
-      [walletId, user.id]
+    // 2) create user (status active)
+    const userIns = await client.query(
+      `INSERT INTO users (
+         email, password_hash, first_name, middle_name, last_name,
+         role, type, on_assistance, status
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'active')
+       RETURNING *`,
+      [email, password_hash, first_name, middle_name || null, last_name, role, type, !!on_assistance]
     );
-    user.wallet_id = walletId;
-  }
+    const user = userIns.rows[0];
 
-  // 🏢 Vendor (free-text category)
-if (role === "vendor" && vendor) {
-  // normalize a bit so you don't get empty strings
-  const businessName = (vendor.name || "").trim();
-  const category     = (vendor.category || "").trim();   // <-- free-text
-  const phone        = (vendor.phone || "").trim();
-  const address      = (vendor.address || "").trim();    // optional
+    // 3) wallet (always create)
+    const walletIns = await client.query(
+      `INSERT INTO wallets (user_id, balance, is_treasury, is_merchant)
+       VALUES ($1, 0, false, false)
+       RETURNING id`,
+      [user.id]
+    );
+    const walletId = walletIns.rows[0].id;
+    await client.query(`UPDATE users SET wallet_id = $1 WHERE id = $2`, [walletId, user.id]);
 
-  if (!businessName) throw new Error("Vendor business_name is required");
-  if (!category)     throw new Error("Vendor category is required");
+    // 4) passport (always create)
+    const ppid = passportId();
+    const ptoken = pidToken();
+    await client.query(
+      `INSERT INTO passports (user_id, passport_id, pid_token)
+       VALUES ($1,$2,$3)`,
+      [user.id, ppid, ptoken]
+    );
+    await client.query(`UPDATE users SET passport_pid = $1 WHERE id = $2`, [ppid, user.id]);
 
-  await client.query(
-    `INSERT INTO vendors (user_id, business_name, phone, category, address, wallet_id)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [user.id, businessName, phone, category, address || null, user.wallet_id]
-  );
-}
+    // 5) spending card (always create; issued_by = admin performing action)
+    const uid = cardUID();
+    const adminId = req.user?.id || req.user?.userId || null;
+    await client.query(
+      `INSERT INTO cards (wallet_id, type, status, issued_by, uid)
+       VALUES ($1, 'spending', 'active', $2, $3)`,
+      [walletId, adminId, uid]
+    );
 
-  // 🎓 Student
-  if (role === "student" && student) {
-    const { school_name, grade_level, expiry_date } = student;
-    if (!school_name || !expiry_date) {
-      throw new Error("Missing required student fields");
+    // 6) optional: vendor profile
+    if (role === "vendor" && vendor) {
+      const businessName = (vendor.name || "").trim();
+      const category     = (vendor.category || "").trim(); // free-text category
+      const phone        = (vendor.phone || "").trim();
+      const address      = (vendor.address || "").trim() || null;
+      if (!businessName) throw new Error("Vendor business_name is required");
+      if (!category)     throw new Error("Vendor category is required");
+
+      await client.query(
+        `INSERT INTO vendors (user_id, business_name, phone, category, address, wallet_id)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [user.id, businessName, phone, category, address, walletId]
+      );
     }
 
-    await client.query(
-      `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
-       VALUES ($1, $2, $3, $4)`,
-      [user.id, school_name, grade_level || null, expiry_date]
-    );
+    // 7) optional: student profile
+    if (role === "student" && student) {
+      const { school_name, grade_level, expiry_date } = student;
+      if (!school_name || !expiry_date) {
+        throw new Error("Missing required student fields");
+      }
+      await client.query(
+        `INSERT INTO students (user_id, school_name, grade_level, expiry_date)
+         VALUES ($1,$2,$3,$4)`,
+        [user.id, school_name, grade_level || null, expiry_date]
+      );
+    }
+
+    // 8) admin action log
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "create_user",
+      target_user_id: user.id,
+      new_email: user.email,
+      type: req.user.type,
+      status: "completed",
+      completed_at: new Date()
+    });
+
+    // 9) create reset token + send setup email (don’t fail whole request if email fails)
+    try {
+      const raw = generateToken();
+      const tokenHash = hashToken(raw);
+      const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
+
+      await client.query(
+        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+         VALUES ($1,$2,$3)`,
+        [user.id, tokenHash, expiresAt]
+      );
+
+      const link = `${APP_URL}/reset-password.html?token=${raw}`;
+      await sendResetEmail(user.email, link);
+    } catch (e) {
+      console.warn("password reset email/initiation failed:", e.message);
+    }
+
+    await client.query("COMMIT");
+
+    return res.status(201).json({
+      message: "User created",
+      id: user.id,
+      wallet_id: walletId,
+      passport_id: ppid,
+      card_uid: uid,
+      role: user.role,
+      type: user.type
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("❌ Error creating user:", err);
+
+    await logAdminAction({
+      performed_by: req.user.id,
+      action: "create_user",
+      target_user_id: null,
+      new_email: email,
+      type: req.user.type,
+      status: "failed",
+      error_message: err.message
+    });
+
+    if (err.code === "23505") {
+      // covers unique(email), unique(passport_id), unique(pid_token), unique(card uid)
+      return res.status(400).json({ message: "A unique field already exists (email / passport / card UID)." });
+    }
+    return res.status(500).json({ message: "Failed to create user" });
+  } finally {
+    client.release();
   }
-
-  // ✅ Log admin action
-  await logAdminAction({
-    performed_by: req.user.id,
-    action: "create_user",
-    target_user_id: user.id,
-    new_email: user.email,
-    type: req.user.type,
-    status: "completed",
-    completed_at: new Date()
-  });
-
-  // Create a password reset token and send reset email
-try {
-  const raw = generateToken();
-  const tokenHash = hashToken(raw);
-  const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
-
-  await client.query(
-    `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-     VALUES ($1, $2, $3)`,
-    [user.id, tokenHash, expiresAt]
-  );
-
-  const link = `${APP_URL}/reset-password.html?token=${raw}`;
-  await sendResetEmail(user.email, link);
-} catch (e) {
-  // Don't fail the whole request if email sends fail
-  console.warn("password reset email/initiation failed:", e.message);
-}
-
-  await client.query("COMMIT");
-
-  res.status(201).json({
-    message: "User created",
-    id: user.id,
-    role: user.role
-  });
-
-} catch (err) {
-  await client.query("ROLLBACK");
-  console.error("❌ Error creating user:", err);
-
-  await logAdminAction({
-    performed_by: req.user.id,
-    action: "create_user",
-    target_user_id: null,
-    new_email: email,
-    type: req.user.type,
-    status: "failed",
-    error_message: err.message
-  });
-
-  if (err.code === "23505") {
-    return res.status(400).json({ message: "Email already exists" });
-  }
-
-  res.status(500).json({ message: "Failed to create user" });
-
-} finally {
-  client.release();
-}
-  });
+});
 
 // ✅ GET /api/users/me — Get current user info
 router.get("/me", authenticateToken, async (req, res) => {
