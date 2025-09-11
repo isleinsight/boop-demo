@@ -1,30 +1,40 @@
-import React, { useState } from 'react';
-import { SafeAreaView, View, Text, TextInput, Button } from 'react-native';
-import { endpoints, setToken, setUser } from '@payulot/shared';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import LoginScreen from './src/screens/LoginScreen';
+import HomeScreen from './src/screens/HomeScreen';
 
-export default function App(){
-  const [email, setEmail] = useState('');
-  const [pw, setPw] = useState('');
-  const [status, setStatus] = useState('');
+const Stack = createNativeStackNavigator();
 
-  async function login(){
-    setStatus('Signing in…');
-    const { ok, data } = await endpoints.login(email.trim().toLowerCase(), pw);
-    if (!ok) { setStatus(data?.message || 'Login failed'); return; }
-    if (data?.token) await setToken(data.token);
-    if (data?.user)  await setUser(data.user);
-    setStatus('OK');
-  }
-
+function AppRoutes() {
+  const { user } = useAuth();
   return (
-    <SafeAreaView style={{ flex:1, padding:16, gap:8 }}>
-      <Text style={{ fontSize:22, fontWeight:'700' }}>Cardholder Login</Text>
-      <TextInput value={email} onChangeText={setEmail} placeholder="Email" autoCapitalize="none"
-        style={{ borderWidth:1, borderColor:'#ddd', padding:10, borderRadius:8 }} />
-      <TextInput value={pw} onChangeText={setPw} placeholder="Password" secureTextEntry
-        style={{ borderWidth:1, borderColor:'#ddd', padding:10, borderRadius:8 }} />
-      <Button title="Sign in" onPress={login} />
-      <Text>{status}</Text>
-    </SafeAreaView>
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: '#0b1220' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '600' }
+        }}
+      >
+        {user ? (
+          <>
+            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Payulot' }} />
+            {/* TODO: add more screens: SendRequest, Activity, Passport */}
+          </>
+        ) : (
+          <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign In' }} />
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }
