@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiFetch } from '../api/client';
+import apiFetch from '../api/client';
 
 const AuthCtx = createContext(null);
 
