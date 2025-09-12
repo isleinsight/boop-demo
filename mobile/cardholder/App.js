@@ -1,4 +1,5 @@
 // App.js
+import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import React from 'react';
