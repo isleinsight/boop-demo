@@ -1,3 +1,5 @@
+// App.js
+import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
@@ -10,22 +12,31 @@ const Stack = createNativeStackNavigator();
 
 function AppRoutes() {
   const { user } = useAuth();
+
   return (
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: '#0b1220' },
           headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '600' }
+          headerTitleStyle: { fontWeight: '600' },
         }}
       >
         {user ? (
           <>
-            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Payulot' }} />
-            {/* TODO: add more screens: SendRequest, Activity, Passport */}
+            <Stack.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{ title: 'Payulot' }}
+            />
+            {/* add more screens here */}
           </>
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign In' }} />
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{ title: 'Sign In' }}
+          />
         )}
       </Stack.Navigator>
     </NavigationContainer>
