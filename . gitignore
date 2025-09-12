@@ -25,3 +25,9 @@ mobile/vendor/.env
 # Expo specific
 .expo/*
 web-build/
+
+# env
+*.env
+**/.env
+backend/.env
+mobile/**/.env
