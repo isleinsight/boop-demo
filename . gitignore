@@ -1,0 +1,27 @@
+# Node / Expo stuff
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.expo/
+.expo-shared/
+dist/
+build/
+*.tar.gz
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Env files (never commit secrets)
+.env
+backend/.env
+mobile/cardholder/.env
+mobile/vendor/.env
+
+# Logs
+*.log
+
+# Expo specific
+.expo/*
+web-build/
