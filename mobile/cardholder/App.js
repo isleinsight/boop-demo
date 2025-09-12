@@ -1,7 +1,6 @@
 // App.js
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
-import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
