@@ -8,7 +8,7 @@ export default {
   extra: {
     API_BASE: "https://payulot.com"
   }
-{
+
   "plugins": [
     "expo-asset"
   ]
