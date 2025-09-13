@@ -169,25 +169,25 @@
     }
 
     /* Inline checkbox + label, wraps neatly on small screens */
-#addUserForm .check-row{
-  display: grid;
-  grid-template-columns: 22px minmax(0,1fr); /* box | text */
-  align-items: center;
-  gap: 10px;
-  margin: 6px 0 2px;
-}
+    #addUserForm .check-row{
+      display: grid;
+      grid-template-columns: 22px minmax(0,1fr); /* box | text */
+      align-items: center;
+      gap: 10px;
+      margin: 6px 0 2px;
+    }
 
-#addUserForm .check-row input[type="checkbox"]{
-  width: 18px;
-  height: 18px;
-  margin: 0;            /* remove default offsets */
-  flex: 0 0 auto;
-}
+    #addUserForm .check-row input[type="checkbox"]{
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      flex: 0 0 auto;
+    }
 
-#addUserForm .check-row label{
-  line-height: 1.4;
-  margin: 0;
-}
+    #addUserForm .check-row label{
+      line-height: 1.4;
+      margin: 0;
+    }
   </style>
 </head>
 <body>
@@ -208,7 +208,7 @@
   })();
 </script>
   
-  <!-- Top Nav -->
+<!-- Top Nav -->
 <nav>
   <div class="nav-container">
     <div class="nav-left">
@@ -230,156 +230,167 @@
   </div>
 </nav>
 
+<div class="container-small">
+  <form id="addUserForm">
+    <h3>Create New User</h3>
 
-  <div class="container-small">
-    <form id="addUserForm">
-      <h3>Create New User</h3>
+    <p>
+      Use this form to create a new user. Select a role to reveal additional options.<br />
+      <strong>Note:</strong> The "On Assistance" toggle only applies to <strong>Cardholder</strong> users.
+    </p>
 
-      <p>
-        Use this form to create a new user. Select a role to reveal additional options.<br />
-        <strong>Note:</strong> The "On Assistance" toggle only applies to <strong>Cardholder</strong> users.
-      </p>
+    <label for="email">Email</label>
+    <input type="email" id="email" required />
 
-      <label for="email">Email</label>
-      <input type="email" id="email" required />
+    <!-- ✅ NEW: Phone number for users table -->
+    <label for="phone">Phone Number</label>
+    <input
+      type="tel"
+      id="phone"
+      inputmode="tel"
+      autocomplete="tel"
+      placeholder="+1 (441) 555-1234"
+      pattern="[\d\s()+\-]{7,}"
+      title="Enter a valid phone number"
+    />
 
-      <label for="firstName">First Name</label>
-      <input type="text" id="firstName" required />
+    <label for="firstName">First Name</label>
+    <input type="text" id="firstName" required />
 
-      <label for="middleName">Middle Name</label>
-      <input type="text" id="middleName" />
+    <label for="middleName">Middle Name</label>
+    <input type="text" id="middleName" />
 
-      <label for="lastName">Last Name</label>
-      <input type="text" id="lastName" required />
+    <label for="lastName">Last Name</label>
+    <input type="text" id="lastName" required />
 
-      <label for="role">Role</label>
-      <select id="role" required>
-        <option value="">Select Role</option>
+    <label for="role">Role</label>
+    <select id="role" required>
+      <option value="">Select Role</option>
+      <option value="admin">Admin</option>
+      <option value="student">Student</option>
+      <option value="parent">Parent</option>
+      <option value="senior">Senior</option>
+      <option value="vendor">Vendor</option>
+      <option value="cardholder">Cardholder</option>
+    </select>
+
+    <div id="adminTypeContainer" style="display: none;">
+      <label for="adminType">Admin Type</label>
+      <select id="adminType">
+        <option value="">Select Admin Type</option>
+        <option value="super_admin">Super Admin</option>
         <option value="admin">Admin</option>
-        <option value="student">Student</option>
-        <option value="parent">Parent</option>
-        <option value="senior">Senior</option>
-        <option value="vendor">Vendor</option>
-        <option value="cardholder">Cardholder</option>
+        <option value="support">Support</option>
+        <option value="accountant">Accountant</option>
+        <option value="viewer">Viewer</option>
       </select>
+    </div>
 
-      <div id="adminTypeContainer" style="display: none;">
-        <label for="adminType">Admin Type</label>
-        <select id="adminType">
-          <option value="">Select Admin Type</option>
-          <option value="super_admin">Super Admin</option>
-          <option value="admin">Admin</option>
-          <option value="support">Support</option>
-          <option value="accountant">Accountant</option>
-          <option value="viewer">Viewer</option>
-        </select>
+    <div id="assistanceContainer" style="display:none;">
+      <div class="check-row">
+        <input type="checkbox" id="onAssistance" />
+        <label for="onAssistance">On Assistance</label>
       </div>
+    </div>
 
-      <div id="assistanceContainer" style="display:none;">
-  <div class="check-row">
-    <input type="checkbox" id="onAssistance" />
-    <label for="onAssistance">On Assistance</label>
-  </div>
+    <div id="vendorFields" style="display:none;">
+      <label for="businessName">Business Name</label>
+      <input type="text" id="businessName" />
+
+      <label for="vendorPhone">Phone</label>
+      <input type="tel" id="vendorPhone" />
+
+      <label for="vendorCategory">Category</label>
+      <input type="text" id="vendorCategory" />
+    </div>
+
+    <div id="studentFields" style="display:none;">
+      <label for="studentSchoolName">School Name</label>
+      <input type="text" id="studentSchoolName" placeholder="School student attends" required />
+
+      <label for="studentGradeLevel">Grade Level</label>
+      <input type="text" id="studentGradeLevel" placeholder="e.g. Primary 6" />
+
+      <label for="expiryDate">Expiry Date</label>
+      <input type="date" id="expiryDate" />
+    </div>
+
+    <button type="submit">Create User</button>
+    <div id="formStatus" class="status-message"></div>
+  </form>
 </div>
 
-      <div id="vendorFields" style="display:none;">
-        <label for="businessName">Business Name</label>
-        <input type="text" id="businessName" />
+<script>
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  const allowedTypes = ["super_admin", "admin"];
 
-        <label for="vendorPhone">Phone</label>
-        <input type="tel" id="vendorPhone" />
+  const isAuthorized =
+    user &&
+    typeof user === "object" &&
+    user.role === "admin" &&
+    allowedTypes.includes(user.type);
 
-        <label for="vendorCategory">Category</label>
-        <input type="text" id="vendorCategory" />
-      </div>
+  if (!isAuthorized) {
+    window.location.href = "../government-portal.html"; // Redirect non-authorized users
+  }
 
-      <div id="studentFields" style="display:none;">
-        <label for="studentSchoolName">School Name</label>
-        <input type="text" id="studentSchoolName" placeholder="School student attends" required />
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("admin.js has loaded!");
 
-        <label for="studentGradeLevel">Grade Level</label>
-        <input type="text" id="studentGradeLevel" placeholder="e.g. Primary 6" />
-
-        <label for="expiryDate">Expiry Date</label>
-        <input type="date" id="expiryDate" />
-      </div>
-
-      <button type="submit">Create User</button>
-      <div id="formStatus" class="status-message"></div>
-    </form>
-  </div>
-
-  <script>
-    const user = JSON.parse(localStorage.getItem("boopUser"));
-    const allowedTypes = ["super_admin", "admin"];
-
-    const isAuthorized =
-      user &&
-      typeof user === "object" &&
-      user.role === "admin" &&
-      allowedTypes.includes(user.type);
-
-    if (!isAuthorized) {
-      window.location.href = "../government-portal.html"; // Redirect non-authorized users
+    // Hide "Add User" and "Assign Card" links for viewer or support users
+    if (user?.type === "viewer" || user?.type === "support") {
+      const addUserLink = document.getElementById("addUserLink");
+      const assignCardLink = document.getElementById("assignCardLink");
+      if (addUserLink) addUserLink.style.display = "none";
+      if (assignCardLink) assignCardLink.style.display = "none";
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log("admin.js has loaded!");
-
-      // Hide "Add User" and "Assign Card" links for viewer or support users
-      if (user?.type === "viewer" || user?.type === "support") {
-        const addUserLink = document.getElementById("addUserLink");
-        const assignCardLink = document.getElementById("assignCardLink");
-        if (addUserLink) addUserLink.style.display = "none";
-        if (assignCardLink) assignCardLink.style.display = "none";
-      }
-
-      const logoutBtn = document.getElementById("logoutBtn");
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          localStorage.removeItem("boopUser");
-          window.location.href = "../government-portal.html";
-        });
-      }
-    });
-
-    document.addEventListener("DOMContentLoaded", () => {
-  const hamburger = document.querySelector(".hamburger");
-  const navRight = document.querySelector(".nav-right");
-  const dropbtn = document.querySelector(".nav-dropdown .dropbtn");
-  const dropdownContent = document.querySelector(".dropdown-content");
-
-  if (hamburger && navRight) {
-    hamburger.addEventListener("click", () => {
-      hamburger.classList.toggle("active");
-      navRight.classList.toggle("active");
-    });
-  }
-
-  if (dropbtn && dropdownContent) {
-    dropbtn.addEventListener("click", (e) => {
-      if (window.innerWidth <= 768) {
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", (e) => {
         e.preventDefault();
-        dropdownContent.classList.toggle("active");
-      }
-    });
-  }
+        localStorage.removeItem("boopUser");
+        window.location.href = "../government-portal.html";
+      });
+    }
+  });
 
-  // Close mobile menu when a link is clicked
-  navRight.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", () => {
-      if (window.innerWidth <= 768) {
-        hamburger.classList.remove("active");
-        navRight.classList.remove("active");
-        if (dropdownContent) {
-          dropdownContent.classList.remove("active");
+  document.addEventListener("DOMContentLoaded", () => {
+    const hamburger = document.querySelector(".hamburger");
+    const navRight = document.querySelector(".nav-right");
+    const dropbtn = document.querySelector(".nav-dropdown .dropbtn");
+    const dropdownContent = document.querySelector(".dropdown-content");
+
+    if (hamburger && navRight) {
+      hamburger.addEventListener("click", () => {
+        hamburger.classList.toggle("active");
+        navRight.classList.toggle("active");
+      });
+    }
+
+    if (dropbtn && dropdownContent) {
+      dropbtn.addEventListener("click", (e) => {
+        if (window.innerWidth <= 768) {
+          e.preventDefault();
+          dropdownContent.classList.toggle("active");
         }
-      }
+      });
+    }
+
+    // Close mobile menu when a link is clicked
+    navRight.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        if (window.innerWidth <= 768) {
+          hamburger.classList.remove("active");
+          navRight.classList.remove("active");
+          if (dropdownContent) {
+            dropdownContent.classList.remove("active");
+          }
+        }
+      });
     });
   });
-});
-  </script>
-  <script type="module" src="add-user.js"></script>
+</script>
+<script type="module" src="add-user.js"></script>
 </body>
 </html>
