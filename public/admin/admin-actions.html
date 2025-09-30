@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Actions – Payulot Accounts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f5f8fb;
+      margin: 0;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 24px 32px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 24px;
+      color: #1a2b4a;
+    }
+
+    /* Navigation Dropdown */
+    .nav-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropbtn {
+      padding: 10px 16px;
+      text-decoration: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background: #fff;
+      min-width: 160px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1;
+    }
+
+    .dropdown-content a {
+      color: #333;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      font-size: 0.95rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-content a:hover {
+      color: #2f80ed;
+    }
+
+    .nav-dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+      align-items: center;
+    }
+
+    .filters input,
+    .filters select {
+      padding: 10px 14px;
+      border: 1px solid #d1d9e6;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background: #fff;
+      transition: border-color 0.2s ease;
+    }
+
+    .filters input:focus,
+    .filters select:focus {
+      outline: none;
+      border-color: #2f80ed;
+    }
+
+    .filters button {
+      padding: 10px 20px;
+      background: #2f80ed;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .filters button:hover {
+      background: #1c6fd8;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f4f8;
+      color: #1a2b4a;
+      font-weight: 600;
+    }
+
+    tr {
+      transition: background-color 0.2s ease;
+    }
+
+    tr:nth-child(even) {
+      background: #fafbfc;
+    }
+
+    tr:hover {
+      background: #f5f8fb;
+    }
+
+    td {
+      border-bottom: 1px solid #e6ebf1;
+    }
+
+    /* Pagination */
+    .pagination-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .pagination-container button {
+      padding: 10px 20px;
+      background: #2f80ed;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .pagination-container button:disabled {
+      background: #d1d9e6;
+      cursor: not-allowed;
+    }
+
+    .pagination-container button:hover:not(:disabled) {
+      background: #1c6fd8;
+    }
+
+    .pagination-container span {
+      font-size: 0.95rem;
+      color: #1a2b4a;
+    }
+
+    /* Status Colors */
+    .status-pending { color: #f4a261; font-weight: 500; }
+    .status-completed { color: #2ecc71; font-weight: 500; }
+    .status-error { color: #e63946; font-weight: 500; }
+
+    /* Status Message */
+    .status-message {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: #fef3f2;
+      color: #e63946;
+      border: 1px solid #f8c4c1;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    .status-message.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="screenGuard" style="display:none; position:fixed; inset:0; background:#0b1220; color:#fff; 
+  display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; z-index:9999;">
+  <div style="max-width:540px;">
+    <h2 style="margin:0 0 12px; font-family:Poppins, sans-serif;">Desktop Required</h2>
+    <p>For security and usability, the BOOP Admin dashboard must be used on a desktop or tablet in landscape.</p>
+  </div>
+</div>
+<script>
+  (function(){
+    const minWidth = 900; 
+    const guard = document.getElementById('screenGuard');
+    function update(){ guard.style.display = (window.innerWidth < minWidth) ? 'flex' : 'none'; }
+    window.addEventListener('resize', update, { passive:true });
+    update();
+  })();
+</script>
+
+<!-- Top Nav -->
+  <nav>
+    <div class="nav-container">
+      <div class="nav-left">
+        <img src="../assets/logo-white.png" alt="Payulot Logo" />
+      </div>
+      <div class="nav-right">
+        <a href="index.html">Dashboard</a>
+        <a href="admin-actions.html">Admin Actions</a>
+        <div class="nav-dropdown">
+          <a href="#" class="dropbtn" style="color: white;">Add</a>
+          <div class="dropdown-content">
+            <a href="add-user.html" id="addUserLink">Add User</a>
+            <a href="assign-student.html">Assign Student</a>
+          </div>
+        </div>
+        <a href="view-users.html">View Users</a>
+        <a href="#" id="logoutBtn">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+<div class="container">
+  <h2>Admin Actions</h2>
+
+  <div class="filters">
+    <input type="date" id="startDate" />
+    <input type="date" id="endDate" />
+    
+    <input type="text" id="searchInput" placeholder="Search name/email..." />
+    <button id="applyFilters">Apply</button>
+  </div>
+
+  <table id="adminActionsTable">
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>Status</th>
+        <th>Performed By</th>
+        <th>Target</th>
+        <th>Requested At</th>
+        <th>Completed At</th>
+        <th>Error Message</th>
+      </tr>
+    </thead>
+    <tbody id="adminActionsBody">
+      <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
+    </tbody>
+  </table>
+
+  <div class="pagination-container">
+    <button id="prevPage">Previous</button>
+    <span id="pageIndicator">Page 1</span>
+    <button id="nextPage">Next</button>
+  </div>
+
+  <div id="statusMessage" class="status-message"></div>
+</div>
+
+<script type="module">
+  const user = JSON.parse(localStorage.getItem("boopUser"));
+  const token = localStorage.getItem("boop_jwt");
+  const tbody = document.getElementById("adminActionsBody");
+  const statusMessage = document.getElementById("statusMessage");
+  const prevBtn = document.getElementById("prevPage");
+  const nextBtn = document.getElementById("nextPage");
+  const pageIndicator = document.getElementById("pageIndicator");
+
+  const allowedTypes = ["super_admin", "admin", "support"];
+  if (!user || user.role !== "admin" || !allowedTypes.includes(user.type)) {
+    window.location.href = "../government-portal.html";
+  }
+
+  let currentPage = 1;
+  const limit = 20;
+
+  async function loadAdminActions() {
+    const start = document.getElementById("startDate")?.value;
+    const end = document.getElementById("endDate")?.value;
+    const status = document.getElementById("statusFilter")?.value;
+    const search = document.getElementById("searchInput")?.value;
+
+    const query = new URLSearchParams({
+      page: currentPage,
+      limit,
+      ...(start && { start }),
+      ...(end && { end }),
+      ...(status && { status }),
+      ...(search && { search })
+    });
+
+    try {
+      const res = await fetch(`/api/admin-actions?${query.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Failed to load actions.");
+
+      const { actions, totalCount } = data;
+
+      tbody.innerHTML = actions.length
+        ? actions.map(action => `
+          <tr>
+            <td>${action.action}</td>
+            <td class="status-${action.status}">${action.status}</td>
+            <td>${action.performed_by_name || "—"}<br><small>${action.performed_by_email || ""}</small></td>
+            <td>${action.target_name || "—"}<br><small>${action.target_email || ""}</small></td>
+            <td>${new Date(action.requested_at).toLocaleString()}</td>
+            <td>${action.completed_at ? new Date(action.completed_at).toLocaleString() : "—"}</td>
+            <td>${action.error_message || ""}</td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="7" style="text-align:center;">No results found.</td></tr>`;
+
+      pageIndicator.textContent = `Page ${currentPage}`;
+
+      prevBtn.style.display = currentPage <= 1 ? "none" : "inline-block";
+      nextBtn.style.display = currentPage * limit >= totalCount ? "none" : "inline-block";
+
+      statusMessage.classList.remove("show");
+    } catch (err) {
+      console.error("❌", err);
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Error loading data.</td></tr>`;
+      statusMessage.textContent = err.message;
+      statusMessage.classList.add("show");
+    }
+  }
+
+  document.getElementById("applyFilters")?.addEventListener("click", () => {
+    currentPage = 1;
+    loadAdminActions();
+  });
+
+  prevBtn?.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadAdminActions();
+    }
+  });
+
+  nextBtn?.addEventListener("click", () => {
+    currentPage++;
+    loadAdminActions();
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // Hide "Add User" for viewer or support users
+    if (user?.type === "support" || user?.type === "viewer") {
+      const addUserLink = document.getElementById("addUserLink");
+      const assignCardLink = document.getElementById("assignCardLink");
+      if (addUserLink) addUserLink.style.display = "none";
+      if (assignCardLink) assignCardLink.style.display = "none";
+    }
+
+    loadAdminActions();
+
+    document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } catch {}
+      localStorage.clear();
+      window.location.href = "../government-portal.html";
+    });
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+  const hamburger = document.querySelector(".hamburger");
+  const navRight = document.querySelector(".nav-right");
+  const dropbtn = document.querySelector(".nav-dropdown .dropbtn");
+  const dropdownContent = document.querySelector(".dropdown-content");
+
+  if (hamburger && navRight) {
+    hamburger.addEventListener("click", () => {
+      hamburger.classList.toggle("active");
+      navRight.classList.toggle("active");
+    });
+  }
+
+  if (dropbtn && dropdownContent) {
+    dropbtn.addEventListener("click", (e) => {
+      if (window.innerWidth <= 768) {
+        e.preventDefault();
+        dropdownContent.classList.toggle("active");
+      }
+    });
+  }
+
+  // Close mobile menu when a link is clicked
+  navRight.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      if (window.innerWidth <= 768) {
+        hamburger.classList.remove("active");
+        navRight.classList.remove("active");
+        if (dropdownContent) {
+          dropdownContent.classList.remove("active");
+        }
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>
